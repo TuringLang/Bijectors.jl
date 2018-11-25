@@ -4,6 +4,7 @@ using Reexport
 @reexport using Distributions
 using StatsFuns
 using LinearAlgebra
+using MappedArrays
 
 export  TransformDistribution, 
         RealDistribution,
@@ -13,6 +14,7 @@ export  TransformDistribution,
         PDMatDistribution,
         link, 
         invlink, 
+        proj_invlink,
         logpdf_with_trans
 
 #=
@@ -46,6 +48,8 @@ export  TransformDistribution,
 #############
 # a ≦ x ≦ b #
 #############
+
+proj_invlink(d, y) = invlink(d, y)
 
 const TransformDistribution{T<:ContinuousUnivariateDistribution} = Union{T, Truncated{T}}
 
@@ -144,15 +148,19 @@ const SimplexDistribution = Union{Dirichlet}
 function link(d::SimplexDistribution, x::AbstractVector{T}) where T<:Real
     y, K = similar(x), length(x)
 
+    ϵ = eps(T)
     sum_tmp = zero(T)
-    z = x[1]
+    z = x[1] * (1 - 2ϵ) + ϵ # z ∈ [ϵ, 1-ϵ]
     y[1] = StatsFuns.logit(z) - log(one(T) / (K - 1))
-    @inbounds for k in 2:K - 1
+    @inbounds for k in 2:(K - 1)
         sum_tmp += x[k - 1]
-        z = x[k] / (one(T) - sum_tmp)
+        # z ∈ [ϵ, 1-ϵ]
+        # x[k] = 0 && sum_tmp = 1 -> z ≈ 1
+        z = (x[k] + ϵ)*(1 - 2ϵ)/(one(T) - sum_tmp + ϵ)
         y[k] = StatsFuns.logit(z) - log(one(T) / (K - k))
     end
-    y[K] = zero(T)
+    sum_tmp += x[K - 1]
+    y[K] = 1 - sum_tmp - x[K]
 
     return y
 end
@@ -161,51 +169,68 @@ end
 function link(d::SimplexDistribution, X::AbstractMatrix{T}) where T<:Real
     Y, K, N = similar(X), size(X, 1), size(X, 2)
 
+    ϵ = eps(T)
     @inbounds for n in 1:size(X, 2)
-        sum_tmp, z = zero(T), X[1, n]
+        sum_tmp = zero(T)
+        z = X[1, n] * (1 - 2ϵ) + ϵ
         Y[1, n] = StatsFuns.logit(z) - log(one(T) / (K - 1))
-        for k in 2:K - 1
+        for k in 2:(K - 1)
             sum_tmp += X[k - 1, n]
-            z = X[k, n] / (one(T) - sum_tmp)
+            z = (X[k, n] + ϵ)*(1 - 2ϵ)/(one(T) - sum_tmp + ϵ)
             Y[k, n] = StatsFuns.logit(z) - log(one(T) / (K - k))
         end
-        Y[K, n] = zero(T)
+        sum_tmp += X[K-1, n]
+        Y[K, n] = 1 - sum_tmp - X[K, n]
     end
 
     return Y
 end
 
-function invlink(d::SimplexDistribution, y::AbstractVector{T}) where T<:Real
+proj_invlink(d::SimplexDistribution, y) = _invlink(d, y, Val{true})
+for T in (AbstractVector{<:Real}, AbstractMatrix{<:Real})
+    @eval invlink(d::SimplexDistribution, y::$T) = _invlink(d, y, Val{false})
+end
+
+function _invlink(d::SimplexDistribution, y::AbstractVector{T}, ::Type{Val{proj}}) where {T<:Real, proj}
     x, K = similar(y), length(y)
 
+    ϵ = eps(T)
     z = StatsFuns.logistic(y[1] + log(one(T) / (K - 1)))
-    x[1] = z
+    x[1] = (z - ϵ) / (1 - 2ϵ)
     sum_tmp = zero(T)
-    @inbounds for k = 2:K - 1
+    @inbounds for k = 2:(K - 1)
         z = StatsFuns.logistic(y[k] + log(one(T) / (K - k)))
         sum_tmp += x[k-1]
-        x[k] = (one(T) - sum_tmp) * z
+        x[k] = (one(T) - sum_tmp  + ϵ) / (1 - 2ϵ) * z - ϵ
     end
-    sum_tmp += x[K-1]
-    x[K] = one(T) - sum_tmp
-
+    sum_tmp += x[K - 1]
+    if proj
+        x[K] = one(T) - sum_tmp
+    else
+        x[K] = one(T) - sum_tmp - y[K]
+    end
     return x
 end
 
 # Vectorised implementation of the above.
-function invlink(d::SimplexDistribution, Y::AbstractMatrix{T}) where T<:Real
+function _invlink(d::SimplexDistribution, Y::AbstractMatrix{T}, ::Type{Val{proj}}) where {T<:Real, proj}
     X, K, N = similar(Y), size(Y, 1), size(Y, 2)
 
+    ϵ = eps(T)
     @inbounds for n in 1:size(X, 2)
         sum_tmp, z = zero(T), StatsFuns.logistic(Y[1, n] + log(one(T) / (K - 1)))
-        X[1, n] = z
-        for k in 2:K - 1
+        X[1, n] = (z - ϵ) / (1 - 2ϵ)
+        for k in 2:(K - 1)
             z = StatsFuns.logistic(Y[k, n] + log(one(T) / (K - k)))
             sum_tmp += X[k - 1]
-            X[k, n] = (one(T) - sum_tmp) * z
+            X[k, n] = (one(T) - sum_tmp  + ϵ) / (1 - 2ϵ) * z - ϵ
         end
         sum_tmp += X[K - 1, n]
-        X[K, n] = one(T) - sum_tmp
+        if proj
+            X[K, n] = 0
+        else
+            X[K, n] = one(T) - sum_tmp - Y[K, n]
+        end
     end
 
     return X
@@ -216,17 +241,19 @@ function logpdf_with_trans(
     x::AbstractVector{<:Real},
     transform::Bool,
 )
-    lp = logpdf(d, x)
+    T = eltype(x)
+    ϵ = eps(T)
+    lp = logpdf(d, mappedarray(x->x+ϵ, x))
     if transform
         K = length(x)
 
         sum_tmp = zero(eltype(x))
         z = x[1]
-        lp += log(z) + log(one(eltype(x)) - z)
-        @inbounds for k in 2:K-1
+        lp += log(z + ϵ) + log(one(eltype(x)) - z + ϵ)
+        @inbounds for k in 2:(K - 1)
             sum_tmp += x[k-1]
             z = x[k] / (one(eltype(x)) - sum_tmp)
-            lp += log(z) + log(one(eltype(x)) - z) + log(one(eltype(x)) - sum_tmp)
+            lp += log(z + ϵ) + log(one(eltype(x)) - z + ϵ) + log(one(eltype(x)) - sum_tmp + ϵ)
         end
     end
     return lp
