@@ -49,8 +49,6 @@ export  TransformDistribution,
 # a ≦ x ≦ b #
 #############
 
-proj_invlink(d, y) = invlink(d, y)
-
 const TransformDistribution{T<:ContinuousUnivariateDistribution} = Union{T, Truncated{T}}
 
 function link(d::TransformDistribution, x::Real)
@@ -145,63 +143,66 @@ end
 
 const SimplexDistribution = Union{Dirichlet}
 
-function link(d::SimplexDistribution, x::AbstractVector{T}) where T<:Real
+function link(d::SimplexDistribution, x::AbstractVector{T}, ::Type{Val{proj}} = Val{true}) where {T<:Real, proj}
     y, K = similar(x), length(x)
 
     ϵ = eps(T)
     sum_tmp = zero(T)
-    z = x[1] * (1 - 2ϵ) + ϵ # z ∈ [ϵ, 1-ϵ]
+    z = x[1] * (one(T) - 2ϵ) + ϵ # z ∈ [ϵ, 1-ϵ]
     y[1] = StatsFuns.logit(z) - log(one(T) / (K - 1))
     @inbounds for k in 2:(K - 1)
         sum_tmp += x[k - 1]
         # z ∈ [ϵ, 1-ϵ]
         # x[k] = 0 && sum_tmp = 1 -> z ≈ 1
-        z = (x[k] + ϵ)*(1 - 2ϵ)/(one(T) - sum_tmp + ϵ)
+        z = (x[k] + ϵ)*(one(T) - 2ϵ)/(one(T) - sum_tmp + ϵ)
         y[k] = StatsFuns.logit(z) - log(one(T) / (K - k))
     end
     sum_tmp += x[K - 1]
-    y[K] = 1 - sum_tmp - x[K]
+    if proj
+        y[K] = zero(T)
+    else
+        y[K] = one(T) - sum_tmp - x[K]
+    end
 
     return y
 end
 
 # Vectorised implementation of the above.
-function link(d::SimplexDistribution, X::AbstractMatrix{T}) where T<:Real
+function link(d::SimplexDistribution, X::AbstractMatrix{T}, ::Type{Val{proj}} = Val{true}) where {T<:Real, proj}
     Y, K, N = similar(X), size(X, 1), size(X, 2)
 
     ϵ = eps(T)
     @inbounds for n in 1:size(X, 2)
         sum_tmp = zero(T)
-        z = X[1, n] * (1 - 2ϵ) + ϵ
+        z = X[1, n] * (one(T) - 2ϵ) + ϵ
         Y[1, n] = StatsFuns.logit(z) - log(one(T) / (K - 1))
         for k in 2:(K - 1)
             sum_tmp += X[k - 1, n]
-            z = (X[k, n] + ϵ)*(1 - 2ϵ)/(one(T) - sum_tmp + ϵ)
+            z = (X[k, n] + ϵ)*(one(T) - 2ϵ)/(one(T) - sum_tmp + ϵ)
             Y[k, n] = StatsFuns.logit(z) - log(one(T) / (K - k))
         end
         sum_tmp += X[K-1, n]
-        Y[K, n] = 1 - sum_tmp - X[K, n]
+        if proj
+            Y[K, n] = zero(T)
+        else
+            Y[K, n] = one(T) - sum_tmp - X[K, n]
+        end
     end
 
     return Y
 end
 
-proj_invlink(d::SimplexDistribution, y) = _invlink(d, y, Val{true})
-for T in (AbstractVector{<:Real}, AbstractMatrix{<:Real})
-    @eval invlink(d::SimplexDistribution, y::$T) = _invlink(d, y, Val{false})
-end
-
-function _invlink(d::SimplexDistribution, y::AbstractVector{T}, ::Type{Val{proj}}) where {T<:Real, proj}
+function invlink(d::SimplexDistribution, y::AbstractVector{T}, ::Type{Val{proj}} = Val{true}) where {T<:Real, proj}
     x, K = similar(y), length(y)
 
     ϵ = eps(T)
     z = StatsFuns.logistic(y[1] + log(one(T) / (K - 1)))
-    x[1] = (z - ϵ) / (1 - 2ϵ)
+    x[1] = (z - ϵ) / (one(T) - 2ϵ)
     sum_tmp = zero(T)
     @inbounds for k = 2:(K - 1)
         z = StatsFuns.logistic(y[k] + log(one(T) / (K - k)))
         sum_tmp += x[k-1]
-        x[k] = (one(T) - sum_tmp  + ϵ) / (1 - 2ϵ) * z - ϵ
+        x[k] = (one(T) - sum_tmp  + ϵ) / (one(T) - 2ϵ) * z - ϵ
     end
     sum_tmp += x[K - 1]
     if proj
@@ -213,21 +214,21 @@ function _invlink(d::SimplexDistribution, y::AbstractVector{T}, ::Type{Val{proj}
 end
 
 # Vectorised implementation of the above.
-function _invlink(d::SimplexDistribution, Y::AbstractMatrix{T}, ::Type{Val{proj}}) where {T<:Real, proj}
+function invlink(d::SimplexDistribution, Y::AbstractMatrix{T}, ::Type{Val{proj}} = Val{true}) where {T<:Real, proj}
     X, K, N = similar(Y), size(Y, 1), size(Y, 2)
 
     ϵ = eps(T)
     @inbounds for n in 1:size(X, 2)
         sum_tmp, z = zero(T), StatsFuns.logistic(Y[1, n] + log(one(T) / (K - 1)))
-        X[1, n] = (z - ϵ) / (1 - 2ϵ)
+        X[1, n] = (z - ϵ) / (one(T) - 2ϵ)
         for k in 2:(K - 1)
             z = StatsFuns.logistic(Y[k, n] + log(one(T) / (K - k)))
             sum_tmp += X[k - 1]
-            X[k, n] = (one(T) - sum_tmp  + ϵ) / (1 - 2ϵ) * z - ϵ
+            X[k, n] = (one(T) - sum_tmp  + ϵ) / (one(T) - 2ϵ) * z - ϵ
         end
         sum_tmp += X[K - 1, n]
         if proj
-            X[K, n] = 0
+            X[K, n] = one(T) - sum_tmp
         else
             X[K, n] = one(T) - sum_tmp - Y[K, n]
         end
@@ -249,11 +250,11 @@ function logpdf_with_trans(
 
         sum_tmp = zero(eltype(x))
         z = x[1]
-        lp += log(z + ϵ) + log(one(eltype(x)) - z + ϵ)
+        lp += log(z + ϵ) + log(one(T) - z + ϵ)
         @inbounds for k in 2:(K - 1)
             sum_tmp += x[k-1]
-            z = x[k] / (one(eltype(x)) - sum_tmp)
-            lp += log(z + ϵ) + log(one(eltype(x)) - z + ϵ) + log(one(eltype(x)) - sum_tmp + ϵ)
+            z = x[k] / (one(T) - sum_tmp)
+            lp += log(z + ϵ) + log(one(T) - z + ϵ) + log(one(T) - sum_tmp + ϵ)
         end
     end
     return lp

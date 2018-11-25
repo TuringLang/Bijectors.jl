@@ -24,7 +24,7 @@ function single_sample_tests(dist, jacobian)
     # Check that the implementation of the logpdf agrees with the AD version.
     x = rand(dist)
     if dist isa SimplexDistribution
-        logpdf_ad = logpdf(dist, x .+ ϵ) - _logabsdet(jacobian(x->link(dist, x), x))
+        logpdf_ad = logpdf(dist, x .+ ϵ) - _logabsdet(jacobian(x->link(dist, x, Val{false}), x))
     else
         logpdf_ad = logpdf(dist, x) - _logabsdet(jacobian(x->link(dist, x), x))
     end
@@ -138,7 +138,7 @@ let ϵ = eps(Float64)
             # This should fail at the minute. Not sure what the correct way to test this is.
             x = rand(dist)
             logpdf_turing = logpdf_with_trans(dist, x, true)
-            J = jacobian(x->link(dist, x), x)
+            J = jacobian(x->link(dist, x, Val{false}), x)
             @test logpdf(dist, x .+ ϵ) - _logabsdet(J) ≈ logpdf_turing
         else
             single_sample_tests(dist, jacobian)
