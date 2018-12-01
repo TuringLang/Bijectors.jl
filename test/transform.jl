@@ -1,7 +1,10 @@
 using Test
 using Bijectors
 using ForwardDiff: derivative, jacobian
-using LinearAlgebra: logabsdet
+using LinearAlgebra: logabsdet, I
+using Random
+
+Random.seed!(123)
 
 # logabsdet doesn't handle scalars.
 _logabsdet(x::AbstractArray) = logabsdet(x)[1]
@@ -10,22 +13,28 @@ _logabsdet(x::Real) = log(abs(x))
 # Generate a (vector / matrix of) random number(s).
 _rand_real(::Real) = randn()
 _rand_real(x) = randn(size(x))
+_rand_real(x, e) = (y = randn(size(x)); y[end] = e; y)
 
 # Standard tests for all distributions involving a single-sample.
 function single_sample_tests(dist, jacobian)
-
+    ϵ = eps(Float64)
     # Do the regular single-sample tests.
     single_sample_tests(dist)
 
     # Check that the implementation of the logpdf agrees with the AD version.
     x = rand(dist)
-    logpdf_ad = logpdf(dist, x) - _logabsdet(jacobian(x->link(dist, x), x))
+    if dist isa SimplexDistribution
+        logpdf_ad = logpdf(dist, x .+ ϵ) - _logabsdet(jacobian(x->link(dist, x, Val{false}), x))
+    else
+        logpdf_ad = logpdf(dist, x) - _logabsdet(jacobian(x->link(dist, x), x))
+    end
     @test logpdf_ad ≈ logpdf_with_trans(dist, x, true)
 end
 
 # Standard tests for all distributions involving a single-sample. Doesn't check that the
 # logpdf implementation is consistent with the link function for technical reasons.
 function single_sample_tests(dist)
+    ϵ = eps(Float64)
 
     # Check that invlink is inverse of link.
     x = rand(dist)
@@ -35,12 +44,16 @@ function single_sample_tests(dist)
     y = link(dist, x)
     @test link(dist, invlink(dist, copy(y))) ≈ y atol=1e-9
 
-    # This should probably be exact.
-    @test logpdf(dist, x) == logpdf_with_trans(dist, x, false)
-
-    # Check that invlink maps back to the apppropriate constrained domain.
-    @test all(isfinite, logpdf.(Ref(dist), [invlink(dist, _rand_real(x)) for _ in 1:100]))
-
+    if dist isa SimplexDistribution
+        # This should probably be exact.
+        @test logpdf(dist, x .+ ϵ) == logpdf_with_trans(dist, x, false)
+        # Check that invlink maps back to the apppropriate constrained domain.
+        @test all(isfinite, logpdf.(Ref(dist), [invlink(dist, _rand_real(x, 0)) .+ ϵ for _ in 1:100]))
+    else
+        # This should probably be exact.
+        @test logpdf(dist, x) == logpdf_with_trans(dist, x, false)
+        @test all(isfinite, logpdf.(Ref(dist), [invlink(dist, _rand_real(x)) for _ in 1:100]))
+    end
     # This is a quirk of the current implementation, of which it would be nice to be rid.
     @test typeof(x) == typeof(y)
 end
@@ -107,11 +120,15 @@ end
 
 # Tests with vector-valued distributions.
 @testset "vector" begin
-let
+let ϵ = eps(Float64)
     vector_dists = [
         Dirichlet(2, 3),
+        Dirichlet([1000 * one(Float64), eps(Float64)]),
+        Dirichlet([eps(Float64), 1000 * one(Float64)]),
         MvNormal(randn(10), exp.(randn(10))),
         MvLogNormal(MvNormal(randn(10), exp.(randn(10)))),
+        Dirichlet([1000 * one(Float64), eps(Float64)]), 
+        Dirichlet([eps(Float64), 1000 * one(Float64)]),
     ]
     for dist in vector_dists
 
@@ -121,8 +138,8 @@ let
             # This should fail at the minute. Not sure what the correct way to test this is.
             x = rand(dist)
             logpdf_turing = logpdf_with_trans(dist, x, true)
-            J = jacobian(x->link(dist, x), x)
-            @test_broken logpdf(dist, x) - _logabsdet(J) ≈ logpdf_turing
+            J = jacobian(x->link(dist, x, Val{false}), x)
+            @test logpdf(dist, x .+ ϵ) - _logabsdet(J) ≈ logpdf_turing
         else
             single_sample_tests(dist, jacobian)
         end
@@ -147,11 +164,13 @@ let
 
         single_sample_tests(dist)
 
-        # This should fail at the minute. Not sure what the correct way to test this is.
-        x = rand(dist)
+        x = rand(dist); x = x + x' + 2I
+        lowerinds = [LinearIndices(size(x))[I] for I in CartesianIndices(size(x)) if I[1] >= I[2]]
+        upperinds = [LinearIndices(size(x))[I] for I in CartesianIndices(size(x)) if I[2] >= I[1]]
         logpdf_turing = logpdf_with_trans(dist, x, true)
         J = jacobian(x->link(dist, x), x)
-        @test_broken logpdf(dist, x) - _logabsdet(J) ≈ logpdf_turing
+        J = J[lowerinds, upperinds]
+        @test logpdf(dist, x) - _logabsdet(J) ≈ logpdf_turing
 
         # Multi-sample tests comprising vectors of matrices.
         N = 10
@@ -174,8 +193,8 @@ end
 # julia> logpdf_with_trans(Dirichlet([1., 1., 1.]), [-1., -2., -3.], true, true)
 # -3.006450206744678
 d  = Dirichlet([1., 1., 1.])
-r  = [-1000., -1000., -1000.]
-r2 = [-1., -2., -3.]
+r  = [-1000., -1000., 0.0]
+r2 = [-1., -2., 0.0]
 
 # test link
 #link(d, r)
