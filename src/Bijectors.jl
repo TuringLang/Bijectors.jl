@@ -143,7 +143,11 @@ end
 
 const SimplexDistribution = Union{Dirichlet}
 
-function link(d::SimplexDistribution, x::AbstractVector{T}, ::Type{Val{proj}} = Val{true}) where {T<:Real, proj}
+function link(
+    d::SimplexDistribution, 
+    x::AbstractVector{T}, 
+    ::Type{Val{proj}} = Val{true}
+) where {T<:Real, proj}
     y, K = similar(x), length(x)
 
     ϵ = eps(T)
@@ -168,7 +172,11 @@ function link(d::SimplexDistribution, x::AbstractVector{T}, ::Type{Val{proj}} = 
 end
 
 # Vectorised implementation of the above.
-function link(d::SimplexDistribution, X::AbstractMatrix{T}, ::Type{Val{proj}} = Val{true}) where {T<:Real, proj}
+function link(
+    d::SimplexDistribution, 
+    X::AbstractMatrix{T}, 
+    ::Type{Val{proj}} = Val{true}
+) where {T<:Real, proj}
     Y, K, N = similar(X), size(X, 1), size(X, 2)
 
     ϵ = eps(T)
@@ -192,7 +200,11 @@ function link(d::SimplexDistribution, X::AbstractMatrix{T}, ::Type{Val{proj}} = 
     return Y
 end
 
-function invlink(d::SimplexDistribution, y::AbstractVector{T}, ::Type{Val{proj}} = Val{true}) where {T<:Real, proj}
+function invlink(
+    d::SimplexDistribution, 
+    y::AbstractVector{T}, 
+    ::Type{Val{proj}} = Val{true}
+) where {T<:Real, proj}
     x, K = similar(y), length(y)
 
     ϵ = eps(T)
@@ -214,7 +226,11 @@ function invlink(d::SimplexDistribution, y::AbstractVector{T}, ::Type{Val{proj}}
 end
 
 # Vectorised implementation of the above.
-function invlink(d::SimplexDistribution, Y::AbstractMatrix{T}, ::Type{Val{proj}} = Val{true}) where {T<:Real, proj}
+function invlink(
+    d::SimplexDistribution, 
+    Y::AbstractMatrix{T}, 
+    ::Type{Val{proj}} = Val{true}
+) where {T<:Real, proj}
     X, K, N = similar(Y), size(Y, 1), size(Y, 2)
 
     ϵ = eps(T)
@@ -304,7 +320,11 @@ function invlink(d::PDMatDistribution, Y::AbstractMatrix{T}) where {T<:Real}
     return LowerTriangular(X) * LowerTriangular(X)'
 end
 
-function logpdf_with_trans(d::PDMatDistribution, X::AbstractMatrix{<:Real}, transform::Bool)
+function logpdf_with_trans(
+    d::PDMatDistribution, 
+    X::AbstractMatrix{<:Real}, 
+    transform::Bool
+)
     lp = logpdf(d, X)
     if transform && isfinite(lp)
         U = cholesky(X).U
