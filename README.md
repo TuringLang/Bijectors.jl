@@ -16,7 +16,7 @@ All exported names from the [Distributions.jl](https://github.com/TuringLang/Bij
 
 ## Functions
 
-1. `link`: maps a sample of a random distribution `dist` from its support to a value in [`-Inf`, `Inf`]. Example:
+1. `link`: maps a sample of a random distribution `dist` from its support to a value in R^n. Example:
 
 ```julia
 julia> using Bijectors
