@@ -317,7 +317,8 @@ function invlink(d::PDMatDistribution, Y::AbstractMatrix{T}) where {T<:Real}
     for m in 1:size(X, 1)
         X[m, m] = exp(X[m, m])
     end
-    return LowerTriangular(X) * LowerTriangular(X)'
+    Z = similar(X)
+    return mul!(Z, LowerTriangular(X), LowerTriangular(X)')
 end
 
 function logpdf_with_trans(
