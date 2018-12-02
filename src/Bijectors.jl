@@ -1,6 +1,6 @@
 module Bijectors
 
-using Reexport
+using Reexport, Requires
 @reexport using Distributions
 using StatsFuns
 using LinearAlgebra
@@ -16,6 +16,17 @@ export  TransformDistribution,
         invlink, 
         proj_invlink,
         logpdf_with_trans
+
+_eps(::Type{T}) where {T} = eps(T)
+_eps(::Type{Real}) = eps(Float64)
+function __init__()
+    @require ForwardDiff="f6369f11-7733-5829-9624-2563aa707210" @eval begin
+        _eps(::Type{<:ForwardDiff.Dual{<:Any, Real}}) = _eps(Real)
+    end
+    @require Flux="587475ba-b771-5e3f-ad9e-33799f191a9c" @eval begin
+        _eps(::Type{<:Flux.Tracker.TrackedReal{T}}) where {T} = eps(T)
+    end
+end
 
 #=
   NOTE: Codes below are adapted from
@@ -150,7 +161,7 @@ function link(
 ) where {T<:Real, proj}
     y, K = similar(x), length(x)
 
-    ϵ = eps(T)
+    ϵ = _eps(T)
     sum_tmp = zero(T)
     z = x[1] * (one(T) - 2ϵ) + ϵ # z ∈ [ϵ, 1-ϵ]
     y[1] = StatsFuns.logit(z) - log(one(T) / (K - 1))
@@ -179,7 +190,7 @@ function link(
 ) where {T<:Real, proj}
     Y, K, N = similar(X), size(X, 1), size(X, 2)
 
-    ϵ = eps(T)
+    ϵ = _eps(T)
     @inbounds for n in 1:size(X, 2)
         sum_tmp = zero(T)
         z = X[1, n] * (one(T) - 2ϵ) + ϵ
@@ -207,7 +218,7 @@ function invlink(
 ) where {T<:Real, proj}
     x, K = similar(y), length(y)
 
-    ϵ = eps(T)
+    ϵ = _eps(T)
     z = StatsFuns.logistic(y[1] + log(one(T) / (K - 1)))
     x[1] = (z - ϵ) / (one(T) - 2ϵ)
     sum_tmp = zero(T)
@@ -233,7 +244,7 @@ function invlink(
 ) where {T<:Real, proj}
     X, K, N = similar(Y), size(Y, 1), size(Y, 2)
 
-    ϵ = eps(T)
+    ϵ = _eps(T)
     @inbounds for n in 1:size(X, 2)
         sum_tmp, z = zero(T), StatsFuns.logistic(Y[1, n] + log(one(T) / (K - 1)))
         X[1, n] = (z - ϵ) / (one(T) - 2ϵ)
@@ -259,7 +270,7 @@ function logpdf_with_trans(
     transform::Bool,
 )
     T = eltype(x)
-    ϵ = eps(T)
+    ϵ = _eps(T)
     lp = logpdf(d, mappedarray(x->x+ϵ, x))
     if transform
         K = length(x)
