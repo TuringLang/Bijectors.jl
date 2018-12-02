@@ -14,7 +14,6 @@ export  TransformDistribution,
         PDMatDistribution,
         link, 
         invlink, 
-        proj_invlink,
         logpdf_with_trans
 
 _eps(::Type{T}) where {T} = eps(T)
