@@ -42,8 +42,17 @@ function single_sample_tests(dist)
 
     # Check that link is inverse of invlink. Hopefully this just holds given the above...
     y = link(dist, x)
-    @test link(dist, invlink(dist, copy(y))) ≈ y atol=1e-9
-
+    if dist isa Dirichlet
+        # `logit` and `logistic` are not perfect inverses. This leads to a diversion.
+        # Example:
+        # julia> logit(logistic(0.9999999999999998))
+        #    1.0
+        # julia> logistic(logit(0.9999999999999998))
+        # 0.9999999999999998
+        @test link(dist, invlink(dist, copy(y))) ≈ y atol=0.5
+    else
+        @test link(dist, invlink(dist, copy(y))) ≈ y atol=1e-9
+    end
     if dist isa SimplexDistribution
         # This should probably be exact.
         @test logpdf(dist, x .+ ϵ) == logpdf_with_trans(dist, x, false)
@@ -140,6 +149,12 @@ let ϵ = eps(Float64)
             logpdf_turing = logpdf_with_trans(dist, x, true)
             J = jacobian(x->link(dist, x, Val{false}), x)
             @test logpdf(dist, x .+ ϵ) - _logabsdet(J) ≈ logpdf_turing
+
+            # Issue #12
+            stepsize = 1e10
+            dim = length(dist)
+            x = [logpdf_with_trans(dist, invlink(dist, link(dist, rand(dist)) .+ randn(dim) .* stepsize), true) for _ in 1:1_000]
+            @test !any(isinf, x) && !any(isnan, x)
         else
             single_sample_tests(dist, jacobian)
         end
