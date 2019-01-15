@@ -61,7 +61,10 @@ end
 
 const TransformDistribution{T<:ContinuousUnivariateDistribution} = Union{T, Truncated{T}}
 @inline function _clamp(x::Real, dist::TransformDistribution)
-    return clamp(x, minimum(dist), maximum(dist))
+    bounds = (minimum(dist), maximum(dist))
+    clamped_x = clamp(x, bounds...)
+    @debug "x = $x, bounds = $bounds, clamped_x = $clamped_x"
+    return clamped_x
 end
 
 link(d::TransformDistribution, x::Real) = _link(d, _clamp(x, d))
@@ -149,7 +152,10 @@ end
 
 const SimplexDistribution = Union{Dirichlet}
 @inline function _clamp(x::T, dist::SimplexDistribution) where T
-    return clamp(x, zero(T), one(T))
+    bounds = (zero(T), one(T))
+    clamped_x = clamp(x, bounds...)
+    @debug "x = $x, bounds = $bounds, clamped_x = $clamped_x"
+    return clamped_x
 end
 
 function link(
