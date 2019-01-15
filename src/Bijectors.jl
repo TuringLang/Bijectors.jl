@@ -60,8 +60,12 @@ end
 #############
 
 const TransformDistribution{T<:ContinuousUnivariateDistribution} = Union{T, Truncated{T}}
+@inline function _clamp(x::Real, dist::TransformDistribution)
+    return clamp(x, minimum(dist), maximum(dist))
+end
 
-function link(d::TransformDistribution, x::Real)
+link(d::TransformDistribution, x::Real) = _link(d, _clamp(x, d))
+function _link(d::TransformDistribution, x::Real)
     a, b = minimum(d), maximum(d)
     lowerbounded, upperbounded = isfinite(a), isfinite(b)
     if lowerbounded && upperbounded
@@ -75,7 +79,8 @@ function link(d::TransformDistribution, x::Real)
     end
 end
 
-function invlink(d::TransformDistribution, y::Real)
+invlink(d::TransformDistribution, y::Real) = _clamp(_invlink(d, y), d)
+function _invlink(d::TransformDistribution, y::Real)
     a, b = minimum(d), maximum(d)
     lowerbounded, upperbounded = isfinite(a), isfinite(b)
     if lowerbounded && upperbounded
@@ -90,6 +95,10 @@ function invlink(d::TransformDistribution, y::Real)
 end
 
 function logpdf_with_trans(d::TransformDistribution, x::Real, transform::Bool)
+    x = transform ? _clamp(x, d) : x
+    return _logpdf_with_trans(d, x, transform)
+end
+function _logpdf_with_trans(d::TransformDistribution, x::Real, transform::Bool)
     lp = logpdf(d, x)
     if transform
         a, b = minimum(d), maximum(d)
@@ -105,19 +114,6 @@ function logpdf_with_trans(d::TransformDistribution, x::Real, transform::Bool)
     return lp
 end
 
-
-###############
-# -∞ < x < -∞ #
-###############
-
-const RealDistribution = Union{
-    Cauchy, Gumbel, Laplace, Logistic, NoncentralT, Normal, NormalCanon, TDist,
-}
-
-link(d::RealDistribution, x::Real) = x
-invlink(d::RealDistribution, y::Real) = y
-logpdf_with_trans(d::RealDistribution, y::Real, transform::Bool) = logpdf(d, y)
-
 #########
 # 0 < x #
 #########
@@ -127,9 +123,9 @@ const PositiveDistribution = Union{
     InverseGaussian, Kolmogorov, LogNormal, NoncentralChisq, NoncentralF, Rayleigh, Weibull,
 }
 
-link(d::PositiveDistribution, x::Real) = log(x)
-invlink(d::PositiveDistribution, y::Real) = exp(y)
-function logpdf_with_trans(d::PositiveDistribution, x::Real, transform::Bool)
+_link(d::PositiveDistribution, x::Real) = log(x)
+_invlink(d::PositiveDistribution, y::Real) = exp(y)
+function _logpdf_with_trans(d::PositiveDistribution, x::Real, transform::Bool)
     return logpdf(d, x) + transform * log(x)
 end
 
@@ -140,9 +136,9 @@ end
 
 const UnitDistribution = Union{Beta, KSOneSided, NoncentralBeta}
 
-link(d::UnitDistribution, x::Real) = StatsFuns.logit(x)
-invlink(d::UnitDistribution, y::Real) = StatsFuns.logistic(y)
-function logpdf_with_trans(d::UnitDistribution, x::Real, transform::Bool)
+_link(d::UnitDistribution, x::Real) = StatsFuns.logit(x)
+_invlink(d::UnitDistribution, y::Real) = StatsFuns.logistic(y)
+function _logpdf_with_trans(d::UnitDistribution, x::Real, transform::Bool)
     return logpdf(d, x) + transform * log(x * (one(x) - x))
 end
 
@@ -152,6 +148,9 @@ end
 ###########
 
 const SimplexDistribution = Union{Dirichlet}
+@inline function _clamp(x::T, dist::SimplexDistribution) where T
+    return clamp(x, zero(T), one(T))
+end
 
 function link(
     d::SimplexDistribution, 
@@ -210,8 +209,6 @@ function link(
     return Y
 end
 
-clamp0to1(x::T) where T = clamp(x, zero(T), one(T))
-
 function invlink(
     d::SimplexDistribution, 
     y::AbstractVector{T}, 
@@ -221,18 +218,18 @@ function invlink(
 
     ϵ = _eps(T)
     z = StatsFuns.logistic(y[1] + log(one(T) / (K - 1)))
-    x[1] = (z - ϵ) / (one(T) - 2ϵ) |> clamp0to1
+    x[1] = _clamp((z - ϵ) / (one(T) - 2ϵ), d)
     sum_tmp = zero(T)
     @inbounds for k = 2:(K - 1)
         z = StatsFuns.logistic(y[k] + log(one(T) / (K - k)))
         sum_tmp += x[k-1]
-        x[k] = (one(T) - sum_tmp  + ϵ) / (one(T) - 2ϵ) * z - ϵ |> clamp0to1
+        x[k] = _clamp((one(T) - sum_tmp  + ϵ) / (one(T) - 2ϵ) * z - ϵ, d)
     end
     sum_tmp += x[K - 1]
     if proj
-        x[K] = one(T) - sum_tmp |> clamp0to1
+        x[K] = _clamp(one(T) - sum_tmp, d)
     else
-        x[K] = one(T) - sum_tmp - y[K] |> clamp0to1
+        x[K] = _clamp(one(T) - sum_tmp - y[K], d)
     end
     return x
 end
@@ -248,17 +245,17 @@ function invlink(
     ϵ = _eps(T)
     @inbounds for n in 1:size(X, 2)
         sum_tmp, z = zero(T), StatsFuns.logistic(Y[1, n] + log(one(T) / (K - 1)))
-        X[1, n] = (z - ϵ) / (one(T) - 2ϵ) |> clamp0to1
+        X[1, n] = _clamp((z - ϵ) / (one(T) - 2ϵ), d)
         for k in 2:(K - 1)
             z = StatsFuns.logistic(Y[k, n] + log(one(T) / (K - k)))
             sum_tmp += X[k - 1]
-            X[k, n] = (one(T) - sum_tmp  + ϵ) / (one(T) - 2ϵ) * z - ϵ |> clamp0to1
+            X[k, n] = _clamp((one(T) - sum_tmp  + ϵ) / (one(T) - 2ϵ) * z - ϵ, d)
         end
         sum_tmp += X[K - 1, n]
         if proj
-            X[K, n] = one(T) - sum_tmp |> clamp0to1
+            X[K, n] = _clamp(one(T) - sum_tmp, d)
         else
-            X[K, n] = one(T) - sum_tmp - Y[K, n] |> clamp0to1
+            X[K, n] = _clamp(one(T) - sum_tmp - Y[K, n], d)
         end
     end
 
