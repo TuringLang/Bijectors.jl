@@ -17,7 +17,11 @@ export  TransformDistribution,
         logpdf_with_trans
 
 _eps(::Type{T}) where {T} = eps(T)
-_eps(::Type{Real}) = eps(Float64)
+@static if Sys.WORDSIZE == 64
+    _eps(::Type{Real}) = eps(Float64)
+else
+    _eps(::Type{Real}) = eps(Float32)
+end
 function __init__()
     @require ForwardDiff="f6369f11-7733-5829-9624-2563aa707210" @eval begin
         _eps(::Type{<:ForwardDiff.Dual{<:Any, Real}}) = _eps(Real)
