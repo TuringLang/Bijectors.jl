@@ -6,14 +6,14 @@ using StatsFuns
 using LinearAlgebra
 using MappedArrays
 
-export  TransformDistribution, 
+export  TransformDistribution,
         RealDistribution,
         PositiveDistribution,
         UnitDistribution,
         SimplexDistribution,
         PDMatDistribution,
-        link, 
-        invlink, 
+        link,
+        invlink,
         logpdf_with_trans
 
 _eps(::Type{T}) where {T} = eps(T)
@@ -61,7 +61,8 @@ end
 
 const TransformDistribution{T<:ContinuousUnivariateDistribution} = Union{T, Truncated{T}}
 @inline function _clamp(x::Real, dist::TransformDistribution)
-    bounds = (minimum(dist), maximum(dist))
+    ϵ = eps(x)
+    bounds = (minimum(dist)+ϵ, maximum(dist)-ϵ)
     clamped_x = clamp(x, bounds...)
     @debug "x = $x, bounds = $bounds, clamped_x = $clamped_x"
     return clamped_x
@@ -159,8 +160,8 @@ const SimplexDistribution = Union{Dirichlet}
 end
 
 function link(
-    d::SimplexDistribution, 
-    x::AbstractVector{T}, 
+    d::SimplexDistribution,
+    x::AbstractVector{T},
     ::Type{Val{proj}} = Val{true}
 ) where {T<:Real, proj}
     y, K = similar(x), length(x)
@@ -188,8 +189,8 @@ end
 
 # Vectorised implementation of the above.
 function link(
-    d::SimplexDistribution, 
-    X::AbstractMatrix{T}, 
+    d::SimplexDistribution,
+    X::AbstractMatrix{T},
     ::Type{Val{proj}} = Val{true}
 ) where {T<:Real, proj}
     Y, K, N = similar(X), size(X, 1), size(X, 2)
@@ -216,8 +217,8 @@ function link(
 end
 
 function invlink(
-    d::SimplexDistribution, 
-    y::AbstractVector{T}, 
+    d::SimplexDistribution,
+    y::AbstractVector{T},
     ::Type{Val{proj}} = Val{true}
 ) where {T<:Real, proj}
     x, K = similar(y), length(y)
@@ -242,8 +243,8 @@ end
 
 # Vectorised implementation of the above.
 function invlink(
-    d::SimplexDistribution, 
-    Y::AbstractMatrix{T}, 
+    d::SimplexDistribution,
+    Y::AbstractMatrix{T},
     ::Type{Val{proj}} = Val{true}
 ) where {T<:Real, proj}
     X, K, N = similar(Y), size(Y, 1), size(Y, 2)
@@ -337,8 +338,8 @@ function invlink(d::PDMatDistribution, Y::AbstractMatrix{T}) where {T<:Real}
 end
 
 function logpdf_with_trans(
-    d::PDMatDistribution, 
-    X::AbstractMatrix{<:Real}, 
+    d::PDMatDistribution,
+    X::AbstractMatrix{<:Real},
     transform::Bool
 )
     lp = logpdf(d, X)
