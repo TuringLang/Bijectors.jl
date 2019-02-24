@@ -386,7 +386,7 @@ link(d::MultivariateDistribution, x::AbstractVector{<:Real}) = copy(x)
 link(d::MultivariateDistribution, X::AbstractMatrix{<:Real}) = copy(X)
 
 invlink(d::MultivariateDistribution, y::AbstractVector{<:Real}) = copy(y)
-invlink(d::MultivariateDistribution, Y::AbstractMatrix{<:Real}) = copy(X)
+invlink(d::MultivariateDistribution, Y::AbstractMatrix{<:Real}) = copy(Y)
 
 function logpdf_with_trans(d::MultivariateDistribution, x::AbstractVector{<:Real}, ::Bool)
     return logpdf(d, x)
