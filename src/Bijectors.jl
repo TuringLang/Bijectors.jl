@@ -383,18 +383,10 @@ end
 using Distributions: MultivariateDistribution
 
 link(d::MultivariateDistribution, x::AbstractVector{<:Real}) = copy(x)
-function link(d::MultivariateDistribution, X::AbstractMatrix{<:Real})
-    Y = similar(X)
-    copy!(Y, X)
-    return Y
-end
+link(d::MultivariateDistribution, X::AbstractMatrix{<:Real}) = copy(X)
 
 invlink(d::MultivariateDistribution, y::AbstractVector{<:Real}) = copy(y)
-function invlink(d::MultivariateDistribution, Y::AbstractMatrix{<:Real})
-    X = similar(Y)
-    copy!(X, Y)
-    return X
-end
+invlink(d::MultivariateDistribution, Y::AbstractMatrix{<:Real}) = copy(X)
 
 function logpdf_with_trans(d::MultivariateDistribution, x::AbstractVector{<:Real}, ::Bool)
     return logpdf(d, x)
