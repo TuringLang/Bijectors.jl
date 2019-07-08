@@ -78,25 +78,21 @@ Base.length(td::MultivariateTransformed) = length(td.dist)
 
 # logp
 function logpdf(td::UnivariateTransformed, y::T where T <: Real)
-    # FIXME: `logpdf_with_trans` give different results from the this:
     # logpdf(td.dist, inverse(td.transform, y)) .+ logdetinvjac(td.transform, y)
-    
-    logpdf_with_trans(td.dist, y, true)
+    logpdf_with_trans(td.dist, inverse(td.transform, y), true)
 end
 function _logpdf(td::MultivariateTransformed, y::AbstractVector{T} where T <: Real)
-    # FIXME: same as above
     # logpdf(td.dist, inverse(td.transform, y)) .+ logdetinvjac(td.transform, y)
-    logpdf_with_trans(td.dist, y, true)
+    logpdf_with_trans(td.dist, inverse(td.transform, y), true)
 end
 
+# TODO: implement these using analytical expressions?
 function logpdf_with_jac(td::UnivariateTransformed, y::T where T <: Real)
-    # FIXME: different results from `logpdf`; see above
     z = logdetinvjac(td.transform, y)
     return (logpdf(td.dist, inverse(td.transform, y)) .+ z, z)
 end
 
 function logpdf_with_jac(td::MultivariateTransformed, y::AbstractVector{T} where T <: Real)
-    # FIXME: different results from `logpdf`; see above
     z = logdetinvjac(td.transform, y)
     return (logpdf(td.dist, inverse(td.transform, y)) .+ z, z)
 end

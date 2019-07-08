@@ -42,11 +42,13 @@ Random.seed!(123)
 
             # single sample
             y = rand(td)
-            @test logpdf(td, y) ≈ logpdf_with_trans(dist, y, true)
+            x = inverse(td.transform, y)
+            @test logpdf(td, y) ≈ logpdf_with_trans(dist, x, true)
 
             # # multi-sample
             y = rand(td, 10)
-            @test logpdf.(td, y) ≈ logpdf_with_trans.(dist, y, true)
+            x = inverse(td.transform).(y)
+            @test logpdf.(td, y) ≈ logpdf_with_trans.(dist, x, true)
         end
     end
 end
