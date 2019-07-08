@@ -59,14 +59,12 @@ transform(b::DistributionBijector, x) = link(b.dist, x)
 inverse(b::DistributionBijector, y) = invlink(b.dist, y)
 
 # Transformed distributions
-struct UnivariateTransformed{D, B} <: Distribution{Univariate, Continuous}
-    where {D <: UnivariateDistribution, B <: Bijector}
+struct UnivariateTransformed{D, B} <: Distribution{Univariate, Continuous} where {D <: UnivariateDistribution, B <: Bijector}
     dist::D
     transform::B
 end
 
-struct MultivariateTransformed{D, B} <: Distribution{Multivariate, Continuous}
-    where {D <: MultivariateDistribution, B <: Bijector}
+struct MultivariateTransformed{D, B} <: Distribution{Multivariate, Continuous} where {D <: MultivariateDistribution, B <: Bijector}
     dist::D
     transform::B
 end
