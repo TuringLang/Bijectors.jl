@@ -6,7 +6,7 @@ using StatsFuns
 using LinearAlgebra
 using MappedArrays
 
-export  TransformDistribution,
+export  TransformDistribution, 
         RealDistribution,
         PositiveDistribution,
         UnitDistribution,
@@ -14,7 +14,15 @@ export  TransformDistribution,
         PDMatDistribution,
         link,
         invlink,
-        logpdf_with_trans
+        logpdf_with_trans,
+        transform,
+        inverse,
+        logdetinvjac,
+        Bijector,
+        DefaultBijector,
+        transformed,
+        UnivariateTransformed,
+        MultivariateTransformed
 
 const DEBUG = Bool(parse(Int, get(ENV, "DEBUG_BIJECTORS", "0")))
 
@@ -419,5 +427,7 @@ function logpdf_with_trans(
 )
     return logpdf_with_trans.(Ref(d), X, Ref(transform))
 end
+
+include("interface.jl")
 
 end # module
