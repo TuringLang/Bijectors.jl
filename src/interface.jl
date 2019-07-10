@@ -18,7 +18,7 @@ end
 Broadcast.broadcastable(b::Bijector) = Ref(b)
 
 logabsdetjac(b::T1, y::T2) where {T<:Bijector,T1<:Inversed{T},T2} = 
-    error("`logabsdetjacob(b::$T1, y::$T2)` is not implemented.")
+    error("`logabsdetjac(b::$T1, y::$T2)` is not implemented.")
 forward(b::T1, y::T2) where {T<:Bijector,T1<:Inversed{T},T2} = 
     error("`forward(b::$T1, y::$T2)` is not implemented.")
 transform(b::T1, y::T2) where {T<:Bijector,T1<:Inversed{T},T2} = 
@@ -115,7 +115,7 @@ function logpdf_with_jac(td::UnivariateTransformed, y::T where T <: Real)
 end
 
 function logpdf_with_jac(td::MultivariateTransformed, y::AbstractVector{T} where T <: Real)
-    z = logabsdetjac(td.transform, y)
+    z = logabsdetjac(inv(td.transform), y)
     return (logpdf(td.dist, transform(inv(td.transform), y)) .+ z, z)
 end
 
