@@ -11,41 +11,53 @@ import Distributions: logpdf, rand, rand!, _rand!, _logpdf
 abstract type Bijector end
 abstract type ADBijector{AD} <: Bijector end
 
+struct Inversed{B <: Bijector} <: Bijector
+    orig::B
+end
+
 Broadcast.broadcastable(b::Bijector) = Ref(b)
 
-"Computes the transformation."
-transform(b::Bijector, x) = begin end
-transform(b::Bijector) = x -> transform(b, x)
+logabsdetjac(b::T1, y::T2) where {T<:Bijector,T1<:Inversed{T},T2} = 
+    error("`logabsdetjacob(b::$T1, y::$T2)` is not implemented.")
+forward(b::T1, y::T2) where {T<:Bijector,T1<:Inversed{T},T2} = 
+    error("`forward(b::$T1, y::$T2)` is not implemented.")
+transform(b::T1, y::T2) where {T<:Bijector,T1<:Inversed{T},T2} = 
+    error("`transform(b::$T1, y::$T2)` is not implemented.")
 
-"Computes the inverse transformation of the Bijector."
-inverse(b::Bijector, y) = begin end
-inverse(b::Bijector) = y -> inverse(b, y)
+
+transform(b::Bijector) = x -> transform(b, x)
+forward(ib::Inversed{<: Bijector}, y) = (transform(ib, y), logabsdetjac(ib, y))
+logabsdetjac(ib::Inversed{<: Bijector}, y) = - logabsdetjac(ib.orig, transform(ib, y))
+
+Base.inv(b::Bijector) = Inversed(b)
+Base.inv(ib::Inversed{<:Bijector}) = ib.orig
+
 
 # TODO: rename? a bit of a mouthful
 # TODO: allow batch-computation, especially for univariate case
 "Computes the absolute determinant of the Jacobian of the inverse-transformation."
-logdetinvjac(b::Bijector, y) = begin end
-function logdetinvjac(b::ADBijector{<: Turing.Core.ForwardDiffAD}, y::Real)
-    log(abs(ForwardDiff.derivative(z -> inverse(b, z), y)))
+function logabsdetjac(b::ADBijector{<: Turing.Core.ForwardDiffAD}, y::Real)
+    log(abs(ForwardDiff.derivative(z -> transform(b, z), y)))
 end
-function logdetinvjac(b::ADBijector{<:Turing.Core.ForwardDiffAD}, y::AbstractVector{<:Real})
-    logabsdet(ForwardDiff.jacobian(z -> inverse(b, z), y))[1]
+function logabsdetjac(b::ADBijector{<:Turing.Core.ForwardDiffAD}, y::AbstractVector{<:Real})
+    logabsdet(ForwardDiff.jacobian(z -> transform(b, z), y))[1]
 end
 
 # FIXME: untrack? i.e. `Tracker.data(...)`
-function logdetinvjac(b::ADBijector{<: Turing.Core.TrackerAD}, y::Real)
-    log(abs(Tracker.gradient(z -> inverse(b, z[1]), [y])[1][1]))
+function logabsdetjac(b::ADBijector{<: Turing.Core.TrackerAD}, y::Real)
+    log(abs(Tracker.gradient(z -> transform(b, z[1]), [y])[1][1]))
 end
-function logdetinvjac(b::ADBijector{<: Turing.Core.TrackerAD}, y::AbstractVector{<: Real})
-    logabsdet(Tracker.jacobian(z -> inverse(b, z), y))[1]
+function logabsdetjac(b::ADBijector{<: Turing.Core.TrackerAD}, y::AbstractVector{<: Real})
+    logabsdet(Tracker.jacobian(z -> transform(b, z), y))[1]
 end
 
 # Example bijector
 struct Identity <: Bijector end
 transform(::Identity, x) = x
-inverse(::Identity, y) = y
-logdetinvjac(::Identity, y::T) where T <: Real = zero(T)
-logdetinvjac(::Identity, y::AbstractVector{T}) where T <: Real = zero(T)
+transform(::Inversed{Identity}, y) = y
+forward(::Identity, x) = (x, zero(x))
+logabsdetjac(::Identity, y::T) where T <: Real = zero(T)
+logabsdetjac(::Identity, y::AbstractVector{T}) where T <: Real = zero(T)
 
 # Simply uses `link` and `invlink` as transforms with AD to get jacobian
 struct DistributionBijector{AD, D} <: ADBijector{AD} where D <: Distribution
@@ -56,7 +68,7 @@ function DistributionBijector(dist::D) where D <: Distribution
 end
 
 transform(b::DistributionBijector, x) = link(b.dist, x)
-inverse(b::DistributionBijector, y) = invlink(b.dist, y)
+transform(ib::Inversed{<: DistributionBijector}, y) = invlink(ib.orig.dist, y)
 
 # Transformed distributions
 struct UnivariateTransformed{D, B} <: Distribution{Univariate, Continuous} where {D <: UnivariateDistribution, B <: Bijector}
@@ -88,23 +100,23 @@ Base.length(td::MultivariateTransformed) = length(td.dist)
 
 # logp
 function logpdf(td::UnivariateTransformed, y::T where T <: Real)
-    # logpdf(td.dist, inverse(td.transform, y)) .+ logdetinvjac(td.transform, y)
-    logpdf_with_trans(td.dist, inverse(td.transform, y), true)
+    # logpdf(td.dist, transform(inv(td.transform), y)) .+ logabsdetjac(inv(td.transform), y)
+    logpdf_with_trans(td.dist, transform(inv(td.transform), y), true)
 end
 function _logpdf(td::MultivariateTransformed, y::AbstractVector{T} where T <: Real)
-    # logpdf(td.dist, inverse(td.transform, y)) .+ logdetinvjac(td.transform, y)
-    logpdf_with_trans(td.dist, inverse(td.transform, y), true)
+    # logpdf(td.dist, transform(inv(td.transform), y)) .+ logabsdetjac(inv(td.transform), y)
+    logpdf_with_trans(td.dist, transform(inv(td.transform), y), true)
 end
 
 # TODO: implement these using analytical expressions?
 function logpdf_with_jac(td::UnivariateTransformed, y::T where T <: Real)
-    z = logdetinvjac(td.transform, y)
-    return (logpdf(td.dist, inverse(td.transform, y)) .+ z, z)
+    z = logabsdetjac(inv(td.transform), y)
+    return (logpdf(td.dist, transform(inv(td.transform), y)) .+ z, z)
 end
 
 function logpdf_with_jac(td::MultivariateTransformed, y::AbstractVector{T} where T <: Real)
-    z = logdetinvjac(td.transform, y)
-    return (logpdf(td.dist, inverse(td.transform, y)) .+ z, z)
+    z = logabsdetjac(td.transform, y)
+    return (logpdf(td.dist, transform(inv(td.transform), y)) .+ z, z)
 end
 
 # rand

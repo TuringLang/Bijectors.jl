@@ -1,3 +1,4 @@
+using Revise
 using Test
 using Bijectors
 using Random
@@ -42,12 +43,12 @@ Random.seed!(123)
 
             # single sample
             y = rand(td)
-            x = inverse(td.transform, y)
+            x = transform(inv(td.transform), y)
             @test logpdf(td, y) ≈ logpdf_with_trans(dist, x, true)
 
             # # multi-sample
             y = rand(td, 10)
-            x = inverse(td.transform).(y)
+            x = transform.(inv(td.transform), y)
             @test logpdf.(td, y) ≈ logpdf_with_trans.(dist, x, true)
         end
     end
