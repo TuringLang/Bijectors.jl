@@ -52,4 +52,21 @@ Random.seed!(123)
             @test logpdf.(td, y) ≈ logpdf_with_trans.(dist, x, true)
         end
     end
+
+    @testset "Composition" begin
+        d = Beta()
+        td = transformed(d)
+
+        x = rand(d)
+        y = transform(td.transform, x)
+
+        forward(td.transform, x)
+        forward(inv(td.transform), y)
+
+        b = Bijectors.compose(td.transform, Bijectors.Identity())
+        ib = inv(b)
+
+        @test forward(b, x) == forward(td.transform, x)
+        @test forward(ib, y) == forward(inv(td.transform), y)
+    end
 end

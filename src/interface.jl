@@ -7,6 +7,8 @@ using Turing
 import Random: AbstractRNG
 import Distributions: logpdf, rand, rand!, _rand!, _logpdf
 
+import Base: inv
+
 
 abstract type Bijector end
 abstract type ADBijector{AD} <: Bijector end
@@ -17,23 +19,34 @@ end
 
 Broadcast.broadcastable(b::Bijector) = Ref(b)
 
+"Computes the log(abs(det(J(x)))) where J is the jacobian of the transform."
 logabsdetjac(b::T1, y::T2) where {T<:Bijector,T1<:Inversed{T},T2} = 
     error("`logabsdetjac(b::$T1, y::$T2)` is not implemented.")
+
+"Transforms the input using the bijector."
+transform(b::T1, y::T2) where {T<:Bijector,T1<:Inversed{T},T2} =
+    error("`transform(b::$T1, y::$T2)` is not implemented.")
+
+"Computes both `transform` and `logabsdetjac` in one forward pass."
 forward(b::T1, y::T2) where {T<:Bijector,T1<:Inversed{T},T2} = 
     error("`forward(b::$T1, y::$T2)` is not implemented.")
-transform(b::T1, y::T2) where {T<:Bijector,T1<:Inversed{T},T2} = 
-    error("`transform(b::$T1, y::$T2)` is not implemented.")
 
 
 transform(b::Bijector) = x -> transform(b, x)
-forward(ib::Inversed{<: Bijector}, y) = (transform(ib, y), logabsdetjac(ib, y))
+
+# default `forward` implementations; should in general implement efficient way
+# of computing both `transform` and `logabsdetjac` together.
+forward(b::Bijector, x) = (rv=transform(b, x), logabsdetjac=logabsdetjac(b, x))
+forward(ib::Inversed{<: Bijector}, y) = (rv=transform(ib, y), logabsdetjac=logabsdetjac(ib, y))
+
+# defaults implementation for inverses
 logabsdetjac(ib::Inversed{<: Bijector}, y) = - logabsdetjac(ib.orig, transform(ib, y))
 
-Base.inv(b::Bijector) = Inversed(b)
-Base.inv(ib::Inversed{<:Bijector}) = ib.orig
+inv(b::Bijector) = Inversed(b)
+inv(ib::Inversed{<:Bijector}) = ib.orig
 
+# AD implementations
 
-# TODO: rename? a bit of a mouthful
 # TODO: allow batch-computation, especially for univariate case
 "Computes the absolute determinant of the Jacobian of the inverse-transformation."
 function logabsdetjac(b::ADBijector{<: Turing.Core.ForwardDiffAD}, y::Real)
@@ -51,11 +64,30 @@ function logabsdetjac(b::ADBijector{<: Turing.Core.TrackerAD}, y::AbstractVector
     logabsdet(Tracker.jacobian(z -> transform(b, z), y))[1]
 end
 
+# Composition
+
+struct Composed{B<:Bijector} <: Bijector
+    ts::Vector{B}
+end
+
+compose(ts...) = Composed([ts...])
+
+inv(ct::Composed{B}) where {B<:Bijector} = Composed(map(inv, reverse(ct.ts)))
+
+function forward(ct::Composed{<:Bijector}, x)
+    res = (rv=x, logabsdetjac=0)
+    for t in ct.ts
+        res′ = forward(t, res.rv)
+        res = (rv=res′.rv, logabsdetjac=res.logabsdetjac + res′.logabsdetjac)
+    end
+    return res
+end
+
 # Example bijector
 struct Identity <: Bijector end
 transform(::Identity, x) = x
 transform(::Inversed{Identity}, y) = y
-forward(::Identity, x) = (x, zero(x))
+forward(::Identity, x) = (rv=x, logabsdetjac=zero(x))
 logabsdetjac(::Identity, y::T) where T <: Real = zero(T)
 logabsdetjac(::Identity, y::AbstractVector{T}) where T <: Real = zero(T)
 
