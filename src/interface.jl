@@ -83,11 +83,17 @@ function compose(ts...)
                 push!(res, b_)
             end
         else
-            push!(res, b)
+            # TODO: do we want this?
+            if (length(res) > 0) && (res[end] == inv(b))
+                # remove if inverse
+                pop!(res)
+            else
+                push!(res, b)
+            end
         end
     end
 
-    Composed([res...])
+    length(res) == 0 ? Identity() : Composed([res...])
 end
 
 # The transformation of `Composed` applies functions left-to-right
