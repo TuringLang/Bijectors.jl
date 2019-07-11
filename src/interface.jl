@@ -152,7 +152,7 @@ struct Logit{T<:Real} <: Bijector
 end
 
 transform(b::Logit, x::Real) = logit((x - b.a) / (b.b - b.a))
-transform(b::Inversed{Logit{<:Real}}, y::Real) = (b.b - b.a) * logistic(y) + b.a
+transform(ib::Inversed{Logit{T}}, y::Real) where T <: Real = (ib.orig.b - ib.orig.a) * logistic(y) + ib.orig.a
 (b::Logit)(x) = transform(b, x)
 
 logabsdetjac(b::Logit{<:Real}, x::Real) = log((x - b.a) * (b.b - x) / (b.b - b.a))
