@@ -7,7 +7,7 @@ using Turing
 import Random: AbstractRNG
 import Distributions: logpdf, rand, rand!, _rand!, _logpdf
 
-import Base: inv
+import Base: inv, ∘
 
 
 abstract type Bijector end
@@ -33,6 +33,7 @@ forward(b::T1, y::T2) where {T<:Bijector,T1<:Inversed{T},T2} =
 
 
 transform(b::Bijector) = x -> transform(b, x)
+(ib::Inversed{<: Bijector})(y) = transform(ib, y)
 
 # default `forward` implementations; should in general implement efficient way
 # of computing both `transform` and `logabsdetjac` together.
@@ -64,34 +65,77 @@ function logabsdetjac(b::ADBijector{<: Turing.Core.TrackerAD}, y::AbstractVector
     logabsdet(Tracker.jacobian(z -> transform(b, z), y))[1]
 end
 
-# Composition
+###############
+# Composition #
+###############
 
 struct Composed{B<:Bijector} <: Bijector
     ts::Vector{B}
 end
 
-compose(ts...) = Composed([ts...])
+function compose(ts...)
+    res = []
+    
+    for b ∈ ts
+        if b isa Composed
+            # "lift" the transformations
+            for b_ ∈ b.ts
+                push!(res, b_)
+            end
+        else
+            push!(res, b)
+        end
+    end
+
+    Composed([res...])
+end
+
+# The transformation of `Composed` applies functions left-to-right
+# but in mathematics we usually go from right-to-left; this reversal ensures that
+# when we use the mathematical composition ∘ we get the expected behavior.
+# TODO: change behavior of `transform` of `Composed`?
+∘(b1::B1, b2::B2) where {B1 <: Bijector, B2 <: Bijector} = Bijectors.compose(b2, b1)
 
 inv(ct::Composed{B}) where {B<:Bijector} = Composed(map(inv, reverse(ct.ts)))
 
-function forward(ct::Composed{<:Bijector}, x)
+# TODO: can we implement this recursively, and with aggressive inlining, make this type-stable?
+function transform(cb::Composed{<: Bijector}, x)
+    res = x
+    for b ∈ cb.ts
+        res = transform(b, res)
+    end
+
+    return res
+end
+
+(cb::Composed{<: Bijector})(x) = transform(cb, x)
+
+function forward(cb::Composed{<:Bijector}, x)
     res = (rv=x, logabsdetjac=0)
-    for t in ct.ts
+    for t in cb.ts
         res′ = forward(t, res.rv)
         res = (rv=res′.rv, logabsdetjac=res.logabsdetjac + res′.logabsdetjac)
     end
     return res
 end
 
-# Example bijector
+##############################
+# Example bijector: Identity #
+##############################
+
 struct Identity <: Bijector end
 transform(::Identity, x) = x
 transform(::Inversed{Identity}, y) = y
+(b::Identity)(x) = transform(b, x)
+
 forward(::Identity, x) = (rv=x, logabsdetjac=zero(x))
+
 logabsdetjac(::Identity, y::T) where T <: Real = zero(T)
 logabsdetjac(::Identity, y::AbstractVector{T}) where T <: Real = zero(T)
 
-# Simply uses `link` and `invlink` as transforms with AD to get jacobian
+#######################################################
+# Constrained to unconstrained distribution bijectors #
+#######################################################
 struct DistributionBijector{AD, D} <: ADBijector{AD} where D <: Distribution
     dist::D
 end
@@ -99,8 +143,10 @@ function DistributionBijector(dist::D) where D <: Distribution
     DistributionBijector{Turing.Core.ADBackend(), D}(dist)
 end
 
+# Simply uses `link` and `invlink` as transforms with AD to get jacobian
 transform(b::DistributionBijector, x) = link(b.dist, x)
 transform(ib::Inversed{<: DistributionBijector}, y) = invlink(ib.orig.dist, y)
+(b::DistributionBijector)(x) = transform(b, x)
 
 # Transformed distributions
 struct UnivariateTransformed{D, B} <: Distribution{Univariate, Continuous} where {D <: UnivariateDistribution, B <: Bijector}

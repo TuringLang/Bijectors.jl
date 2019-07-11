@@ -60,13 +60,34 @@ Random.seed!(123)
         x = rand(d)
         y = transform(td.transform, x)
 
-        forward(td.transform, x)
-        forward(inv(td.transform), y)
-
         b = Bijectors.compose(td.transform, Bijectors.Identity())
         ib = inv(b)
 
         @test forward(b, x) == forward(td.transform, x)
         @test forward(ib, y) == forward(inv(td.transform), y)
+
+        # inverse works fine for composition
+        cb = b ∘ ib
+        @test transform(cb, x) ≈ x
+
+        cb2 = cb ∘ cb
+        @test transform(cb, x) ≈ x
+
+        # order of composed evaluation
+        b1 = DistributionBijector(d)
+        b2 = DistributionBijector(Gamma())
+
+        cb = b1 ∘ b2
+        @test cb(x) ≈ b1(b2(x))
+    end
+
+    @testset "Example: ADVI" begin
+        # Usage in ADVI
+        d = Beta()
+        b = DistributionBijector(d)    # [0, 1] → ℝ
+        ib = inv(b)                    # ℝ → [0, 1]
+        td = transformed(Normal(), ib) # x ∼ 𝓝(0, 1) then f(x) ∈ [0, 1]
+        x = rand(td)                   # ∈ [0, 1]
+        @test 0 ≤ x ≤ 1                      # => true
     end
 end
