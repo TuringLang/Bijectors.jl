@@ -93,7 +93,7 @@ function compose(ts...)
         end
     end
 
-    length(res) == 0 ? Identity() : Composed([res...])
+    length(res) == 0 ? IdentityBijector : Composed([res...])
 end
 
 # The transformation of `Composed` applies functions left-to-right
@@ -139,6 +139,8 @@ forward(::Identity, x) = (rv=x, logabsdetjac=zero(x))
 logabsdetjac(::Identity, y::T) where T <: Real = zero(T)
 logabsdetjac(::Identity, y::AbstractVector{T}) where T <: Real = zero(T)
 
+const IdentityBijector = Identity()
+
 #######################################################
 # Constrained to unconstrained distribution bijectors #
 #######################################################
@@ -173,7 +175,7 @@ transformed(d::MultivariateDistribution, b::Bijector) = MultivariateTransformed(
 transformed(d) = transformed(d, DistributionBijector(d))
 
 # can specialize further by
-transformed(d::Normal) = transformed(d, Identity())
+transformed(d::Normal) = transformed(d, IdentityBijector)
 
 ##############################
 # Distributions.jl interface #
