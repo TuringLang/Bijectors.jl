@@ -141,6 +141,24 @@ logabsdetjac(::Identity, y::AbstractVector{T}) where T <: Real = zero(T)
 
 const IdentityBijector = Identity()
 
+###############################
+# Example: Logit and Logistic #
+###############################
+using StatsFuns: logit, logistic
+
+struct Logit{T<:Real} <: Bijector
+    a::T
+    b::T
+end
+
+transform(b::Logit, x::Real) = logit((x - b.a) / (b.b - b.a))
+transform(b::Inversed{Logit{<:Real}}, y::Real) = (b.b - b.a) * logistic(y) + b.a
+(b::Logit)(x) = transform(b, x)
+
+logabsdetjac(b::Logit{<:Real}, x::Real) = log((x - b.a) * (b.b - x) / (b.b - b.a))
+forward(b::Logit, x::Real) = (rv=transform(b, x), logabsdetjac=-logabsdetjac(b, x))
+
+
 #######################################################
 # Constrained to unconstrained distribution bijectors #
 #######################################################
@@ -155,6 +173,9 @@ end
 transform(b::DistributionBijector, x) = link(b.dist, x)
 transform(ib::Inversed{<: DistributionBijector}, y) = invlink(ib.orig.dist, y)
 (b::DistributionBijector)(x) = transform(b, x)
+
+"Returns the constrained-to-unconstrained bijector for distribution `d`."
+bijector(d::Distribution) = DistributionBijector(d)
 
 # Transformed distributions
 struct UnivariateTransformed{D, B} <: Distribution{Univariate, Continuous} where {D <: UnivariateDistribution, B <: Bijector}
@@ -171,11 +192,11 @@ end
 # Can implement these on a case-by-case basis
 transformed(d::UnivariateDistribution, b::Bijector) = UnivariateTransformed(d, b)
 transformed(d::MultivariateDistribution, b::Bijector) = MultivariateTransformed(d, b)
-
-transformed(d) = transformed(d, DistributionBijector(d))
+transformed(d) = transformed(d, bijector(d))
 
 # can specialize further by
-transformed(d::Normal) = transformed(d, IdentityBijector)
+bijector(d::Normal) = IdentityBijector
+bijector(d::Beta{T}) where T <: Real = Logit(zero(T), one(T))
 
 ##############################
 # Distributions.jl interface #

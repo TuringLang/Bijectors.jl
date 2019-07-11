@@ -25,6 +25,7 @@ export  TransformDistribution,
         compose,
         Identity,
         DistributionBijector,
+        bijector,
         transformed,
         UnivariateTransformed,
         MultivariateTransformed
