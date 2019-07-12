@@ -213,6 +213,44 @@ function link(
     return y
 end
 
+function link_jacobian(
+    d::SimplexDistribution, 
+    x::AbstractVector{T}, 
+    ::Type{Val{proj}} = Val{true}
+) where {T<:Real, proj}
+    y, K = similar(x), length(x)
+    dydxt = similar(x, length(x), length(x))
+    dydxt .= 0
+    ϵ = _eps(T)
+    sum_tmp = zero(T)
+
+    @inbounds z = x[1] * (one(T) - 2ϵ) + ϵ # z ∈ [ϵ, 1-ϵ]
+    @inbounds y[1] = StatsFuns.logit(z) + log(T(K - 1))
+    dydxt[1,1] = (1/z + 1/(1-z)) * (one(T) - 2ϵ)
+    @inbounds @simd for k in 2:(K - 1)
+        sum_tmp += x[k - 1]
+        # z ∈ [ϵ, 1-ϵ]
+        # x[k] = 0 && sum_tmp = 1 -> z ≈ 1
+        z = (x[k] + ϵ)*(one(T) - 2ϵ)/((one(T) + ϵ) - sum_tmp)
+        y[k] = StatsFuns.logit(z) + log(T(K - k))
+	    dydxt[k,k] = (1/z + 1/(1-z)) * (one(T) - 2ϵ)/((one(T) + ϵ) - sum_tmp)
+	    for i in 1:k-1
+		    dydxt[i,k] = (1/z + 1/(1-z)) * (x[k] + ϵ)*(one(T) - 2ϵ)/((one(T) + ϵ) - sum_tmp)^2
+		end
+    end
+    @inbounds sum_tmp += x[K - 1]
+    @inbounds if proj
+        y[K] = zero(T)
+    else
+        y[K] = one(T) - sum_tmp - x[K]
+	    for i in 1:K
+		    dydxt[i,K] = -1
+		end        
+    end
+
+    return UpperTriangular(dydxt)'
+end
+
 # Vectorised implementation of the above.
 function link(
     d::SimplexDistribution,
@@ -265,6 +303,58 @@ function invlink(
         x[K] = _clamp(one(T) - sum_tmp - y[K], d)
     end
     return x
+end
+
+function invlink_jacobian(
+    d::SimplexDistribution, 
+    y::AbstractVector{T}, 
+    ::Type{Val{proj}} = Val{true}
+) where {T<:Real, proj}
+    x, K = similar(y), length(y)
+    dxdy = similar(y, length(y), length(y))
+    dxdy .= 0
+
+    ϵ = _eps(T)
+    @inbounds z = StatsFuns.logistic(y[1] - log(T(K - 1)))
+    unclamped_x = (z - ϵ) / (one(T) - 2ϵ)
+    @inbounds x[1] = _clamp(unclamped_x, d)
+    if unclamped_x == x[1]
+        dxdy[1,1] = z * (1 - z) / (one(T) - 2ϵ)
+    end
+    sum_tmp = zero(T)
+    @inbounds @simd for k = 2:(K - 1)
+        z = StatsFuns.logistic(y[k] - log(T(K - k)))
+        sum_tmp += x[k-1]
+        unclamped_x = ((one(T) + ϵ) - sum_tmp) / (one(T) - 2ϵ) * z - ϵ
+        x[k] = _clamp(unclamped_x, d)
+        if unclamped_x == x[k]
+            dxdy[k,k] = z * (1 - z) * ((one(T) + ϵ) - sum_tmp) / (one(T) - 2ϵ)
+            for i in 1:k-1
+                for j in i:k-1
+                    dxdy[k,i] += -dxdy[j,i] * z / (one(T) - 2ϵ)
+                end
+            end
+        end
+    end
+    @inbounds sum_tmp += x[K - 1]
+    @inbounds if proj
+    	unclamped_x = one(T) - sum_tmp
+        x[K] = _clamp(unclamped_x, d)
+    else
+    	unclamped_x = one(T) - sum_tmp - y[K]
+        x[K] = _clamp(unclamped_x, d)
+        if unclamped_x == x[K]
+            dxdy[K,K] = -1
+        end
+    end
+    if unclamped_x == x[K]
+        for i in 1:K-1
+            for j in i:K-1
+                dxdy[K,i] += -dxdy[j,i]
+            end
+        end
+    end
+    return LowerTriangular(dxdy)
 end
 
 # Vectorised implementation of the above.
