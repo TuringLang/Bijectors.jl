@@ -222,13 +222,13 @@ function link_jacobian(
 ) where {T<:Real, proj}
     y, K = similar(x), length(x)
     dydxt = similar(x, length(x), length(x))
-    dydxt .= 0
+    @inbounds dydxt .= 0
     ϵ = _eps(T)
     sum_tmp = zero(T)
 
     @inbounds z = x[1] * (one(T) - 2ϵ) + ϵ # z ∈ [ϵ, 1-ϵ]
     @inbounds y[1] = StatsFuns.logit(z) + log(T(K - 1))
-    dydxt[1,1] = (1/z + 1/(1-z)) * (one(T) - 2ϵ)
+    @inbounds dydxt[1,1] = (1/z + 1/(1-z)) * (one(T) - 2ϵ)
     @inbounds @simd for k in 2:(K - 1)
         sum_tmp += x[k - 1]
         # z ∈ [ϵ, 1-ϵ]
@@ -245,7 +245,7 @@ function link_jacobian(
         y[K] = zero(T)
     else
         y[K] = one(T) - sum_tmp - x[K]
-	    for i in 1:K
+	    @simd for i in 1:K
 		    dydxt[i,K] = -1
 		end        
     end
@@ -314,17 +314,17 @@ function invlink_jacobian(
 ) where {T<:Real, proj}
     x, K = similar(y), length(y)
     dxdy = similar(y, length(y), length(y))
-    dxdy .= 0
+    @inbounds dxdy .= 0
 
     ϵ = _eps(T)
     @inbounds z = StatsFuns.logistic(y[1] - log(T(K - 1)))
     unclamped_x = (z - ϵ) / (one(T) - 2ϵ)
     @inbounds x[1] = _clamp(unclamped_x, d)
-    if unclamped_x == x[1]
+    @inbounds if unclamped_x == x[1]
         dxdy[1,1] = z * (1 - z) / (one(T) - 2ϵ)
     end
     sum_tmp = zero(T)
-    @inbounds @simd for k = 2:(K - 1)
+    @inbounds for k = 2:(K - 1)
         z = StatsFuns.logistic(y[k] - log(T(K - k)))
         sum_tmp += x[k-1]
         unclamped_x = ((one(T) + ϵ) - sum_tmp) / (one(T) - 2ϵ) * z - ϵ
@@ -349,9 +349,9 @@ function invlink_jacobian(
             dxdy[K,K] = -1
         end
     end
-    if unclamped_x == x[K]
+    @inbounds if unclamped_x == x[K]
         for i in 1:K-1
-            for j in i:K-1
+            @simd for j in i:K-1
                 dxdy[K,i] += -dxdy[j,i]
             end
         end
