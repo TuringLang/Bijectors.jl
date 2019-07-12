@@ -100,7 +100,7 @@ end
 # but in mathematics we usually go from right-to-left; this reversal ensures that
 # when we use the mathematical composition ∘ we get the expected behavior.
 # TODO: change behavior of `transform` of `Composed`?
-∘(b1::B1, b2::B2) where {B1 <: Bijector, B2 <: Bijector} = Bijectors.compose(b2, b1)
+∘(b1::B1, b2::B2) where {B1 <: Bijector, B2 <: Bijector} = compose(b2, b1)
 
 inv(ct::Composed{B}) where {B<:Bijector} = Composed(map(inv, reverse(ct.ts)))
 
