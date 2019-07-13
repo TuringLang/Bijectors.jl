@@ -60,6 +60,11 @@ Random.seed!(123)
             
             @test abs(det(Bijectors.jacobian(b, x))) > 0
             @test logabsdetjac(b, x) ≠ Inf
+
+            y = transform(b, x)
+            b⁻¹ = inv(b)
+            @test abs(det(Bijectors.jacobian(b⁻¹, y))) > 0
+            @test logabsdetjac(b⁻¹, y) ≠ Inf
         end
 
         @testset "$dist: Tracker AD" begin
@@ -68,6 +73,11 @@ Random.seed!(123)
             
             @test abs(det(Bijectors.jacobian(b, x))) > 0
             @test logabsdetjac(b, x) ≠ Inf
+
+            y = transform(b, x)
+            b⁻¹ = inv(b)
+            @test abs(det(Bijectors.jacobian(b⁻¹, y))) > 0
+            @test logabsdetjac(b⁻¹, y) ≠ Inf
         end
     end
 

@@ -47,18 +47,23 @@ inv(b::Bijector) = Inversed(b)
 inv(ib::Inversed{<:Bijector}) = ib.orig
 
 # AD implementations
-# FIXME: `Inverse` of `ADBijector` is NOT a an `ADBijector`
 function jacobian(b::ADBijector{<: Turing.Core.ForwardDiffAD}, y::Real)
     ForwardDiff.derivative(z -> transform(b, z), y)
 end
-function jacobian(b::ADBijector{<: Turing.Core.ForwardDiffAD}, y::AbstractVector{<: Real})
+function jacobian(b::Inversed{<: ADBijector{<: Turing.Core.ForwardDiffAD}}, y::Real)
+    ForwardDiff.derivative(z -> transform(b, z), y)
+end
+function jacobian(b::Inversed{<: ADBijector{<: Turing.Core.ForwardDiffAD}}, y::AbstractVector{<: Real})
     ForwardDiff.jacobian(z -> transform(b, z), y)
 end
 
 function jacobian(b::ADBijector{<: Turing.Core.TrackerAD}, y::Real)
     Tracker.gradient(z -> transform(b, z), y)[1]
 end
-function jacobian(b::ADBijector{<: Turing.Core.TrackerAD}, y::AbstractVector{<: Real})
+function jacobian(b::Inversed{<: ADBijector{<: Turing.Core.TrackerAD}}, y::Real)
+    Tracker.gradient(z -> transform(b, z), y)[1]
+end
+function jacobian(b::Inversed{<: ADBijector{<: Turing.Core.TrackerAD}}, y::AbstractVector{<: Real})
     Tracker.jacobian(z -> transform(b, z), y)
 end
 
