@@ -2,6 +2,8 @@ using Revise
 using Test
 using Bijectors
 using Random
+using Turing
+using LinearAlgebra
 
 Random.seed!(123)
 
@@ -38,7 +40,7 @@ Random.seed!(123)
     ]
     
     for dist in uni_dists
-        @testset "$dist" begin
+        @testset "$dist: dist" begin
             td = transformed(dist)
 
             # single sample
@@ -46,10 +48,26 @@ Random.seed!(123)
             x = transform(inv(td.transform), y)
             @test logpdf(td, y) ≈ logpdf_with_trans(dist, x, true)
 
-            # # multi-sample
+            # multi-sample
             y = rand(td, 10)
             x = transform.(inv(td.transform), y)
             @test logpdf.(td, y) ≈ logpdf_with_trans.(dist, x, true)
+        end
+
+        @testset "$dist: ForwardDiff AD" begin
+            x = rand(dist)
+            b = DistributionBijector{Turing.Core.ADBackend(:forward_diff), typeof(dist)}(dist)
+            
+            @test abs(det(Bijectors.jacobian(b, x))) > 0
+            @test logabsdetjac(b, x) ≠ Inf
+        end
+
+        @testset "$dist: Tracker AD" begin
+            x = rand(dist)
+            b = DistributionBijector{Turing.Core.ADBackend(:reverse_diff), typeof(dist)}(dist)
+            
+            @test abs(det(Bijectors.jacobian(b, x))) > 0
+            @test logabsdetjac(b, x) ≠ Inf
         end
     end
 
