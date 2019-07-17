@@ -2,13 +2,39 @@ using Distributions, Bijectors
 using ForwardDiff
 using Tracker
 
-using Turing
+import Base: inv, ∘
 
 import Random: AbstractRNG
 import Distributions: logpdf, rand, rand!, _rand!, _logpdf
 
-import Base: inv, ∘
+#######################################
+# AD stuff "extracted" from Turing.jl #
+#######################################
 
+abstract type ADBackend end
+struct ForwardDiffAD <: ADBackend end
+struct TrackerAD <: ADBackend end
+
+const ADBACKEND = Ref(:forward)
+function setadbackend(backend_sym)
+    @assert backend_sym == :forward_diff || backend_sym == :reverse_diff
+    backend_sym == :forward_diff && CHUNKSIZE[] == 0 && setchunksize(40)
+    ADBACKEND[] = backend_sym
+end
+
+ADBackend() = ADBackend(ADBACKEND[])
+ADBackend(T::Symbol) = ADBackend(Val(T))
+function ADBackend(::Val{T}) where {T}
+    if T === :forward_diff
+        return ForwardDiffAD
+    else
+        return TrackerAD
+    end
+end
+
+######################
+# Bijector interface #
+######################
 
 abstract type Bijector end
 abstract type ADBijector{AD} <: Bijector end
@@ -47,23 +73,23 @@ inv(b::Bijector) = Inversed(b)
 inv(ib::Inversed{<:Bijector}) = ib.orig
 
 # AD implementations
-function jacobian(b::ADBijector{<: Turing.Core.ForwardDiffAD}, y::Real)
+function jacobian(b::ADBijector{<: ForwardDiffAD}, y::Real)
     ForwardDiff.derivative(z -> transform(b, z), y)
 end
-function jacobian(b::Inversed{<: ADBijector{<: Turing.Core.ForwardDiffAD}}, y::Real)
+function jacobian(b::Inversed{<: ADBijector{<: ForwardDiffAD}}, y::Real)
     ForwardDiff.derivative(z -> transform(b, z), y)
 end
-function jacobian(b::Inversed{<: ADBijector{<: Turing.Core.ForwardDiffAD}}, y::AbstractVector{<: Real})
+function jacobian(b::Inversed{<: ADBijector{<: ForwardDiffAD}}, y::AbstractVector{<: Real})
     ForwardDiff.jacobian(z -> transform(b, z), y)
 end
 
-function jacobian(b::ADBijector{<: Turing.Core.TrackerAD}, y::Real)
+function jacobian(b::ADBijector{<: TrackerAD}, y::Real)
     Tracker.gradient(z -> transform(b, z), y)[1]
 end
-function jacobian(b::Inversed{<: ADBijector{<: Turing.Core.TrackerAD}}, y::Real)
+function jacobian(b::Inversed{<: ADBijector{<: TrackerAD}}, y::Real)
     Tracker.gradient(z -> transform(b, z), y)[1]
 end
-function jacobian(b::Inversed{<: ADBijector{<: Turing.Core.TrackerAD}}, y::AbstractVector{<: Real})
+function jacobian(b::Inversed{<: ADBijector{<: TrackerAD}}, y::AbstractVector{<: Real})
     Tracker.jacobian(z -> transform(b, z), y)
 end
 
@@ -177,7 +203,7 @@ struct DistributionBijector{AD, D} <: ADBijector{AD} where D <: Distribution
     dist::D
 end
 function DistributionBijector(dist::D) where D <: Distribution
-    DistributionBijector{Turing.Core.ADBackend(), D}(dist)
+    DistributionBijector{ADBackend(), D}(dist)
 end
 
 # Simply uses `link` and `invlink` as transforms with AD to get jacobian
