@@ -394,7 +394,7 @@ function logpdf_with_trans(
 )
     T = eltype(x)
     ϵ = _eps(T)
-    lp = logpdf(d, mappedarray(x->x+ϵ, x))
+    lp = logpdf(d, x .+ ϵ)
     if transform
         K = length(x)
 
