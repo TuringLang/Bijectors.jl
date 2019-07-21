@@ -323,36 +323,26 @@ end
 
 const PDMatDistribution = Union{InverseWishart, Wishart}
 
-function link(d::PDMatDistribution, X::AbstractMatrix{T}) where {T<:Real}
-    Y = cholesky(X).L
-    @inbounds @simd for m in 1:size(Y, 1)
-        Y[m, m] = log(Y[m, m])
-    end
-    return Matrix(Y)
+function link(d::PDMatDistribution, X::AbstractMatrix{<:Real})
+    Y = Matrix(cholesky(X).L)
+    Y[diagind(Y)] .= log.(view(Y, diagind(Y)))
+    return Y
 end
 
-function invlink(d::PDMatDistribution, Y::AbstractMatrix{T}) where {T<:Real}
-    X, dim = copy(Y), size(Y)
-    @inbounds @simd for m in 1:size(X, 1)
-        X[m, m] = exp(X[m, m])
-    end
-    Z = similar(X)
-    return mul!(Z, LowerTriangular(X), LowerTriangular(X)')
+function invlink(d::PDMatDistribution, Y::AbstractMatrix{<:Real})
+    X = copy(Y)
+    X[diagind(X)] .= exp.(view(X, diagind(X)))
+    return LowerTriangular(X) * LowerTriangular(X)'
 end
 
-function logpdf_with_trans(
-    d::PDMatDistribution, 
-    X::AbstractMatrix{<:Real}, 
-    transform::Bool
-)
-    T = eltype(X)
+function logpdf_with_trans(d::PDMatDistribution, X::AbstractMatrix{<:Real}, transform::Bool)
     lp = logpdf(d, X)
     if transform && isfinite(lp)
         U = cholesky(X).U
         @inbounds @simd for i in 1:dim(d)
             lp += (dim(d) - i + 2) * log(U[i, i])
         end
-        lp += dim(d) * log(T(2))
+        lp += dim(d) * log(eltype(X)(2))
     end
     return lp
 end
