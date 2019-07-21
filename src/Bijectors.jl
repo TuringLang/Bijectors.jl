@@ -339,10 +339,8 @@ function logpdf_with_trans(d::PDMatDistribution, X::AbstractMatrix{<:Real}, tran
     lp = logpdf(d, X)
     if transform && isfinite(lp)
         U = cholesky(X).U
-        @inbounds @simd for i in 1:dim(d)
-            lp += (dim(d) - i + 2) * log(U[i, i])
-        end
-        lp += dim(d) * log(eltype(X)(2))
+        lp += sum(i->(dim(d) - i + 2) * log(U[i, i]), 1:dim(d))
+        lp += dim(d) * log(2)
     end
     return lp
 end
