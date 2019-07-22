@@ -337,18 +337,24 @@ function invlink(d::PDMatDistribution, Y::AbstractMatrix{T}) where {T<:Real}
         X[m, m] = exp(X[m, m])
     end
     Z = similar(X)
-    return mul!(Z, LowerTriangular(X), LowerTriangular(X)')
+    return Symmetric(mul!(Z, LowerTriangular(X), LowerTriangular(X)'))
 end
 
 function logpdf_with_trans(
-    d::PDMatDistribution, 
+    d::Wishart, 
     X::AbstractMatrix{<:Real}, 
     transform::Bool
 )
     T = eltype(X)
-    lp = logpdf(d, X)
+    df = d.df
+    p = dim(d)
+    Xcf = cholesky(X, check=false)
+    if !issuccess(Xcf)
+        Xcf = cholesky(X + diagm(0 => fill(sqrt(eps(T)) * norm(X, Inf), size(X, 1))))
+    end
+    lp = 0.5 * ((df - (p + 1)) * logdet(Xcf) - tr(d.S \ X)) - d.c0
     if transform && isfinite(lp)
-        U = cholesky(X).U
+        U = Xcf.U
         @inbounds @simd for i in 1:dim(d)
             lp += (dim(d) - i + 2) * log(U[i, i])
         end
@@ -357,6 +363,30 @@ function logpdf_with_trans(
     return lp
 end
 
+function logpdf_with_trans(
+    d::InverseWishart, 
+    X::AbstractMatrix{<:Real}, 
+    transform::Bool
+)
+    T = eltype(X)
+    p = dim(d)
+    df = d.df
+    Xcf = cholesky(X, check=false)
+    if !issuccess(Xcf)
+        Xcf = cholesky(X + Diagonal(fill(eps(T), size(X, 1))))
+    end
+    # we use the fact: tr(Ψ * inv(X)) = tr(inv(X) * Ψ) = tr(X \ Ψ)
+    Ψ = Matrix(d.Ψ)
+    lp = -0.5 * ((df + p + 1) * logdet(Xcf) + tr(Xcf \ Ψ)) - d.c0
+    if transform && isfinite(lp)
+        U = Xcf.U
+        @inbounds @simd for i in 1:dim(d)
+            lp += (dim(d) - i + 2) * log(U[i, i])
+        end
+        lp += dim(d) * log(T(2))
+    end
+    return lp
+end
 
 ############################################
 # Defaults (assume identity link function) #
