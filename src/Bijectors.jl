@@ -328,7 +328,7 @@ function link(d::PDMatDistribution, X::AbstractMatrix{<:Real})
     return Y
 end
 
-function invlink(d::PDMatDistribution, Y::AbstractMatrix{T}) where {T<:Real}
+function invlink(d::PDMatDistribution, Y::AbstractMatrix{<:Real})
     X = copy(Y)
     X[diagind(X)] .= exp.(view(X, diagind(X)))
     return LowerTriangular(X) * LowerTriangular(X)'
