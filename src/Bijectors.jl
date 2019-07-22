@@ -335,47 +335,31 @@ function invlink(d::PDMatDistribution, Y::AbstractMatrix{T}) where {T<:Real}
 end
 
 function logpdf_with_trans(
-    d::Wishart, 
+    d::PDMatDistribution, 
     X::AbstractMatrix{<:Real}, 
     transform::Bool
 )
     T = eltype(X)
-    df = d.df
-    p = dim(d)
     Xcf = cholesky(X, check=false)
     if !issuccess(Xcf)
         Xcf = cholesky(X + (eps(T) * norm(X)) * I)
     end
-    lp = 0.5 * ((df - (p + 1)) * logdet(Xcf) - tr(d.S \ X)) - d.c0
+    lp = getlogp(d, Xcf, X)
     if transform && isfinite(lp)
         U = Xcf.U
-        lp += sum((dim(d) .- (1:dim(d)) .+ 2) .* log.(view(U, diagind(U))))
+        @inbounds @simd for i in 1:dim(d)
+            lp += (dim(d) - i + 2) * log(U[i, i])
+        end
         lp += dim(d) * log(T(2))
     end
     return lp
 end
-
-function logpdf_with_trans(
-    d::InverseWishart, 
-    X::AbstractMatrix{<:Real}, 
-    transform::Bool
-)
-    T = eltype(X)
-    p = dim(d)
-    df = d.df
-    Xcf = cholesky(X, check=false)
-    if !issuccess(Xcf)
-        Xcf = cholesky(X + (eps(T) * norm(X)) * I)
-    end
-    # we use the fact: tr(Ψ * inv(X)) = tr(inv(X) * Ψ) = tr(X \ Ψ)
+function getlogp(d::Wishart, Xcf, X)
+    return 0.5 * ((d.df - (dim(d) + 1)) * logdet(Xcf) - tr(d.S \ X)) - d.c0
+end
+function getlogp(d::InverseWishart, Xcf, X)
     Ψ = Matrix(d.Ψ)
-    lp = -0.5 * ((df + p + 1) * logdet(Xcf) + tr(Xcf \ Ψ)) - d.c0
-    if transform && isfinite(lp)
-        U = Xcf.U
-        lp += sum((dim(d) .- (1:dim(d)) .+ 2) .* log.(view(U, diagind(U))))
-        lp += dim(d) * log(T(2))
-    end
-    return lp
+    return -0.5 * ((d.df + dim(d) + 1) * logdet(Xcf) + tr(Xcf \ Ψ)) - d.c0
 end
 
 ############################################
