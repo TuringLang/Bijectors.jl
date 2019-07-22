@@ -7,7 +7,6 @@ using LinearAlgebra
 using MappedArrays
 
 export  TransformDistribution,
-        RealDistribution,
         PositiveDistribution,
         UnitDistribution,
         SimplexDistribution,
@@ -350,7 +349,7 @@ function logpdf_with_trans(
     p = dim(d)
     Xcf = cholesky(X, check=false)
     if !issuccess(Xcf)
-        Xcf = cholesky(X + diagm(0 => fill(sqrt(eps(T)) * norm(X, Inf), size(X, 1))))
+        Xcf = cholesky(X + (eps(T) * norm(X)) * I)
     end
     lp = 0.5 * ((df - (p + 1)) * logdet(Xcf) - tr(d.S \ X)) - d.c0
     if transform && isfinite(lp)
@@ -373,7 +372,7 @@ function logpdf_with_trans(
     df = d.df
     Xcf = cholesky(X, check=false)
     if !issuccess(Xcf)
-        Xcf = cholesky(X + Diagonal(fill(eps(T), size(X, 1))))
+        Xcf = cholesky(X + (eps(T) * norm(X)) * I)
     end
     # we use the fact: tr(Ψ * inv(X)) = tr(inv(X) * Ψ) = tr(X \ Ψ)
     Ψ = Matrix(d.Ψ)
