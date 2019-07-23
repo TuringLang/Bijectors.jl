@@ -4,13 +4,15 @@ using Random
 using Flux
 
 
-#########################################################################################################################
-# Planar and Radial Flows : Variational Inference with Normalizing Flows, D. Rezende, S. Mohamed(2015) arXiv:1505.05770 #
-#########################################################################################################################
+################################################################################
+#                            Planar and Radial Flows                           #
+#             Ref: Variational Inference with Normalizing Flows,               #
+#               D. Rezende, S. Mohamed(2015) arXiv:1505.05770                  #
+################################################################################
 
 mutable struct PlanarLayer <: Bijector
     w
-    
+
     u
     u_hat
     b
@@ -28,7 +30,8 @@ function update_u_hat(u, w)
 end
 
 function update_u_hat!(flow::PlanarLayer)
-    flow.u_hat = flow.u + (m(transpose(flow.w)*flow.u) - transpose(flow.w)*flow.u)[1]*flow.w/(norm(flow.w,2)^2)
+    flow.u_hat = flow.u + (m(transpose(flow.w)*flow.u) \
+    - transpose(flow.w)*flow.u)[1]*flow.w/(norm(flow.w,2)^2)
 end
 
 
@@ -83,6 +86,7 @@ function forward(flow::T, z) where {T<:RadialLayer}
     β_hat = -α + softplus(flow.β)
     r = norm.(z - flow.z_not, 1)
     d = size(flow.z_not)[1]
-    log_det_jacobian = log.(((1 + β_hat*h(α, r)).^(d-1)) .* ( 1 +  β_hat*h(α, r) + β_hat*dh(α, r)*r))
+    log_det_jacobian = log.(((1 + β_hat*h(α, r)).^(d-1)) \
+    .* ( 1 +  β_hat*h(α, r) + β_hat*dh(α, r)*r))
     return (rv=transformed, logabsdetjacob=log_det_jacobian)
 end
