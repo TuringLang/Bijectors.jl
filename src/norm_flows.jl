@@ -1,8 +1,6 @@
 using Distributions
 using LinearAlgebra
 using Random
-using Flux
-
 
 ################################################################################
 #                            Planar and Radial Flows                           #
@@ -19,7 +17,7 @@ mutable struct PlanarLayer <: Bijector
 end
 
 mutable struct RadialLayer <: Bijector
-    α
+    α_
     β
     z_not
 end
@@ -30,8 +28,7 @@ function update_u_hat(u, w)
 end
 
 function update_u_hat!(flow::PlanarLayer)
-    flow.u_hat = flow.u + (m(transpose(flow.w)*flow.u) \
-    - transpose(flow.w)*flow.u)[1]*flow.w/(norm(flow.w,2)^2)
+    flow.u_hat = flow.u + (m(transpose(flow.w)*flow.u) - transpose(flow.w)*flow.u)[1]*flow.w/(norm(flow.w,2)^2)
 end
 
 
@@ -44,10 +41,10 @@ function PlanarLayer(dims::Int)
 end
 
 function RadialLayer(dims::Int)
-    α_ = params(randn(1))
-    β = params(randn(1))
+    α_ = param(randn(1))
+    β = param(randn(1))
     z_not = param(randn(dims, 1))
-    return RadialLayer(α, β, z_not)
+    return RadialLayer(α_, β, z_not)
 end
 
 m(x) = -1 .+ log.(1 .+ exp.(x)) #for planar flow
@@ -64,8 +61,8 @@ end
 function transform(flow::RadialLayer, z)
     α = softplus(flow.α_)
     β_hat = -α + softplus(flow.β)
-    r = norm.(z - flow.z_not, 1)
-    return z + β_hat*h(α, r)*(z - flow.z_not)
+    r = norm.(z .- flow.z_not, 1)
+    return z + β_hat.*h(α, r).*(z .- flow.z_not)
 end
 
 function forward(flow::T, z) where {T<:PlanarLayer}
@@ -75,7 +72,7 @@ function forward(flow::T, z) where {T<:PlanarLayer}
     psi = ψ(transformed, flow.w, flow.b)
     log_det_jacobian = log.(abs.(1.0 .+ transpose(psi)*flow.u_hat))
 
-    return (rv=transformed, logabsdetjacob=Bijector)
+    return (rv=transformed, logabsdetjacob=log_det_jacobian)
 end
 
 
@@ -84,9 +81,8 @@ function forward(flow::T, z) where {T<:RadialLayer}
     transformed = transform(flow, z)
     α = softplus(flow.α_)
     β_hat = -α + softplus(flow.β)
-    r = norm.(z - flow.z_not, 1)
+    r = norm.(z .- flow.z_not, 1)
     d = size(flow.z_not)[1]
-    log_det_jacobian = log.(((1 + β_hat*h(α, r)).^(d-1)) \
-    .* ( 1 +  β_hat*h(α, r) + β_hat*dh(α, r)*r))
+    log_det_jacobian = log.(((1.0 .+ β_hat.*h(α, r)).^(d-1)) .* ( 1.0 .+  β_hat.*h(α, r) + β_hat.*dh(α, r).*r))
     return (rv=transformed, logabsdetjacob=log_det_jacobian)
 end
