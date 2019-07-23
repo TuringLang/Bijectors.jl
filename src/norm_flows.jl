@@ -52,7 +52,7 @@ dtanh(x) = 1 .- (tanh.(x)).^2 #for planar flow
 ψ(z, w, b) = dtanh(transpose(w)*z .+ b).*w #for planar flow
 softplus(x) = log.(1 .+ exp.(x)) #for radial flow
 h(α, r) = 1 ./ (α .+ r) #for radial flow
-dh(α, r) = -dh(α, r).^2 #for radial flow
+dh(α, r) = -h(α, r).^2 #for radial flow
 
 function transform(flow::PlanarLayer, z)
     return z + flow.u_hat*tanh.(transpose(flow.w)*z .+ flow.b)
@@ -81,7 +81,7 @@ function forward(flow::T, z) where {T<:RadialLayer}
     transformed = transform(flow, z)
     α = softplus(flow.α_)
     β_hat = -α + softplus(flow.β)
-    r = norm.(z .- flow.z_not, 1)
+    r = transpose(norm.([z[:,i] .- flow.z_not[:,:] for i in 1:size(z)[2]], 1))
     d = size(flow.z_not)[1]
     log_det_jacobian = log.(((1.0 .+ β_hat.*h(α, r)).^(d-1)) .* ( 1.0 .+  β_hat.*h(α, r) + β_hat.*dh(α, r).*r))
     return (rv=transformed, logabsdetjacob=log_det_jacobian)
