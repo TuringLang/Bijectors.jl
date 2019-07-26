@@ -2,7 +2,6 @@ using Revise
 using Test
 using Bijectors
 using Random
-using Turing
 using LinearAlgebra
 
 Random.seed!(123)
@@ -56,7 +55,7 @@ Random.seed!(123)
 
         @testset "$dist: ForwardDiff AD" begin
             x = rand(dist)
-            b = DistributionBijector{Turing.Core.ADBackend(:forward_diff), typeof(dist)}(dist)
+            b = DistributionBijector{Bijectors.ADBackend(:forward_diff), typeof(dist)}(dist)
             
             @test abs(det(Bijectors.jacobian(b, x))) > 0
             @test logabsdetjac(b, x) ≠ Inf
@@ -69,7 +68,7 @@ Random.seed!(123)
 
         @testset "$dist: Tracker AD" begin
             x = rand(dist)
-            b = DistributionBijector{Turing.Core.ADBackend(:reverse_diff), typeof(dist)}(dist)
+            b = DistributionBijector{Bijectors.ADBackend(:reverse_diff), typeof(dist)}(dist)
             
             @test abs(det(Bijectors.jacobian(b, x))) > 0
             @test logabsdetjac(b, x) ≠ Inf

@@ -95,43 +95,23 @@ end
 
 # TODO: allow batch-computation, especially for univariate case?
 "Computes the absolute determinant of the Jacobian of the inverse-transformation."
-function logabsdetjac(b::ADBijector, y::Real)
-    log(abs(jacobian(b, y)))
+function logabsdetjac(b::ADBijector, x::Real)
+    log(abs(jacobian(b, x)))
 end
-function logabsdetjac(b::ADBijector, y::AbstractVector{<:Real})
-    logabsdet(jacobian(b, y))[1]
+function logabsdetjac(b::ADBijector, x::AbstractVector{<:Real})
+    fact = lu(jacobian(b, x), check=false)
+    issuccess(fact) ? log(abs(det(fact))) : -Inf # TODO: or smallest possible float?
 end
 
 ###############
 # Composition #
 ###############
 
-struct Composed{B<:Bijector} <: Bijector
-    ts::Vector{B}
+struct Composed{A} <: Bijector
+    ts::A
 end
 
-function compose(ts...)
-    res = []
-    
-    for b ∈ ts
-        if b isa Composed
-            # "lift" the transformations
-            for b_ ∈ b.ts
-                push!(res, b_)
-            end
-        else
-            # TODO: do we want this?
-            if (length(res) > 0) && (res[end] == inv(b))
-                # remove if inverse
-                pop!(res)
-            else
-                push!(res, b)
-            end
-        end
-    end
-
-    length(res) == 0 ? IdentityBijector : Composed([res...])
-end
+compose(ts...) = Composed(ts)
 
 # The transformation of `Composed` applies functions left-to-right
 # but in mathematics we usually go from right-to-left; this reversal ensures that
@@ -139,10 +119,10 @@ end
 # TODO: change behavior of `transform` of `Composed`?
 ∘(b1::B1, b2::B2) where {B1 <: Bijector, B2 <: Bijector} = compose(b2, b1)
 
-inv(ct::Composed{B}) where {B<:Bijector} = Composed(map(inv, reverse(ct.ts)))
+inv(ct::Composed) = Composed(map(inv, reverse(ct.ts)))
 
 # TODO: can we implement this recursively, and with aggressive inlining, make this type-stable?
-function transform(cb::Composed{<: Bijector}, x)
+function transform(cb::Composed, x)
     res = x
     for b ∈ cb.ts
         res = transform(b, res)
@@ -151,9 +131,9 @@ function transform(cb::Composed{<: Bijector}, x)
     return res
 end
 
-(cb::Composed{<: Bijector})(x) = transform(cb, x)
+(cb::Composed)(x) = transform(cb, x)
 
-function forward(cb::Composed{<:Bijector}, x)
+function forward(cb::Composed, x)
     res = (rv=x, logabsdetjac=0)
     for t in cb.ts
         res′ = forward(t, res.rv)
