@@ -74,33 +74,31 @@ inv(ib::Inversed{<:Bijector}) = ib.orig
 
 # AD implementations
 function jacobian(b::ADBijector{<: ForwardDiffAD}, y::Real)
-    ForwardDiff.derivative(z -> transform(b, z), y)
+    return ForwardDiff.derivative(z -> transform(b, z), y)
 end
 function jacobian(b::Inversed{<: ADBijector{<: ForwardDiffAD}}, y::Real)
-    ForwardDiff.derivative(z -> transform(b, z), y)
+    return ForwardDiff.derivative(z -> transform(b, z), y)
 end
 function jacobian(b::Inversed{<: ADBijector{<: ForwardDiffAD}}, y::AbstractVector{<: Real})
-    ForwardDiff.jacobian(z -> transform(b, z), y)
+    return ForwardDiff.jacobian(z -> transform(b, z), y)
 end
 
 function jacobian(b::ADBijector{<: TrackerAD}, y::Real)
-    Tracker.gradient(z -> transform(b, z), y)[1]
+    return Tracker.gradient(z -> transform(b, z), y)[1]
 end
 function jacobian(b::Inversed{<: ADBijector{<: TrackerAD}}, y::Real)
-    Tracker.gradient(z -> transform(b, z), y)[1]
+    return Tracker.gradient(z -> transform(b, z), y)[1]
 end
 function jacobian(b::Inversed{<: ADBijector{<: TrackerAD}}, y::AbstractVector{<: Real})
-    Tracker.jacobian(z -> transform(b, z), y)
+    return Tracker.jacobian(z -> transform(b, z), y)
 end
 
 # TODO: allow batch-computation, especially for univariate case?
 "Computes the absolute determinant of the Jacobian of the inverse-transformation."
-function logabsdetjac(b::ADBijector, x::Real)
-    log(abs(jacobian(b, x)))
-end
+logabsdetjac(b::ADBijector, x::Real) = log(abs(jacobian(b, x)))
 function logabsdetjac(b::ADBijector, x::AbstractVector{<:Real})
     fact = lu(jacobian(b, x), check=false)
-    issuccess(fact) ? log(abs(det(fact))) : -Inf # TODO: or smallest possible float?
+    return issuccess(fact) ? log(abs(det(fact))) : -Inf # TODO: or smallest possible float?
 end
 
 ###############
@@ -117,7 +115,7 @@ compose(ts...) = Composed(ts)
 # but in mathematics we usually go from right-to-left; this reversal ensures that
 # when we use the mathematical composition ∘ we get the expected behavior.
 # TODO: change behavior of `transform` of `Composed`?
-∘(b1::B1, b2::B2) where {B1 <: Bijector, B2 <: Bijector} = compose(b2, b1)
+∘(b1::Bijector, b2::Bijector) = compose(b2, b1)
 
 inv(ct::Composed) = Composed(map(inv, reverse(ct.ts)))
 
@@ -223,22 +221,21 @@ bijector(d::Beta{T}) where T <: Real = Logit(zero(T), one(T))
 Base.length(td::MultivariateTransformed) = length(td.dist)
 
 # logp
-function logpdf(td::UnivariateTransformed, y::T where T <: Real)
+function logpdf(td::UnivariateTransformed, y::Real)
     # logpdf(td.dist, transform(inv(td.transform), y)) .+ logabsdetjac(inv(td.transform), y)
     logpdf_with_trans(td.dist, transform(inv(td.transform), y), true)
 end
-function _logpdf(td::MultivariateTransformed, y::AbstractVector{T} where T <: Real)
+function _logpdf(td::MultivariateTransformed, y::AbstractVector{<: Real})
     # logpdf(td.dist, transform(inv(td.transform), y)) .+ logabsdetjac(inv(td.transform), y)
     logpdf_with_trans(td.dist, transform(inv(td.transform), y), true)
 end
 
-# TODO: implement these using analytical expressions?
-function logpdf_with_jac(td::UnivariateTransformed, y::T where T <: Real)
+function logpdf_with_jac(td::UnivariateTransformed, y::Real)
     z = logabsdetjac(inv(td.transform), y)
     return (logpdf(td.dist, transform(inv(td.transform), y)) .+ z, z)
 end
 
-function logpdf_with_jac(td::MultivariateTransformed, y::AbstractVector{T} where T <: Real)
+function logpdf_with_jac(td::MultivariateTransformed, y::AbstractVector{<:Real})
     z = logabsdetjac(inv(td.transform), y)
     return (logpdf(td.dist, transform(inv(td.transform), y)) .+ z, z)
 end
