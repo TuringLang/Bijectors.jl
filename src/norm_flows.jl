@@ -2,6 +2,7 @@ using Distributions
 using LinearAlgebra
 using Random
 using StatsFuns: softplus
+using Roots, LinearAlgebra # for inverse
 
 ################################################################################
 #                            Planar and Radial Flows                           #
@@ -83,4 +84,15 @@ function forward(flow::T, z) where {T<:RadialLayer}
     d = size(flow.z_not)[1]
     log_det_jacobian = log.(((1.0 .+ β_hat .* h(α, r)).^(d-1)) .* ( 1.0 .+  β_hat .* h(α, r) + β_hat .* dh(α, r) .* r))
     return (rv=transformed, logabsdetjacob=log_det_jacobian)
+end
+
+function inv(flow::PlanarLayer, y)
+    function f(y)
+        return loss(alpha) = (transpose(flow.w.data)*y)[1] - alpha -(transpose(flow.w.data)*flow.u_hat.data)[1]*tanh(alpha+flow.b.data[1])
+    end
+    alphas = transpose([find_zero(f(y[:,i:i]), 0, Order16()) for i in 1:size(z)[2]])
+    z_para = (flow.w.data ./norm(flow.w.data,2))*alphas
+    z_per = y - z_para - flow.u_hat.data*tanh.(transpose(flow.w.data)*z_para .+ flow.b.data)
+
+    return z_para+z_per
 end
