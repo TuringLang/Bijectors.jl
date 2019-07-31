@@ -90,7 +90,7 @@ function inv(flow::PlanarLayer, y)
     function f(y)
         return loss(alpha) = (transpose(flow.w.data)*y)[1] - alpha -(transpose(flow.w.data)*flow.u_hat.data)[1]*tanh(alpha+flow.b.data[1])
     end
-    alphas = transpose([find_zero(f(y[:,i:i]), 0, Order16()) for i in 1:size(z)[2]])
+    alphas = transpose([find_zero(f(y[:,i:i]), 0, Order16()) for i in 1:size(y)[2]])
     z_para = (flow.w.data ./norm(flow.w.data,2))*alphas
     z_per = y - z_para - flow.u_hat.data*tanh.(transpose(flow.w.data)*z_para .+ flow.b.data)
 
