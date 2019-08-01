@@ -5,7 +5,6 @@ using Reexport, Requires
 using StatsFuns
 using LinearAlgebra
 using MappedArrays
-using Tracker: param
 
 export  TransformDistribution,
         RealDistribution,
