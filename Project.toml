@@ -1,6 +1,6 @@
 name = "Bijectors"
 uuid = "76274a88-744f-5084-9051-94815aaf08c4"
-version = "0.3.1"
+version = "0.3.2"
 
 [deps]
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
