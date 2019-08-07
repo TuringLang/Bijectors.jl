@@ -57,18 +57,18 @@ end
 function inv(flow::PlanarLayer, y)
     function f(y)
         return loss(alpha) = (
-                (transpose(flow.w.data)*y)[1] - alpha
-                - (transpose(flow.w.data)*flow.u_hat.data)[1]
-                * tanh(alpha+flow.b.data[1])
+                (transpose(flow.w)*y)[1] - alpha
+                - (transpose(flow.w)*flow.u_hat)[1]
+                * tanh(alpha+flow.b[1])
             )
     end
     alphas_ = [find_zero(f(y[:,i:i]), 0.0, Order16()) for i in 1:size(y)[2]]
     alphas = transpose(alphas)
-    z_para = (flow.w.data ./norm(flow.w.data,2)) * alphas
+    z_para = (flow.w ./norm(flow.w,2)) * alphas
     z_per = (
-            y - z_para - flow.u_hat.data*tanh.(
-                                    transpose(flow.w.data) * z_para
-                                    .+ flow.b.data
+            y - z_para - flow.u_hat*tanh.(
+                                    transpose(flow.w) * z_para
+                                    .+ flow.b
                                     )
             )
 
@@ -120,16 +120,20 @@ function forward(flow::T, z) where {T<:RadialLayer}
 end
 
 function inv(flow::RadialLayer, y)
-    α = softplus(flow.α_.data[1])
-    β_hat = -α + softplus(flow.β.data[1])
+    α = softplus(flow.α_[1])
+    β_hat = -α + softplus(flow.β[1])
     function f(y)
         return loss(r) = (
-                        norm(y - flow.z_not.data, 2)
+                        norm(y - flow.z_0, 2)
                         - r * (1 + β_hat / (α + r))
                         )
     end
     rs_ = [find_zero(f(y[:,i:i]), 0.0, Order16()) for i in 1:size(y)[2]]
     rs = transpose(alphas)
-    z = (y.-flow.z_not.data) .* (rs .* (1 .+ β_hat ./ (α .+ rs)) )
+    z = (y.-flow.z_0) .* (rs .* (1 .+ β_hat ./ (α .+ rs)) )
     return z
 end
+
+flow = RadialLayer(2)
+
+transform(flow, randn(2,100))
