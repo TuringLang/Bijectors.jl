@@ -98,7 +98,7 @@ dh(α, r) = -h(α, r).^2 # for radial flow
 function transform(flow::RadialLayer, z)
     α = softplus(flow.α_[1])
     β_hat = -α + softplus(flow.β[1])
-    r = norm.(z .- flow.z_0, 1)
+    r = transpose(norm.([z[:,i] .- flow.z_0[:,:] for i in 1:size(z)[2]], 1))
     return z + β_hat .* h(α, r) .* (z .- flow.z_0)
 end
 
@@ -111,7 +111,6 @@ function forward(flow::T, z) where {T<:RadialLayer}
     β_hat = -α + softplus(flow.β[1])
     r = transpose(norm.([z[:,i] .- flow.z_0[:,:] for i in 1:size(z)[2]], 1))
     d = size(flow.z_0)[1]
-    h_ = h(α, r)
     h_ = h(α, r)
     log_det_jacobian = @. (
         (d-1) * log(1.0 + β_hat * h_)
