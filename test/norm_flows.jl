@@ -2,7 +2,7 @@ using Test
 using Bijectors, ForwardDiff, LinearAlgebra
 
 @testset "planar flows" begin
-    for i in 1:1
+    for i in 1:10
         flow = PlanarLayer(10)
         z = randn(10,100)
         forward_diff = log(abs(det(ForwardDiff.jacobian(t -> transform(flow, t), z))))
