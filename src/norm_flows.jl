@@ -51,8 +51,8 @@ function forward(flow::T, z) where {T<:PlanarLayer}
     # Compute log_det_jacobian
     psi = ψ(z, flow.w, flow.b)
     log_det_jacobian = log.(abs.(1.0 .+ transpose(psi) * flow.u_hat)) # from eq(12)
-
-    return (rv=transformed, logabsdetjacob=log_det_jacobian)
+    transformed = z + flow.u_hat * tanh.(transpose(flow.w) * z .+ flow.b)
+    return (rv=transformed, logabsdetjacob=log_det_jacobian) # from eq(10)
 end
 
 function inv(flow::PlanarLayer, y)
@@ -99,7 +99,7 @@ dh(α, r) = - h(α, r) .^ 2 # for radial flow, derivative of h()
 function transform(flow::RadialLayer, z)
     α = softplus(flow.α_[1]) # from A.2
     β_hat = -α + softplus(flow.β[1]) # from A.2
-    r = transpose(norm.([z[:,i] .- flow.z_0[:,:] for i in 1:size(z, 2)], 1))
+    r = transpose(norm.([z[:,i] .- flow.z_0 for i in 1:size(z, 2)], 1))
     return z + β_hat .* h(α, r) .* (z .- flow.z_0) # from eq(14)
 end
 
@@ -109,7 +109,7 @@ function forward(flow::T, z) where {T<:RadialLayer}
     # Compute log_det_jacobian
     α = softplus(flow.α_[1]) # from A.2
     β_hat = -α + softplus(flow.β[1]) # from A.2
-    r = transpose(norm.([z[:,i] .- flow.z_0[:,:] for i in 1:size(z, 2)], 1))
+    r = transpose(norm.([z[:,i] .- flow.z_0 for i in 1:size(z, 2)], 1))
     transformed = z + β_hat .* h(α, r) .* (z .- flow.z_0) # from eq(14)
 
     d = size(flow.z_0, 1)
