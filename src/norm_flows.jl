@@ -19,7 +19,7 @@ end
 
 function get_u_hat(u, w)
     # To preserve invertibility
-    u_hat = (
+    return (
         u + (planar_flow_m(transpose(w) * u) - transpose(w) * u)[1]
         * w / (norm(w[:,1],2) ^ 2)
     )
