@@ -85,11 +85,8 @@ function RadialLayer(dims::Int, container=Array)
     return RadialLayer(α_, β, z_0)
 end
 
-
-
 h(α, r) = 1 ./ (α .+ r) # for radial flow from eq(14)
 dh(α, r) = - h(α, r) .^ 2 # for radial flow, derivative of h()
-
 
 function transform(flow::RadialLayer, z)
     α = softplus(flow.α_[1]) # from A.2
@@ -98,15 +95,12 @@ function transform(flow::RadialLayer, z)
     return z + β_hat .* h(α, r) .* (z .- flow.z_0) # from eq(14)
 end
 
-
-
 function forward(flow::T, z) where {T<:RadialLayer}
-    # Compute log_det_jacobian
     α = softplus(flow.α_[1]) # from A.2
     β_hat = -α + softplus(flow.β[1]) # from A.2
     r = transpose(norm.([z[:,i] .- flow.z_0 for i in 1:size(z, 2)], 2))
     transformed = z + β_hat .* h(α, r) .* (z .- flow.z_0) # from eq(14)
-
+    # Compute log_det_jacobian
     d = size(flow.z_0, 1)
     h_ = h(α, r)
     log_det_jacobian = @. (
@@ -128,7 +122,7 @@ function inv(flow::RadialLayer, y)
     end
     rs_ = [find_zero(f(y[:,i:i]), 0.0, Order16()) for i in 1:size(y, 2)] # A.2
     rs = transpose(rs_)
-    z_hat = (y .- flow.z_0) .* (rs .* (1 .+ β_hat ./ (α .+ rs)) ) # from eq(25)
+    z_hat = (y .- flow.z_0) ./ (rs .* (1 .+ β_hat ./ (α .+ rs)) ) # from eq(25)
     z = flow.z_0 .+ rs .* z_hat # from A.2
     return z
 end

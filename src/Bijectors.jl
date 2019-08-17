@@ -5,6 +5,7 @@ using Reexport, Requires
 using StatsFuns
 using LinearAlgebra
 using MappedArrays
+using Roots
 
 export  TransformDistribution,
         RealDistribution,
