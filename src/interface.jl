@@ -46,7 +46,7 @@ end
 Broadcast.broadcastable(b::Bijector) = Ref(b)
 
 "Computes the log(abs(det(J(x)))) where J is the jacobian of the transform."
-logabsdetjac(b::T1, y::T2) where {T<:Bijector,T1<:Inversed{T},T2} = 
+logabsdetjac(b::T1, y::T2) where {T<:Bijector,T1<:Inversed{T},T2} =
     error("`logabsdetjac(b::$T1, y::$T2)` is not implemented.")
 
 "Transforms the input using the bijector."
@@ -54,7 +54,7 @@ transform(b::T1, y::T2) where {T<:Bijector,T1<:Inversed{T},T2} =
     error("`transform(b::$T1, y::$T2)` is not implemented.")
 
 "Computes both `transform` and `logabsdetjac` in one forward pass."
-forward(b::T1, y::T2) where {T<:Bijector,T1<:Inversed{T},T2} = 
+forward(b::T1, y::T2) where {T<:Bijector,T1<:Inversed{T},T2} =
     error("`forward(b::$T1, y::$T2)` is not implemented.")
 
 
@@ -112,7 +112,7 @@ end
 
 function compose(ts...)
     res = []
-    
+
     for b ∈ ts
         if b isa Composed
             # "lift" the transformations
@@ -151,6 +151,14 @@ function transform(cb::Composed{<: Bijector}, x)
     return res
 end
 
+function inv(cb::Composed{<: Bijector}, y)
+    res = y
+    for b ∈ reverse(cb.ts)
+        res = inv(b, res)
+    end
+    return res
+end
+
 (cb::Composed{<: Bijector})(x) = transform(cb, x)
 
 function forward(cb::Composed{<:Bijector}, x)
@@ -162,6 +170,12 @@ function forward(cb::Composed{<:Bijector}, x)
     return res
 end
 
+function rand(flow::Composed, dims::Integer, shape::Integer=1)
+    dims = [dims]
+    append!(dims, shape)
+    print(dims)
+    return transform(flow, randn(dims...))
+end
 ##############################
 # Example bijector: Identity #
 ##############################
