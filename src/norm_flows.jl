@@ -10,6 +10,8 @@ using Roots # for inverse
 #               D. Rezende, S. Mohamed(2015) arXiv:1505.05770                  #
 ################################################################################
 
+(b::Bijector)(x) = transform(b, x)
+
 mutable struct PlanarLayer{T1,T2} <: Bijector
     w::T1
     u::T1
@@ -46,7 +48,7 @@ function forward(flow::T, z) where {T<:PlanarLayer}
     psi = ψ(z, flow.w, flow.b)
     log_det_jacobian = log.(abs.(1.0 .+ transpose(psi) * u_hat)) # from eq(12)
     transformed = z + u_hat * tanh.(transpose(flow.w) * z .+ flow.b)
-    return (rv=transformed, logabsdetjacob=log_det_jacobian) # from eq(10)
+    return (rv=transformed, logabsdetjac=log_det_jacobian) # from eq(10)
 end
 
 function inv(flow::PlanarLayer, y)
@@ -107,7 +109,7 @@ function forward(flow::T, z) where {T<:RadialLayer}
         (d-1) * log(1.0 + β_hat * h_)
         + log(1.0 +  β_hat * h_ + β_hat * (- h_ ^ 2) * r)
     ) # from eq(14)
-    return (rv=transformed, logabsdetjacob=log_det_jacobian)
+    return (rv=transformed, logabsdetjac=log_det_jacobian)
 end
 
 function inv(flow::RadialLayer, y)
