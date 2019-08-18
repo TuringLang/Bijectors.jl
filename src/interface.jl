@@ -173,7 +173,6 @@ end
 function rand(flow::Composed, dims::Integer, shape::Integer=1)
     dims = [dims]
     append!(dims, shape)
-    print(dims)
     return transform(flow, randn(dims...))
 end
 ##############################

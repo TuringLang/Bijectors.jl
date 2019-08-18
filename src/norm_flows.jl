@@ -10,13 +10,13 @@ using Roots # for inverse
 #               D. Rezende, S. Mohamed(2015) arXiv:1505.05770                  #
 ################################################################################
 
-(b::Bijector)(x) = transform(b, x)
-
 mutable struct PlanarLayer{T1,T2} <: Bijector
     w::T1
     u::T1
     b::T2
 end
+
+(b::PlanarLayer)(x) = transform(b, x)
 
 function get_u_hat(u, w)
     # To preserve invertibility
@@ -86,6 +86,8 @@ function RadialLayer(dims::Int, container=Array)
     z_0 = container(randn(dims, 1))
     return RadialLayer(α_, β, z_0)
 end
+
+(b::RadialLayer)(x) = transform(b, x)
 
 h(α, r) = 1 ./ (α .+ r) # for radial flow from eq(14)
 dh(α, r) = - h(α, r) .^ 2 # for radial flow, derivative of h()
