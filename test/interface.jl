@@ -44,12 +44,12 @@ Random.seed!(123)
 
             # single sample
             y = rand(td)
-            x = transform(inv(td.transform), y)
+            x = inv(td.transform)(y)
             @test logpdf(td, y) ≈ logpdf_with_trans(dist, x, true)
 
             # multi-sample
             y = rand(td, 10)
-            x = transform.(inv(td.transform), y)
+            x = inv(td.transform).(y)
             @test logpdf.(td, y) ≈ logpdf_with_trans.(dist, x, true)
         end
 
@@ -60,7 +60,7 @@ Random.seed!(123)
             @test abs(det(Bijectors.jacobian(b, x))) > 0
             @test logabsdetjac(b, x) ≠ Inf
 
-            y = transform(b, x)
+            y = b(x)
             b⁻¹ = inv(b)
             @test abs(det(Bijectors.jacobian(b⁻¹, y))) > 0
             @test logabsdetjac(b⁻¹, y) ≠ Inf
@@ -73,7 +73,7 @@ Random.seed!(123)
             @test abs(det(Bijectors.jacobian(b, x))) > 0
             @test logabsdetjac(b, x) ≠ Inf
 
-            y = transform(b, x)
+            y = b(x)
             b⁻¹ = inv(b)
             @test abs(det(Bijectors.jacobian(b⁻¹, y))) > 0
             @test logabsdetjac(b⁻¹, y) ≠ Inf
@@ -85,7 +85,7 @@ Random.seed!(123)
         td = transformed(d)
 
         x = rand(d)
-        y = transform(td.transform, x)
+        y = td.transform(x)
 
         b = Bijectors.compose(td.transform, Bijectors.Identity())
         ib = inv(b)
@@ -95,10 +95,10 @@ Random.seed!(123)
 
         # inverse works fine for composition
         cb = b ∘ ib
-        @test transform(cb, x) ≈ x
+        @test cb(x) ≈ x
 
         cb2 = cb ∘ cb
-        @test transform(cb, x) ≈ x
+        @test cb(x) ≈ x
 
         # order of composed evaluation
         b1 = DistributionBijector(d)
@@ -106,6 +106,12 @@ Random.seed!(123)
 
         cb = b1 ∘ b2
         @test cb(x) ≈ b1(b2(x))
+
+        # contrived example
+        b = bijector(d)
+        cb = inv(b) ∘ b
+        cb = cb ∘ cb
+        @test (cb ∘ cb ∘ cb ∘ cb ∘ cb)(x) ≈ x
     end
 
     @testset "Example: ADVI" begin
@@ -115,6 +121,6 @@ Random.seed!(123)
         ib = inv(b)                    # ℝ → [0, 1]
         td = transformed(Normal(), ib) # x ∼ 𝓝(0, 1) then f(x) ∈ [0, 1]
         x = rand(td)                   # ∈ [0, 1]
-        @test 0 ≤ x ≤ 1                      # => true
+        @test 0 ≤ x ≤ 1
     end
 end
