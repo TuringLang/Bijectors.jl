@@ -7,75 +7,98 @@ Random.seed!(123)
 
 # Scalar tests
 @testset "Interface" begin
-    # Tests with scalar-valued distributions.
-    uni_dists = [
-        Arcsine(2, 4),
-        Beta(2,2),
-        BetaPrime(),
-        Biweight(),
-        Cauchy(),
-        Chi(3),
-        Chisq(2),
-        Cosine(),
-        Epanechnikov(),
-        Erlang(),
-        Exponential(),
-        FDist(1, 1),
-        Frechet(),
-        Gamma(),
-        InverseGamma(),
-        InverseGaussian(),
-        # Kolmogorov(),
-        Laplace(),
-        Levy(),
-        Logistic(),
-        LogNormal(1.0, 2.5),
-        Normal(0.1, 2.5),
-        Pareto(),
-        Rayleigh(1.0),
-        TDist(2),
-        TruncatedNormal(0, 1, -Inf, 2),
-    ]
-    
-    for dist in uni_dists
-        @testset "$dist: dist" begin
-            td = transformed(dist)
+    @testset "Univariate" begin
+        # Tests with scalar-valued distributions.
+        uni_dists = [
+            Arcsine(2, 4),
+            Beta(2,2),
+            BetaPrime(),
+            Biweight(),
+            Cauchy(),
+            Chi(3),
+            Chisq(2),
+            Cosine(),
+            Epanechnikov(),
+            Erlang(),
+            Exponential(),
+            FDist(1, 1),
+            Frechet(),
+            Gamma(),
+            InverseGamma(),
+            InverseGaussian(),
+            # Kolmogorov(),
+            Laplace(),
+            Levy(),
+            Logistic(),
+            LogNormal(1.0, 2.5),
+            Normal(0.1, 2.5),
+            Pareto(),
+            Rayleigh(1.0),
+            TDist(2),
+            TruncatedNormal(0, 1, -Inf, 2),
+        ]
+        
+        for dist in uni_dists
+            @testset "$dist: dist" begin
+                td = transformed(dist)
 
-            # single sample
-            y = rand(td)
-            x = inv(td.transform)(y)
-            @test logpdf(td, y) ≈ logpdf_with_trans(dist, x, true)
+                # single sample
+                y = rand(td)
+                x = inv(td.transform)(y)
+                @test logpdf(td, y) ≈ logpdf_with_trans(dist, x, true)
 
-            # multi-sample
-            y = rand(td, 10)
-            x = inv(td.transform).(y)
-            @test logpdf.(td, y) ≈ logpdf_with_trans.(dist, x, true)
+                # multi-sample
+                y = rand(td, 10)
+                x = inv(td.transform).(y)
+                @test logpdf.(td, y) ≈ logpdf_with_trans.(dist, x, true)
+            end
+
+            @testset "$dist: ForwardDiff AD" begin
+                x = rand(dist)
+                b = DistributionBijector{Bijectors.ADBackend(:forward_diff), typeof(dist)}(dist)
+                
+                @test abs(det(Bijectors.jacobian(b, x))) > 0
+                @test logabsdetjac(b, x) ≠ Inf
+
+                y = b(x)
+                b⁻¹ = inv(b)
+                @test abs(det(Bijectors.jacobian(b⁻¹, y))) > 0
+                @test logabsdetjac(b⁻¹, y) ≠ Inf
+            end
+
+            @testset "$dist: Tracker AD" begin
+                x = rand(dist)
+                b = DistributionBijector{Bijectors.ADBackend(:reverse_diff), typeof(dist)}(dist)
+                
+                @test abs(det(Bijectors.jacobian(b, x))) > 0
+                @test logabsdetjac(b, x) ≠ Inf
+
+                y = b(x)
+                b⁻¹ = inv(b)
+                @test abs(det(Bijectors.jacobian(b⁻¹, y))) > 0
+                @test logabsdetjac(b⁻¹, y) ≠ Inf
+            end
         end
+    end
 
-        @testset "$dist: ForwardDiff AD" begin
-            x = rand(dist)
-            b = DistributionBijector{Bijectors.ADBackend(:forward_diff), typeof(dist)}(dist)
-            
-            @test abs(det(Bijectors.jacobian(b, x))) > 0
-            @test logabsdetjac(b, x) ≠ Inf
+    @testset "Matrix variate" begin
+        v = 7.0
+        S = Matrix(1.0I, 2, 2)
+        S[1, 2] = S[2, 1] = 0.5
 
-            y = b(x)
-            b⁻¹ = inv(b)
-            @test abs(det(Bijectors.jacobian(b⁻¹, y))) > 0
-            @test logabsdetjac(b⁻¹, y) ≠ Inf
-        end
+        matrix_dists = [
+            Wishart(v,S),
+            InverseWishart(v,S)
+        ]
+        
+        for dist in matrix_dists
+            @testset "$dist: dist" begin
+                td = transformed(dist)
+                y = rand(rng, td)
 
-        @testset "$dist: Tracker AD" begin
-            x = rand(dist)
-            b = DistributionBijector{Bijectors.ADBackend(:reverse_diff), typeof(dist)}(dist)
-            
-            @test abs(det(Bijectors.jacobian(b, x))) > 0
-            @test logabsdetjac(b, x) ≠ Inf
-
-            y = b(x)
-            b⁻¹ = inv(b)
-            @test abs(det(Bijectors.jacobian(b⁻¹, y))) > 0
-            @test logabsdetjac(b⁻¹, y) ≠ Inf
+                x = inv(td.transform)(y)
+                @test td.transform(x) ≈ y
+            end
         end
     end
 
@@ -123,3 +146,5 @@ Random.seed!(123)
         @test 0 ≤ x ≤ 1
     end
 end
+
+

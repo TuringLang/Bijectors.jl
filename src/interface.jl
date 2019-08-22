@@ -264,29 +264,31 @@ end
 bijector(d::Distribution) = DistributionBijector(d)
 
 # Transformed distributions
-struct UnivariateTransformed{D, B} <: Distribution{Univariate, Continuous} where {D <: UnivariateDistribution, B <: Bijector}
+struct TransformedDistribution{D, B, V} <: Distribution{V, Continuous} where {D <: Distribution{V, Continuous}, B <: Bijector}
     dist::D
     transform::B
+end
+function TransformedDistribution(d::D, b::B) where {V <: VariateForm, B <: Bijector, D <: Distribution{V, Continuous}}
+    return TransformedDistribution{D, B, V}(d, b)
 end
 
-struct MultivariateTransformed{D, B} <: Distribution{Multivariate, Continuous} where {D <: MultivariateDistribution, B <: Bijector}
-    dist::D
-    transform::B
-end
+
+const UnivariateTransformed = TransformedDistribution{<: Distribution, <: Bijector, Univariate}
+const MultivariateTransformed = TransformedDistribution{<: Distribution, <: Bijector, Multivariate}
+const MatrixTransformed = TransformedDistribution{<: Distribution, <: Bijector, Matrixvariate}
+const Transformed = Union{UnivariateTransformed, MultivariateTransformed, MatrixTransformed}
 
 
 """
     transformed(d::Distribution)
     transformed(d::Distribution, b::Bijector)
 
-Couples the distribution `d` with the bijector `b` by returning a `UnivariateTransformed`
-or `MultivariateTransformed`, depending on type `D`.
+Couples distribution `d` with the bijector `b` by returning a `TransformedDistribution`.
 
-If not bijector is provided, i.e. `transformed(d)` is called, 
-then `transformed(d, bijector(d))` is returned.
+If no bijector is provided, i.e. `transformed(d)` is called, then 
+`transformed(d, bijector(d))` is returned.
 """
-transformed(d::UnivariateDistribution, b::Bijector) = UnivariateTransformed(d, b)
-transformed(d::MultivariateDistribution, b::Bijector) = MultivariateTransformed(d, b)
+transformed(d::Distribution, b::Bijector) = TransformedDistribution(d, b)
 transformed(d) = transformed(d, bijector(d))
 
 """
@@ -303,7 +305,8 @@ bijector(d::Beta{T}) where T <: Real = Logit(zero(T), one(T))
 ##############################
 
 # size
-Base.length(td::MultivariateTransformed) = length(td.dist)
+Base.length(td::Transformed) = length(td.dist)
+Base.size(td::Transformed) = size(td.dist)
 
 # logp
 function logpdf(td::UnivariateTransformed, y::Real)
@@ -329,8 +332,21 @@ end
 rand(td::UnivariateTransformed) = td.transform(rand(td.dist))
 rand(rng::AbstractRNG, td::UnivariateTransformed) = td.transform(rand(rng, td.dist))
 
+# These ovarloadings are useful for differentiating sampling wrt. params of `td.dist`
+# or params of `Bijector`, as they are not inplace like the default `rand`
 rand(td::MultivariateTransformed) = td.transform(rand(td.dist))
-function rand(td::MultivariateTransformed, num_samples::Int)
+rand(rng::AbstractRNG, td::MultivariateTransformed) = td.transform(rand(rng, td.dist))
+function rand(rng::AbstractRNG, td::MultivariateTransformed, num_samples::Int)
     res = hcat([td.transform(rand(td.dist)) for i = 1:num_samples]...)
     return res
+end
+
+function _rand!(rng::AbstractRNG, td::MultivariateTransformed, x::AbstractVector{<: Real})
+    rand!(rng, td.dist, x)
+    x .= td.transform(x)
+end
+
+function _rand!(rng::AbstractRNG, td::MatrixTransformed, x::DenseMatrix{<: Real})
+    rand!(rng, td.dist, x)
+    x .= td.transform(x)
 end
