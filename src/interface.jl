@@ -185,7 +185,6 @@ _transform(x, b::Bijector, bs::Bijector...) = _transform(b(x), bs...)
 (cb::Composed{<: Tuple})(x) = _transform(x, cb.ts...)
 
 function _logabsdetjac(x, b1::Bijector, b2::Bijector)
-    logabsdetjac(b2, b1(x)) + logabsdetjac(b1, x)
     res = forward(b1, x)
     return logabsdetjac(b2, res.rv) + res.logabsdetjac
 end
