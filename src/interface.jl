@@ -126,11 +126,11 @@ function logabsdetjac(b::ADBijector, x::AbstractVector{<:Real})
 end
 
 """
-    logabsdetjacinv(b::Bijector, x)
+    logabsdetjacinv(b::Bijector, y)
 
-Just an alias for `logabsdetjac(inv(b), b(x))`.
+Just an alias for `logabsdetjac(inv(b), y)`.
 """
-logabsdetjacinv(b::Bijector, x) = logabsdetjac(inv(b), b(x))
+logabsdetjacinv(b::Bijector, y) = logabsdetjac(inv(b), y)
 
 ###############
 # Composition #
@@ -234,8 +234,20 @@ end
 (ib::Inversed{<: Logit{<: Real}})(y) = @. (ib.orig.b - ib.orig.a) * logistic(y) + ib.orig.a
 
 logabsdetjac(b::Logit{<:Real}, x) = log((x - b.a) * (b.b - x) / (b.b - b.a))
-forward(b::Logit, x) = (rv=b(x), logabsdetjac=-logabsdetjac(b, x))
 
+struct Exp <: Bijector end
+struct Log <: Bijector end
+const exp_b = Exp()
+const log_b = Log()
+
+(b::Log)(x) = @. log(x)
+(b::Exp)(y) = @. exp(y)
+
+inv(b::Log) = exp_b
+inv(b::Exp) = log_b
+
+logabsdetjac(b::Log, x) = log(x)
+logabsdetjac(b::Exp, y) = - y
 
 #######################################################
 # Constrained to unconstrained distribution bijectors #
@@ -298,7 +310,17 @@ Returns the constrained-to-unconstrained bijector for distribution `d`.
 """
 bijector(d::Normal) = IdentityBijector
 bijector(d::MvNormal) = IdentityBijector
-bijector(d::Beta{T}) where T <: Real = Logit(zero(T), one(T))
+bijector(d::PositiveDistribution) = log_b
+
+_union2tuple(T1::Type, T2::Type) = (T1, T2)
+_union2tuple(T1::Type, T2::Union) = (T1, union2tuple(T2.a, T2.b)...)
+_union2tuple(T::Union) = union2tuple(T.a, T.b)
+
+bijector(d::Kolmogorov) = Logit(zero(eltype(d)), zero(eltype(d)))
+for D in _union2tuple(PositiveDistribution)[2:end]
+    # skipping Kolmogorov because it's a DataType
+    @eval bijector(d::$D{T}) where T <: Real = Logit(zero(T), zero(T))
+end
 
 ##############################
 # Distributions.jl interface #
@@ -308,24 +330,33 @@ bijector(d::Beta{T}) where T <: Real = Logit(zero(T), one(T))
 Base.length(td::Transformed) = length(td.dist)
 Base.size(td::Transformed) = size(td.dist)
 
-# logp
+# TODO: should eventually drop using `logpdf_with_trans` and replace with
+# res = forward(inv(td.transform), y)
+# logpdf(td.dist, res.rv) .- res.logabsdetjac
 function logpdf(td::UnivariateTransformed, y::Real)
-    # logpdf(td.dist, transform(inv(td.transform), y)) .+ logabsdetjac(inv(td.transform), y)
-    logpdf_with_trans(td.dist, inv(td.transform)(y), true)
+    return logpdf_with_trans(td.dist, inv(td.transform)(y), true)
 end
 function _logpdf(td::MultivariateTransformed, y::AbstractVector{<: Real})
-    # logpdf(td.dist, transform(inv(td.transform), y)) .+ logabsdetjac(inv(td.transform), y)
-    logpdf_with_trans(td.dist, inv(td.transform)(y), true)
+    return logpdf_with_trans(td.dist, inv(td.transform)(y), true)
+end
+
+function _logpdf(td::MatrixTransformed, y::AbstractMatrix{<:Real})
+    return logpdf_with_trans(td.dist, inv(td.transform)(y), true)
 end
 
 function logpdf_with_jac(td::UnivariateTransformed, y::Real)
-    z = logabsdetjac(inv(td.transform), y)
-    return (logpdf(td.dist, inv(td.transform)(y)) .+ z, z)
+    res = forward(inv(td.transform), y)
+    return (logpdf_with_trans(td.dist, res.rv, true), res.logabsdetjac)
 end
 
 function logpdf_with_jac(td::MultivariateTransformed, y::AbstractVector{<:Real})
-    z = logabsdetjac(inv(td.transform), y)
-    return (logpdf(td.dist, inv(td.transform)(y)) .+ z, z)
+    res = forward(inv(td.transform), y)
+    return (logpdf_with_trans(td.dist, res.rv, true), res.logabsdetjac)
+end
+
+function logpdf_with_jac(td::MatrixTransformed, y::AbstractMatrix{<:Real})
+    res = forward(inv(td.transform), y)
+    return (logpdf_with_trans(td.dist, res.rv, true), res.logabsdetjac)
 end
 
 # rand

@@ -47,6 +47,11 @@ Random.seed!(123)
                 x = inv(td.transform)(y)
                 @test logpdf(td, y) ≈ logpdf_with_trans(dist, x, true)
 
+                # logpdf_with_jac
+                lp, logjac = logpdf_with_jac(td, y)
+                @test lp ≈ logpdf(td, y)
+                @test logjac ≈ logabsdetjacinv(td.transform, y)
+
                 # multi-sample
                 y = rand(td, 10)
                 x = inv(td.transform).(y)
@@ -81,6 +86,39 @@ Random.seed!(123)
         end
     end
 
+    @testset "Multivariate" begin
+        vector_dists = [
+            Dirichlet(2, 3),
+            Dirichlet([1000 * one(Float64), eps(Float64)]),
+            Dirichlet([eps(Float64), 1000 * one(Float64)]),
+            MvNormal(randn(10), exp.(randn(10))),
+            # MvLogNormal(MvNormal(randn(10), exp.(randn(10)))),
+            Dirichlet([1000 * one(Float64), eps(Float64)]), 
+            Dirichlet([eps(Float64), 1000 * one(Float64)]),
+        ]
+
+        for dist in vector_dists
+            @testset "$dist: dist" begin
+                td = transformed(dist)
+
+                # single sample
+                y = rand(td)
+                x = inv(td.transform)(y)
+                @test logpdf(td, y) ≈ logpdf_with_trans(dist, x, true)
+
+                # logpdf_with_jac
+                lp, logjac = logpdf_with_jac(td, y)
+                @test lp ≈ logpdf(td, y)
+                @test logjac ≈ logabsdetjacinv(td.transform, y)
+
+                # multi-sample
+                y = rand(td, 10)
+                x = inv(td.transform)(y)
+                @test logpdf(td, y) ≈ logpdf_with_trans(dist, x, true)
+            end
+        end
+    end
+
     @testset "Matrix variate" begin
         v = 7.0
         S = Matrix(1.0I, 2, 2)
@@ -94,10 +132,22 @@ Random.seed!(123)
         for dist in matrix_dists
             @testset "$dist: dist" begin
                 td = transformed(dist)
-                y = rand(td)
 
+                # single sample
+                y = rand(td)
                 x = inv(td.transform)(y)
-                @test td.transform(x) ≈ y
+                @test logpdf(td, y) ≈ logpdf_with_trans(dist, x, true)
+
+                # TODO: implement `logabsdetjac` for these
+                # logpdf_with_jac
+                # lp, logjac = logpdf_with_jac(td, y)
+                # @test lp ≈ logpdf(td, y)
+                # @test logjac ≈ logabsdetjacinv(td.transform, y)
+
+                # multi-sample
+                y = rand(td, 10)
+                x = inv(td.transform)(y)
+                @test logpdf(td, y) ≈ logpdf_with_trans(dist, x, true)
             end
         end
     end
@@ -147,4 +197,41 @@ Random.seed!(123)
     end
 end
 
+d = BetaPrime(Dual(1.0), Dual(1.0))
+b = bijector(d)
 
+
+
+bijector()
+
+
+A = Union{[Beta, Normal, Gamma, InverseGamma]...}
+
+using ForwardDiff: Dual
+@code_warntype bijector(Beta(ForwardDiff.Dual(2.0), ForwardDiff.Dual(3.0)))
+d = Beta(ForwardDiff.Dual(2.0), ForwardDiff.Dual(3.0))
+
+d = InverseGamma()
+b = bijector(d)
+eltype(d)
+x = rand(d)
+y = b(x)
+
+
+x == inv(b)(y)
+
+# logabsdetjacinv(b, y) == logabsdetjac(inv(b), y)
+# logabsdetjacinv(b, y) == - y
+
+@test logpdf(d, inv(b)(y)) - logabsdetjacinv(b, y) ≈ logpdf_with_trans(d, x, true)
+@test logpdf(d, x) + logabsdetjac(b, x) ≈ logpdf_with_trans(d, x, true) 
+
+
+
+
+logpdf_with_trans(d, x, true) - logpdf_with_trans(d, x, false)
+
+logpdf_with_trans(d, invlink(d, y), true) - logpdf_with_trans(d, invlink(d, y), false)
+logabsdetjac(b, x)
+
+logpdf(d, x) + logabsdetjacinv(b, y)
