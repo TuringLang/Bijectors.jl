@@ -43,3 +43,21 @@ end
     flow = RadialLayer(α_, β, z_0)
     @test inv(flow)(flow(z)) ≈ z
 end
+
+@testset "Flows" begin
+    d = MvNormal(zeros(2), ones(2))
+    b = PlanarLayer(2)
+    flow = transformed(d, b)  # <= Radial flow
+    
+    y = rand(flow)
+    @test logpdf(flow, y) != 0.0
+
+    x = rand(d)
+    y = flow.transform(x)
+    res = forward(flow, x)
+    lp = logpdf_forward(flow, x, res.logabsdetjac)
+    
+    @test res.rv ≈ y
+    @test logpdf(flow, y) ≈ lp rtol=0.1
+end
+

@@ -10,6 +10,10 @@ using Roots # for inverse
 #               D. Rezende, S. Mohamed(2015) arXiv:1505.05770                  #
 ################################################################################
 
+###############
+# PlanarLayer #
+###############
+
 mutable struct PlanarLayer{T1,T2} <: Bijector
     w::T1
     u::T1
@@ -44,15 +48,23 @@ end
 
 (b::PlanarLayer)(z) = _transform(b, z).transformed
 
-function forward(flow::T, z) where {T<:PlanarLayer}
+function _forward(flow::PlanarLayer, z)
     transformed, u_hat = _transform(flow, z)
     # Compute log_det_jacobian
     psi = ψ(z, flow.w, flow.b)
-    log_det_jacobian = log.(abs.(1.0 .+ psi' * u_hat))      # from eq(12)
-    return (rv=transformed, logabsdetjac=log_det_jacobian)  # from eq(10)
+    log_det_jacobian = log.(abs.(1.0 .+ psi' * u_hat))          # from eq(12)
+    return (rv=transformed, logabsdetjac=vec(log_det_jacobian)) # from eq(10)
 end
 
-function (ib::Inversed{<: PlanarLayer})(y)
+forward(flow::PlanarLayer, z) = _forward(flow, z)
+
+function forward(flow::PlanarLayer, z::AbstractVector{<: Real})
+    res = _forward(flow, z)
+    return (rv=res.rv, logabsdetjac=res.logabsdetjac[1])
+end
+
+
+function (ib::Inversed{<: PlanarLayer})(y::AbstractMatrix{<: Real})
     flow = ib.orig
     u_hat = get_u_hat(flow.u, flow.w)
     # Define the objective functional; implemented with reference from A.1
@@ -66,6 +78,18 @@ function (ib::Inversed{<: PlanarLayer})(y)
     return z_para + z_per
 end
 
+function (ib::Inversed{<: PlanarLayer})(y::AbstractVector{<: Real})
+    return vec(ib(reshape(y, (length(y), 1))))
+end
+
+logabsdetjac(flow::PlanarLayer, x) = forward(flow, x).logabsdetjac
+
+###############
+# RadialLayer #
+###############
+
+# FIXME: using `TrackedArray` for the parameters, we end up with
+# nested tracked structures; don't want this.
 mutable struct RadialLayer{T1,T2} <: Bijector
     α_::T1
     β::T1
@@ -93,7 +117,7 @@ end
 
 (b::RadialLayer)(z) = _transform(b, z).transformed
 
-function forward(flow::T, z) where {T<:RadialLayer}
+function _forward(flow::RadialLayer, z)
     transformed, α, β_hat, r = _transform(flow, z)
     # Compute log_det_jacobian
     d = size(flow.z_0, 1)
@@ -102,7 +126,14 @@ function forward(flow::T, z) where {T<:RadialLayer}
         (d - 1) * log(1.0 + β_hat * h_)
         + log(1.0 +  β_hat * h_ + β_hat * (- h_ ^ 2) * r)
     )   # from eq(14)
-    return (rv=transformed, logabsdetjac=log_det_jacobian)
+    return (rv=transformed, logabsdetjac=vec(log_det_jacobian))
+end
+
+forward(flow::RadialLayer, z) = _forward(flow, z)
+
+function forward(flow::RadialLayer, z::AbstractVector{<: Real})
+    res = forward(flow, z)
+    return (rv=res.rv, logabsdetjac=res.logabsdetjac[1])
 end
 
 # function inv(flow::RadialLayer, y)
@@ -118,3 +149,9 @@ function (ib::Inversed{<: RadialLayer})(y)
     z = flow.z_0 .+ rs .* z_hat # from A.2
     return z
 end
+
+function (ib::Inversed{<: RadialLayer})(y::AbstractVector{<: Real})
+    return vec(ib(reshape(y, (length(y), 1))))
+end
+
+logabsdetjac(flow::RadialLayer, x) = forward(flow, x).logabsdetjac

@@ -31,6 +31,7 @@ export  TransformDistribution,
         UnivariateTransformed,
         MultivariateTransformed,
         logpdf_with_jac,
+        logpdf_forward,
         PlanarLayer,
         RadialLayer
 

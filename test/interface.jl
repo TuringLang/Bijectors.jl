@@ -227,3 +227,151 @@ Random.seed!(123)
     end
 end
 
+# using ForwardDiff: Dual
+# d = BetaPrime(Dual(1.0), Dual(1.0))
+# b = bijector(d)
+
+
+
+# bijector()
+
+
+# A = Union{[Beta, Normal, Gamma, InverseGamma]...}
+
+# @code_warntype bijector(Beta(ForwardDiff.Dual(2.0), ForwardDiff.Dual(3.0)))
+# d = Beta(ForwardDiff.Dual(2.0), ForwardDiff.Dual(3.0))
+
+# d = InverseGamma()
+# b = bijector(d)
+# eltype(d)
+# x = rand(d)
+# y = b(x)
+
+
+# x == inv(b)(y)
+
+# # logabsdetjacinv(b, y) == logabsdetjac(inv(b), y)
+# # logabsdetjacinv(b, y) == - y
+
+# @test logpdf(d, inv(b)(y)) - logabsdetjacinv(b, y) ≈ logpdf_with_trans(d, x, true)
+# @test logpdf(d, x) + logabsdetjac(b, x) ≈ logpdf_with_trans(d, x, true) 
+
+
+
+
+# logpdf_with_trans(d, x, true) - logpdf_with_trans(d, x, false)
+
+# logpdf_with_trans(d, invlink(d, y), true) - logpdf_with_trans(d, invlink(d, y), false)
+# logabsdetjac(b, x)
+
+# logpdf(d, x) + logabsdetjacinv(b, y)
+
+
+# using BenchmarkTools
+
+# @btime b(x)
+# @btime link(d, x)
+
+# @btime logabsdetjac(b, x)
+
+# d = Truncated(Normal(), -1, 1)
+# b = bijector(d)
+# x = rand(d)
+# @test b(x) == link(d, x)
+
+# d = Truncated(Normal(), -Inf, 1)
+# b = bijector(d)
+# x = rand(d)
+# @test b(x) == link(d, x)
+
+# d = Truncated(Normal(), 1, Inf)
+# b = bijector(d)
+# x = rand(d)
+# @test b(x) == link(d, x)
+
+
+# d = Beta()
+# x = rand(d)
+# f(x, d) = bijector(d)(x)
+# @code_warntype f(x, d)
+
+
+# d = MvNormal(zeros(10), ones(10))
+# b = PlanarLayer(10)
+# flow = transformed(d, b)  # <= Radial flow
+# y = rand(flow, 5)
+
+
+
+# res = forward(flow)
+# res.rv
+# res.logabsdetjac
+
+# x = rand(d, 5)
+# res = forward(flow, x)
+# res.rv
+# res.logabsdetjac
+
+# logpdf_with_jac(flow, y)
+
+# forward(b, rand(d))
+
+# @code_typed logpdf(flow, y)
+
+
+# using Tracker
+# b = PlanarLayer(10, param)
+# flow = transformed(d, b)
+# y = rand(flow)
+# sum(y)
+
+# Tracker.back!(sum(y), 1.0)
+# Tracker.grad(b.u)
+
+
+# x = rand(d)
+# @code_warntype forward(b, x)
+# y = rand(flow, 5)
+# Tracker.back!(mean(sum(y, dims=1)), 1.0)
+
+# Tracker.grad(b.u)
+
+# @code_warntype forward(b, y)
+
+
+# Bijectors.logpdf_forward(flow, x)
+
+# forward(inv(flow.transform), rand(flow)).rv
+# rand(flow)
+
+# Bijectors.get_u_hat(flow.transform.u, flow.transform.w)
+
+
+# Bijectors.logpdf_forward(flow, x)
+
+# logpdf(flow, y)
+
+# using Tracker
+# b = RadialLayer(10, param)
+
+# b.α_
+# b.β
+# b.z_0
+
+# b(x)[1]
+
+
+# x = rand(d)
+# (b ∘ b)(x)
+# b(x)
+
+
+# rb = PlanarLayer(10, param)
+# pb = PlanarLayer(10, param)
+
+# flow = transformed(d, rb ∘ pb)
+# y = rand(flow)
+
+# Tracker.back!(sum(y.^2), 1.0)
+# Tracker.grad(rb.u)
+
