@@ -16,8 +16,6 @@ mutable struct PlanarLayer{T1,T2} <: Bijector
     b::T2
 end
 
-(b::PlanarLayer)(x) = transform(b, x)
-
 function get_u_hat(u, w)
     # To preserve invertibility
     return (
@@ -44,7 +42,7 @@ function _transform(flow::PlanarLayer, z)
     return (transformed=transformed, u_hat=u_hat)
 end
 
-transform(flow::PlanarLayer, z) = _transform(flow, z).transformed
+(b::PlanarLayer)(z) = _transform(b, z).transformed
 
 function forward(flow::T, z) where {T<:PlanarLayer}
     transformed, u_hat = _transform(flow, z)
@@ -54,7 +52,8 @@ function forward(flow::T, z) where {T<:PlanarLayer}
     return (rv=transformed, logabsdetjac=log_det_jacobian)  # from eq(10)
 end
 
-function inv(flow::PlanarLayer, y)
+function (ib::Inversed{<: PlanarLayer})(y)
+    flow = ib.orig
     u_hat = get_u_hat(flow.u, flow.w)
     # Define the objective functional; implemented with reference from A.1
     f(y) = alpha -> (flow.w' * y)[1] - alpha - (flow.w' * u_hat)[1] * tanh(alpha+flow.b[1])
@@ -80,8 +79,6 @@ function RadialLayer(dims::Int, container=Array)
     return RadialLayer(α_, β, z_0)
 end
 
-(b::RadialLayer)(x) = transform(b, x)
-
 h(α, r) = 1 ./ (α .+ r)     # for radial flow from eq(14)
 dh(α, r) = - h(α, r) .^ 2   # for radial flow; derivative of h()
 
@@ -94,7 +91,7 @@ function _transform(flow::RadialLayer, z)
     return (transformed=transformed, α=α, β_hat=β_hat, r=r)
 end
 
-transform(flow::RadialLayer, z) = _transform(flow, z).transformed
+(b::RadialLayer)(z) = _transform(b, z).transformed
 
 function forward(flow::T, z) where {T<:RadialLayer}
     transformed, α, β_hat, r = _transform(flow, z)
@@ -108,7 +105,9 @@ function forward(flow::T, z) where {T<:RadialLayer}
     return (rv=transformed, logabsdetjac=log_det_jacobian)
 end
 
-function inv(flow::RadialLayer, y)
+# function inv(flow::RadialLayer, y)
+function (ib::Inversed{<: RadialLayer})(y)
+    flow = ib.orig
     α = softplus(flow.α_[1])            # from A.2
     β_hat = - α + softplus(flow.β[1])   # from A.2
     # Define the objective functional
