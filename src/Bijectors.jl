@@ -8,7 +8,6 @@ using MappedArrays
 using Roots
 
 export  TransformDistribution,
-        RealDistribution,
         PositiveDistribution,
         UnitDistribution,
         SimplexDistribution,
@@ -340,21 +339,16 @@ end
 
 const PDMatDistribution = Union{InverseWishart, Wishart}
 
-function link(d::PDMatDistribution, X::AbstractMatrix{T}) where {T<:Real}
-    Y = cholesky(X).L
-    @inbounds @simd for m in 1:size(Y, 1)
-        Y[m, m] = log(Y[m, m])
-    end
-    return Matrix(Y)
+function link(d::PDMatDistribution, X::AbstractMatrix{<:Real})
+    Y = Matrix(cholesky(X).L)
+    Y[diagind(Y)] .= log.(view(Y, diagind(Y)))
+    return Y
 end
 
-function invlink(d::PDMatDistribution, Y::AbstractMatrix{T}) where {T<:Real}
-    X, dim = copy(Y), size(Y)
-    @inbounds @simd for m in 1:size(X, 1)
-        X[m, m] = exp(X[m, m])
-    end
-    Z = similar(X)
-    return mul!(Z, LowerTriangular(X), LowerTriangular(X)')
+function invlink(d::PDMatDistribution, Y::AbstractMatrix{<:Real})
+    X = copy(Y)
+    X[diagind(X)] .= exp.(view(X, diagind(X)))
+    return LowerTriangular(X) * LowerTriangular(X)'
 end
 
 function logpdf_with_trans(
@@ -363,9 +357,13 @@ function logpdf_with_trans(
     transform::Bool
 )
     T = eltype(X)
-    lp = logpdf(d, X)
+    Xcf = cholesky(X, check=false)
+    if !issuccess(Xcf)
+        Xcf = cholesky(X + (eps(T) * norm(X)) * I)
+    end
+    lp = getlogp(d, Xcf, X)
     if transform && isfinite(lp)
-        U = cholesky(X).U
+        U = Xcf.U
         @inbounds @simd for i in 1:dim(d)
             lp += (dim(d) - i + 2) * log(U[i, i])
         end
@@ -373,7 +371,13 @@ function logpdf_with_trans(
     end
     return lp
 end
-
+function getlogp(d::Wishart, Xcf, X)
+    return 0.5 * ((d.df - (dim(d) + 1)) * logdet(Xcf) - tr(d.S \ X)) - d.c0
+end
+function getlogp(d::InverseWishart, Xcf, X)
+    Ψ = Matrix(d.Ψ)
+    return -0.5 * ((d.df + dim(d) + 1) * logdet(Xcf) + tr(Xcf \ Ψ)) - d.c0
+end
 
 ############################################
 # Defaults (assume identity link function) #
@@ -383,10 +387,10 @@ end
 using Distributions: UnivariateDistribution
 
 link(d::UnivariateDistribution, x::Real) = x
-link(d::UnivariateDistribution, x::AbstractVector{<:Real}) = link.(Ref(d), x)
+link(d::UnivariateDistribution, x::AbstractVector{<:Real}) = map(x -> link(d, x), x)
 
 invlink(d::UnivariateDistribution, y::Real) = y
-invlink(d::UnivariateDistribution, y::AbstractVector{<:Real}) = invlink.(Ref(d), y)
+invlink(d::UnivariateDistribution, y::AbstractVector{<:Real}) = map(y -> invlink(d, y), y)
 
 logpdf_with_trans(d::UnivariateDistribution, x::Real, ::Bool) = logpdf(d, x)
 function logpdf_with_trans(
@@ -394,7 +398,7 @@ function logpdf_with_trans(
     x::AbstractVector{<:Real},
     transform::Bool,
 )
-    return logpdf_with_trans.(Ref(d), x, transform)
+    return map(x -> logpdf_with_trans(d, x, transform), x)
 end
 
 # MultivariateDistributions
@@ -421,11 +425,11 @@ end
 using Distributions: MatrixDistribution
 
 link(d::MatrixDistribution, X::AbstractMatrix{<:Real}) = copy(X)
-link(d::MatrixDistribution, X::AbstractVector{<:AbstractMatrix{<:Real}}) = link.(Ref(d), X)
+link(d::MatrixDistribution, X::AbstractVector{<:AbstractMatrix{<:Real}}) = map(x -> link(d, x), X)
 
 invlink(d::MatrixDistribution, Y::AbstractMatrix{<:Real}) = copy(Y)
 function invlink(d::MatrixDistribution, Y::AbstractVector{<:AbstractMatrix{<:Real}})
-    return invlink.(Ref(d), Y)
+    return map(y -> invlink(d, y), Y)
 end
 
 logpdf_with_trans(d::MatrixDistribution, X::AbstractMatrix{<:Real}, ::Bool) = logpdf(d, X)
@@ -434,7 +438,7 @@ function logpdf_with_trans(
     X::AbstractVector{<:AbstractMatrix{<:Real}},
     transform::Bool,
 )
-    return logpdf_with_trans.(Ref(d), X, Ref(transform))
+    return map(x -> logpdf_with_trans(d, x, transform), X)
 end
 
 include("interface.jl")
