@@ -40,7 +40,6 @@ Random.seed!(123)
         
         for dist in uni_dists
             @testset "$dist: dist" begin
-                dist = Erlang()
                 td = transformed(dist)
 
                 # single sample
@@ -57,6 +56,14 @@ Random.seed!(123)
                 y = rand(td, 10)
                 x = inv(td.transform).(y)
                 @test logpdf.(td, y) ≈ logpdf_with_trans.(dist, x, true)
+
+                # logpdf corresponds to logpdf_with_trans
+                d = dist
+                b = bijector(d)
+                x = rand(d)
+                y = b(x)
+                @test logpdf(d, inv(b)(y)) - logabsdetjacinv(b, y) ≈ logpdf_with_trans(d, x, true)
+                @test logpdf(d, x) + logabsdetjac(b, x) ≈ logpdf_with_trans(d, x, true)
             end
 
             @testset "$dist: ForwardDiff AD" begin
@@ -190,6 +197,11 @@ Random.seed!(123)
         cb2 = cb ∘ cb
         @test cb(x) ≈ x
 
+        # ensures that the `logabsdetjac` is correct
+        x = rand(d)
+        b = inv(bijector(d))
+        @test logabsdetjac(b ∘ b, x) ≈ logabsdetjac(b, b(x)) + logabsdetjac(b, x)
+
         # order of composed evaluation
         b1 = DistributionBijector(d)
         b2 = DistributionBijector(Gamma())
@@ -214,3 +226,65 @@ Random.seed!(123)
         @test 0 ≤ x ≤ 1
     end
 end
+
+# using ForwardDiff: Dual
+# d = BetaPrime(Dual(1.0), Dual(1.0))
+# b = bijector(d)
+
+
+
+# bijector()
+
+
+# A = Union{[Beta, Normal, Gamma, InverseGamma]...}
+
+# @code_warntype bijector(Beta(ForwardDiff.Dual(2.0), ForwardDiff.Dual(3.0)))
+# d = Beta(ForwardDiff.Dual(2.0), ForwardDiff.Dual(3.0))
+
+# d = InverseGamma()
+# b = bijector(d)
+# eltype(d)
+# x = rand(d)
+# y = b(x)
+
+
+# x == inv(b)(y)
+
+# # logabsdetjacinv(b, y) == logabsdetjac(inv(b), y)
+# # logabsdetjacinv(b, y) == - y
+
+# @test logpdf(d, inv(b)(y)) - logabsdetjacinv(b, y) ≈ logpdf_with_trans(d, x, true)
+# @test logpdf(d, x) + logabsdetjac(b, x) ≈ logpdf_with_trans(d, x, true) 
+
+
+
+
+# logpdf_with_trans(d, x, true) - logpdf_with_trans(d, x, false)
+
+# logpdf_with_trans(d, invlink(d, y), true) - logpdf_with_trans(d, invlink(d, y), false)
+# logabsdetjac(b, x)
+
+# logpdf(d, x) + logabsdetjacinv(b, y)
+
+
+# using BenchmarkTools
+
+# @btime b(x)
+# @btime link(d, x)
+
+# @btime logabsdetjac(b, x)
+
+# d = Truncated(Normal(), -1, 1)
+# b = bijector(d)
+# x = rand(d)
+# @test b(x) == link(d, x)
+
+# d = Truncated(Normal(), -Inf, 1)
+# b = bijector(d)
+# x = rand(d)
+# @test b(x) == link(d, x)
+
+# d = Truncated(Normal(), 1, Inf)
+# b = bijector(d)
+# x = rand(d)
+# @test b(x) == link(d, x)

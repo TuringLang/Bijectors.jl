@@ -268,7 +268,7 @@ struct Scale{T} <: Bijector
 end
 
 (b::Scale)(x) = b.a * x
-inv(b::Scale) = Scale(b^(-1))
+inv(b::Scale) = Scale(b.a^(-1))
 logabsdetjac(b::Scale, x) = log(abs(b.a))
 
 #######################################################
@@ -344,15 +344,18 @@ for D in _union2tuple(UnitDistribution)[2:end]
     @eval bijector(d::$D{T}) where T <: Real = Logit(zero(T), one(T))
 end
 
-function bijector(d::Truncated{D}) where D <: Distribution
+# FIXME: can we make this typestable?
+function bijector(d::TransformDistribution) where D <: Distribution
     a, b = minimum(d), maximum(d)
     lowerbounded, upperbounded = isfinite(a), isfinite(b)
     if lowerbounded && upperbounded
         return Logit(a, b)
     elseif lowerbounded
         return (log_b ∘ Shift(- a))
-    else
+    elseif upperbounded
         return (log_b ∘ Shift(b) ∘ Scale(- one(typeof(b))))
+    else
+        return IdentityBijector
     end
 end
 
