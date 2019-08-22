@@ -340,11 +340,15 @@ _union2tuple(T::Union) = _union2tuple(T.a, T.b)
 
 bijector(d::Kolmogorov) = Logit(zero(eltype(d)), zero(eltype(d)))
 for D in _union2tuple(UnitDistribution)[2:end]
-    # skipping Kolmogorov because it's a DataType
+    # Skipping Kolmogorov because it's a DataType
     @eval bijector(d::$D{T}) where T <: Real = Logit(zero(T), one(T))
 end
 
-# FIXME: can we make this typestable?
+# FIXME: Can we make this type-stable?
+# Everything but `Truncated` can probably be made type-stable
+# by explicit implementation. Can also make a `TruncatedBijector`
+# which has the same transform as the `link` function.
+# E.g. (b::Truncated)(x) = link(b.d, x) or smth
 function bijector(d::TransformDistribution) where D <: Distribution
     a, b = minimum(d), maximum(d)
     lowerbounded, upperbounded = isfinite(a), isfinite(b)
