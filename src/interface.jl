@@ -205,6 +205,11 @@ function forward(cb::Composed, x)
     return res
 end
 
+function rand(flow::Composed, dims::Integer, shape::Integer=1)
+    dims = [dims]
+    append!(dims, shape)
+    return transform(flow, randn(dims...))
+end
 ##############################
 # Example bijector: Identity #
 ##############################
