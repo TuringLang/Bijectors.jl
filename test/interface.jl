@@ -94,7 +94,7 @@ Random.seed!(123)
         for dist in matrix_dists
             @testset "$dist: dist" begin
                 td = transformed(dist)
-                y = rand(rng, td)
+                y = rand(td)
 
                 x = inv(td.transform)(y)
                 @test td.transform(x) ≈ y
