@@ -40,6 +40,7 @@ Random.seed!(123)
         
         for dist in uni_dists
             @testset "$dist: dist" begin
+                dist = Erlang()
                 td = transformed(dist)
 
                 # single sample
@@ -84,6 +85,23 @@ Random.seed!(123)
                 @test logabsdetjac(b⁻¹, y) ≠ Inf
             end
         end
+    end
+
+    @testset "Truncated" begin
+        d = Truncated(Normal(), -1, 1)
+        b = bijector(d)
+        x = rand(d)
+        @test b(x) == link(d, x)
+
+        d = Truncated(Normal(), -Inf, 1)
+        b = bijector(d)
+        x = rand(d)
+        @test b(x) == link(d, x)
+
+        d = Truncated(Normal(), 1, Inf)
+        b = bijector(d)
+        x = rand(d)
+        @test b(x) == link(d, x)
     end
 
     @testset "Multivariate" begin
@@ -196,42 +214,3 @@ Random.seed!(123)
         @test 0 ≤ x ≤ 1
     end
 end
-
-d = BetaPrime(Dual(1.0), Dual(1.0))
-b = bijector(d)
-
-
-
-bijector()
-
-
-A = Union{[Beta, Normal, Gamma, InverseGamma]...}
-
-using ForwardDiff: Dual
-@code_warntype bijector(Beta(ForwardDiff.Dual(2.0), ForwardDiff.Dual(3.0)))
-d = Beta(ForwardDiff.Dual(2.0), ForwardDiff.Dual(3.0))
-
-d = InverseGamma()
-b = bijector(d)
-eltype(d)
-x = rand(d)
-y = b(x)
-
-
-x == inv(b)(y)
-
-# logabsdetjacinv(b, y) == logabsdetjac(inv(b), y)
-# logabsdetjacinv(b, y) == - y
-
-@test logpdf(d, inv(b)(y)) - logabsdetjacinv(b, y) ≈ logpdf_with_trans(d, x, true)
-@test logpdf(d, x) + logabsdetjac(b, x) ≈ logpdf_with_trans(d, x, true) 
-
-
-
-
-logpdf_with_trans(d, x, true) - logpdf_with_trans(d, x, false)
-
-logpdf_with_trans(d, invlink(d, y), true) - logpdf_with_trans(d, invlink(d, y), false)
-logabsdetjac(b, x)
-
-logpdf(d, x) + logabsdetjacinv(b, y)

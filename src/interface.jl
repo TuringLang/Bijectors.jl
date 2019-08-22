@@ -235,6 +235,10 @@ end
 
 logabsdetjac(b::Logit{<:Real}, x) = log((x - b.a) * (b.b - x) / (b.b - b.a))
 
+#############
+# Exp & Log #
+#############
+
 struct Exp <: Bijector end
 struct Log <: Bijector end
 const exp_b = Exp()
@@ -248,6 +252,25 @@ inv(b::Exp) = log_b
 
 logabsdetjac(b::Log, x) = log(x)
 logabsdetjac(b::Exp, y) = - y
+
+#################
+# Shift & Scale #
+#################
+struct Shift{T} <: Bijector
+    a::T
+end
+
+(b::Shift)(x) = b.a + x
+inv(b::Shift) = Shift(-b.a)
+logabsdetjac(b::Shift, x::T) where T = zero(T)
+
+struct Scale{T} <: Bijector
+    a::T
+end
+
+(b::Scale)(x) = b.a * x
+inv(b::Scale) = Scale(b^(-1))
+logabsdetjac(b::Scale, x) = log(abs(b.a))
 
 #######################################################
 # Constrained to unconstrained distribution bijectors #
@@ -313,13 +336,25 @@ bijector(d::MvNormal) = IdentityBijector
 bijector(d::PositiveDistribution) = log_b
 
 _union2tuple(T1::Type, T2::Type) = (T1, T2)
-_union2tuple(T1::Type, T2::Union) = (T1, union2tuple(T2.a, T2.b)...)
-_union2tuple(T::Union) = union2tuple(T.a, T.b)
+_union2tuple(T1::Type, T2::Union) = (T1, _union2tuple(T2.a, T2.b)...)
+_union2tuple(T::Union) = _union2tuple(T.a, T.b)
 
 bijector(d::Kolmogorov) = Logit(zero(eltype(d)), zero(eltype(d)))
-for D in _union2tuple(PositiveDistribution)[2:end]
+for D in _union2tuple(UnitDistribution)[2:end]
     # skipping Kolmogorov because it's a DataType
-    @eval bijector(d::$D{T}) where T <: Real = Logit(zero(T), zero(T))
+    @eval bijector(d::$D{T}) where T <: Real = Logit(zero(T), one(T))
+end
+
+function bijector(d::Truncated{D}) where D <: Distribution
+    a, b = minimum(d), maximum(d)
+    lowerbounded, upperbounded = isfinite(a), isfinite(b)
+    if lowerbounded && upperbounded
+        return Logit(a, b)
+    elseif lowerbounded
+        return (log_b ∘ Shift(- a))
+    else
+        return (log_b ∘ Shift(b) ∘ Scale(- one(typeof(b))))
+    end
 end
 
 ##############################
