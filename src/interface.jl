@@ -427,11 +427,6 @@ end
 (b::DistributionBijector)(x) = link(b.dist, x)
 (ib::Inversed{<: DistributionBijector})(y) = invlink(ib.orig.dist, y)
 
-# HACK: he he he, we gottem' boys
-function logabsdetjac(b::B, x::AbstractVector{<:Real}) where {AD, B <: DistributionBijector{AD, <: Dirichlet}}
-    return logpdf_with_trans(b.dist, x, true) - logpdf_with_trans(b.dist, x, false)
-end
-
 
 "Returns the constrained-to-unconstrained bijector for distribution `d`."
 bijector(d::Distribution) = DistributionBijector(d)
