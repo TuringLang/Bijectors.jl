@@ -198,25 +198,29 @@ end
 logabsdetjac(cb::Composed, x) = _logabsdetjac(x, cb.ts...)
 
 # recursive implementation of `forward`
-function _forward(f, b1::Bijector, b2::Bijector)
+# HACK: we need this one in the case where `length(cb.ts) == 2`
+# in which case forward(...) immediately calls `_forward(::NamedTuple, b::Bijector)`
+function _forward(f::NamedTuple, b::Bijector)
+    y, logjac = forward(b, f.rv)
+    return (rv=y, logabsdetjac=logjac .+ f.logabsdetjac)
+end
+function _forward(f::NamedTuple, b1::Bijector, b2::Bijector)
     f1 = forward(b1, f.rv)
     f2 = forward(b2, f1.rv)
     return (rv=f2.rv, logabsdetjac=f2.logabsdetjac .+ f1.logabsdetjac .+ f.logabsdetjac)
 end
-function _forward(f, b::Bijector, bs::Bijector...)
+function _forward(f::NamedTuple, b::Bijector, bs::Bijector...)
     f1 = forward(b, f.rv)
     f_ = (rv=f1.rv, logabsdetjac=f1.logabsdetjac .+ f.logabsdetjac)
     return _forward(f_, bs...)
 end
-function forward(cb::Composed{<: Tuple}, x)
-    _forward((rv=x, logabsdetjac=zero(eltype(x))), cb.ts...)
-end
+_forward(x, b::Bijector, bs::Bijector...) = _forward(forward(b, x), bs...)
+forward(cb::Composed{<: Tuple}, x) = _forward(x, cb.ts...)
 
 function forward(cb::Composed, x)
-    rv = x
-    logjac = zero(eltype(x))
+    rv, logjac = forward(cb.ts[1], x)
     
-    for t in cb.ts
+    for t in cb.ts[2:end]
         res = forward(t, rv)
         rv = res.rv
         logjac = res.logabsdetjac .+ logjac
@@ -280,6 +284,9 @@ struct Shift{T} <: Bijector
 end
 
 (b::Shift)(x) = b.a + x
+(b::Shift{<: Real})(x::AbstractVector) = b.a .+ x
+(b::Shift{<: AbstractVector})(x::AbstractMatrix) = b.a .+ x
+
 inv(b::Shift) = Shift(-b.a)
 logabsdetjac(b::Shift, x::T) where T = zero(T)
 
@@ -288,6 +295,9 @@ struct Scale{T} <: Bijector
 end
 
 (b::Scale)(x) = b.a * x
+(b::Scale{<: Real})(x::AbstractVector) = b.a .* x
+(b::Scale{<: AbstractVector{<: Real}})(x::AbstractMatrix{<: Real}) = b.a * x
+
 inv(b::Scale) = Scale(b.a^(-1))
 logabsdetjac(b::Scale, x) = log(abs(b.a))
 
