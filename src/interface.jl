@@ -279,6 +279,8 @@ struct SimplexBijector{T} <: Bijector where T end
 const simplex_b = SimplexBijector{Val{false}}()
 const simplex_b_proj = SimplexBijector{Val{true}}()
 
+# the following implementations are basically just copy-paste from `invlink` and
+# `link` for `SimplexDistributions` but dropping the dependence on the `Distribution`.
 function _clamp(x::T, b::SimplexBijector) where T
     bounds = (zero(T), one(T))
     clamped_x = clamp(x, bounds...)
@@ -358,7 +360,9 @@ function (ib::Inversed{<: SimplexBijector{Val{proj}}})(y::AbstractVector{T}) whe
 end
 
 # Vectorised implementation of the above.
-function (ib::Inversed{<: SimplexBijector{Val{proj}}})(Y::AbstractMatrix{T}) where {T<:Real, proj}
+function (ib::Inversed{<: SimplexBijector{Val{proj}}})(
+    Y::AbstractMatrix{T}
+) where {T<:Real, proj}
     X, K, N = similar(Y), size(Y, 1), size(Y, 2)
 
     ϵ = _eps(T)
