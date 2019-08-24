@@ -74,43 +74,17 @@ logabsdetjac(ib::Inversed{<: Bijector}, y) = - logabsdetjac(ib.orig, ib(y))
 
 """
     forward(b::Bijector, x)
-    forward(b::Bijector, x, logjac)
+    forward(ib::Inversed{<: Bijector}, y)
 
 Computes both `transform` and `logabsdetjac` in one forward pass, and
 returns a named tuple `(rv=b(x), logabsdetjac=logabsdetjac(b, x))`.
-
-`forward(b::Bijector, x, logjac)` allows the user to specify the accumulation
-variable for the `logabsdetjac` field. This is useful for doing batch computations.
-See below for example.
 
 This defaults to the call above, but often one can re-use computation
 in the computation of the forward pass and the computation of the
 `logabsdetjac`. `forward` allows the user to take advantange of such
 efficiencies, if they exist.
-
-# Examples
-`forward(b::Bijector, x, logjac)` allows specification of the accumulation variable
-for the `logabsdetjac` field. This is useful for doing **batch computations**.
-```
-julia> b = PlanarLayer(2);
-
-julia> cb = b ∘ b;
-
-julia> x = randn(2, 3)
-2×3 Array{Float64,2}:
-  0.0660476  -0.77195  -1.7832  
- -0.147743   -1.46459   0.264924
-
-julia> forward(cb, x)
-ERROR: MethodError: no method matching +(::Array{Float64,1}, ::Float64)
-  ...
-julia> forward(cb, x, zeros(size(x, 2)))
-(rv = [1.10887 0.32029 -0.704563; -0.639206 -1.97935 -0.243419], logabsdetjac = [0.018534, 1.46352e-5, 0.00521633])
-```
-    
 """
-forward(b::Bijector, x) = forward(b, x, zero(eltype(x)))
-forward(b::Bijector, x, logjac) = (rv=b(x), logabsdetjac=logjac + logabsdetjac(b, x))
+forward(b::Bijector, x) = (rv=b(x), logabsdetjac=logabsdetjac(b, x))
 forward(ib::Inversed{<: Bijector}, y) = (
     rv=ib(y),
     logabsdetjac=logabsdetjac(ib, y)
@@ -215,11 +189,11 @@ _transform(x, b::Bijector, bs::Bijector...) = _transform(b(x), bs...)
 
 function _logabsdetjac(x, b1::Bijector, b2::Bijector)
     res = forward(b1, x)
-    return logabsdetjac(b2, res.rv) + res.logabsdetjac
+    return logabsdetjac(b2, res.rv) .+ res.logabsdetjac
 end
 function _logabsdetjac(x, b1::Bijector, bs::Bijector...)
     res = forward(b1, x)
-    return _logabsdetjac(res.rv, bs...) + res.logabsdetjac
+    return _logabsdetjac(res.rv, bs...) .+ res.logabsdetjac
 end
 logabsdetjac(cb::Composed, x) = _logabsdetjac(x, cb.ts...)
 
@@ -227,30 +201,27 @@ logabsdetjac(cb::Composed, x) = _logabsdetjac(x, cb.ts...)
 function _forward(f, b1::Bijector, b2::Bijector)
     f1 = forward(b1, f.rv)
     f2 = forward(b2, f1.rv)
-    return (rv=f2.rv, logabsdetjac=f2.logabsdetjac + f1.logabsdetjac + f.logabsdetjac)
+    return (rv=f2.rv, logabsdetjac=f2.logabsdetjac .+ f1.logabsdetjac .+ f.logabsdetjac)
 end
 function _forward(f, b::Bijector, bs::Bijector...)
     f1 = forward(b, f.rv)
-    f_ = (rv=f1.rv, logabsdetjac=f1.logabsdetjac + f.logabsdetjac)
+    f_ = (rv=f1.rv, logabsdetjac=f1.logabsdetjac .+ f.logabsdetjac)
     return _forward(f_, bs...)
 end
-# if `x` represents multiple elements to act on, we want to allow the user to
-# specify the `logjac` accumulation field since it's ambigious, e.g. should
-# it be a vector or a float?
-function forward(cb::Composed{<: Tuple}, x, logjac)
-    _forward((rv=x, logabsdetjac=logjac), cb.ts...)
+function forward(cb::Composed{<: Tuple}, x)
+    _forward((rv=x, logabsdetjac=zero(eltype(x))), cb.ts...)
 end
 
-function forward(cb::Composed, x, logjac)
+function forward(cb::Composed, x)
     rv = x
-    logjac_ = logjac
+    logjac = zero(eltype(x))
     
     for t in cb.ts
         res = forward(t, rv)
         rv = res.rv
-        logjac_ = res.logabsdetjac + logjac_
+        logjac = res.logabsdetjac .+ logjac
     end
-    return (rv=rv, logabsdetjac=logjac_)
+    return (rv=rv, logabsdetjac=logjac)
 end
 
 ##############################
