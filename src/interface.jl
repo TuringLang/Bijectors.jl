@@ -194,15 +194,32 @@ function _logabsdetjac(x, b1::Bijector, bs::Bijector...)
 end
 logabsdetjac(cb::Composed, x) = _logabsdetjac(x, cb.ts...)
 
-# TODO: implement `forward` recursively
-function forward(cb::Composed, x)
-    res = (rv=x, logabsdetjac=0)
-    for t in cb.ts
-        res′ = forward(t, res.rv)
-        res = (rv=res′.rv, logabsdetjac=res.logabsdetjac + res′.logabsdetjac)
-    end
-    return res
+# recursive implementation of `forward`
+function _forward(f, b1::Bijector, b2::Bijector)
+    f1 = forward(b1, f.rv)
+    f2 = forward(b2, f1.rv)
+    return (rv=f2.rv, logabsdetjac=f2.logabsdetjac + f1.logabsdetjac + f.logabsdetjac)
 end
+function _forward(f, b::Bijector, bs::Bijector...)
+    f1 = forward(b, f.rv)
+    f_ = (rv=f1.rv, logabsdetjac=f1.logabsdetjac + f.logabsdetjac)
+    return _forward(f_, bs...)
+end
+forward(cb::Composed{<: Tuple}, x, logjac) = _forward((rv=x, logabsdetjac=logjac), cb.ts...)
+forward(cb::Composed{<: Tuple}, x) = forward(cb, x, zero(eltype(x)))
+
+function forward(cb::Composed, x, logjac)
+    rv = x
+    logjac_ = logjac
+    
+    for t in cb.ts
+        res = forward(t, rv)
+        rv = res.rv
+        logjac_ = res.logabsdetjac + logjac_
+    end
+    return (rv=rv, logabsdetjac=logjac_)
+end
+forward(cb::Composed, x) = forward(cb, x, zero(eltype(x)))
 
 ##############################
 # Example bijector: Identity #

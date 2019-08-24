@@ -177,7 +177,7 @@ Random.seed!(123)
         end
     end
 
-    @testset "Composition" begin
+    @testset "Composition <: Bijector" begin
         d = Beta()
         td = transformed(d)
 
@@ -214,9 +214,23 @@ Random.seed!(123)
         cb = inv(b) ∘ b
         cb = cb ∘ cb
         @test (cb ∘ cb ∘ cb ∘ cb ∘ cb)(x) ≈ x
+
+        # forward for tuple and array
+        d = Beta()
+        b = inv(bijector(d))
+        b⁻¹ = inv(b)
+        x = rand(d)
+
+        cb_t = b⁻¹ ∘ b⁻¹
+        f_t = forward(cb_t, x)
+
+        cb_a = Composed([b⁻¹, b⁻¹])
+        f_a = forward(cb_a, x)
+
+        @test f_t == f_a
     end
 
-    @testset "Example: ADVI" begin
+    @testset "Example: ADVI single" begin
         # Usage in ADVI
         d = Beta()
         b = DistributionBijector(d)    # [0, 1] → ℝ
