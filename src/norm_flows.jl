@@ -132,7 +132,7 @@ end
 forward(flow::RadialLayer, z) = _forward(flow, z)
 
 function forward(flow::RadialLayer, z::AbstractVector{<: Real})
-    res = forward(flow, z)
+    res = _forward(flow, z)
     return (rv=res.rv, logabsdetjac=res.logabsdetjac[1])
 end
 
