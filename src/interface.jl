@@ -89,23 +89,23 @@ in the computation of the forward pass and the computation of the
 efficiencies, if they exist.
 
 # Examples
-`forward(b::Bijector, x, logjac)` allows the user to specify the accumulation
-variable for the `logabsdetjac` field. This is useful for doing **batch computations**.
+`forward(b::Bijector, x, logjac)` allows specification of the accumulation variable
+for the `logabsdetjac` field. This is useful for doing **batch computations**.
 ```
 julia> b = PlanarLayer(2);
 
 julia> cb = b ∘ b;
 
-julia> x = randn(2, 5)
-2×5 Array{Float64,2}:
-  0.35499    0.244763  -0.790103  -0.551053  -0.315193
- -0.210833  -0.854612  -0.197942  -0.486802   0.864496
+julia> x = randn(2, 3)
+2×3 Array{Float64,2}:
+  0.0660476  -0.77195  -1.7832  
+ -0.147743   -1.46459   0.264924
 
 julia> forward(cb, x)
 ERROR: MethodError: no method matching +(::Array{Float64,1}, ::Float64)
   ...
 julia> forward(cb, x, zeros(size(x, 2)))
-(rv = [0.0277394 -0.16401 … -0.253787 0.145421; 0.0144131 -0.573255 … -0.69141 0.547456], logabsdetjac = [-2.26736, -1.63996, -0.884037, -2.49163, -1.24809])
+(rv = [1.10887 0.32029 -0.704563; -0.639206 -1.97935 -0.243419], logabsdetjac = [0.018534, 1.46352e-5, 0.00521633])
 ```
     
 """
