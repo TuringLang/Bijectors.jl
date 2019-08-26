@@ -45,6 +45,7 @@ Random.seed!(123)
                 # single sample
                 y = rand(td)
                 x = inv(td.transform)(y)
+                @test y == td.transform(x)
                 @test logpdf(td, y) ≈ logpdf_with_trans(dist, x, true)
 
                 # logpdf_with_jac
