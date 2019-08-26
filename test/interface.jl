@@ -118,7 +118,7 @@ Random.seed!(123)
             Dirichlet([1000 * one(Float64), eps(Float64)]),
             Dirichlet([eps(Float64), 1000 * one(Float64)]),
             MvNormal(randn(10), exp.(randn(10))),
-            # MvLogNormal(MvNormal(randn(10), exp.(randn(10)))),
+            MvLogNormal(MvNormal(randn(10), exp.(randn(10)))),
             Dirichlet([1000 * one(Float64), eps(Float64)]), 
             Dirichlet([eps(Float64), 1000 * one(Float64)]),
         ]
@@ -130,6 +130,7 @@ Random.seed!(123)
                 # single sample
                 y = rand(td)
                 x = inv(td.transform)(y)
+                @test y == td.transform(x)
                 @test logpdf(td, y) ≈ logpdf_with_trans(dist, x, true)
 
                 # logpdf_with_jac

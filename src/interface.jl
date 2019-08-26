@@ -273,8 +273,8 @@ const log_b = Log()
 inv(b::Log) = exp_b
 inv(b::Exp) = log_b
 
-logabsdetjac(b::Log, x) = log(x)
-logabsdetjac(b::Exp, y) = - y
+logabsdetjac(b::Log, x) = sum(log.(x))
+logabsdetjac(b::Exp, y) = - sum(y)
 
 #################
 # Shift & Scale #
@@ -508,6 +508,7 @@ Returns the constrained-to-unconstrained bijector for distribution `d`.
 bijector(d::Normal) = IdentityBijector
 bijector(d::MvNormal) = IdentityBijector
 bijector(d::PositiveDistribution) = log_b
+bijector(d::MvLogNormal) = log_b
 bijector(d::SimplexDistribution) = simplex_b_proj
 
 _union2tuple(T1::Type, T2::Type) = (T1, T2)
