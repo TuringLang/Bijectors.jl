@@ -112,11 +112,11 @@ function jacobian(b::Inversed{<: ADBijector{<: TrackerAD}}, y::Real)
     return Tracker.gradient(b, y)[1]
 end
 function jacobian(b::ADBijector{<: TrackerAD}, x::AbstractVector{<: Real})
-    # we extract `data` so that we don't returne a `Tracked` type
+    # We extract `data` so that we don't returne a `Tracked` type
     return Tracker.data(Tracker.jacobian(b, x))
 end
 function jacobian(b::Inversed{<: ADBijector{<: TrackerAD}}, y::AbstractVector{<: Real})
-    # we extract `data` so that we don't returne a `Tracked` type
+    # We extract `data` so that we don't returne a `Tracked` type
     return Tracker.data(Tracker.jacobian(b, y))
 end
 
@@ -197,7 +197,7 @@ function _logabsdetjac(x, b1::Bijector, bs::Bijector...)
 end
 logabsdetjac(cb::Composed, x) = _logabsdetjac(x, cb.ts...)
 
-# recursive implementation of `forward`
+# Recursive implementation of `forward`
 # HACK: we need this one in the case where `length(cb.ts) == 2`
 # in which case forward(...) immediately calls `_forward(::NamedTuple, b::Bijector)`
 function _forward(f::NamedTuple, b::Bijector)
@@ -238,8 +238,8 @@ struct Identity <: Bijector end
 
 forward(::Identity, x) = (rv=x, logabsdetjac=zero(x))
 
-logabsdetjac(::Identity, y::T) where T <: Real = zero(T)
-logabsdetjac(::Identity, y::AbstractArray{T}) where T <: Real = zero(T)
+logabsdetjac(::Identity, y::T) where {T<:Real} = zero(T)
+logabsdetjac(::Identity, y::AbstractArray{T}) where {T <: Real} = zero(T)
 
 const IdentityBijector = Identity()
 
@@ -319,7 +319,7 @@ struct SimplexBijector{T} <: Bijector where T end
 const simplex_b = SimplexBijector{Val{false}}()
 const simplex_b_proj = SimplexBijector{Val{true}}()
 
-# the following implementations are basically just copy-paste from `invlink` and
+# The following implementations are basically just copy-paste from `invlink` and
 # `link` for `SimplexDistributions` but dropping the dependence on the `Distribution`.
 function _clamp(x::T, b::SimplexBijector) where T
     bounds = (zero(T), one(T))
