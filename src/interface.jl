@@ -515,9 +515,12 @@ _union2tuple(T1::Type, T2::Type) = (T1, T2)
 _union2tuple(T1::Type, T2::Union) = (T1, _union2tuple(T2.a, T2.b)...)
 _union2tuple(T::Union) = _union2tuple(T.a, T.b)
 
-bijector(d::Kolmogorov) = Logit(zero(eltype(d)), zero(eltype(d)))
-for D in _union2tuple(UnitDistribution)[2:end]
-    # Skipping Kolmogorov because it's a DataType
+bijector(d::KSOneSided) = Logit(zero(eltype(d)), zero(eltype(d)))
+for D in _union2tuple(UnitDistribution)
+    # Skipping KSOneSided because it's not a parametric type
+    if D == KSOneSided
+        continue
+    end
     @eval bijector(d::$D{T}) where T <: Real = Logit(zero(T), one(T))
 end
 
