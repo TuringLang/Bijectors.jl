@@ -521,7 +521,7 @@ for D in _union2tuple(UnitDistribution)[2:end]
     @eval bijector(d::$D{T}) where T <: Real = Logit(zero(T), one(T))
 end
 
-# FIXME: Can we make this type-stable?
+# FIXME: (TOR) Can we make this type-stable?
 # Everything but `Truncated` can probably be made type-stable
 # by explicit implementation. Can also make a `TruncatedBijector`
 # which has the same transform as the `link` function.
