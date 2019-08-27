@@ -245,10 +245,9 @@ struct Identity <: Bijector end
 (::Identity)(x) = x
 (::Inversed{Identity})(y) = y
 
-forward(::Identity, x) = (rv=x, logabsdetjac=zero(x))
+forward(::Identity, x) = (rv=x, logabsdetjac=zero(eltype(x)))
 
-logabsdetjac(::Identity, y::T) where {T<:Real} = zero(T)
-logabsdetjac(::Identity, y::AbstractArray{T}) where {T<:Real} = zero(T)
+logabsdetjac(::Identity, y) = zero(eltype(y))
 
 const IdentityBijector = Identity()
 
@@ -664,5 +663,39 @@ This is similar to `logpdf_with_trans`.
 logpdf_forward(td::Transformed, x, logjac) = logpdf(td.dist, x) .+ logjac
 logpdf_forward(td::Transformed, x) = logpdf_forward(td, x, logabsdetjac(td.transform, x))
 
-forward(d::Transformed, x) = forward(d.transform, x)
-forward(d::Transformed) = forward(d, rand(d.dist))
+
+# forward function
+const GLOBAL_RNG = Distributions.GLOBAL_RNG
+
+function _forward(d::UnivariateDistribution, x)
+    y, logjac = forward(IdentityBijector, x)
+    return (x = x, y = y, logabsdetjac = logjac, logpdf = logpdf.(d, x))
+end
+
+forward(rng::AbstractRNG, d::Distribution) = _forward(d, rand(rng, d))
+function forward(rng::AbstractRNG, d::Distribution, num_samples::Int)
+    return _forward(d, rand(rng, d, num_samples))
+end
+function _forward(d::Distribution, x)
+    y, logjac = forward(IdentityBijector, x)
+    return (x = x, y = y, logabsdetjac = logjac, logpdf = logpdf(d, x))
+end
+
+function _forward(td::Transformed, x)
+    y, logjac = forward(td.transform, x)
+    return (
+        x = x,
+        y = y,
+        logabsdetjac = logjac,
+        logpdf = logpdf_forward(td, x, logjac)
+    )
+end
+function forward(rng::AbstractRNG, td::Transformed)
+    return _forward(td, rand(rng, td.dist))
+end
+function forward(rng::AbstractRNG, td::Transformed, num_samples::Int)
+    return _forward(td, rand(rng, td.dist, num_samples))
+end
+
+forward(td::Distribution) = forward(GLOBAL_RNG, td)
+forward(td::Distribution, num_samples::Int) = forward(GLOBAL_RNG, td, num_samples)

@@ -74,6 +74,13 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD} end
                 y = b(x)
                 @test logpdf(d, inv(b)(y)) - logabsdetjacinv(b, y) ≈ logpdf_with_trans(d, x, true)
                 @test logpdf(d, x) + logabsdetjac(b, x) ≈ logpdf_with_trans(d, x, true)
+
+                # forward
+                f = forward(td)
+                @test f.x ≈ inv(td.transform)(f.y)
+                @test f.y ≈ td.transform(f.x)
+                @test f.logabsdetjac ≈ logabsdetjac(td.transform, f.x)
+                @test f.logpdf ≈ logpdf(td.dist, f.x) + f.logabsdetjac
             end
 
             @testset "$dist: ForwardDiff AD" begin
@@ -151,6 +158,13 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD} end
                 y = rand(td, 10)
                 x = inv(td.transform)(y)
                 @test logpdf(td, y) ≈ logpdf_with_trans(dist, x, true)
+
+                # forward
+                f = forward(td)
+                @test f.x ≈ inv(td.transform)(f.y)
+                @test f.y ≈ td.transform(f.x)
+                @test f.logabsdetjac ≈ logabsdetjac(td.transform, f.x)
+                @test f.logpdf ≈ logpdf(td.dist, f.x) + f.logabsdetjac
             end
         end
     end
