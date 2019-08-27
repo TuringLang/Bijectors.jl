@@ -5,8 +5,17 @@ using LinearAlgebra
 
 Random.seed!(123)
 
+struct NonInvertibleBijector{AD} <: ADBijector{AD} end
+
 # Scalar tests
 @testset "Interface" begin
+    @testset "<: ADBijector{AD}" begin
+        (b::NonInvertibleBijector)(x) = clamp.(x, 0, 1)
+
+        b = NonInvertibleBijector{Bijectors.ADBackend()}()
+        @test_throws Bijectors.SingularJacobianException logabsdetjac(b, [1.0, 10.0])
+    end
+    
     @testset "Univariate" begin
         # Tests with scalar-valued distributions.
         uni_dists = [
