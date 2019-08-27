@@ -70,7 +70,7 @@ Similarily for the inverse-transform.
 Default implementation for `Inversed{<: Bijector}` is implemented as
 `- logabsdetjac` of original `Bijector`.
 """
-logabsdetjac(ib::Inversed{<: Bijector}, y) = - logabsdetjac(ib.orig, ib(y))
+logabsdetjac(ib::Inversed{<:Bijector}, y) = - logabsdetjac(ib.orig, ib(y))
 
 """
     forward(b::Bijector, x)
@@ -85,7 +85,7 @@ in the computation of the forward pass and the computation of the
 efficiencies, if they exist.
 """
 forward(b::Bijector, x) = (rv=b(x), logabsdetjac=logabsdetjac(b, x))
-forward(ib::Inversed{<: Bijector}, y) = (
+forward(ib::Inversed{<:Bijector}, y) = (
     rv=ib(y),
     logabsdetjac=logabsdetjac(ib, y)
 )
@@ -120,7 +120,7 @@ function jacobian(b::Inversed{<: ADBijector{<: TrackerAD}}, y::AbstractVector{<:
     return Tracker.data(Tracker.jacobian(b, y))
 end
 
-struct SingularJacobianException{B} <: Exception where B <: Bijector
+struct SingularJacobianException{B} <: Exception where {B<:Bijector}
     b::B
 end
 Base.showerror(io::IO, e::SingularJacobianException) = print(io, "jacobian of $(e.b) is singular")
@@ -248,7 +248,7 @@ struct Identity <: Bijector end
 forward(::Identity, x) = (rv=x, logabsdetjac=zero(x))
 
 logabsdetjac(::Identity, y::T) where {T<:Real} = zero(T)
-logabsdetjac(::Identity, y::AbstractArray{T}) where {T <: Real} = zero(T)
+logabsdetjac(::Identity, y::AbstractArray{T}) where {T<:Real} = zero(T)
 
 const IdentityBijector = Identity()
 
@@ -323,14 +323,14 @@ logabsdetjac(b::Scale, x) = log(abs(b.a))
 ####################
 # Simplex bijector #
 ####################
-struct SimplexBijector{T} <: Bijector where T end
+struct SimplexBijector{T} <: Bijector where {T} end
 
 const simplex_b = SimplexBijector{Val{false}}()
 const simplex_b_proj = SimplexBijector{Val{true}}()
 
 # The following implementations are basically just copy-paste from `invlink` and
 # `link` for `SimplexDistributions` but dropping the dependence on the `Distribution`.
-function _clamp(x::T, b::SimplexBijector) where T
+function _clamp(x::T, b::SimplexBijector) where {T}
     bounds = (zero(T), one(T))
     clamped_x = clamp(x, bounds...)
     DEBUG && @debug "x = $x, bounds = $bounds, clamped_x = $clamped_x"
@@ -465,10 +465,10 @@ This is the default `Bijector` for a distribution.
 It uses `link` and `invlink` to compute the transformations, and `AD` to compute
 the `jacobian` and `logabsdetjac`.
 """
-struct DistributionBijector{AD, D} <: ADBijector{AD} where D <: Distribution
+struct DistributionBijector{AD, D} <: ADBijector{AD} where {D<:Distribution}
     dist::D
 end
-function DistributionBijector(dist::D) where D <: Distribution
+function DistributionBijector(dist::D) where {D<:Distribution}
     DistributionBijector{ADBackend(), D}(dist)
 end
 
@@ -481,19 +481,19 @@ end
 bijector(d::Distribution) = DistributionBijector(d)
 
 # Transformed distributions
-struct TransformedDistribution{D, B, V} <: Distribution{V, Continuous} where {D <: Distribution{V, Continuous}, B <: Bijector}
+struct TransformedDistribution{D, B, V} <: Distribution{V, Continuous} where {D<:Distribution{V, Continuous}, B<:Bijector}
     dist::D
     transform::B
 end
-function TransformedDistribution(d::D, b::B) where {V <: VariateForm, B <: Bijector, D <: Distribution{V, Continuous}}
+function TransformedDistribution(d::D, b::B) where {V<:VariateForm, B<:Bijector, D<:Distribution{V, Continuous}}
     return TransformedDistribution{D, B, V}(d, b)
 end
 
 
-const UnivariateTransformed = TransformedDistribution{<: Distribution, <: Bijector, Univariate}
-const MultivariateTransformed = TransformedDistribution{<: Distribution, <: Bijector, Multivariate}
+const UnivariateTransformed = TransformedDistribution{<: Distribution, <:Bijector, Univariate}
+const MultivariateTransformed = TransformedDistribution{<: Distribution, <:Bijector, Multivariate}
 const MvTransformed = MultivariateTransformed
-const MatrixTransformed = TransformedDistribution{<: Distribution, <: Bijector, Matrixvariate}
+const MatrixTransformed = TransformedDistribution{<: Distribution, <:Bijector, Matrixvariate}
 const Transformed = TransformedDistribution
 
 
@@ -530,7 +530,7 @@ for D in _union2tuple(UnitDistribution)
     if D == KSOneSided
         continue
     end
-    @eval bijector(d::$D{T}) where T <: Real = Logit(zero(T), one(T))
+    @eval bijector(d::$D{T}) where {T<:Real} = Logit(zero(T), one(T))
 end
 
 # FIXME: (TOR) Can we make this type-stable?
@@ -538,7 +538,7 @@ end
 # by explicit implementation. Can also make a `TruncatedBijector`
 # which has the same transform as the `link` function.
 # E.g. (b::Truncated)(x) = link(b.d, x) or smth
-function bijector(d::TransformDistribution) where D <: Distribution
+function bijector(d::TransformDistribution) where {D<:Distribution}
     a, b = minimum(d), maximum(d)
     lowerbounded, upperbounded = isfinite(a), isfinite(b)
     if lowerbounded && upperbounded
