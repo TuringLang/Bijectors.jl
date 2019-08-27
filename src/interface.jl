@@ -272,14 +272,12 @@ logabsdetjac(b::Logit{<:Real}, x) = @. log((x - b.a) * (b.b - x) / (b.b - b.a))
 
 struct Exp <: Bijector end
 struct Log <: Bijector end
-const exp_b = Exp()
-const log_b = Log()
 
 (b::Log)(x) = @. log(x)
 (b::Exp)(y) = @. exp(y)
 
-inv(b::Log) = exp_b
-inv(b::Exp) = log_b
+inv(b::Log) = Exp()
+inv(b::Exp) = Log()
 
 logabsdetjac(b::Log, x) = sum(log.(x))
 logabsdetjac(b::Exp, y) = - sum(y)
@@ -515,8 +513,8 @@ Returns the constrained-to-unconstrained bijector for distribution `d`.
 """
 bijector(d::Normal) = IdentityBijector
 bijector(d::MvNormal) = IdentityBijector
-bijector(d::PositiveDistribution) = log_b
-bijector(d::MvLogNormal) = log_b
+bijector(d::PositiveDistribution) = Log()
+bijector(d::MvLogNormal) = Log()
 bijector(d::SimplexDistribution) = simplex_b_proj
 
 _union2tuple(T1::Type, T2::Type) = (T1, T2)
@@ -543,9 +541,9 @@ function bijector(d::TransformDistribution) where {D<:Distribution}
     if lowerbounded && upperbounded
         return Logit(a, b)
     elseif lowerbounded
-        return (log_b ∘ Shift(- a))
+        return (Log() ∘ Shift(- a))
     elseif upperbounded
-        return (log_b ∘ Shift(b) ∘ Scale(- one(typeof(b))))
+        return (Log() ∘ Shift(b) ∘ Scale(- one(typeof(b))))
     else
         return IdentityBijector
     end
