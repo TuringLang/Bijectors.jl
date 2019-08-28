@@ -267,7 +267,7 @@ end
 (b::Logit)(x) = @. logit((x - b.a) / (b.b - b.a))
 (ib::Inversed{<:Logit{<:Real}})(y) = @. (ib.orig.b - ib.orig.a) * logistic(y) + ib.orig.a
 
-logabsdetjac(b::Logit{<:Real}, x) = @. log((x - b.a) * (b.b - x) / (b.b - b.a))
+logabsdetjac(b::Logit{<:Real}, x) = @. - log((x - b.a) * (b.b - x) / (b.b - b.a))
 
 #############
 # Exp & Log #
@@ -282,8 +282,8 @@ struct Log <: Bijector end
 inv(b::Log) = Exp()
 inv(b::Exp) = Log()
 
-logabsdetjac(b::Log, x) = sum(log.(x))
-logabsdetjac(b::Exp, y) = - sum(y)
+logabsdetjac(b::Log, x) = - sum(log.(x))
+logabsdetjac(b::Exp, y) = sum(y)
 
 #################
 # Shift & Scale #
@@ -450,7 +450,7 @@ function logabsdetjac(b::SimplexBijector, x::AbstractVector{T}) where T
         lp += log(z + ϵ) + log((one(T) + ϵ) - z) + log((one(T) + ϵ) - sum_tmp)
     end
 
-    return lp
+    return - lp
 end
 
 #######################################################
@@ -562,13 +562,13 @@ Base.size(td::Transformed) = size(td.dist)
 
 function logpdf(td::UnivariateTransformed, y::Real)
     res = forward(inv(td.transform), y)
-    return logpdf(td.dist, res.rv) .- res.logabsdetjac
+    return logpdf(td.dist, res.rv) .+ res.logabsdetjac
 end
 
 # TODO: implement more efficiently for flows in the case of `Matrix`
 function _logpdf(td::MvTransformed, y::AbstractVector{<:Real})
     res = forward(inv(td.transform), y)
-    return logpdf(td.dist, res.rv) .- res.logabsdetjac
+    return logpdf(td.dist, res.rv) .+ res.logabsdetjac
 end
 
 function _logpdf(td::MvTransformed{<:Dirichlet}, y::AbstractVector{<:Real})
@@ -576,7 +576,7 @@ function _logpdf(td::MvTransformed{<:Dirichlet}, y::AbstractVector{<:Real})
     ϵ = _eps(T)
 
     res = forward(inv(td.transform), y)
-    return logpdf(td.dist, mappedarray(x->x+ϵ, res.rv)) .- res.logabsdetjac
+    return logpdf(td.dist, mappedarray(x->x+ϵ, res.rv)) .+ res.logabsdetjac
 end
 
 # TODO: should eventually drop using `logpdf_with_trans` and replace with
@@ -623,18 +623,18 @@ and returns a tuple `(logpdf, logabsdetjac)`.
 """
 function logpdf_with_jac(td::UnivariateTransformed, y::Real)
     res = forward(inv(td.transform), y)
-    return (logpdf(td.dist, res.rv) .- res.logabsdetjac, res.logabsdetjac)
+    return (logpdf(td.dist, res.rv) .+ res.logabsdetjac, res.logabsdetjac)
 end
 
 # TODO: implement more efficiently for flows in the case of `Matrix`
 function logpdf_with_jac(td::MvTransformed, y::AbstractVector{<:Real})
     res = forward(inv(td.transform), y)
-    return (logpdf(td.dist, res.rv) .- res.logabsdetjac, res.logabsdetjac)
+    return (logpdf(td.dist, res.rv) .+ res.logabsdetjac, res.logabsdetjac)
 end
 
 function logpdf_with_jac(td::MvTransformed, y::AbstractMatrix{<:Real})
     res = forward(inv(td.transform), y)
-    return (logpdf(td.dist, res.rv) .- res.logabsdetjac, res.logabsdetjac)
+    return (logpdf(td.dist, res.rv) .+ res.logabsdetjac, res.logabsdetjac)
 end
 
 function logpdf_with_jac(td::MvTransformed{<:Dirichlet}, y::AbstractVector{<:Real})
@@ -642,7 +642,7 @@ function logpdf_with_jac(td::MvTransformed{<:Dirichlet}, y::AbstractVector{<:Rea
     ϵ = _eps(T)
 
     res = forward(inv(td.transform), y)
-    return (logpdf(td.dist, mappedarray(x->x+ϵ, res.rv)) .- res.logabsdetjac, res.logabsdetjac)
+    return (logpdf(td.dist, mappedarray(x->x+ϵ, res.rv)) .+ res.logabsdetjac, res.logabsdetjac)
 end
 
 # TODO: should eventually drop using `logpdf_with_trans`
