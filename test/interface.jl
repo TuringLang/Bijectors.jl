@@ -209,7 +209,7 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD} end
         x = rand(d)
         y = td.transform(x)
 
-        b = Bijectors.compose(td.transform, Bijectors.Identity())
+        b = Bijectors.composel(td.transform, Bijectors.Identity())
         ib = inv(b)
 
         @test forward(b, x) == forward(td.transform, x)
