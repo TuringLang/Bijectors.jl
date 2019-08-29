@@ -5,6 +5,7 @@ using Reexport, Requires
 using StatsFuns
 using LinearAlgebra
 using MappedArrays
+using Roots
 
 export  TransformDistribution,
         PositiveDistribution,
@@ -13,7 +14,26 @@ export  TransformDistribution,
         PDMatDistribution,
         link,
         invlink,
-        logpdf_with_trans
+        logpdf_with_trans,
+        transform,
+        forward,
+        logabsdetjac,
+        logabsdetjacinv,
+        Bijector,
+        ADBijector,
+        Inversed,
+        Composed,
+        compose,
+        Identity,
+        DistributionBijector,
+        bijector,
+        transformed,
+        UnivariateTransformed,
+        MultivariateTransformed,
+        logpdf_with_jac,
+        logpdf_forward,
+        PlanarLayer,
+        RadialLayer
 
 const DEBUG = Bool(parse(Int, get(ENV, "DEBUG_BIJECTORS", "0")))
 
@@ -162,8 +182,8 @@ function _clamp(x::T, dist::SimplexDistribution) where T
 end
 
 function link(
-    d::SimplexDistribution, 
-    x::AbstractVector{T}, 
+    d::SimplexDistribution,
+    x::AbstractVector{T},
     ::Type{Val{proj}} = Val{true}
 ) where {T<:Real, proj}
     y, K = similar(x), length(x)
@@ -191,8 +211,8 @@ end
 
 # Vectorised implementation of the above.
 function link(
-    d::SimplexDistribution, 
-    X::AbstractMatrix{T}, 
+    d::SimplexDistribution,
+    X::AbstractMatrix{T},
     ::Type{Val{proj}} = Val{true}
 ) where {T<:Real, proj}
     Y, K, N = similar(X), size(X, 1), size(X, 2)
@@ -219,8 +239,8 @@ function link(
 end
 
 function invlink(
-    d::SimplexDistribution, 
-    y::AbstractVector{T}, 
+    d::SimplexDistribution,
+    y::AbstractVector{T},
     ::Type{Val{proj}} = Val{true}
 ) where {T<:Real, proj}
     x, K = similar(y), length(y)
@@ -245,8 +265,8 @@ end
 
 # Vectorised implementation of the above.
 function invlink(
-    d::SimplexDistribution, 
-    Y::AbstractMatrix{T}, 
+    d::SimplexDistribution,
+    Y::AbstractMatrix{T},
     ::Type{Val{proj}} = Val{true}
 ) where {T<:Real, proj}
     X, K, N = similar(Y), size(Y, 1), size(Y, 2)
@@ -335,8 +355,8 @@ function invlink(d::PDMatDistribution, Y::AbstractMatrix{<:Real})
 end
 
 function logpdf_with_trans(
-    d::PDMatDistribution, 
-    X::AbstractMatrix{<:Real}, 
+    d::PDMatDistribution,
+    X::AbstractMatrix{<:Real},
     transform::Bool
 )
     T = eltype(X)
@@ -423,5 +443,9 @@ function logpdf_with_trans(
 )
     return map(x -> logpdf_with_trans(d, x, transform), X)
 end
+
+include("interface.jl")
+
+include("norm_flows.jl")
 
 end # module
