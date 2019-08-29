@@ -81,7 +81,8 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD} end
                 @test f.x ≈ inv(td.transform)(f.y)
                 @test f.y ≈ td.transform(f.x)
                 @test f.logabsdetjac ≈ logabsdetjac(td.transform, f.x)
-                @test f.logpdf ≈ logpdf(td.dist, f.x) + f.logabsdetjac
+                @test f.logpdf ≈ logpdf_with_trans(td.dist, f.x, true)
+                @test f.logpdf ≈ logpdf(td.dist, f.x) - f.logabsdetjac
 
                 # verify against AD
                 d = dist
@@ -150,6 +151,7 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD} end
 
         for dist in vector_dists
             @testset "$dist: dist" begin
+                dist = Dirichlet([eps(Float64), 1000 * one(Float64)])
                 td = transformed(dist)
 
                 # single sample
@@ -173,7 +175,7 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD} end
                 @test f.x ≈ inv(td.transform)(f.y)
                 @test f.y ≈ td.transform(f.x)
                 @test f.logabsdetjac ≈ logabsdetjac(td.transform, f.x)
-                @test f.logpdf ≈ logpdf(td.dist, f.x) + f.logabsdetjac
+                @test f.logpdf ≈ logpdf_with_trans(td.dist, f.x, true)
 
                 # verify against AD
                 # similar to what we do in test/transform.jl for Dirichlet

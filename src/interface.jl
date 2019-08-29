@@ -661,8 +661,15 @@ the inverse transform to compute the necessary `logabsdetjac`.
 This is similar to `logpdf_with_trans`.
 """
 # TODO: implement more efficiently for flows in the case of `Matrix`
-logpdf_forward(td::Transformed, x, logjac) = logpdf(td.dist, x) .+ logjac
+logpdf_forward(td::Transformed, x, logjac) = logpdf(td.dist, x) .- logjac
 logpdf_forward(td::Transformed, x) = logpdf_forward(td, x, logabsdetjac(td.transform, x))
+
+function logpdf_forward(td::MvTransformed{<:Dirichlet}, x, logjac)
+    T = eltype(x)
+    ϵ = _eps(T)
+
+    return logpdf(td.dist, mappedarray(z->z+ϵ, x)) .- logjac
+end
 
 
 # forward function
