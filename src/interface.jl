@@ -123,7 +123,9 @@ end
 struct SingularJacobianException{B} <: Exception where {B<:Bijector}
     b::B
 end
-Base.showerror(io::IO, e::SingularJacobianException) = print(io, "jacobian of $(e.b) is singular")
+function Base.showerror(io::IO, e::SingularJacobianException)
+    print(io, "jacobian of $(e.b) is singular")
+end
 
 # TODO: allow batch-computation, especially for univariate case?
 "Computes the absolute determinant of the Jacobian of the inverse-transformation."
@@ -240,6 +242,73 @@ function forward(cb::Composed, x)
     return (rv=rv, logabsdetjac=logjac)
 end
 
+-###########
+-# Stacked #
+-###########
+"""
+    Stacked(bs)
+    Stacked(bs, ranges)
+    vcat(bs::Bijector...)
+
+A `Bijector` which stacks bijectors together which can then be applied to a vector
+where `bs[i]::Bijector` is applied to `x[ranges[i]]`.
+
+# Examples
+```
+b1 = Logistic(0.0, 1.0)
+b2 = Identity()
+b = vcat(b1, b2)
+b([0.0, 1.0]) == [b1(0.0), 1.0]  # => true
+```
+"""
+struct Stacked{B, N} <: Bijector where N
+    bs::B
+    ranges::NTuple{N, UnitRange{Int}}
+end
+Stacked(bs) = Stacked(bs, NTuple{length(bs), UnitRange{Int}}([i:i for i = 1:length(bs)]))
+Stacked(bs, ranges) = Stacked(bs, NTuple{length(bs), UnitRange{Int}}(ranges))
+
+Base.vcat(bs::Bijector...) = Stacked(bs)
+
+inv(sb::Stacked) = Stacked(inv.(sb.bs), sb.ranges)
+
+# TODO: Is there a better approach to this?
+@generated function _transform(x, rs::NTuple{N, UnitRange{Int}}, bs::Bijector...) where N
+    exprs = []
+    for i = 1:N
+        push!(exprs, :(bs[$i](x[rs[$i]])))
+    end
+
+    return :(vcat($(exprs...)))
+end
+_transform(x, rs::NTuple{1, UnitRange{Int}}, b::Bijector) = b(x)
+
+(sb::Stacked)(x::AbstractArray{<: Real}) = _transform(x, sb.ranges, sb.bs...)
+(sb::Stacked)(x::AbstractMatrix{<: Real}) = hcat([sb(x[:, i]) for i = 1:size(x, 2)]...)
+function (sb::Stacked)(x::TrackedArray{A, 2}) where {A}
+    return Tracker.collect(hcat([sb(x[:, i]) for i = 1:size(x, 2)]...))
+end
+
+@generated function _logabsdetjac(
+    x,
+    rs::NTuple{N, UnitRange{Int}},
+    bs::Bijector...
+) where {N}
+    exprs = []
+    for i = 1:N
+        push!(exprs, :(sum(logabsdetjac(bs[$i], x[rs[$i]]))))
+    end
+
+    return :(sum([$(exprs...), ]))
+end
+logabsdetjac(b::Stacked, x::AbstractVector{<: Real}) = _logabsdetjac(x, b.ranges, b.bs...)
+function logabsdetjac(sb::Stacked, x::AbstractMatrix{<: Real})
+    return hcat([logabsdetjac(sb, x[:, i]) for i = 1:size(x, 2)])
+end
+function logabsdetjac(sb::Stacked, x::TrackedArray{A, 2}) where {A}
+    return Tracker.collect(hcat([logabsdetjac(sb, x[:, i]) for i = 1:size(x, 2)]))
+end
+
 ##############################
 # Example bijector: Identity #
 ##############################
@@ -324,13 +393,14 @@ logabsdetjac(b::Scale, x) = log(abs(b.a))
 # Simplex bijector #
 ####################
 struct SimplexBijector{T} <: Bijector where {T} end
+SimplexBijector() = SimplexBijector{Val{true}}()
 
 const simplex_b = SimplexBijector{Val{false}}()
 const simplex_b_proj = SimplexBijector{Val{true}}()
 
 # The following implementations are basically just copy-paste from `invlink` and
 # `link` for `SimplexDistributions` but dropping the dependence on the `Distribution`.
-function _clamp(x::T, b::SimplexBijector) where {T}
+function _clamp(x::T, b::Union{SimplexBijector, Inversed{<:SimplexBijector}}) where {T}
     bounds = (zero(T), one(T))
     clamped_x = clamp(x, bounds...)
     DEBUG && @debug "x = $x, bounds = $bounds, clamped_x = $clamped_x"
@@ -518,7 +588,7 @@ bijector(d::Normal) = IdentityBijector
 bijector(d::MvNormal) = IdentityBijector
 bijector(d::PositiveDistribution) = Log()
 bijector(d::MvLogNormal) = Log()
-bijector(d::SimplexDistribution) = simplex_b_proj
+bijector(d::SimplexDistribution) = SimplexBijector{Val{true}}()
 
 _union2tuple(T1::Type, T2::Type) = (T1, T2)
 _union2tuple(T1::Type, T2::Union) = (T1, _union2tuple(T2.a, T2.b)...)

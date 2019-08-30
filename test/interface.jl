@@ -282,6 +282,65 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD} end
         @test f_t == f_a
     end
 
+    @testset "Stacked <: Bijector" begin
+        # `logabsdetjac` without AD
+        d = Beta()
+        b = bijector(d)
+        x = rand(d)
+        y = b(x)
+        sb = vcat(b, b, inv(b), inv(b))
+        @test logabsdetjac(sb, [x, x, y, y]) ≈ 0.0
+
+        # `logabsdetjac` with AD
+        b = DistributionBijector(d)
+        y = b(x)
+        sb1 = vcat(b, b, inv(b), inv(b))             # <= tuple
+        sb2 = Stacked([b, b, inv(b), inv(b)])        # <= Array
+        @test logabsdetjac(sb1, [x, x, y, y]) ≈ 0.0
+        @test logabsdetjac(sb2, [x, x, y, y]) ≈ 0.0
+
+        @testset "Stacked: ADVI with MvNormal" begin
+            # MvNormal test
+            d = MvNormal(zeros(10), ones(10))
+            dists = [
+                Beta(),
+                Beta(),
+                Beta(),
+                InverseGamma(),
+                InverseGamma(),
+                Gamma(),
+                Gamma(),
+                InverseGamma(),
+                Cauchy(),
+                Gamma()
+            ]
+            bs = bijector.(dists)    # constrained-to-unconstrained bijectors for dists
+            ibs = inv.(bs)           # invert, so we get unconstrained-to-constrained
+            sb = vcat(ibs...)        # => Stacked <: Bijector
+            @test sb isa Stacked
+
+            td = transformed(d, sb)  # => MultivariateTransformed <: Distribution{Multivariate, Continuous}
+            @test td isa Distribution{Multivariate, Continuous}
+
+            y = rand(td)
+
+            bs = bijector.(tuple(dists...))
+            ibs = inv.(bs)
+            sb = vcat(ibs...)
+            isb = inv(sb)
+            @test sb isa Stacked{<: Tuple}
+
+            # inverse
+            y = rand(td)
+            x = isb(y)
+            @test sb(x) ≈ y
+
+            # AD verification
+            @test log(abs(det(ForwardDiff.jacobian(sb, x)))) ≈ logabsdetjac(sb, x)
+            @test log(abs(det(ForwardDiff.jacobian(isb, y)))) ≈ logabsdetjac(isb, y)
+        end
+    end
+
     @testset "Example: ADVI single" begin
         # Usage in ADVI
         d = Beta()
