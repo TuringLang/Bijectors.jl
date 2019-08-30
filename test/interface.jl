@@ -301,7 +301,6 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD} end
 
         @testset "Stacked: ADVI with MvNormal" begin
             # MvNormal test
-            d = MvNormal(zeros(10), ones(10))
             dists = [
                 Beta(),
                 Beta(),
@@ -312,28 +311,58 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD} end
                 Gamma(),
                 InverseGamma(),
                 Cauchy(),
-                Gamma()
+                Gamma(),
+                MvNormal(zeros(2), ones(2))
             ]
-            bs = bijector.(dists)    # constrained-to-unconstrained bijectors for dists
-            ibs = inv.(bs)           # invert, so we get unconstrained-to-constrained
-            sb = vcat(ibs...)        # => Stacked <: Bijector
+
+            ranges = []
+            idx = 1
+            for i = 1:length(dists)
+                d = dists[i]
+                push!(ranges, idx:idx + length(d) - 1)
+                idx += length(d)
+            end
+
+            num_params = ranges[end][end]
+            d = MvNormal(zeros(num_params), ones(num_params))
+
+            # Stacked{<:Array}
+            bs = bijector.(dists)     # constrained-to-unconstrained bijectors for dists
+            ibs = inv.(bs)            # invert, so we get unconstrained-to-constrained
+            sb = Stacked(ibs, ranges) # => Stacked <: Bijector
+            x = rand(d)
+            sb(x)
             @test sb isa Stacked
 
             td = transformed(d, sb)  # => MultivariateTransformed <: Distribution{Multivariate, Continuous}
             @test td isa Distribution{Multivariate, Continuous}
 
-            y = rand(td)
+            # check that wrong ranges fails
+            sb = vcat(ibs...)
+            td = transformed(d, sb)
+            x = rand(d)
+            @test_throws AssertionError sb(x)
 
+            # Stacked{<:Tuple}
             bs = bijector.(tuple(dists...))
             ibs = inv.(bs)
-            sb = vcat(ibs...)
+            sb = Stacked(ibs, ranges)
             isb = inv(sb)
             @test sb isa Stacked{<: Tuple}
 
             # inverse
+            td = transformed(d, sb)
             y = rand(td)
             x = isb(y)
             @test sb(x) ≈ y
+
+            # verification of computation
+            x = rand(d)
+            y = sb(x)
+            y_ = vcat([ibs[i](x[ranges[i]]) for i = 1:length(dists)]...)
+            x_ = vcat([bs[i](y[ranges[i]]) for i = 1:length(dists)]...)
+            @test x ≈ x_
+            @test y ≈ y_
 
             # AD verification
             @test log(abs(det(ForwardDiff.jacobian(sb, x)))) ≈ logabsdetjac(sb, x)

@@ -283,7 +283,14 @@ inv(sb::Stacked) = Stacked(inv.(sb.bs), sb.ranges)
 end
 _transform(x, rs::NTuple{1, UnitRange{Int}}, b::Bijector) = b(x)
 
-(sb::Stacked)(x::AbstractArray{<: Real}) = _transform(x, sb.ranges, sb.bs...)
+function (sb::Stacked)(x::AbstractArray{<: Real})
+    y = _transform(x, sb.ranges, sb.bs...)
+
+    # TODO: maybe tell user to check their ranges?
+    @assert size(y) == size(x)
+
+    return y
+end
 (sb::Stacked)(x::AbstractMatrix{<: Real}) = hcat([sb(x[:, i]) for i = 1:size(x, 2)]...)
 function (sb::Stacked)(x::TrackedArray{A, 2}) where {A}
     return Tracker.collect(hcat([sb(x[:, i]) for i = 1:size(x, 2)]...))
@@ -302,11 +309,11 @@ end
     return :(sum([$(exprs...), ]))
 end
 logabsdetjac(b::Stacked, x::AbstractVector{<: Real}) = _logabsdetjac(x, b.ranges, b.bs...)
-function logabsdetjac(sb::Stacked, x::AbstractMatrix{<: Real})
-    return hcat([logabsdetjac(sb, x[:, i]) for i = 1:size(x, 2)])
+function logabsdetjac(b::Stacked, x::AbstractMatrix{<: Real})
+    return hcat([logabsdetjac(b, x[:, i]) for i = 1:size(x, 2)])
 end
-function logabsdetjac(sb::Stacked, x::TrackedArray{A, 2}) where {A}
-    return Tracker.collect(hcat([logabsdetjac(sb, x[:, i]) for i = 1:size(x, 2)]))
+function logabsdetjac(b::Stacked, x::TrackedArray{A, 2}) where {A}
+    return Tracker.collect(hcat([logabsdetjac(b, x[:, i]) for i = 1:size(x, 2)]))
 end
 
 ##############################
