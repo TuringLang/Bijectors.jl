@@ -177,7 +177,7 @@ julia> x = rand(td)                    # ∈ (0, 1)
 ```
 
 ### Normalizing flows
-A very interesting application is that of _normalizing flows_.[1] Usually this is done by sampling from a multivariate normal distribution, and then transforming this to a target distribution using invertible neural networks. Currently there are two different such transforms available in Bijectors.jl: `PlanarFlow` and `RadialFlow`. Let's create a flow with a single `PlanarLayer`:
+A very interesting application is that of _normalizing flows_.[1] Usually this is done by sampling from a multivariate normal distribution, and then transforming this to a target distribution using invertible neural networks. Currently there are two such transforms available in Bijectors.jl: `PlanarFlow` and `RadialFlow`. Let's create a flow with a single `PlanarLayer`:
 
 ```julia
 julia> d = MvNormal(zeros(2), ones(2));
@@ -274,7 +274,7 @@ julia> @Flux.treelike PlanarLayer
 julia> Flux.params(flow)
 Params([[0.100896; -0.753183] (tracked), [0.320337; 0.674077] (tracked), [-1.02852] (tracked)])
 ```
-Though we might just do this for you in the future, so then all you'll have to do then is call `Flux.params`.
+Though we might just do this for you in the future, so then all you'll have to do is call `Flux.params`.
 
 Another useful function is the `forward(d::Distribution)` method. It is similar to `forward(b::Bijector)` in the sense that it does a forward pass of the entire process "sample then transform" and returns all the most useful quantities in process using the most efficent computation path.
 
@@ -347,7 +347,7 @@ For `TransformedDistribution`, together with default implementations for `Distri
 - `bijector(d::Distribution)`: returns the default constrained-to-unconstrained bijector for `d`
 - `transformed(d::Distribution)`, `transformed(d::Distribution, b::Bijector)`: constructs a `TransformedDistribution` from `d` and `b`.
 - `logpdf_forward(d::Distribution, x)`, `logpdf_forward(d::Distribution, x, logjac)`: computes the `logpdf(td, td.transform(x))` using the forward pass, which is potentially faster depending on the transform at hand.
-- `forward(d::Distribution)`: returns `(x = rand(dist), y = b(x), logabsdetjac = logabsdetjac(b, x), logpdf = logpdf_forward(td, x))` where `b = td.transform`. This combines sampling from base distribution and transforming into one function. The intention is that this entire process should be performed in the most efficient manner, e.g. it the `logabsdetjac(b, x)` call might instead be `- logabsdetjac(inv(b), b(x))` depending on which is most efficient.
+- `forward(d::Distribution)`: returns `(x = rand(dist), y = b(x), logabsdetjac = logabsdetjac(b, x), logpdf = logpdf_forward(td, x))` where `b = td.transform`. This combines sampling from base distribution and transforming into one function. The intention is that this entire process should be performed in the most efficient manner, e.g. the `logabsdetjac(b, x)` call might instead be implemented as `- logabsdetjac(inv(b), b(x))` depending on which is most efficient.
 
 # Bibliography
 1. Rezende, D. J., & Mohamed, S., Variational Inference With Normalizing Flows, CoRR, (),  (2015). 
