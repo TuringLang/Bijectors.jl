@@ -555,7 +555,10 @@ struct TransformedDistribution{D, B, V} <: Distribution{V, Continuous} where {D<
     dist::D
     transform::B
 end
-function TransformedDistribution(d::D, b::B) where {V<:VariateForm, B<:Bijector, D<:Distribution{V, Continuous}}
+function TransformedDistribution(
+    d::D,
+    b::B
+) where {V<:VariateForm, B<:Bijector, D<:Distribution{V, Continuous}}
     return TransformedDistribution{D, B, V}(d, b)
 end
 
@@ -712,7 +715,8 @@ function logpdf_with_jac(td::MvTransformed{<:Dirichlet}, y::AbstractVector{<:Rea
     ϵ = _eps(T)
 
     res = forward(inv(td.transform), y)
-    return (logpdf(td.dist, mappedarray(x->x+ϵ, res.rv)) .+ res.logabsdetjac, res.logabsdetjac)
+    lp = logpdf(td.dist, mappedarray(x->x+ϵ, res.rv)) .+ res.logabsdetjac
+    return (lp, res.logabsdetjac)
 end
 
 # TODO: should eventually drop using `logpdf_with_trans`
