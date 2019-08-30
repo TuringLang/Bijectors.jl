@@ -154,6 +154,7 @@ This can be quite convenient if you have computations assuming input to be on th
 But the real utility of `TransformedDistribution` becomes more apparent when using `transformed(dist, b)` for any bijector `b`. To get the transformed distribution corresponding to the `Beta(2, 2)`, we called `transformed(dist)` before. This is simply an alias for `transformed(dist, bijector(dist))`. Remember `bijector(dist)` returns the constrained-to-constrained bijector for that particular `Distribution`. But we can of course construct a `TransformedDistribution` using different bijectors for the same distribution! It's particular useful in something called _Automatic Derivative Variational Inference (ADVI)_.[2] An important part of this to approximate a constrained distribution, e.g. `Beta`, as follows:
 1. Sample `x` from a `Normal` with parameters `μ` and `σ`, i.e. `x ~ Normal(μ, σ)`.
 2. Transform `x` to `y` s.t. `y ∈ support(Beta)`, with the transform being a differentiable bijection with a differentiable inverse (a "bijector")
+
 This then defines a probability density with support same as `Beta`! Of course, it's unlikely that it will be the same, but it's an _approximation_. Creating such a distribution becomes trivial with `Bijector` and `TransformedDistribution`:
 
 ```julia
