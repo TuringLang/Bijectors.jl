@@ -179,20 +179,20 @@ julia> x = rand(td)                    # ∈ (0, 1)
 A very interesting application is that of _normalizing flows_.[1] Usually this is done by sampling from a multivariate normal distribution, and then transforming this to a target distribution using invertible neural networks. Currenlty there are two different such transforms available in Bijectors.jl: `PlanarFlow` and `RadialFlow`. Let's create a flow with a single `PlanarLayer`:
 
 ```julia
-julia> d = MvNormal(zeros(10), ones(10))
-       b = PlanarLayer(10)
+julia> d = MvNormal(zeros(2), ones(2));
 
-PlanarLayer{Array{Float64,2},Array{Float64,1}}([-0.314585; -2.12398; … ; -1.03734; 0.358121], [-0.410737; -2.28809; … ; -0.973653; 0.498173], [1.43277])
+julia> b = PlanarLayer(2)
+PlanarLayer{Array{Float64,2},Array{Float64,1}}([1.25544; -0.644276], [0.735741; 0.522381], [-1.19838])
 
 julia> flow = transformed(d, b)
 TransformedDistribution{MvNormal{Float64,PDMats.PDiagMat{Float64,Array{Float64,1}},Array{Float64,1}},PlanarLayer{Array{Float64,2},Array{Float64,1}},Multivariate}(
 dist: DiagNormal(
-dim: 10
-μ: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-Σ: [1.0 0.0 … 0.0 0.0; 0.0 1.0 … 0.0 0.0; … ; 0.0 0.0 … 1.0 0.0; 0.0 0.0 … 0.0 1.0]
+dim: 2
+μ: [0.0, 0.0]
+Σ: [1.0 0.0; 0.0 1.0]
 )
 
-transform: PlanarLayer{Array{Float64,2},Array{Float64,1}}([-0.314585; -2.12398; … ; -1.03734; 0.358121], [-0.410737; -2.28809; … ; -0.973653; 0.498173], [1.43277])
+transform: PlanarLayer{Array{Float64,2},Array{Float64,1}}([1.25544; -0.644276], [0.735741; 0.522381], [-1.19838])
 )
 
 
@@ -204,36 +204,20 @@ That's it. Now we can sample from it using `rand` and compute the `logpdf`, like
 
 ```julia
 julia> y = rand(flow)
-10-element Array{Float64,1}:
- -1.071445060874162  
- -0.5861125545541264 
- -0.20580680244677016
- -0.39722878482476176
- -1.389712016403798  
- -1.306541712448448  
- -0.30426655640478534
- -0.25236339697375954
- -0.8167239755371702 
- -0.2091496608178263 
+2-element Array{Float64,1}:
+ 0.8356896540230636 
+ 0.07708282276548209
 
-julia> logpdf(flow, y)                        # uses inverse of `b`; not very efficient for `PlanarFlow` and not 100% accurate
--20.42265249674501
+julia> logpdf(flow, y)         # uses inverse of `b`; not very efficient for `PlanarFlow` and not 100% accurate
+-2.151503833297053
 
 julia> x = rand(flow.dist)
-10-element Array{Float64,1}:
- -1.3580971978613618  
- -0.14987419873885632 
- -0.43333586299952587 
-  0.6873847861686496  
-  0.4802780532275886  
-  1.2128548836103794  
-  1.231281336482941   
-  0.5673980088490946  
-  1.7291046521748124  
- -0.036465987288854064
+2-element Array{Float64,1}:
+ 0.8186517293759961 
+ 0.31896083550211446
 
-julia> logpdf_forward(flow, x)                # more efficent and accurate
--15.14882873386875
+julia> logpdf_forward(flow, x) # more efficent and accurate
+-2.2489445532797867
 ```
 
 Want to fit the flow?
@@ -241,49 +225,37 @@ Want to fit the flow?
 ```julia
 julia> using Tracker
 
-julia> b = PlanarLayer(10, param)                  # construct parameters using `param`
-PlanarLayer{TrackedArray{…,Array{Float64,2}},TrackedArray{…,Array{Float64,1}}}([-0.448776; 0.138082; … ; -0.203282; -0.054871] (tracked), [-1.70598; 0.714034; … ; 0.340427; 0.155935] (tracked), [-0.174542] (tracked))
+julia> b = PlanarLayer(2, param)                  # construct parameters using `param`
+PlanarLayer{TrackedArray{…,Array{Float64,2}},TrackedArray{…,Array{Float64,1}}}([0.100896; -0.753183] (tracked), [0.320337; 0.674077] (tracked), [-1.02852] (tracked))
 
 julia> flow = transformed(d, b)
 TransformedDistribution{MvNormal{Float64,PDMats.PDiagMat{Float64,Array{Float64,1}},Array{Float64,1}},PlanarLayer{TrackedArray{…,Array{Float64,2}},TrackedArray{…,Array{Float64,1}}},Multivariate}(
 dist: DiagNormal(
-dim: 10
-μ: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-Σ: [1.0 0.0 … 0.0 0.0; 0.0 1.0 … 0.0 0.0; … ; 0.0 0.0 … 1.0 0.0; 0.0 0.0 … 0.0 1.0]
+dim: 2
+μ: [0.0, 0.0]
+Σ: [1.0 0.0; 0.0 1.0]
 )
 
-transform: PlanarLayer{TrackedArray{…,Array{Float64,2}},TrackedArray{…,Array{Float64,1}}}([-0.448776; 0.138082; … ; -0.203282; -0.054871] (tracked), [-1.70598; 0.714034; … ; 0.340427; 0.155935] (tracked), [-0.174542] (tracked))
+transform: PlanarLayer{TrackedArray{…,Array{Float64,2}},TrackedArray{…,Array{Float64,1}}}([0.100896; -0.753183] (tracked), [0.320337; 0.674077] (tracked), [-1.02852] (tracked))
 )
+
 
 julia> rand(flow)
-Tracked 10-element Array{Float64,1}:
- -0.43034610482235824
- -1.2291497791483754 
- -0.6669111894516624 
- -0.53669141546758   
-  0.22203436167631224
-  0.19375938341908486
- -0.7016018204533963 
-  1.0353319678328805 
- -0.5932260118764895 
- -0.5127551044141234
+Tracked 2-element Array{Float64,1}:
+  0.32015420426554175
+ -0.9860754227482333 
 
 julia> x = rand(flow.dist)
+2-element Array{Float64,1}:
+  0.11278529997563423
+ -1.6565063910085815 
 
 julia> Tracker.back!(logpdf_forward(flow, x), 1.0) # backprob
 
 julia> Tracker.grad(b.w)
-10×1 Array{Float64,2}:
-  0.007970605904267344
- -0.00050931432618324 
- -0.012275698582014296
- -0.009238682005821862
-  0.008625181060971085
- -0.009017315948208902
- -0.007548744417896309
-  0.003679880842608043
- -0.004626588177230863
-  0.003465272529470697
+2×1 Array{Float64,2}:
+ -0.277554258517636  
+  0.24043919425701835
 ```
 
 We can easily create more complex flows by simply doing `PlanarFlow(10) ∘ PlanarFlow(10) ∘ RadialFlow(10)` and so on.
@@ -299,15 +271,15 @@ julia> @Flux.treelike TransformedDistribution
 julia> @Flux.treelike PlanarLayer
 
 julia> Flux.params(flow)
-Params([[-0.448776; 0.138082; … ; -0.203282; -0.054871] (tracked), [-1.70598; 0.714034; … ; 0.340427; 0.155935] (tracked), [-0.174542] (tracked)])
+Params([[0.100896; -0.753183] (tracked), [0.320337; 0.674077] (tracked), [-1.02852] (tracked)])
 ```
-Though we might just do this for you in the future, so all you'll have to do then is call `Flux.params`.
+Though we might just do this for you in the future, so then all you'll have to do then is call `Flux.params`.
 
 Another useful function is the `forward(d::Distribution)` method. It is similar to `forward(b::Bijector)` in the sense that it does a forward pass of the entire process "sample then transform" and returns all the most useful quantities in process using the most efficent computation path.
 
 ```julia
 julia> x, y, logjac, logpdf_y = forward(flow) # sample + transform and returns all the useful quantities in one pass
-(x = [-0.219525, -0.0934792, -0.314279, -0.165165, -1.62902, -0.32859, 0.514781, -0.3116, 0.957078, -0.069889], y = [0.0930996, 1.62717, -0.756388, 0.519735, -1.33456, 0.484004, 0.680621, -0.307233, 1.68176, -0.450381], logabsdetjac = 1.355433577912755, logpdf = -12.658641183050728)
+(x = [-0.387191, 0.761807], y = [-0.677683, 0.0866711] (tracked), logabsdetjac = -0.07475475048737289 (tracked), logpdf = -2.1282560611425447 (tracked))
 ```
 
 This method is for example useful when computing quantities such as the _expected lower bound (ELBO)_ between this transformed distribution and some other joint density. If no analytical expression is available, we have to approximate the ELBO by a monte carlo estimate. But one term in the ELBO is the entropy of the base density, which we _do_ know analytically in this case. Using the analytical expression for the entropy and then using a monte carlo estimate for the rest of the terms in the ELBO gives an estimate with lower variance than if we used the monte carlo estimate for the entire expectation.
