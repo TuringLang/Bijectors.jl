@@ -356,12 +356,53 @@ struct Logit{T<:Real} <: Bijector
 end
 
 (b::Logit)(x) = @. logit((x - b.a) / (b.b - b.a))
-(ib::Inversed{<:Logit{<:Real}})(y) = @. (ib.orig.b - ib.orig.a) * logistic(y) + ib.orig.a  # `orig` contains the `Bijector` which was inverted
+(ib::Inversed{<:Logit})(y) = @. (ib.orig.b - ib.orig.a) * logistic(y) + ib.orig.a  # `orig` contains the `Bijector` which was inverted
 
-logabsdetjac(b::Logit{<:Real}, x) = @. - log((x - b.a) * (b.b - x) / (b.b - b.a))
+logabsdetjac(b::Logit, x) = @. - log((x - b.a) * (b.b - x) / (b.b - b.a))
 ```
 
-Batch computation is not fully supported by all bijectors yet (see Issue #35), but is actively worked on. In the particular case of `Logit` there's only one thing that makes sense, which is elementwise application. Therefore we've added `@.` to the implementation above, thus this works for any `AbstractArray{<:Real}`.
+(Batch computation is not fully supported by all bijectors yet (see issue #35), but is actively worked on. In the particular case of `Logit` there's only one thing that makes sense, which is elementwise application. Therefore we've added `@.` to the implementation above, thus this works for any `AbstractArray{<:Real}`.)
+
+Then
+
+```julia
+julia> b = Logit(0.0, 1.0)
+Logit{Float64}(0.0, 1.0)
+
+julia> b(0.6)
+0.4054651081081642
+
+julia> inv(b)(y)
+0.6
+
+julia> logabsdetjac(b, 0.6)
+1.4271163556401458
+
+julia> logabsdetjac(inv(b), y) # defaults to `- logabsdetjac(b, inv(b)(x))`
+-1.4271163556401458
+
+julia> forward(b, 0.6)         # defaults to `(rv=b(x), logabsdetjac=logabsdetjac(b, x))`
+(rv = 0.4054651081081642, logabsdetjac = 1.4271163556401458)
+```
+
+For further efficiency, one could manually implement `forward(b::Logit, x)`:
+
+```julia
+julia> import Bijectors: forward, Logit
+
+julia> function forward(b::Logit{<:Real}, x)
+           totally_worth_saving = (x - b.a) / (b.b - b.a)  # spoiler: it's not
+           y = @. logit(totally_worth_saving)
+           logjac = @. - log((b.b - x) * totally_worth_saving)
+           return (rv=y, logabsdetjac = logjac)
+       end
+forward (generic function with 16 methods)
+
+julia> forward(b, 0.6)
+(rv = 0.4054651081081642, logabsdetjac = 1.4271163556401458)
+```
+
+As you can see it's a very contrived example, but you get the idea.
 
 ### `<: ADBijector`
 
