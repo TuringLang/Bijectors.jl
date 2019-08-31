@@ -334,7 +334,7 @@ Requires PR with `Stacked` merged.
 ## Implementing your own `Bijector`
 There's mainly two ways you can implement your own `Bijector`, and which way you choose mainly depends on the following question: are you bothered enough to manually implement `logabsdetjac`? If the answer is "Yup!", then you subtype from `Bijector`, if "Naaaah" then you subtype `ADBijector`.
 
-### `<: Bijector`
+### `<:Bijector`
 Here's a simple example taken from the source code, the `Identity`:
 
 ```julia
@@ -400,11 +400,14 @@ forward (generic function with 16 methods)
 
 julia> forward(b, 0.6)
 (rv = 0.4054651081081642, logabsdetjac = 1.4271163556401458)
+
+julia> @which forward(b, 0.6)
+forward(b::Logit{#s4} where #s4<:Real, x) in Main at REPL[43]:2
 ```
 
 As you can see it's a very contrived example, but you get the idea.
 
-### `<: ADBijector`
+### `<:ADBijector`
 
 We could also have implemented `Logit` as an `ADBijector`:
 
