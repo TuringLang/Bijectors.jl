@@ -476,10 +476,6 @@ end
 (b::DistributionBijector)(x) = link(b.dist, x)
 (ib::Inversed{<:DistributionBijector})(y) = invlink(ib.orig.dist, y)
 
-
-"Returns the constrained-to-unconstrained bijector for distribution `d`."
-bijector(d::Distribution) = DistributionBijector(d)
-
 # Transformed distributions
 struct TransformedDistribution{D, B, V} <: Distribution{V, Continuous} where {D<:Distribution{V, Continuous}, B<:Bijector}
     dist::D
@@ -514,6 +510,7 @@ transformed(d) = transformed(d, bijector(d))
 
 Returns the constrained-to-unconstrained bijector for distribution `d`.
 """
+bijector(d::Distribution) = DistributionBijector(d)
 bijector(d::Normal) = IdentityBijector
 bijector(d::MvNormal) = IdentityBijector
 bijector(d::PositiveDistribution) = Log()
