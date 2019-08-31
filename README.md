@@ -477,11 +477,15 @@ julia> logabsdetjac(b_ad, 0.6)
 Most of the methods and types mention below will have docstrings with more elaborate explanation and examples, e.g.
 ```julia
 help?> Bijectors.Composed
-  ∘(b1::Bijector, b2::Bijector)
-  composel(ts::Bijector...)
-  composer(ts::Bijector...)
+  Composed(ts::A)
 
-  A Bijector representing composition of bijectors. composel and composer results in a `Composed` for which application occurs from left-to-right and right-to-left, respectively.
+  ∘(b1::Bijector, b2::Bijector)::Composed{<:Tuple}
+  composel(ts::Bijector...)::Composed{<:Tuple}
+  composer(ts::Bijector...)::Composed{<:Tuple}
+
+  A Bijector representing composition of bijectors. composel and composer results in a Composed for which application occurs from left-to-right and right-to-left, respectively.
+
+  Note that all the propsed ways of constructing a Composed returns a Tuple of bijectors. This ensures type-stability of implementations of all relating methdos, e.g. inv.
 
   Examples
   ≡≡≡≡≡≡≡≡≡≡
@@ -495,7 +499,6 @@ help?> Bijectors.Composed
   cb1 = b1 ∘ b2                  # => Composed.ts == (b2, b1)
   cb2 = composel(b2, b1)         # => Composed.ts == (b2, b1)
   cb1(x) == cb2(x) == b1(b2(x))  # => true
-
 ```
 If anything is lacking or not clear in docstrings, feel free to open an issue or PR.
 
