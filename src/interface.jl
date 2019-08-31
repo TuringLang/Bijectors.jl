@@ -106,10 +106,10 @@ function jacobian(b::Inversed{<:ADBijector{<:ForwardDiffAD}}, y::AbstractVector{
 end
 
 function jacobian(b::ADBijector{<:TrackerAD}, x::Real)
-    return Tracker.gradient(b, x)[1]
+    return Tracker.data(Tracker.gradient(b, x)[1])
 end
 function jacobian(b::Inversed{<:ADBijector{<:TrackerAD}}, y::Real)
-    return Tracker.gradient(b, y)[1]
+    return Tracker.data(Tracker.gradient(b, y)[1])
 end
 function jacobian(b::ADBijector{<:TrackerAD}, x::AbstractVector{<:Real})
     # We extract `data` so that we don't returne a `Tracked` type
@@ -262,7 +262,7 @@ end
 
 struct Identity <: Bijector end
 (::Identity)(x) = x
-(::Inversed{Identity})(y) = y
+(::Inversed{<:Identity})(y) = y
 
 forward(::Identity, x) = (rv=x, logabsdetjac=zero(eltype(x)))
 
