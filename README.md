@@ -391,8 +391,8 @@ For further efficiency, one could manually implement `forward(b::Logit, x)`:
 julia> import Bijectors: forward, Logit
 
 julia> function forward(b::Logit{<:Real}, x)
-           totally_worth_saving = (x - b.a) / (b.b - b.a)  # spoiler: it's probably not
-           y = @. logit(totally_worth_saving)
+           totally_worth_saving = @. (x - b.a) / (b.b - b.a)  # spoiler: it's probably not
+           y = logit.(totally_worth_saving)
            logjac = @. - log((b.b - x) * totally_worth_saving)
            return (rv=y, logabsdetjac = logjac)
        end
