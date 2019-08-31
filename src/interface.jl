@@ -519,26 +519,19 @@ bijector(d::MvNormal) = IdentityBijector
 bijector(d::PositiveDistribution) = Log()
 bijector(d::MvLogNormal) = Log()
 bijector(d::SimplexDistribution) = simplex_b_proj
-
-_union2tuple(T1::Type, T2::Type) = (T1, T2)
-_union2tuple(T1::Type, T2::Union) = (T1, _union2tuple(T2.a, T2.b)...)
-_union2tuple(T::Union) = _union2tuple(T.a, T.b)
-
 bijector(d::KSOneSided) = Logit(zero(eltype(d)), zero(eltype(d)))
-for D in _union2tuple(UnitDistribution)
-    # Skipping KSOneSided because it's not a parametric type
-    if D == KSOneSided
-        continue
-    end
-    @eval bijector(d::$D{T}) where {T<:Real} = Logit(zero(T), one(T))
-end
+
+const BoundedDistribution = Union{Arcsine, Biweight, Cosine, Epanechnikov, Beta, NoncentralBeta}
+bijector(d::BoundedDistribution) = Logit(minimum(d), maximum(d))
+
+const LowerboundedDistribution = Union{Pareto, Levy}
+bijector(d::LowerboundedDistribution) = Log() ∘ Shift(- minimum(d))
 
 # FIXME: (TOR) Can we make this type-stable?
-# Everything but `Truncated` can probably be made type-stable
-# by explicit implementation. Can also make a `TruncatedBijector`
+# Can also make a `TruncatedBijector`
 # which has the same transform as the `link` function.
 # E.g. (b::Truncated)(x) = link(b.d, x) or smth
-function bijector(d::TransformDistribution) where {D<:Distribution}
+function bijector(d::Truncated)
     a, b = minimum(d), maximum(d)
     lowerbounded, upperbounded = isfinite(a), isfinite(b)
     if lowerbounded && upperbounded
