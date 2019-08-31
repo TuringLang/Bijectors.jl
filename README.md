@@ -331,6 +331,104 @@ This method is for example useful when computing quantities such as the _expecte
 ### TODO Normalizing flows with constrained supports
 Requires PR with `Stacked` merged.
 
+## Implementing your own `Bijector`
+There's mainly two ways you can implement your own `Bijector`, and which way you choose mainly depends on the following question: are you bothered enough to manually implement `logabsdetjac`? If the answer is "Yup!", then you subtype from `Bijector`, if "Naaaah" then you subtype `ADBijector`.
+
+### `<: Bijector`
+Here's a simple example taken from the source code, the `Identity`:
+
+```julia
+struct Identity <: Bijector end
+(::Identity)(x) = x                           # transform itself, "forward"
+(::Inversed{<: Identity})(y) = y              # inverse tramsform, "backward"
+
+logabsdetjac(::Identity, y) = zero(eltype(y)) # ∂ₓid(x) = ∂ₓ x = 1 → log(abs(1)) = log(1) = 0
+```
+
+A slightly more complex example is `Logit`:
+
+```julia
+using StatsFuns: logit, logistic
+
+struct Logit{T<:Real} <: Bijector
+    a::T
+    b::T
+end
+
+(b::Logit)(x) = @. logit((x - b.a) / (b.b - b.a))
+(ib::Inversed{<:Logit{<:Real}})(y) = @. (ib.orig.b - ib.orig.a) * logistic(y) + ib.orig.a  # `orig` contains the `Bijector` which was inverted
+
+logabsdetjac(b::Logit{<:Real}, x) = @. - log((x - b.a) * (b.b - x) / (b.b - b.a))
+```
+
+Batch computation is not fully supported by all bijectors yet (see Issue #35), but is actively worked on. In the particular case of `Logit` there's only one thing that makes sense, which is elementwise application. Therefore we've added `@.` to the implementation above, thus this works for any `AbstractArray{<:Real}`.
+
+### `<: ADBijector`
+
+We could also have implemented `Logit` as an `ADBijector`:
+
+```julia
+using StatsFuns: logit, logistic
+using Bijectors: ADBackend
+
+struct ADLogit{T, AD} <: ADBijector{AD}
+    a::T
+    b::T
+end
+
+# ADBackend() returns ForwardDiffAD, which means we use ForwardDiff.jl for AD
+ADLogit(a::T, b::T) where {T<:Real} = ADLogit{T, ADBackend()}(a, b)
+
+(b::ADLogit)(x) = @. logit((x - b.a) / (b.b - b.a))
+(ib::Inversed{<:ADLogit{<:Real}})(y) = @. (ib.orig.b - ib.orig.a) * logistic(y) + ib.orig.a
+```
+
+No implementation of `logabsdetjac`, but:
+
+```julia
+julia> b_ad = ADLogit(0.0, 1.0)
+ADLogit{Float64,Bijectors.ForwardDiffAD}(0.0, 1.0)
+
+julia> logabsdetjac(b_ad, 0.6)
+1.4271163556401458
+
+julia> y = b_ad(0.6)
+0.4054651081081642
+
+julia> inv(b_ad)(y)
+0.6
+
+julia> logabsdetjac(inv(b_ad), y)
+-1.4271163556401458
+```
+
+Neat! And just to verify that everything works:
+
+```julia
+julia> b = Logit(0.0, 1.0)
+Logit{Float64}(0.0, 1.0)
+
+julia> logabsdetjac(b, 0.6)
+1.4271163556401458
+
+julia> logabsdetjac(b_ad, 0.6) ≈ logabsdetjac(b, 0.6)
+true
+```
+
+We can also use Tracker.jl for the AD, rather than ForwardDiff.jl:
+
+```julia
+julia> Bijectors.setadbackend(:reverse_diff)
+:reverse_diff
+
+julia> b_ad = ADLogit(0.0, 1.0)
+ADLogit{Float64,Bijectors.TrackerAD}(0.0, 1.0)
+
+julia> logabsdetjac(b_ad, 0.6)
+1.4271163556401458
+```
+
+
 ### Reference
 Most of the methods and types mention below will have docstrings with more elaborate explanation and examples, e.g.
 ```julia
