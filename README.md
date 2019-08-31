@@ -166,21 +166,21 @@ julia> logabsdetjac(b, x) ≈ - logabsdetjac(b⁻¹, y)
 true
 ```
 
-which is always the case for a differentiable bijection with differentiabe inverse. Therefore if you want to compute `logabsdetjac(b⁻¹, y)`, and we know that `logabsdetjac(b, b⁻¹(y))` is actually more efficient, we'll return `- logabsdetjac(b, b⁻¹(y))` instead. But for some bijectors it might be easy to compute, say, the forward pass `b(x)`, but expensive to compute `b⁻¹(y)`. Because of this you might want to avoid doing anything "backwards", i.e. using `b⁻¹`. You can then use `forward`:
+which is always the case for a differentiable bijection with differentiable inverse. Therefore if you want to compute `logabsdetjac(b⁻¹, y)` and we know that `logabsdetjac(b, b⁻¹(y))` is actually more efficient, we'll return `-logabsdetjac(b, b⁻¹(y))` instead. For some bijectors it might be easy to compute, say, the forward pass `b(x)`, but expensive to compute `b⁻¹(y)`. Because of this you might want to avoid doing anything "backwards", i.e. using `b⁻¹`. This is where `forward` comes to good use:
 
 ```julia
 julia> forward(b, x)
 (rv = 0.9312689879144197, logabsdetjac = 1.595700144883034)
 ```
 
-What if `b(x)` is the expensive part? Then we just do:
+Similarily
 
 ```julia
 julia> forward(inv(b), y)
 (rv = 0.7173326646959575, logabsdetjac = -1.595700144883034)
 ```
 
-In fact, the purpose of `forward` is to just _do the right thing_. In this function we'll have access to both the original value `x` and the transformed value `y`, so how we can compute `logabsdetjac(b, x)` in either direction. Furthermore, in a lot of cases one can re-use a lot of the computation of `b(x)` in the computation of `logabsdetjac(b, x)`, or vice-versa. `forward(b, x)` will take advantage of such opportunities (if implemented).
+In fact, the purpose of `forward` is to just _do the right thing_, not necessarily "forward". In this function we'll have access to both the original value `x` and the transformed value `y`, so we can compute `logabsdetjac(b, x)` in either direction. Furthermore, in a lot of cases we can re-use a lot of the computation from `b(x)` in the computation of `logabsdetjac(b, x)`, or vice-versa. `forward(b, x)` will take advantage of such opportunities (if implemented).
 
 At this point we've only shown that we can replicate the existing functionality. But we said `TransformedDistribution isa Distribution`, so we also have `rand`:
 
@@ -194,11 +194,11 @@ julia> x = inv(td.transform)(y)  # transform back to interval [0, 1]
 
 This can be quite convenient if you have computations assuming input to be on the real line.
 
-But the real utility of `TransformedDistribution` becomes more apparent when using `transformed(dist, b)` for any bijector `b`. To get the transformed distribution corresponding to the `Beta(2, 2)`, we called `transformed(dist)` before. This is simply an alias for `transformed(dist, bijector(dist))`. Remember `bijector(dist)` returns the constrained-to-constrained bijector for that particular `Distribution`. But we can of course construct a `TransformedDistribution` using different bijectors for the same distribution! It's particular useful in something called _Automatic Derivative Variational Inference (ADVI)_.[2] An important part of this to approximate a constrained distribution, e.g. `Beta`, as follows:
+But the real utility of `TransformedDistribution` becomes more apparent when using `transformed(dist, b)` for any bijector `b`. To get the transformed distribution corresponding to the `Beta(2, 2)`, we called `transformed(dist)` before. This is simply an alias for `transformed(dist, bijector(dist))`. Remember `bijector(dist)` returns the constrained-to-constrained bijector for that particular `Distribution`. But we can of course construct a `TransformedDistribution` using different bijectors with the same `dist`. This is particularly useful in something called _Automatic Derivative Variational Inference (ADVI)_.[2] An important part of ADVI is to approximate a constrained distribution, e.g. `Beta`, as follows:
 1. Sample `x` from a `Normal` with parameters `μ` and `σ`, i.e. `x ~ Normal(μ, σ)`.
 2. Transform `x` to `y` s.t. `y ∈ support(Beta)`, with the transform being a differentiable bijection with a differentiable inverse (a "bijector")
 
-This then defines a probability density with support same as `Beta`! Of course, it's unlikely that it will be the same, but it's an _approximation_. Creating such a distribution becomes trivial with `Bijector` and `TransformedDistribution`:
+This then defines a probability density with same _support_ as `Beta`! Of course, it's unlikely that it will be the same density, but it's an _approximation_. Creating such a distribution becomes trivial with `Bijector` and `TransformedDistribution`:
 
 ```julia
 julia> dist = Beta(2, 2)
@@ -218,6 +218,16 @@ transform: Inversed{Logit{Float64}}(Logit{Float64}(0.0, 1.0))
 julia> x = rand(td)                    # ∈ (0, 1)
 0.37786466412061664
 ```
+
+It's worth noting that `support(Beta)` is the _closed_ interval `[0, 1]`, while the constrained-to-unconstrained bijection, `Logit` in this case, is only well-defined as a map `(0, 1) → ℝ` for the _open_ interval `(0, 1)`. This is of course not an implementation detail. `ℝ` is itself open, thus no continuous bijection exists from a _closed_ interval to `ℝ`. But since the boundaries of a closed interval has what's known as measure zero, this doesn't end up affecting the resulting density with support on the entire real line. In practice, this means that
+
+```julia
+td = transformed(Beta())
+
+inv(td.transform)(rand(td))
+```
+
+will never result in `0` or `1` though any sample arbitrarily close to either `0` or `1` is possible. _Disclaimer: numerical accuracy is limited, so you might still see `0` and `1` if you're lucky._
 
 ### Normalizing flows
 A very interesting application is that of _normalizing flows_.[1] Usually this is done by sampling from a multivariate normal distribution, and then transforming this to a target distribution using invertible neural networks. Currently there are two such transforms available in Bijectors.jl: `PlanarFlow` and `RadialFlow`. Let's create a flow with a single `PlanarLayer`:
