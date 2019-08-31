@@ -104,10 +104,20 @@ true
 Pretty neat, huh? `Inversed{Logit}` is also a `Bijector` where we've defined `(ib::Inversed{<:Logit})(y)` as the inverse transformation of `(b::Logit)(x)`. Note that it's not always the case that `inv(b) isa Inversed`, e.g. the inverse of `Exp` is simply `Log` so `inv(Exp()) isa Log` is true. Aslo, we can _compose_ bijectors:
 
 ```julia
-julia> id = (b ∘ b⁻¹)
+julia> id_y = (b ∘ b⁻¹)
 Composed{Tuple{Inversed{Logit{Float64}},Logit{Float64}}}((Inversed{Logit{Float64}}(Logit{Float64}(0.0, 1.0)), Logit{Float64}(0.0, 1.0)))
 
-julia> id(y) == y
+julia> id_y(y) ≈ y
+true
+```
+
+And since `Composed isa Bijector`:
+
+```julia
+julia> id_x = inv(id_y)
+Composed{Tuple{Inversed{Bijectors.Logit{Float64}},Bijectors.Logit{Float64}}}((Inversed{Bijectors.Logit{Float64}}(Bijectors.Logit{Float64}(0.0, 1.0)), Bijectors.Logit{Float64}(0.0, 1.0)))
+
+julia> id_x(x) ≈ x
 true
 ```
 
@@ -138,6 +148,39 @@ When computing `logpdf(td, y)` where `td` is the _transformed_ distribution corr
 julia> logpdf_forward(td, x)
 -1.05777275797781
 ```
+
+In the computatio of both `logpdf` and `logpdf_forward` we need to compute `log(abs(det(jacobian(inv(b), y))))` and `log(abs(det(jacobian(b, x))))`, respectively. This computation is available using the `logabsdetjac` method
+
+```julia
+julia> logabsdetjac(b⁻¹, y)
+-1.595700144883034
+
+julia> logabsdetjac(b, x)
+1.595700144883034
+```
+
+Notice that
+
+```julia
+julia> logabsdetjac(b, x) ≈ - logabsdetjac(b⁻¹, y)
+true
+```
+
+which is always the case for a differentiable bijection with differentiabe inverse. Therefore if you want to compute `logabsdetjac(b⁻¹, y)`, and we know that `logabsdetjac(b, b⁻¹(y))` is actually more efficient, we'll return `- logabsdetjac(b, b⁻¹(y))` instead. But for some bijectors it might be easy to compute, say, the forward pass `b(x)`, but expensive to compute `b⁻¹(y)`. Because of this you might want to avoid doing anything "backwards", i.e. using `b⁻¹`. You can then use `forward`:
+
+```julia
+julia> forward(b, x)
+(rv = 0.9312689879144197, logabsdetjac = 1.595700144883034)
+```
+
+What if `b(x)` is the expensive part? Then we just do:
+
+```julia
+julia> forward(inv(b), y)
+(rv = 0.7173326646959575, logabsdetjac = -1.595700144883034)
+```
+
+In fact, the purpose of `forward` is to just _do the right thing_. In this function we'll have access to both the original value `x` and the transformed value `y`, so how we can compute `logabsdetjac(b, x)` in either direction. Furthermore, in a lot of cases one can re-use a lot of the computation of `b(x)` in the computation of `logabsdetjac(b, x)`, or vice-versa. `forward(b, x)` will take advantage of such opportunities (if implemented).
 
 At this point we've only shown that we can replicate the existing functionality. But we said `TransformedDistribution isa Distribution`, so we also have `rand`:
 
