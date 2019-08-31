@@ -63,7 +63,7 @@ julia> logpdf_with_trans(dist, x, true) # considering the transformation
 ```
 
 ## `Bijector` interface
-Other than the `logpdf_with_trans` methods, the package also provides a more composable interface through the `Bijector` types. Consider for example the from above with `Beta(2, 2)`.
+Other than the `logpdf_with_trans` methods, the package also provides a more composable interface through the `Bijector` types. Consider for example the one from above with `Beta(2, 2)`.
 
 ```julia
 julia> using Bijectors; using Bijectors: Logit
