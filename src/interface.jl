@@ -521,7 +521,9 @@ bijector(d::MvLogNormal) = Log()
 bijector(d::SimplexDistribution) = simplex_b_proj
 bijector(d::KSOneSided) = Logit(zero(eltype(d)), zero(eltype(d)))
 
-const BoundedDistribution = Union{Arcsine, Biweight, Cosine, Epanechnikov, Beta, NoncentralBeta}
+const BoundedDistribution = Union{
+    Arcsine, Biweight, Cosine, Epanechnikov, Beta, NoncentralBeta
+}
 bijector(d::BoundedDistribution) = Logit(minimum(d), maximum(d))
 
 const LowerboundedDistribution = Union{Pareto, Levy}
