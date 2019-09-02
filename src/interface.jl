@@ -5,7 +5,8 @@ using Tracker
 import Base: inv, ∘
 
 import Random: AbstractRNG
-import Distributions: logpdf, rand, rand!, _rand!, _logpdf
+import Distributions: logpdf, rand, rand!, _rand!, _logpdf, params
+import StatsBase: entropy
 
 #######################################
 # AD stuff "extracted" from Turing.jl #
@@ -64,7 +65,7 @@ inv(ib::Inversed{<:Bijector}) = ib.orig
     logabsdetjac(b::Bijector, x)
     logabsdetjac(ib::Inversed{<:Bijector}, y)
 
-Computes the log(abs(det(J(x)))) where J is the jacobian of the transform.
+Computes the log(abs(det(J(b(x))))) where J is the jacobian of the transform.
 Similarily for the inverse-transform.
 
 Default implementation for `Inversed{<:Bijector}` is implemented as
@@ -554,7 +555,11 @@ end
 (ib::Inversed{<:DistributionBijector})(y) = invlink(ib.orig.dist, y)
 
 
-"Returns the constrained-to-unconstrained bijector for distribution `d`."
+"""
+    bijector(d::Distribution)
+
+Returns the constrained-to-unconstrained bijector for distribution `d`.
+"""
 bijector(d::Distribution) = DistributionBijector(d)
 
 # Transformed distributions
@@ -806,3 +811,26 @@ In the case where `d isa Distribution`, this means
 """
 forward(d::Distribution) = forward(GLOBAL_RNG, d)
 forward(d::Distribution, num_samples::Int) = forward(GLOBAL_RNG, d, num_samples)
+
+# utility stuff
+params(td::Transformed) = params(td.dist)
+entropy(td::Transformed) = entropy(td.dist)
+
+# logabsdetjac for distributions
+logabsdetjacinv(d::UnivariateDistribution, x::T) where T <: Real = zero(T)
+logabsdetjacinv(d::MultivariateDistribution, x::AbstractVector{T}) where {T<:Real} = zero(T)
+
+# for transformed distributions the `y` is going to be the transformed variable
+# and so we use the inverse transform to get what we want
+# TODO: should this be renamed to `logabsdetinvjac`?
+"""
+    logabsdetjacinv(td::UnivariateTransformed, y::Real)
+    logabsdetjacinv(td::MultivariateTransformed, y::AbstractVector{<:Real})
+
+Computes the `logabsdetjac` of the _inverse_ transformation, since `rand(td)` returns
+the _transformed_ random variable.
+"""
+logabsdetjacinv(td::UnivariateTransformed, y::Real) = logabsdetjac(inv(td.transform), y)
+function logabsdetjacinv(td::MvTransformed, y::AbstractVector{<:Real})
+    return logabsdetjac(inv(td.transform), y)
+end
