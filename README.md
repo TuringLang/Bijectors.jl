@@ -101,7 +101,9 @@ julia> b⁻¹(y) == invlink(dist, y)
 true
 ```
 
-Pretty neat, huh? `Inversed{Logit}` is also a `Bijector` where we've defined `(ib::Inversed{<:Logit})(y)` as the inverse transformation of `(b::Logit)(x)`. Note that it's not always the case that `inv(b) isa Inversed`, e.g. the inverse of `Exp` is simply `Log` so `inv(Exp()) isa Log` is true. Also, we can _compose_ bijectors:
+Pretty neat, huh? `Inversed{Logit}` is also a `Bijector` where we've defined `(ib::Inversed{<:Logit})(y)` as the inverse transformation of `(b::Logit)(x)`. Note that it's not always the case that `inv(b) isa Inversed`, e.g. the inverse of `Exp` is simply `Log` so `inv(Exp()) isa Log` is true. 
+
+Also, we can _compose_ bijectors:
 
 ```julia
 julia> id_y = (b ∘ b⁻¹)
@@ -110,7 +112,7 @@ Composed{Tuple{Inversed{Logit{Float64}},Logit{Float64}}}((Inversed{Logit{Float64
 julia> id_y(y) ≈ y
 true
 ```
-
+    
 And since `Composed isa Bijector`:
 
 ```julia
@@ -162,7 +164,7 @@ julia> logabsdetjac(b, x)
 Notice that
 
 ```julia
-julia> logabsdetjac(b, x) ≈ - logabsdetjac(b⁻¹, y)
+julia> logabsdetjac(b, x) ≈ -logabsdetjac(b⁻¹, y)
 true
 ```
 
@@ -336,7 +338,7 @@ julia> x, y, logjac, logpdf_y = forward(flow) # sample + transform and returns a
 (x = [-0.387191, 0.761807], y = [-0.677683, 0.0866711] (tracked), logabsdetjac = -0.07475475048737289 (tracked), logpdf = -2.1282560611425447 (tracked))
 ```
 
-This method is for example useful when computing quantities such as the _expected lower bound (ELBO)_ between this transformed distribution and some other joint density. If no analytical expression is available, we have to approximate the ELBO by a monte carlo estimate. But one term in the ELBO is the entropy of the base density, which we _do_ know analytically in this case. Using the analytical expression for the entropy and then using a monte carlo estimate for the rest of the terms in the ELBO gives an estimate with lower variance than if we used the monte carlo estimate for the entire expectation.
+This method is for example useful when computing quantities such as the _expected lower bound (ELBO)_ between this transformed distribution and some other joint density. If no analytical expression is available, we have to approximate the ELBO by a Monte Carlo estimate. But one term in the ELBO is the entropy of the base density, which we _do_ know analytically in this case. Using the analytical expression for the entropy and then using a monte carlo estimate for the rest of the terms in the ELBO gives an estimate with lower variance than if we used the monte carlo estimate for the entire expectation.
 
 ### TODO Normalizing flows with constrained supports
 Requires PR with `Stacked` merged.
