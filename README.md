@@ -124,7 +124,7 @@ julia> id_x(x) ≈ x
 true
 ```
 
-### `TransformedDistribution`
+### `logpdf` of `TransformedDistribution`
 This far we've seen that we can replicate the functionality provided by `link` and `invlink`. To replicate `logpdf_with_trans` we instead provide a `TransformedDistribution <: Distribution` implementing the `Distribution` interface from Distributions.jl:
 
 ```julia
@@ -153,7 +153,7 @@ julia> logpdf_forward(td, x)
 -1.05777275797781
 ```
 
-### `logabsdetjac` & `forward`
+### `logabsdetjac` and `forward`
 
 In the computation of both `logpdf` and `logpdf_forward` we need to compute `log(abs(det(jacobian(inv(b), y))))` and `log(abs(det(jacobian(b, x))))`, respectively. This computation is available using the `logabsdetjac` method
 
