@@ -1,9 +1,14 @@
 using SparseArrays
 
-# TODO: should we add another field `A_3` which we can use to filter out those
-# parts of the vector to which we apply the identity? E.g.
-# you want to use x[1] to parameterize transform of x[2], but you don't want
-# to do anything with x[3]
+"""
+    PartitionMask{A}(A_1::A, A_2::A, A_3::A) where {A}
+
+This is used to partition and recombine a vector into 3 disjoint "subvectors".
+
+Implements
+- `partition(m::PartitionMask, x)`: partitions `x` into 3 disjoint "subvectors"
+- `combine(m::PartitionMask, x_1, x_2, x_3)`: combines 3 disjoint vectors into a single one
+"""
 struct PartitionMask{A}
     A_1::A
     A_2::A
@@ -77,12 +82,31 @@ function PartitionMask(n::Int, indices)
 end
 PartitionMask(x::AbstractVector, indices) = PartitionMask(length(x), indices)
 
+"""
+    combine(m::PartitionMask, x_1, x_2, x_3)
+
+Combines `x_1`, `x_2`, and `x_3` into a single vector.
+"""
 @inline combine(m::PartitionMask, x_1, x_2, x_3) = m.A_1 * x_1 .+ m.A_2 * x_2 .+ m.A_3 * x_3
+
+"""
+    partition(m::PartitionMask, x)
+
+Partitions `x` into 3 disjoint subvectors.
+"""
 @inline partition(m::PartitionMask, x) = (transpose(m.A_1) * x, transpose(m.A_2) * x, transpose(m.A_3) * x)
 
 
 # CouplingLayer
 
+"""
+    CouplingLayer{B, M, F}(mask::M, θ::F)
+
+Implements a coupling-layer as defined in [1].
+
+# References
+[1] Kobyzev, I., Prince, S., & Brubaker, M. A., Normalizing flows: introduction and ideas, CoRR, (),  (2019). 
+"""
 struct CouplingLayer{B, M, F} <: Bijector where {B, M <: PartitionMask, F}
     mask::M
     θ::F
@@ -95,12 +119,14 @@ function CouplingLayer(B, θ, n::Int)
 end
 
 
-
 function (cl::CouplingLayer{B})(x) where {B}
+    # partition vector using `cl.mask::PartitionMask`
     x_1, x_2, x_3 = partition(cl.mask, x)
 
+    # construct bijector `B` using θ(x₂)
     b = B(cl.θ(x_2))
 
+    # recombine the vector again using the `PartitionMask`
     return combine(cl.mask, b(x_1), x_2, x_3)
 end
 
