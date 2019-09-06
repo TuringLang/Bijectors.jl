@@ -204,11 +204,11 @@ _transform(x, b::Bijector, bs::Bijector...) = _transform(b(x), bs...)
 
 function _logabsdetjac(x, b1::Bijector, b2::Bijector)
     res = forward(b1, x)
-    return logabsdetjac(b2, res.rv) .+ res.logabsdetjac
+    return logabsdetjac(b2, res.rv) + res.logabsdetjac
 end
 function _logabsdetjac(x, b1::Bijector, bs::Bijector...)
     res = forward(b1, x)
-    return _logabsdetjac(res.rv, bs...) .+ res.logabsdetjac
+    return _logabsdetjac(res.rv, bs...) + res.logabsdetjac
 end
 logabsdetjac(cb::Composed, x) = _logabsdetjac(x, cb.ts...)
 
@@ -311,10 +311,10 @@ end
 end
 logabsdetjac(b::Stacked, x::AbstractVector{<: Real}) = _logabsdetjac(x, b.ranges, b.bs...)
 function logabsdetjac(b::Stacked, x::AbstractMatrix{<: Real})
-    return hcat([logabsdetjac(b, x[:, i]) for i = 1:size(x, 2)])
+    return [logabsdetjac(b, x[:, i]) for i = 1:size(x, 2)]
 end
 function logabsdetjac(b::Stacked, x::TrackedArray{A, 2}) where {A}
-    return Tracker.collect(hcat([logabsdetjac(b, x[:, i]) for i = 1:size(x, 2)]))
+    return Tracker.collect([logabsdetjac(b, x[:, i]) for i = 1:size(x, 2)])
 end
 
 ##############################
