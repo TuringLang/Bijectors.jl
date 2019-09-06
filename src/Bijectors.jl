@@ -451,4 +451,6 @@ include("interface.jl")
 
 include("norm_flows.jl")
 
+include("couplings.jl")
+
 end # module
