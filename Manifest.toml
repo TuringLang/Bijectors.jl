@@ -280,9 +280,11 @@ version = "0.5.6"
 
 [[Tracker]]
 deps = ["Adapt", "DiffRules", "ForwardDiff", "LinearAlgebra", "MacroTools", "NNlib", "NaNMath", "Printf", "Random", "Requires", "SpecialFunctions", "Statistics", "Test"]
-git-tree-sha1 = "327342fec6e09f68ced0c2dc5731ed475e4b696b"
+git-tree-sha1 = "1aa443d3b4bfa91a8aec32f169a479cb87309910"
+repo-rev = "master"
+repo-url = "https://github.com/FluxML/Tracker.jl.git"
 uuid = "9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c"
-version = "0.2.2"
+version = "0.2.3"
 
 [[URIParser]]
 deps = ["Test", "Unicode"]
