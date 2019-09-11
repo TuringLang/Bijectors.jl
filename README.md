@@ -349,9 +349,6 @@ julia> x, y, logjac, logpdf_y = forward(flow) # sample + transform and returns a
 
 This method is for example useful when computing quantities such as the _expected lower bound (ELBO)_ between this transformed distribution and some other joint density. If no analytical expression is available, we have to approximate the ELBO by a Monte Carlo estimate. But one term in the ELBO is the entropy of the base density, which we _do_ know analytically in this case. Using the analytical expression for the entropy and then using a monte carlo estimate for the rest of the terms in the ELBO gives an estimate with lower variance than if we used the monte carlo estimate for the entire expectation.
 
-### TODO Normalizing flows with constrained supports
-Requires PR with `Stacked` merged.
-
 ## Implementing your own `Bijector`
 There's mainly two ways you can implement your own `Bijector`, and which way you choose mainly depends on the following question: are you bothered enough to manually implement `logabsdetjac`? If the answer is "Yup!", then you subtype from `Bijector`, if "Naaaah" then you subtype `ADBijector`.
 
@@ -559,5 +556,5 @@ For `TransformedDistribution`, together with default implementations for `Distri
 - `forward(d::Distribution)`: returns `(x = rand(dist), y = b(x), logabsdetjac = logabsdetjac(b, x), logpdf = logpdf_forward(td, x))` where `b = td.transform`. This combines sampling from base distribution and transforming into one function. The intention is that this entire process should be performed in the most efficient manner, e.g. the `logabsdetjac(b, x)` call might instead be implemented as `- logabsdetjac(inv(b), b(x))` depending on which is most efficient.
 
 # Bibliography
-1. Rezende, D. J., & Mohamed, S., Variational Inference With Normalizing Flows, CoRR, (),  (2015). 
-2. Kucukelbir, A., Tran, D., Ranganath, R., Gelman, A., & Blei, D. M., Automatic Differentiation Variational Inference, CoRR, (),  (2016).
+[1] Rezende, D. J., & Mohamed, S., Variational Inference With Normalizing Flows, CoRR, arXiv:1505.05770 [stat.ML], (),  (2015). 
+[2] Kucukelbir, A., Tran, D., Ranganath, R., Gelman, A., & Blei, D. M., Automatic Differentiation Variational Inference, CoRR, arXiv:1603.00788 [stat.ML], (),  (2016). 
