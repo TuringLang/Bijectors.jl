@@ -556,5 +556,6 @@ For `TransformedDistribution`, together with default implementations for `Distri
 - `forward(d::Distribution)`: returns `(x = rand(dist), y = b(x), logabsdetjac = logabsdetjac(b, x), logpdf = logpdf_forward(td, x))` where `b = td.transform`. This combines sampling from base distribution and transforming into one function. The intention is that this entire process should be performed in the most efficient manner, e.g. the `logabsdetjac(b, x)` call might instead be implemented as `- logabsdetjac(inv(b), b(x))` depending on which is most efficient.
 
 # Bibliography
-[1] Rezende, D. J., & Mohamed, S., Variational Inference With Normalizing Flows, CoRR, arXiv:1505.05770 [stat.ML], (),  (2015). 
+[1] Rezende, D. J., & Mohamed, S., Variational Inference With Normalizing Flows, CoRR, arXiv:1505.05770 [stat.ML], (),  (2015).
+
 [2] Kucukelbir, A., Tran, D., Ranganath, R., Gelman, A., & Blei, D. M., Automatic Differentiation Variational Inference, CoRR, arXiv:1603.00788 [stat.ML], (),  (2016). 
