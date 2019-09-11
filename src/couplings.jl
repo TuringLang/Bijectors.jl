@@ -118,6 +118,9 @@ function CouplingLayer(B, θ, n::Int)
     return CouplingLayer(B, PartitionMask(n, 1:idx), θ)
 end
 
+function CouplingLayer(cl::CouplingLayer{B}, mask::PartitionMask) where {B}
+    return CouplingLayer(B, mask, cl.θ)
+end
 
 function (cl::CouplingLayer{B})(x) where {B}
     # partition vector using `cl.mask::PartitionMask`
