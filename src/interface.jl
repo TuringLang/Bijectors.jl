@@ -190,7 +190,7 @@ composel(ts::Bijector...) = Composed(ts)
 
 Constructs `Composed` such that `ts` are applied right-to-left.
 """
-composer(ts::Bijector...) = Composed(inv(ts))
+composer(ts::Bijector...) = Composed(reverse(ts))
 
 # The transformation of `Composed` applies functions left-to-right
 # but in mathematics we usually go from right-to-left; this reversal ensures that
