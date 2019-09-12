@@ -242,6 +242,8 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD} end
         @test forward(b, x) == forward(td.transform, x)
         @test forward(ib, y) == forward(inv(td.transform), y)
 
+        @test forward(b, x) == forward(Bijectors.composer(b.ts...), x)
+
         # inverse works fine for composition
         cb = b ∘ ib
         @test cb(x) ≈ x
@@ -280,6 +282,15 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD} end
         f_a = forward(cb_a, x)
 
         @test f_t == f_a
+
+        # `composer` and `composel`
+        cb_l = Bijectors.composel(b⁻¹, b⁻¹, b)
+        cb_r = Bijectors.composer(reverse(cb_l.ts)...)
+        y = cb_l(x)
+        @test y == Bijectors.composel(cb_r.ts...)(x)
+
+        k = length(cb_l.ts)
+        @test all([cb_l.ts[i] == cb_r.ts[i] for i = 1:k])
     end
 
     @testset "Example: ADVI single" begin

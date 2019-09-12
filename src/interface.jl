@@ -106,10 +106,10 @@ function jacobian(b::Inversed{<:ADBijector{<:ForwardDiffAD}}, y::AbstractVector{
 end
 
 function jacobian(b::ADBijector{<:TrackerAD}, x::Real)
-    return Tracker.gradient(b, x)[1]
+    return Tracker.data(Tracker.gradient(b, x)[1])
 end
 function jacobian(b::Inversed{<:ADBijector{<:TrackerAD}}, y::Real)
-    return Tracker.gradient(b, y)[1]
+    return Tracker.data(Tracker.gradient(b, y)[1])
 end
 function jacobian(b::ADBijector{<:TrackerAD}, x::AbstractVector{<:Real})
     # We extract `data` so that we don't returne a `Tracked` type
@@ -149,12 +149,17 @@ logabsdetjacinv(b::Bijector, y) = logabsdetjac(inv(b), y)
 ###############
 
 """
-    ∘(b1::Bijector, b2::Bijector)
-    composel(ts::Bijector...)
-    composer(ts::Bijector...)
+    Composed(ts::A)
+
+    ∘(b1::Bijector, b2::Bijector)::Composed{<:Tuple}
+    composel(ts::Bijector...)::Composed{<:Tuple}
+    composer(ts::Bijector...)::Composed{<:Tuple}
 
 A `Bijector` representing composition of bijectors. `composel` and `composer` results in a
 `Composed` for which application occurs from left-to-right and right-to-left, respectively.
+
+Note that all the propsed ways of constructing a `Composed` returns a `Tuple` of bijectors.
+This ensures type-stability of implementations of all relating methdos, e.g. `inv`.
 
 # Examples
 It's important to note that `∘` does what is expected mathematically, which means that the
@@ -173,8 +178,19 @@ struct Composed{A} <: Bijector
     ts::A
 end
 
+"""
+    composel(ts::Bijector...)::Composed{<:Tuple}
+
+Constructs `Composed` such that `ts` are applied left-to-right.
+"""
 composel(ts::Bijector...) = Composed(ts)
-composer(ts::Bijector...) = Composed(inv(ts))
+
+"""
+    composer(ts::Bijector...)::Composed{<:Tuple}
+
+Constructs `Composed` such that `ts` are applied right-to-left.
+"""
+composer(ts::Bijector...) = Composed(reverse(ts))
 
 # The transformation of `Composed` applies functions left-to-right
 # but in mathematics we usually go from right-to-left; this reversal ensures that
@@ -246,7 +262,7 @@ end
 
 struct Identity <: Bijector end
 (::Identity)(x) = x
-(::Inversed{Identity})(y) = y
+(::Inversed{<:Identity})(y) = y
 
 forward(::Identity, x) = (rv=x, logabsdetjac=zero(eltype(x)))
 
