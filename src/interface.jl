@@ -37,7 +37,7 @@ end
 ######################
 
 "Abstract type for a `Bijector`."
-abstract type Bijector end
+abstract type Bijector{N} end
 
 Broadcast.broadcastable(b::Bijector) = Ref(b)
 
@@ -45,7 +45,7 @@ Broadcast.broadcastable(b::Bijector) = Ref(b)
 Abstract type for a `Bijector` making use of auto-differentation (AD) to
 implement `jacobian` and, by impliciation, `logabsdetjac`.
 """
-abstract type ADBijector{AD} <: Bijector end
+abstract type ADBijector{AD, N} <: Bijector{N} end
 
 """
     inv(b::Bijector)
@@ -53,9 +53,13 @@ abstract type ADBijector{AD} <: Bijector end
 
 A `Bijector` representing the inverse transform of `b`.
 """
-struct Inversed{B <: Bijector} <: Bijector
+# TODO: can we do something like `Bijector{N}` instead?
+struct Inversed{B <: Bijector, N} <: Bijector{N}
     orig::B
+
+    Inversed(b::B) where {N, B<:Bijector{N}} = new{B, N}(b)
 end
+
 
 inv(b::Bijector) = Inversed(b)
 inv(ib::Inversed{<:Bijector}) = ib.orig
@@ -174,31 +178,40 @@ cb2 = composel(b2, b1)         # => Composed.ts == (b2, b1)
 cb1(x) == cb2(x) == b1(b2(x))  # => true
 ```
 """
-struct Composed{A} <: Bijector
+struct Composed{A, N} <: Bijector{N}
     ts::A
 end
+
+Composed(ts::A) where {N, A <: AbstractArray{<: Bijector{N}}} = Composed{A, N}(ts)
 
 """
     composel(ts::Bijector...)::Composed{<:Tuple}
 
 Constructs `Composed` such that `ts` are applied left-to-right.
 """
-composel(ts::Bijector...) = Composed(ts)
+composel(ts::Bijector{N}...) where {N} = Composed{typeof(ts), N}(ts)
 
 """
     composer(ts::Bijector...)::Composed{<:Tuple}
 
 Constructs `Composed` such that `ts` are applied right-to-left.
 """
+<<<<<<< HEAD
 composer(ts::Bijector...) = Composed(reverse(ts))
+=======
+function composer(ts::Bijector{N}...) where {N}
+    its = reverse(ts)
+    return Composed{typeof(its), N}(its)
+end
+>>>>>>> added dimension of expected input to Bijector type
 
 # The transformation of `Composed` applies functions left-to-right
 # but in mathematics we usually go from right-to-left; this reversal ensures that
 # when we use the mathematical composition ∘ we get the expected behavior.
 # TODO: change behavior of `transform` of `Composed`?
-∘(b1::Bijector, b2::Bijector) = composel(b2, b1)
+∘(b1::Bijector{N}, b2::Bijector{N}) where {N} = composel(b2, b1)
 
-inv(ct::Composed) = Composed(map(inv, reverse(ct.ts)))
+inv(ct::Composed) = composer(map(inv, ct.ts)...)
 
 # # TODO: should arrays also be using recursive implementation instead?
 function (cb::Composed{<:AbstractArray{<:Bijector}})(x)
@@ -260,7 +273,7 @@ end
 # Example bijector: Identity #
 ##############################
 
-struct Identity <: Bijector end
+struct Identity{N} <: Bijector{N} end
 (::Identity)(x) = x
 (::Inversed{<:Identity})(y) = y
 
@@ -268,14 +281,12 @@ forward(::Identity, x) = (rv=x, logabsdetjac=zero(eltype(x)))
 
 logabsdetjac(::Identity, y) = zero(eltype(y))
 
-const IdentityBijector = Identity()
-
 ###############################
 # Example: Logit and Logistic #
 ###############################
 using StatsFuns: logit, logistic
 
-struct Logit{T<:Real} <: Bijector
+struct Logit{T<:Real} <: Bijector{0}
     a::T
     b::T
 end
@@ -289,14 +300,17 @@ logabsdetjac(b::Logit{<:Real}, x) = @. - log((x - b.a) * (b.b - x) / (b.b - b.a)
 # Exp & Log #
 #############
 
-struct Exp <: Bijector end
-struct Log <: Bijector end
+struct Exp{N} <: Bijector{N} end
+struct Log{N} <: Bijector{N} end
+
+Exp() = Exp{0}()
+Log() = Log{0}()
 
 (b::Log)(x) = @. log(x)
 (b::Exp)(y) = @. exp(y)
 
-inv(b::Log) = Exp()
-inv(b::Exp) = Log()
+inv(b::Log{N}) where {N} = Exp{N}()
+inv(b::Exp{N}) where {N} = Log{N}()
 
 logabsdetjac(b::Log, x) = - sum(log.(x))
 logabsdetjac(b::Exp, y) = sum(y)
@@ -304,9 +318,12 @@ logabsdetjac(b::Exp, y) = sum(y)
 #################
 # Shift & Scale #
 #################
-struct Shift{T} <: Bijector
+struct Shift{T, N} <: Bijector{N}
     a::T
 end
+
+Shift(a::T) where {T<:Real} = Shift{T, 0}(a)
+Shift(a::AbstractArray{T, N}) where {T, N} = Shift{T, N}(a)
 
 (b::Shift)(x) = b.a + x
 (b::Shift{<:Real})(x::AbstractArray) = b.a .+ x
@@ -318,9 +335,12 @@ logabsdetjac(b::Shift, x) = zero(eltype(x))
 logabsdetjac(b::Shift{<:Real}, x::AbstractMatrix) = zeros(eltype(x), size(x, 2))
 logabsdetjac(b::Shift{<:AbstractVector}, x::AbstractMatrix) = zeros(eltype(x), size(x, 2))
 
-struct Scale{T} <: Bijector
+struct Scale{T, N} <: Bijector{N}
     a::T
 end
+
+Scale(a::T) where {T<:Real} = Scale{T, 0}(a)
+Scale(a::AbstractArray{T, N}) where {T, N} = Scale{T, N}(a)
 
 (b::Scale)(x) = b.a * x
 (b::Scale{<:Real})(x::AbstractArray) = b.a .* x
@@ -339,7 +359,7 @@ logabsdetjac(b::Scale, x) = log(abs(b.a))
 ####################
 # Simplex bijector #
 ####################
-struct SimplexBijector{T} <: Bijector where {T} end
+struct SimplexBijector{T} <: Bijector{1} where {T} end
 
 const simplex_b = SimplexBijector{Val{false}}()
 const simplex_b_proj = SimplexBijector{Val{true}}()
@@ -481,11 +501,11 @@ This is the default `Bijector` for a distribution.
 It uses `link` and `invlink` to compute the transformations, and `AD` to compute
 the `jacobian` and `logabsdetjac`.
 """
-struct DistributionBijector{AD, D} <: ADBijector{AD} where {D<:Distribution}
+struct DistributionBijector{AD, D, N} <: ADBijector{AD, N} where {D<:Distribution}
     dist::D
 end
 function DistributionBijector(dist::D) where {D<:Distribution}
-    DistributionBijector{ADBackend(), D}(dist)
+    DistributionBijector{ADBackend(), D, length(size(dist))}(dist)
 end
 
 # Simply uses `link` and `invlink` as transforms with AD to get jacobian
@@ -497,12 +517,12 @@ end
 bijector(d::Distribution) = DistributionBijector(d)
 
 # Transformed distributions
-struct TransformedDistribution{D, B, V} <: Distribution{V, Continuous} where {D<:Distribution{V, Continuous}, B<:Bijector}
+struct TransformedDistribution{D, B, V, N} <: Distribution{V, Continuous} where {D<:Distribution{V, Continuous}, B<:Bijector{N}}
     dist::D
     transform::B
 end
 function TransformedDistribution(d::D, b::B) where {V<:VariateForm, B<:Bijector, D<:Distribution{V, Continuous}}
-    return TransformedDistribution{D, B, V}(d, b)
+    return TransformedDistribution{D, B, V, length(size(d))}(d, b)
 end
 
 
@@ -530,10 +550,10 @@ transformed(d) = transformed(d, bijector(d))
 
 Returns the constrained-to-unconstrained bijector for distribution `d`.
 """
-bijector(d::Normal) = IdentityBijector
-bijector(d::MvNormal) = IdentityBijector
-bijector(d::PositiveDistribution) = Log()
-bijector(d::MvLogNormal) = Log()
+bijector(d::Normal) = Identity{0}()
+bijector(d::MvNormal) = Identity{1}()
+bijector(d::PositiveDistribution) = Log{0}()
+bijector(d::MvLogNormal) = Log{0}()
 bijector(d::SimplexDistribution) = simplex_b_proj
 
 _union2tuple(T1::Type, T2::Type) = (T1, T2)
@@ -564,7 +584,7 @@ function bijector(d::TransformDistribution) where {D<:Distribution}
     elseif upperbounded
         return (Log() ∘ Shift(b) ∘ Scale(- one(typeof(b))))
     else
-        return IdentityBijector
+        return Identity{0}()
     end
 end
 
@@ -692,7 +712,7 @@ end
 const GLOBAL_RNG = Distributions.GLOBAL_RNG
 
 function _forward(d::UnivariateDistribution, x)
-    y, logjac = forward(IdentityBijector, x)
+    y, logjac = forward(Identity{0}(), x)
     return (x = x, y = y, logabsdetjac = logjac, logpdf = logpdf.(d, x))
 end
 
@@ -701,7 +721,7 @@ function forward(rng::AbstractRNG, d::Distribution, num_samples::Int)
     return _forward(d, rand(rng, d, num_samples))
 end
 function _forward(d::Distribution, x)
-    y, logjac = forward(IdentityBijector, x)
+    y, logjac = forward(Identity{length(size(d))}(), x)
     return (x = x, y = y, logabsdetjac = logjac, logpdf = logpdf(d, x))
 end
 

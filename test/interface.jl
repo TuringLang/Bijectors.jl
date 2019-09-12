@@ -6,7 +6,7 @@ using ForwardDiff
 
 Random.seed!(123)
 
-struct NonInvertibleBijector{AD} <: ADBijector{AD} end
+struct NonInvertibleBijector{AD} <: ADBijector{AD, 2} end
 
 # Scalar tests
 @testset "Interface" begin
@@ -95,7 +95,7 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD} end
 
             @testset "$dist: ForwardDiff AD" begin
                 x = rand(dist)
-                b = DistributionBijector{Bijectors.ADBackend(:forward_diff), typeof(dist)}(dist)
+                b = DistributionBijector{Bijectors.ADBackend(:forward_diff), typeof(dist), length(size(dist))}(dist)
                 
                 @test abs(det(Bijectors.jacobian(b, x))) > 0
                 @test logabsdetjac(b, x) ≠ Inf
@@ -108,7 +108,7 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD} end
 
             @testset "$dist: Tracker AD" begin
                 x = rand(dist)
-                b = DistributionBijector{Bijectors.ADBackend(:reverse_diff), typeof(dist)}(dist)
+                b = DistributionBijector{Bijectors.ADBackend(:reverse_diff), typeof(dist), length(size(dist))}(dist)
                 
                 @test abs(det(Bijectors.jacobian(b, x))) > 0
                 @test logabsdetjac(b, x) ≠ Inf
@@ -236,7 +236,7 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD} end
         x = rand(d)
         y = td.transform(x)
 
-        b = Bijectors.composel(td.transform, Bijectors.Identity())
+        b = Bijectors.composel(td.transform, Bijectors.Identity{0}())
         ib = inv(b)
 
         @test forward(b, x) == forward(td.transform, x)

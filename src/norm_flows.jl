@@ -14,7 +14,7 @@ using Roots # for inverse
 # PlanarLayer #
 ###############
 
-mutable struct PlanarLayer{T1,T2} <: Bijector
+mutable struct PlanarLayer{T1,T2} <: Bijector{1}
     w::T1
     u::T1
     b::T2
@@ -90,7 +90,7 @@ logabsdetjac(flow::PlanarLayer, x) = forward(flow, x).logabsdetjac
 
 # FIXME: using `TrackedArray` for the parameters, we end up with
 # nested tracked structures; don't want this.
-mutable struct RadialLayer{T1,T2} <: Bijector
+mutable struct RadialLayer{T1,T2} <: Bijector{1}
     α_::T1
     β::T1
     z_0::T2
