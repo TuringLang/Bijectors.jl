@@ -237,11 +237,11 @@ _transform(x, b::Bijector, bs::Bijector...) = _transform(b(x), bs...)
 
 function _logabsdetjac(x, b1::Bijector, b2::Bijector)
     res = forward(b1, x)
-    return logabsdetjac(b2, res.rv) .+ res.logabsdetjac
+    return logabsdetjac(b2, res.rv) + res.logabsdetjac
 end
 function _logabsdetjac(x, b1::Bijector, bs::Bijector...)
     res = forward(b1, x)
-    return _logabsdetjac(res.rv, bs...) .+ res.logabsdetjac
+    return _logabsdetjac(res.rv, bs...) + res.logabsdetjac
 end
 logabsdetjac(cb::Composed, x) = _logabsdetjac(x, cb.ts...)
 
@@ -250,16 +250,16 @@ logabsdetjac(cb::Composed, x) = _logabsdetjac(x, cb.ts...)
 # in which case forward(...) immediately calls `_forward(::NamedTuple, b::Bijector)`
 function _forward(f::NamedTuple, b::Bijector)
     y, logjac = forward(b, f.rv)
-    return (rv=y, logabsdetjac=logjac .+ f.logabsdetjac)
+    return (rv=y, logabsdetjac=logjac + f.logabsdetjac)
 end
 function _forward(f::NamedTuple, b1::Bijector, b2::Bijector)
     f1 = forward(b1, f.rv)
     f2 = forward(b2, f1.rv)
-    return (rv=f2.rv, logabsdetjac=f2.logabsdetjac .+ f1.logabsdetjac .+ f.logabsdetjac)
+    return (rv=f2.rv, logabsdetjac=f2.logabsdetjac + f1.logabsdetjac + f.logabsdetjac)
 end
 function _forward(f::NamedTuple, b::Bijector, bs::Bijector...)
     f1 = forward(b, f.rv)
-    f_ = (rv=f1.rv, logabsdetjac=f1.logabsdetjac .+ f.logabsdetjac)
+    f_ = (rv=f1.rv, logabsdetjac=f1.logabsdetjac + f.logabsdetjac)
     return _forward(f_, bs...)
 end
 _forward(x, b::Bijector, bs::Bijector...) = _forward(forward(b, x), bs...)
@@ -271,7 +271,7 @@ function forward(cb::Composed, x)
     for t in cb.ts[2:end]
         res = forward(t, rv)
         rv = res.rv
-        logjac = res.logabsdetjac .+ logjac
+        logjac = res.logabsdetjac + logjac
     end
     return (rv=rv, logabsdetjac=logjac)
 end
