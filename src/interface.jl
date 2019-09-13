@@ -349,28 +349,29 @@ struct Shift{T, N} <: Bijector{N}
 end
 
 Shift(a::T) where {T<:Real} = Shift{T, 0}(a)
-Shift(a::AbstractArray{T, N}) where {T, N} = Shift{T, N}(a)
+Shift(a::A) where {T, N, A<:AbstractArray{T, N}} = Shift{A, N}(a)
 
 (b::Shift)(x) = b.a + x
 (b::Shift{<:Real})(x::AbstractArray) = b.a .+ x
 (b::Shift{<:AbstractVector})(x::AbstractMatrix) = b.a .+ x
 
 inv(b::Shift) = Shift(-b.a)
-logabsdetjac(b::Shift, x) = zero(eltype(x))
-# FIXME: ambiguous whether or not this is actually a batch or whatever
-logabsdetjac(b::Shift{<:Real}, x::AbstractMatrix) = zeros(eltype(x), size(x, 2))
-logabsdetjac(b::Shift{<:AbstractVector}, x::AbstractMatrix) = zeros(eltype(x), size(x, 2))
+
+logabsdetjac(b::Shift{<:Real, 0}, x::Real) = zero(eltype(x))
+logabsdetjac(b::Shift{<:Real, 0}, x::AbstractVector) = zeros(eltype(x), length(x))
+logabsdetjac(b::Shift{T, 1}, x::AbstractVector) where {T<:Union{Real, AbstractVector}} = zero(eltype(x))
+logabsdetjac(b::Shift{T, 1}, x::AbstractMatrix) where {T<:Union{Real, AbstractVector}} = zeros(eltype(x), size(x, 2))
 
 struct Scale{T, N} <: Bijector{N}
     a::T
 end
 
 Scale(a::T) where {T<:Real} = Scale{T, 0}(a)
-Scale(a::AbstractArray{T, N}) where {T, N} = Scale{T, N}(a)
+Scale(a::A) where {T, N, A<:AbstractArray{T, N}} = Scale{A, N}(a)
 
-(b::Scale)(x) = b.a * x
+(b::Scale)(x) = b.a .* x
 (b::Scale{<:Real})(x::AbstractArray) = b.a .* x
-(b::Scale{<:AbstractVector{<:Real}})(x::AbstractMatrix{<:Real}) = x * b.a
+(b::Scale{<:AbstractVector{<:Real}, 2})(x::AbstractMatrix{<:Real}) = b.a .* x
 
 inv(b::Scale) = Scale(inv(b.a))
 inv(b::Scale{<:AbstractVector}) = Scale(inv.(b.a))
@@ -380,7 +381,11 @@ inv(b::Scale{<:AbstractVector}) = Scale(inv.(b.a))
 #      logabsdetjac(b::Scale{<: AbstractVector}, x::AbstractMatrix)
 # Is this a batch or is it simply a matrix we want to scale differently
 # in each component?
-logabsdetjac(b::Scale, x) = log(abs(b.a))
+logabsdetjac(b::Scale{<:Real, 0}, x::Real) = log(abs(b.a))
+logabsdetjac(b::Scale{<:Real, 0}, x::AbstractVector) = log(abs(b.a)) .* ones(eltype(x), length(x))
+logabsdetjac(b::Scale{<:Real, 1}, x::AbstractVector) = log(abs(b.a)) * length(x)
+logabsdetjac(b::Scale{<:AbstractVector, 1}, x::AbstractVector) = sum(log.(abs.(b.a)))
+logabsdetjac(b::Scale{<:AbstractVector, 1}, x::AbstractMatrix) = sum(log.(abs.(b.a))) * ones(eltype(x), size(x, 2))
 
 ####################
 # Simplex bijector #
