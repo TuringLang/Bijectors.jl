@@ -4,9 +4,11 @@ using Random
 using LinearAlgebra
 using ForwardDiff
 
+using Bijectors: Log, Exp, Shift, Scale, Logit
+
 Random.seed!(123)
 
-struct NonInvertibleBijector{AD} <: ADBijector{AD, 2} end
+struct NonInvertibleBijector{AD} <: ADBijector{AD, 1} end
 
 # Scalar tests
 @testset "Interface" begin
@@ -118,6 +120,71 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD, 2} end
                 @test abs(det(Bijectors.jacobian(b⁻¹, y))) > 0
                 @test logabsdetjac(b⁻¹, y) ≠ Inf
             end
+        end
+    end
+
+    @testset "Batch computation" begin
+        bs_xs = [
+            (Scale(2.0), randn(3)),
+            (Scale([1.0, 2.0]), randn(2, 3)),
+            (Shift(2.0), randn(3)),
+            (Shift([1.0, 2.0]), randn(2, 3)),
+            (Log{0}(), exp.(randn(3))),
+            (Log{1}(), exp.(randn(2, 3))),
+            (Exp{0}(), randn(3)),
+            (Exp{1}(), randn(2, 3)),
+            (Log{1}() ∘ Exp{1}(), randn(2, 3)),
+            (inv(Logit(-1.0, 1.0)), randn(3)),
+            (Identity{0}(), randn(3)),
+            (Identity{1}(), randn(2, 3))
+        ]
+
+        for (b, xs) in bs_xs
+            @testset "$b" begin
+                D = Bijectors.dimension(b)
+                ib = inv(b)
+
+                @test Bijectors.dimension(ib) == D
+
+                x = D == 0 ? xs[1] : xs[:, 1]
+
+                y = b(x)
+                ys = b(xs)
+
+                x_ = ib(y)
+                xs_ = ib(ys)
+
+                @test size(y) == size(x)
+                @test size(ys) == size(xs)
+                @test size(x_) == size(x)
+                @test size(xs_) == size(xs)
+
+                if D == 0
+                    @test y == ys[1]
+
+                    @test length(logabsdetjac(b, xs)) == length(xs)
+                    @test logabsdetjac(b, x) == logabsdetjac(b, xs)[1]
+
+                    @test length(logabsdetjac(ib, ys)) == length(xs)
+                    @test logabsdetjac(ib, y) == logabsdetjac(ib, ys)[1]
+                elseif Bijectors.dimension(b) == 1
+                    @test y == ys[:, 1]
+                    # Comparing sizes instead of lengths ensures we catch errors s.t.
+                    # length(x) == 3 when size(x) == (1, 3).
+                    # We want the return value to
+                    @test size(logabsdetjac(b, xs)) == (size(xs, 2), )
+                    @test logabsdetjac(b, x) == logabsdetjac(b, xs)[1]
+
+                    @test size(logabsdetjac(ib, ys)) == (size(xs, 2), )
+                    @test logabsdetjac(ib, y) == logabsdetjac(ib, ys)[1]
+                else
+                    error("tests not implemented yet")
+                end
+            end
+        end
+
+        @testset "Composition" begin
+            @test_throws DimensionMismatch (Exp{1}() ∘ Log{0}())
         end
     end
 
