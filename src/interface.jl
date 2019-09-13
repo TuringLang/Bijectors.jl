@@ -282,11 +282,23 @@ end
 
 struct Identity{N} <: Bijector{N} end
 (::Identity)(x) = x
-(::Inversed{<:Identity})(y) = y
+inv(b::Identity) = b
 
 forward(::Identity, x) = (rv=x, logabsdetjac=zero(eltype(x)))
 
-logabsdetjac(::Identity, y) = zero(eltype(y))
+logabsdetjac(::Identity, x::Real) = zero(eltype(x))
+@generated function logabsdetjac(
+    b::Identity{N1},
+    x::AbstractArray{T2, N2}
+) where {N1, T2, N2}
+    if N1 == N2
+        return :(zero(eltype(x)))
+    elseif N1 + 1 == N2
+        return :(zeros(eltype(x), size(x, $N2)))
+    else
+        return :(throw(MethodError(logabsdetjac, (b, x))))
+    end
+end
 
 ###############################
 # Example: Logit and Logistic #
