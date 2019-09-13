@@ -63,6 +63,14 @@ julia> logpdf_with_trans(dist, x, true) # considering the transformation
 ```
 
 ## `Bijector` interface
+A `Bijector` is a differentiable bijection with a differentiable inverse. That's basically it. 
+
+The primary application of `Bijector`s is the (very profitable) business of transforming (usually continuous) probability densities. If we transfrom a random variable `x ~ p(x)` to `y = b(x)` where `b` is a `Bijector`, we also get a canonical density `q(y) = p(b⁻¹(y)) |det J(b⁻¹, y)|` for `y`. Here `J(b⁻¹, y)` is the jacobian of the inverse transform evaluated at `y`. `q` is also known as the _push-forward_ of `p` by `b` in measure theory.
+
+There's plenty of different reasons why one would want to do something like this. It can be because your `p` has non-zero probability (support) on a closed interval `[a, b]` and you want to use AD without having to worry about reaching the boundary. E.g. `Beta` has support `[0, 1]` so if we could transform `p = Beta` into a density `q` with support on ℝ, we could instead compute the derivative of `logpdf(q, y)` wrt. `y`, and then transform back `x = b⁻¹(y)`. This is very useful for certain inference methods, e.g. Hamiltonian Monte-Carlo, where we need to take the derivative of the logpdf-computation wrt. input.
+
+Another use-case is constructing a _parameterized_ `Bijector` and consider transforming a "simple" density, e.g. `MvNormal`, to match a more complex density. One class of such bijectors is _Normalizing Flows (NFs)_ which are compositions of differentiable and invertible neural networks, i.e. composition of a particular family of parameterized bijectors.[1] We'll see an example of this later on.
+
 ### Basic usage
 Other than the `logpdf_with_trans` methods, the package also provides a more composable interface through the `Bijector` types. Consider for example the one from above with `Beta(2, 2)`.
 
