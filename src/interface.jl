@@ -215,7 +215,6 @@ end
     if N1 == N2
         return :(composel(b2, b1))
     else
-        # FIXME: this doesn't give a stack trace?
         return :(throw(DimensionMismatch("$(typeof(b1)) expects $(N1)-dim but $(typeof(b2)) expects $(N2)-dim")))
     end
 end
