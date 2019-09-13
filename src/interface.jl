@@ -198,14 +198,10 @@ composel(ts::Bijector{N}...) where {N} = Composed{typeof(ts), N}(ts)
 
 Constructs `Composed` such that `ts` are applied right-to-left.
 """
-<<<<<<< HEAD
-composer(ts::Bijector...) = Composed(reverse(ts))
-=======
 function composer(ts::Bijector{N}...) where {N}
     its = reverse(ts)
     return Composed{typeof(its), N}(its)
 end
->>>>>>> added dimension of expected input to Bijector type
 
 # The transformation of `Composed` applies functions left-to-right
 # but in mathematics we usually go from right-to-left; this reversal ensures that
