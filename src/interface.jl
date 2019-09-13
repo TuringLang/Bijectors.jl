@@ -209,7 +209,14 @@ end
 # but in mathematics we usually go from right-to-left; this reversal ensures that
 # when we use the mathematical composition ∘ we get the expected behavior.
 # TODO: change behavior of `transform` of `Composed`?
-∘(b1::Bijector{N}, b2::Bijector{N}) where {N} = composel(b2, b1)
+@generated function ∘(b1::Bijector{N1}, b2::Bijector{N2}) where {N1, N2}
+    if N1 == N2
+        return :(composel(b2, b1))
+    else
+        # FIXME: this doesn't give a stack trace?
+        return :(throw(DimensionMismatch("$(typeof(b1)) expects $(N1)-dim but $(typeof(b2)) expects $(N2)-dim")))
+    end
+end
 
 inv(ct::Composed) = composer(map(inv, ct.ts)...)
 
