@@ -281,9 +281,24 @@ b([0.0, 1.0]) == [b1(0.0), 1.0]  # => true
 struct Stacked{B, N} <: Bijector where N
     bs::B
     ranges::NTuple{N, UnitRange{Int}}
+
+    function Stacked(
+        bs::C,
+        ranges::NTuple{N, UnitRange{Int}}
+    ) where {N, C<:Tuple{Vararg{<:Bijector, N}}}
+        return new{C, N}(bs, ranges)
+    end
+
+    function Stacked(
+        bs::A,
+        ranges::NTuple{N, UnitRange{Int}}
+    ) where {N, A<:AbstractArray{<:Bijector}}
+        @assert length(bs) == N "number of bijectors is not same as number of ranges"
+        return new{A, N}(bs, ranges)
+    end
 end
 Stacked(bs) = Stacked(bs, NTuple{length(bs), UnitRange{Int}}([i:i for i = 1:length(bs)]))
-Stacked(bs, ranges) = Stacked(bs, NTuple{length(bs), UnitRange{Int}}(ranges))
+Stacked(bs, ranges::AbstractArray) = Stacked(bs, tuple(ranges...))
 
 Base.vcat(bs::Bijector...) = Stacked(bs)
 

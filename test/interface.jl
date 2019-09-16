@@ -321,6 +321,9 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD} end
         sb = Stacked((Bijectors.Exp(), Bijectors.SimplexBijector()), [1:1, 2:3])
         @test_throws AssertionError sb(x ./ sum(x))
 
+        @test_throws AssertionError Stacked([Bijectors.Exp(), ], (1:1, 2:3))
+        @test_throws MethodError Stacked((Bijectors.Exp(), ), (1:1, 2:3))
+
         @testset "Stacked: ADVI with MvNormal" begin
             # MvNormal test
             dists = [
