@@ -356,7 +356,7 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD} end
             ibs = inv.(bs)            # invert, so we get unconstrained-to-constrained
             sb = Stacked(ibs, ranges) # => Stacked <: Bijector
             x = rand(d)
-            sb(x)
+
             @test sb isa Stacked
 
             td = transformed(d, sb)  # => MultivariateTransformed <: Distribution{Multivariate, Continuous}
