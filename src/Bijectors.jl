@@ -2,7 +2,6 @@ module Bijectors
 
 using Reexport, Requires
 @reexport using Distributions
-@reexport using StatsBase
 using StatsFuns
 using LinearAlgebra
 using MappedArrays
@@ -33,10 +32,11 @@ export  TransformDistribution,
         TransformedDistribution,
         UnivariateTransformed,
         MultivariateTransformed,
+        entropy,
         logpdf_with_jac,
         logpdf_forward,
         PlanarLayer,
-        RadialLayer
+        RadialLayer,
 
 const DEBUG = Bool(parse(Int, get(ENV, "DEBUG_BIJECTORS", "0")))
 
