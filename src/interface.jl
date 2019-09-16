@@ -304,7 +304,7 @@ function (sb::Stacked)(x::AbstractArray{<: Real})
     y = _transform(x, sb.ranges, sb.bs...)
 
     # TODO: maybe tell user to check their ranges?
-    @assert size(y) == size(x)
+    @assert size(y) == size(x) "x is size $(size(x)) but y is $(size(y))"
 
     return y
 end
@@ -417,7 +417,7 @@ logabsdetjac(b::Scale, x) = log(abs(b.a))
 # Simplex bijector #
 ####################
 struct SimplexBijector{T} <: Bijector where {T} end
-SimplexBijector(proj::Bool) = SimplexBijector{Val(proj)}()
+SimplexBijector(proj::Bool) = SimplexBijector{Val{proj}}()
 SimplexBijector() = SimplexBijector(true)
 
 const simplex_b = SimplexBijector{Val{false}}()

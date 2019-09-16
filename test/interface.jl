@@ -310,11 +310,15 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD} end
         @test logabsdetjac(sb1, [x, x, y, y]) ≈ 0.0
         @test logabsdetjac(sb2, [x, x, y, y]) ≈ 0.0
 
-        # stuff
+        # value-test
         x = ones(3)
         sb = vcat(Bijectors.Exp(), Bijectors.Log(), Bijectors.Shift(5.0))
         @test sb(x) == [exp(x[1]), log(x[2]), x[3] + 5.0]
         @test logabsdetjac(sb, x) == sum([logabsdetjac(sb.bs[i], x[i]) for i = 1:3])
+
+        # TODO: change when we have dimensionality in the type
+        sb = vcat([Bijectors.Exp(), Bijectors.SimplexBijector()]...)
+        @test_throws AssertionError sb(x)
 
         @testset "Stacked: ADVI with MvNormal" begin
             # MvNormal test
