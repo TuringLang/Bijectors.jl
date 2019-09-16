@@ -332,8 +332,6 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD} end
         @test logabsdetjac(sb2, [x, x, y, y]) ≈ 0.0
         @test res2.logabsdetjac ≈ 0.0
 
-        @which logabsdetjac(sb2, [x, x, y, y])
-
         # value-test
         x = ones(3)
         sb = vcat(Bijectors.Exp(), Bijectors.Log(), Bijectors.Shift(5.0))

@@ -305,6 +305,16 @@ Base.vcat(bs::Bijector...) = Stacked(bs)
 inv(sb::Stacked) = Stacked(inv.(sb.bs), sb.ranges)
 
 # TODO: Is there a better approach to this?
+@generated function _transform(x, rs::NTuple{N, UnitRange{Int}}, bs::Bijector...) where N
+    exprs = []
+    for i = 1:N
+        push!(exprs, :(bs[$i](x[rs[$i]])))
+    end
+
+    return :(vcat($(exprs...)))
+end
+_transform(x, rs::NTuple{1, UnitRange{Int}}, b::Bijector) = b(x)
+
 function (sb::Stacked{<:Tuple})(x::AbstractVector{<:Real})
     y = _transform(x, sb.ranges, sb.bs...)
 
