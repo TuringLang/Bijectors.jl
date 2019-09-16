@@ -318,7 +318,7 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD} end
 
         # TODO: change when we have dimensionality in the type
         x = ones(4)
-        sb = vcat(Bijectors.Exp(), Bijectors.SimplexBijector()...)
+        sb = vcat(Bijectors.Exp(), Bijectors.SimplexBijector())
         @test_throws AssertionError sb(x ./ sum(x))
 
         @testset "Stacked: ADVI with MvNormal" begin
