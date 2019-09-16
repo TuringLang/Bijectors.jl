@@ -325,11 +325,12 @@ _transform(x, rs::NTuple{1, UnitRange{Int}}, b::Bijector) = b(x)
 function (sb::Stacked{<:Tuple})(x::AbstractVector{<:Real})
     y = _transform(x, sb.ranges, sb.bs...)
     @assert size(y) == size(x) "x is size $(size(x)) but y is $(size(y))"
-
     return y
 end
 function (sb::Stacked{<:AbstractArray, N})(x::AbstractVector{<:Real}) where {N}
-    return vcat([sb.bs[i](x[sb.ranges[i]]) for i = 1:N]...)
+    y = vcat([sb.bs[i](x[sb.ranges[i]]) for i = 1:N]...)
+    @assert size(y) == size(x) "x is size $(size(x)) but y is $(size(y))"
+    return y
 end
 
 (sb::Stacked)(x::AbstractMatrix{<: Real}) = hcat([sb(x[:, i]) for i = 1:size(x, 2)]...)
