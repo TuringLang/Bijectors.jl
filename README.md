@@ -634,6 +634,7 @@ The following are the bijectors available:
   - `ADBijector{AD} <: Bijector`: subtypes of this only require the user to implement `(b::UserBijector)(x)` and `(ib::Inversed{<:UserBijector})(y)`. Automatic differentation will be used to compute the `jacobian(b, x)` and thus `logabsdetjac(b, x).
 - Concrete:
   - `Composed`: represents a composition of bijectors.
+  - `Stacked`: stacks univariate and multivariate bijectors
   - `Identity`: does what it says, i.e. nothing.
   - `Logit`
   - `Exp`
