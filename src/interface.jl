@@ -831,6 +831,16 @@ forward(d::Distribution, num_samples::Int) = forward(GLOBAL_RNG, d, num_samples)
 
 # utility stuff
 params(td::Transformed) = params(td.dist)
+
+#   ℍ(p̃(y))
+# = ∫ p̃(y) log p̃(y) dy
+# = ∫ p(f⁻¹(y)) |det J(f⁻¹, y)| log (p(f⁻¹(y)) |det J(f⁻¹, y)|) dy
+# = ∫ p(x) (log p(x) |det J(f⁻¹, f(x))|) dx
+# = ∫ p(x) (log p(x) |det J(f⁻¹ ∘ f, x)|) dx
+# = ∫ p(x) log (p(x) |det J(id, x)|) dx
+# = ∫ p(x) log (p(x) ⋅ 1) dx
+# = ∫ p(x) log p(x) dx
+# = ℍ(p(x))
 entropy(td::Transformed) = entropy(td.dist)
 
 # logabsdetjac for distributions
