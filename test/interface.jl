@@ -320,6 +320,7 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD} end
         sb = vcat([Bijectors.Exp(), Bijectors.SimplexBijector()]...)
         println(sb)
         println(x)
+        sb(x ./ sum(x))
         @test_throws AssertionError sb(x ./ sum(x))
 
         @testset "Stacked: ADVI with MvNormal" begin
