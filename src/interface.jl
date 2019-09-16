@@ -305,17 +305,7 @@ Base.vcat(bs::Bijector...) = Stacked(bs)
 inv(sb::Stacked) = Stacked(inv.(sb.bs), sb.ranges)
 
 # TODO: Is there a better approach to this?
-@generated function _transform(x, rs::NTuple{N, UnitRange{Int}}, bs::Bijector...) where N
-    exprs = []
-    for i = 1:N
-        push!(exprs, :(bs[$i](x[rs[$i]])))
-    end
-
-    return :(vcat($(exprs...)))
-end
-_transform(x, rs::NTuple{1, UnitRange{Int}}, b::Bijector) = b(x)
-
-function (sb::Stacked)(x::AbstractArray{<: Real})
+function (sb::Stacked{<:Tuple})(x::AbstractVector{<:Real})
     y = _transform(x, sb.ranges, sb.bs...)
 
     # TODO: maybe tell user to check their ranges?
@@ -323,29 +313,82 @@ function (sb::Stacked)(x::AbstractArray{<: Real})
 
     return y
 end
+function (sb::Stacked{<:AbstractArray, N})(x::AbstractVector{<:Real}) where {N}
+    return vcat([sb.bs[i](x[sb.ranges[i]]) for i = 1:N]...)
+end
+
 (sb::Stacked)(x::AbstractMatrix{<: Real}) = hcat([sb(x[:, i]) for i = 1:size(x, 2)]...)
 function (sb::Stacked)(x::TrackedArray{A, 2}) where {A}
     return Tracker.collect(hcat([sb(x[:, i]) for i = 1:size(x, 2)]...))
 end
 
-@generated function _logabsdetjac(
-    x,
-    rs::NTuple{N, UnitRange{Int}},
-    bs::Bijector...
+@generated function logabsdetjac(
+    b::Stacked{<:Tuple, N},
+    x::AbstractVector{<:Real}
 ) where {N}
     exprs = []
     for i = 1:N
-        push!(exprs, :(sum(logabsdetjac(bs[$i], x[rs[$i]]))))
+        push!(exprs, :(sum(logabsdetjac(b.bs[$i], x[b.ranges[$i]]))))
     end
 
     return :(sum([$(exprs...), ]))
 end
-logabsdetjac(b::Stacked, x::AbstractVector{<: Real}) = _logabsdetjac(x, b.ranges, b.bs...)
+function logabsdetjac(
+    b::Stacked{<:AbstractArray, N},
+    x::AbstractVector{<:Real}
+) where {N}
+    # TODO: drop the `sum` when we have dimensionality
+    return sum([sum(logabsdetjac(b.bs[i], x[b.ranges[i]])) for i = 1:N])
+end
 function logabsdetjac(b::Stacked, x::AbstractMatrix{<: Real})
     return [logabsdetjac(b, x[:, i]) for i = 1:size(x, 2)]
 end
 function logabsdetjac(b::Stacked, x::TrackedArray{A, 2}) where {A}
     return Tracker.collect([logabsdetjac(b, x[:, i]) for i = 1:size(x, 2)])
+end
+
+# Generates something similar to:
+#
+# quote
+#    (y_1, logjac) = forward(b.bs[1], x[b.ranges[1]])
+#    (y_2, _logjac) = forward(b.bs[2], x[b.ranges[2]])
+#     logjac += _logjac
+#     y = vcat(tuple(y_1, y_2)...)
+#     return (rv = y, logabsdetjac = logjac)
+# end
+@generated function forward(b::Stacked{T, N}, x::AbstractVector) where {N, T<:Tuple}
+    expr = Expr(:block)
+    e = Expr(:call, :tuple)
+
+    push!(expr.args, :((y_1, logjac) = forward(b.bs[1], x[b.ranges[1]])))
+    push!(e.args, :y_1)
+    for i = 2:length(T.parameters)
+        y_name = Symbol("y_$i")
+        push!(expr.args, :(($y_name, _logjac) = forward(b.bs[$i], x[b.ranges[$i]])))
+        push!(expr.args, :(logjac += _logjac))
+
+        push!(e.args, y_name)
+    end
+
+    push!(expr.args, :(y = vcat($e...)))
+
+    # TODO: drop the `sum` when we have dimensionality
+    push!(expr.args, :(return (rv = y, logabsdetjac = sum(logjac))))
+
+    return expr
+end
+
+function forward(sb::Stacked{<:AbstractArray, N}, x::AbstractVector) where {N}
+    ys = []
+    logjacs = []
+    for i = 1:N
+        y, logjac = forward(sb.bs[i], x[sb.ranges[i]])
+        push!(ys, y)
+        # TODO: drop the `sum` when we have dimensionality
+        push!(logjacs, sum(logjac))
+    end
+
+    return (rv = vcat(ys...), logabsdetjac = sum(logjacs))
 end
 
 ##############################

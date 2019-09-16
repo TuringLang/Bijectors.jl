@@ -294,27 +294,55 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD} end
     end
 
     @testset "Stacked <: Bijector" begin
-        # `logabsdetjac` without AD
+        # `logabsdetjac` withOUT AD
         d = Beta()
         b = bijector(d)
         x = rand(d)
         y = b(x)
-        sb = vcat(b, b, inv(b), inv(b))
-        @test logabsdetjac(sb, [x, x, y, y]) ≈ 0.0
+
+        sb1 = vcat(b, b, inv(b), inv(b))             # <= tuple
+        res1 = forward(sb1, [x, x, y, y])
+
+        @test sb1([x, x, y, y]) == res1.rv
+        @test logabsdetjac(sb1, [x, x, y, y]) ≈ 0.0
+        @test res1.logabsdetjac ≈ 0.0
+
+        sb2 = Stacked([b, b, inv(b), inv(b)])        # <= Array
+        res2 = forward(sb2, [x, x, y, y])
+
+        @test sb2([x, x, y, y]) == res2.rv
+        @test logabsdetjac(sb2, [x, x, y, y]) ≈ 0.0
+        @test res2.logabsdetjac ≈ 0.0
 
         # `logabsdetjac` with AD
         b = DistributionBijector(d)
         y = b(x)
+        
         sb1 = vcat(b, b, inv(b), inv(b))             # <= tuple
-        sb2 = Stacked([b, b, inv(b), inv(b)])        # <= Array
+        res1 = forward(sb1, [x, x, y, y])
+
+        @test sb1([x, x, y, y]) == res1.rv
         @test logabsdetjac(sb1, [x, x, y, y]) ≈ 0.0
+        @test res1.logabsdetjac ≈ 0.0
+
+        sb2 = Stacked([b, b, inv(b), inv(b)])        # <= Array
+        res2 = forward(sb2, [x, x, y, y])
+
+        @test sb2([x, x, y, y]) == res2.rv
         @test logabsdetjac(sb2, [x, x, y, y]) ≈ 0.0
+        @test res2.logabsdetjac ≈ 0.0
+
+        @which logabsdetjac(sb2, [x, x, y, y])
 
         # value-test
         x = ones(3)
         sb = vcat(Bijectors.Exp(), Bijectors.Log(), Bijectors.Shift(5.0))
+        res = forward(sb, x)
         @test sb(x) == [exp(x[1]), log(x[2]), x[3] + 5.0]
+        @test res.rv == [exp(x[1]), log(x[2]), x[3] + 5.0]
         @test logabsdetjac(sb, x) == sum([logabsdetjac(sb.bs[i], x[i]) for i = 1:3])
+        @test res.logabsdetjac == logabsdetjac(sb, x)
+        
 
         # TODO: change when we have dimensionality in the type
         x = ones(4)
