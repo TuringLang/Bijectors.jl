@@ -366,10 +366,11 @@ end
 #
 # quote
 #    (y_1, logjac) = forward(b.bs[1], x[b.ranges[1]])
+#    logjac = logjac_
 #    (y_2, _logjac) = forward(b.bs[2], x[b.ranges[2]])
-#     logjac += _logjac
-#     y = vcat(tuple(y_1, y_2)...)
-#     return (rv = y, logabsdetjac = logjac)
+#    logjac += _logjac
+#    y = vcat(tuple(y_1, y_2)...)
+#    return (rv = y, logabsdetjac = logjac)
 # end
 @generated function forward(b::Stacked{T, N}, x::AbstractVector) where {N, T<:Tuple}
     expr = Expr(:block)
