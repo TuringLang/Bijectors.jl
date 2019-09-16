@@ -847,9 +847,7 @@ entropy(td::Transformed) = entropy(td.dist)
 logabsdetjacinv(d::UnivariateDistribution, x::T) where T <: Real = zero(T)
 logabsdetjacinv(d::MultivariateDistribution, x::AbstractVector{T}) where {T<:Real} = zero(T)
 
-# for transformed distributions the `y` is going to be the transformed variable
-# and so we use the inverse transform to get what we want
-# TODO: should this be renamed to `logabsdetinvjac`?
+
 """
     logabsdetjacinv(td::UnivariateTransformed, y::Real)
     logabsdetjacinv(td::MultivariateTransformed, y::AbstractVector{<:Real})
