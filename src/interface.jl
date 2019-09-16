@@ -268,7 +268,14 @@ end
     vcat(bs::Bijector...)
 
 A `Bijector` which stacks bijectors together which can then be applied to a vector
-where `bs[i]::Bijector` is applied to `x[ranges[i]]`.
+where `bs[i]::Bijector` is applied to `x[ranges[i]]::UnitRange{Int}`.
+
+# Arguments
+- `bs` can be either a `Tuple` or an `AbstractArray` of bijectors.
+  - If `bs` is a `Tuple`, implementations are type-stable using generated functions
+  - If `bs` is an `AbstractArray`, implementations are _not_ type-stable and uses iterative methods
+- `ranges` needs to be an iterable consisting of `UnitRange{Int}`
+  - `length(bs) == length(ranges)` needs to be true.
 
 # Examples
 ```
@@ -317,8 +324,6 @@ _transform(x, rs::NTuple{1, UnitRange{Int}}, b::Bijector) = b(x)
 
 function (sb::Stacked{<:Tuple})(x::AbstractVector{<:Real})
     y = _transform(x, sb.ranges, sb.bs...)
-
-    # TODO: maybe tell user to check their ranges?
     @assert size(y) == size(x) "x is size $(size(x)) but y is $(size(y))"
 
     return y
