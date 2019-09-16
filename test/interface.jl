@@ -317,10 +317,8 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD} end
         @test logabsdetjac(sb, x) == sum([logabsdetjac(sb.bs[i], x[i]) for i = 1:3])
 
         # TODO: change when we have dimensionality in the type
-        sb = vcat([Bijectors.Exp(), Bijectors.SimplexBijector()]...)
-        println(sb)
-        println(x)
-        sb(x ./ sum(x))
+        x = ones(4)
+        sb = vcat(Bijectors.Exp(), Bijectors.SimplexBijector()...)
         @test_throws AssertionError sb(x ./ sum(x))
 
         @testset "Stacked: ADVI with MvNormal" begin
