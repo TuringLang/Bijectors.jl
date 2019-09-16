@@ -338,14 +338,21 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD} end
         res = forward(sb, x)
         @test sb(x) == [exp(x[1]), log(x[2]), x[3] + 5.0]
         @test res.rv == [exp(x[1]), log(x[2]), x[3] + 5.0]
-        @test logabsdetjac(sb, x) == sum([logabsdetjac(sb.bs[i], x[i]) for i = 1:3])
+        @test logabsdetjac(sb, x) == sum([logabsdetjac(sb.bs[i], x[sb.ranges[i]]) for i = 1:3])
         @test res.logabsdetjac == logabsdetjac(sb, x)
         
 
         # TODO: change when we have dimensionality in the type
-        x = ones(4)
         sb = Stacked((Bijectors.Exp(), Bijectors.SimplexBijector()), [1:1, 2:3])
-        @test_throws AssertionError sb(x ./ sum(x))
+        x = ones(3) ./ 3.0
+        res = forward(sb, x)
+        @test sb(x) == [exp(x[1]), sb.bs[2](x[2:3])...]
+        @test res.rv == [exp(x[1]), sb.bs[2](x[2:3])...]
+        @test logabsdetjac(sb, x) == sum([logabsdetjac(sb.bs[i], x[sb.ranges[i]]) for i = 1:2])
+        @test res.logabsdetjac == logabsdetjac(sb, x)
+
+        x = ones(4) ./ 4.0
+        @test_throws AssertionError sb(x)
 
         @test_throws AssertionError Stacked([Bijectors.Exp(), ], (1:1, 2:3))
         @test_throws MethodError Stacked((Bijectors.Exp(), ), (1:1, 2:3))
