@@ -391,9 +391,7 @@ end
     end
 
     push!(expr.args, :(y = vcat($e...)))
-
     push!(expr.args, :(return (rv = y, logabsdetjac = logjac)))
-
     return expr
 end
 
