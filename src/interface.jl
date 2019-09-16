@@ -401,7 +401,8 @@ logabsdetjac(b::Scale, x) = log(abs(b.a))
 # Simplex bijector #
 ####################
 struct SimplexBijector{T} <: Bijector where {T} end
-SimplexBijector() = SimplexBijector{Val{true}}()
+SimplexBijector(proj:::bool) = SimplexBijector{Val{proj}}()
+SimplexBijector() = SimplexBijector(true)
 
 const simplex_b = SimplexBijector{Val{false}}()
 const simplex_b_proj = SimplexBijector{Val{true}}()
