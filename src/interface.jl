@@ -434,6 +434,7 @@ end
 
 function (b::SimplexBijector{Val{proj}})(x::AbstractVector{T}) where {T, proj}
     y, K = similar(x), length(x)
+    @assert K > 1
 
     ϵ = _eps(T)
     sum_tmp = zero(T)
@@ -459,6 +460,7 @@ end
 # Vectorised implementation of the above.
 function (b::SimplexBijector{Val{proj}})(X::AbstractMatrix{T}) where {T<:Real, proj}
     Y, K, N = similar(X), size(X, 1), size(X, 2)
+    @assert K > 1
 
     ϵ = _eps(T)
     @inbounds @simd for n in 1:size(X, 2)
@@ -483,6 +485,7 @@ end
 
 function (ib::Inversed{<:SimplexBijector{Val{proj}}})(y::AbstractVector{T}) where {T, proj}
     x, K = similar(y), length(y)
+    @assert K > 1
 
     ϵ = _eps(T)
     @inbounds z = StatsFuns.logistic(y[1] - log(T(K - 1)))
@@ -508,6 +511,7 @@ function (ib::Inversed{<:SimplexBijector{Val{proj}}})(
     Y::AbstractMatrix{T}
 ) where {T<:Real, proj}
     X, K, N = similar(Y), size(Y, 1), size(Y, 2)
+    @assert K > 1
 
     ϵ = _eps(T)
     @inbounds @simd for n in 1:size(X, 2)
