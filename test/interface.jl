@@ -125,17 +125,26 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD} end
         d = Truncated(Normal(), -1, 1)
         b = bijector(d)
         x = rand(d)
-        @test b(x) == link(d, x)
+        y = b(x)
+        @test y ≈ link(d, x)
+        @test inv(b)(y) ≈ x
+        @test logabsdetjac(b, x) ≈ logpdf_with_trans(d, x, false) - logpdf_with_trans(d, x, true)
 
         d = Truncated(Normal(), -Inf, 1)
         b = bijector(d)
         x = rand(d)
-        @test b(x) == link(d, x)
+        y = b(x)
+        @test y ≈ link(d, x)
+        @test inv(b)(y) ≈ x
+        @test logabsdetjac(b, x) ≈ logpdf_with_trans(d, x, false) - logpdf_with_trans(d, x, true)
 
         d = Truncated(Normal(), 1, Inf)
         b = bijector(d)
         x = rand(d)
-        @test b(x) == link(d, x)
+        y = b(x)
+        @test y ≈ link(d, x)
+        @test inv(b)(y) ≈ x
+        @test logabsdetjac(b, x) ≈ logpdf_with_trans(d, x, false) - logpdf_with_trans(d, x, true)
     end
 
     @testset "Multivariate" begin

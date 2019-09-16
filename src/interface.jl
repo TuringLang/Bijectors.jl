@@ -516,15 +516,11 @@ bijector(d::MvNormal) = IdentityBijector
 bijector(d::PositiveDistribution) = Log()
 bijector(d::MvLogNormal) = Log()
 bijector(d::SimplexDistribution) = simplex_b_proj
-bijector(d::KSOneSided) = Logit(zero(eltype(d)), zero(eltype(d)))
+bijector(d::KSOneSided) = Logit(zero(eltype(d)), one(eltype(d)))
 
-const BoundedDistribution = Union{
-    Arcsine, Biweight, Cosine, Epanechnikov, Beta, NoncentralBeta
-}
-bijector(d::BoundedDistribution) = Logit(minimum(d), maximum(d))
-
-const LowerboundedDistribution = Union{Pareto, Levy}
-bijector(d::LowerboundedDistribution) = Log() ∘ Shift(- minimum(d))
+bijector_bounded(d, a=minimum(d), b=maximum(d)) = Logit(a, b)
+bijector_lowerbounded(d, a=minimum(d)) = Log() ∘ Shift(-a)
+bijector_upperbounded(d, b=maximum(d)) = Log() ∘ Shift(b) ∘ Scale(- one(typeof(b)))
 
 # FIXME: (TOR) Can we make this type-stable?
 # Can also make a `TruncatedBijector`
@@ -534,15 +530,24 @@ function bijector(d::Truncated)
     a, b = minimum(d), maximum(d)
     lowerbounded, upperbounded = isfinite(a), isfinite(b)
     if lowerbounded && upperbounded
-        return Logit(a, b)
+        return bijector_bounded(d)
     elseif lowerbounded
-        return (Log() ∘ Shift(- a))
+        return bijector_lowerbounded(d)
     elseif upperbounded
-        return (Log() ∘ Shift(b) ∘ Scale(- one(typeof(b))))
+        return bijector_upperbounded(d)
     else
         return IdentityBijector
     end
 end
+
+const BoundedDistribution = Union{
+    Arcsine, Biweight, Cosine, Epanechnikov, Beta, NoncentralBeta
+}
+bijector(d::BoundedDistribution) = bijector_bounded(d)
+
+const LowerboundedDistribution = Union{Pareto, Levy}
+bijector(d::LowerboundedDistribution) = bijector_lowerbounded(d)
+
 
 ##############################
 # Distributions.jl interface #
