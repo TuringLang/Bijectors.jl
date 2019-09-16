@@ -254,9 +254,17 @@ end
     b = inv(bijector(d))
     @test logabsdetjac(b ∘ b, x) ≈ logabsdetjac(b, b(x)) + logabsdetjac(b, x)
 
+<<<<<<< HEAD
     # order of composed evaluation
     b1 = DistributionBijector(d)
     b2 = DistributionBijector(Gamma())
+=======
+        @test forward(b, x) == forward(Bijectors.composer(b.ts...), x)
+
+        # inverse works fine for composition
+        cb = b ∘ ib
+        @test cb(x) ≈ x
+>>>>>>> master
 
     cb = b1 ∘ b2
     @test cb(x) ≈ b1(b2(x))
@@ -321,6 +329,7 @@ end
             MvNormal(zeros(2), ones(2))
         ]
 
+<<<<<<< HEAD
         ranges = []
         idx = 1
         for i = 1:length(dists)
@@ -342,6 +351,19 @@ end
 
         td = transformed(d, sb)  # => MultivariateTransformed <: Distribution{Multivariate, Continuous}
         @test td isa Distribution{Multivariate, Continuous}
+=======
+        @test f_t == f_a
+
+        # `composer` and `composel`
+        cb_l = Bijectors.composel(b⁻¹, b⁻¹, b)
+        cb_r = Bijectors.composer(reverse(cb_l.ts)...)
+        y = cb_l(x)
+        @test y == Bijectors.composel(cb_r.ts...)(x)
+
+        k = length(cb_l.ts)
+        @test all([cb_l.ts[i] == cb_r.ts[i] for i = 1:k])
+    end
+>>>>>>> master
 
         # check that wrong ranges fails
         sb = vcat(ibs...)
