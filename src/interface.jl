@@ -496,9 +496,6 @@ struct SimplexBijector{T} <: Bijector where {T} end
 SimplexBijector(proj::Bool) = SimplexBijector{Val{proj}}()
 SimplexBijector() = SimplexBijector(true)
 
-const simplex_b = SimplexBijector{Val{false}}()
-const simplex_b_proj = SimplexBijector{Val{true}}()
-
 # The following implementations are basically just copy-paste from `invlink` and
 # `link` for `SimplexDistributions` but dropping the dependence on the `Distribution`.
 function _clamp(x::T, b::Union{SimplexBijector, Inversed{<:SimplexBijector}}) where {T}
