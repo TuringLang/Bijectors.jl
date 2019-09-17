@@ -273,7 +273,7 @@ where `bs[i]::Bijector` is applied to `x[ranges[i]]::UnitRange{Int}`.
 # Arguments
 - `bs` can be either a `Tuple` or an `AbstractArray` of bijectors.
   - If `bs` is a `Tuple`, implementations are type-stable using generated functions
-  - If `bs` is an `AbstractArray`, implementations are _not_ type-stable and uses iterative methods
+  - If `bs` is an `AbstractArray`, implementations are _not_ type-stable and use iterative methods
 - `ranges` needs to be an iterable consisting of `UnitRange{Int}`
   - `length(bs) == length(ranges)` needs to be true.
 
@@ -304,7 +304,7 @@ struct Stacked{B, N} <: Bijector where N
         return new{A, N}(bs, ranges)
     end
 end
-Stacked(bs) = Stacked(bs, NTuple{length(bs), UnitRange{Int}}([i:i for i = 1:length(bs)]))
+Stacked(bs) = Stacked(bs, tuple([i:i for i = 1:length(bs)]...))
 Stacked(bs, ranges::AbstractArray) = Stacked(bs, tuple(ranges...))
 
 Base.vcat(bs::Bijector...) = Stacked(bs)
