@@ -366,21 +366,20 @@ end
 # Generates something similar to:
 #
 # quote
-#    (y_1, logjac) = forward(b.bs[1], x[b.ranges[1]])
-#    logjac = logjac_
-#    (y_2, _logjac) = forward(b.bs[2], x[b.ranges[2]])
-#    logjac += _logjac
-#    y = vcat(tuple(y_1, y_2)...)
-#    return (rv = y, logabsdetjac = logjac)
+#     (y_1, _logjac) = forward(b.bs[1], x[b.ranges[1]])
+#     logjac = sum(_logjac)
+#     (y_2, _logjac) = forward(b.bs[2], x[b.ranges[2]])
+#     logjac += sum(_logjac)
+#     return (rv = vcat(y_1, y_2), logabsdetjac = logjac)
 # end
 @generated function forward(b::Stacked{T, N}, x::AbstractVector) where {N, T<:Tuple}
     expr = Expr(:block)
-    e = Expr(:call, :tuple)
+    y_names = []
 
     push!(expr.args, :((y_1, _logjac) = forward(b.bs[1], x[b.ranges[1]])))
     # TODO: drop the `sum` when we have dimensionality
     push!(expr.args, :(logjac = sum(_logjac)))
-    push!(e.args, :y_1)
+    push!(y_names, :y_1)
     for i = 2:length(T.parameters)
         y_name = Symbol("y_$i")
         push!(expr.args, :(($y_name, _logjac) = forward(b.bs[$i], x[b.ranges[$i]])))
@@ -388,11 +387,10 @@ end
         # TODO: drop the `sum` when we have dimensionality
         push!(expr.args, :(logjac += sum(_logjac)))
 
-        push!(e.args, y_name)
+        push!(y_names, y_name)
     end
 
-    push!(expr.args, :(y = vcat($e...)))
-    push!(expr.args, :(return (rv = y, logabsdetjac = logjac)))
+    push!(expr.args, :(return (rv = vcat($(y_names...)), logabsdetjac = logjac)))
     return expr
 end
 
