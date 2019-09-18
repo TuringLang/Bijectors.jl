@@ -36,7 +36,8 @@ export  TransformDistribution,
         logpdf_with_jac,
         logpdf_forward,
         PlanarLayer,
-        RadialLayer
+        RadialLayer,
+        CouplingLayer
 
 const DEBUG = Bool(parse(Int, get(ENV, "DEBUG_BIJECTORS", "0")))
 
