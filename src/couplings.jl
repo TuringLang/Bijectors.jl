@@ -122,7 +122,7 @@ function CouplingLayer(cl::CouplingLayer{B}, mask::PartitionMask) where {B}
     return CouplingLayer(B, mask, cl.θ)
 end
 
-function (cl::CouplingLayer{B})(x) where {B}
+function (cl::CouplingLayer{B})(x::AbstractVector) where {B}
     # partition vector using `cl.mask::PartitionMask`
     x_1, x_2, x_3 = partition(cl.mask, x)
 
@@ -132,9 +132,13 @@ function (cl::CouplingLayer{B})(x) where {B}
     # recombine the vector again using the `PartitionMask`
     return combine(cl.mask, b(x_1), x_2, x_3)
 end
+# TODO: drop when we have dimensionality
+function (cl::CouplingLayer{B})(x::AbstractMatrix) where {B}
+    return mapslices(z -> cl(z), x; dims = 1)
+end
 
 
-function (icl::Inversed{<:CouplingLayer{B}})(y) where {B}
+function (icl::Inversed{<:CouplingLayer{B}})(y::AbstractVector) where {B}
     cl = icl.orig
     
     y_1, y_2, y_3 = partition(cl.mask, y)
@@ -144,11 +148,20 @@ function (icl::Inversed{<:CouplingLayer{B}})(y) where {B}
 
     return combine(cl.mask, ib(y_1), y_2, y_3)
 end
+# TODO: drop when we have dimensionality
+function (icl::Inversed{<:CouplingLayer{B}})(y::AbstractMatrix) where {B}
+    return mapslices(z -> icl(z), y; dims = 1)
+end
 
-
-function logabsdetjac(cl::CouplingLayer{B}, x) where {B}
+function logabsdetjac(cl::CouplingLayer{B}, x::AbstractVector) where {B}
     x_1, x_2, x_3 = partition(cl.mask, x)
     b = B(cl.θ(x_2))
 
     return logabsdetjac(b, x_1)
 end
+
+function logabsdetjac(cl::CouplingLayer{B}, x::AbstractMatrix) where {B}
+    return vec(mapslices(z -> logabsdetjac(cl, z), x; dims = 1))
+end
+
+
