@@ -492,10 +492,6 @@ end
 (b::DistributionBijector)(x) = link(b.dist, x)
 (ib::Inversed{<:DistributionBijector})(y) = invlink(ib.orig.dist, y)
 
-
-"Returns the constrained-to-unconstrained bijector for distribution `d`."
-bijector(d::Distribution) = DistributionBijector(d)
-
 # Transformed distributions
 struct TransformedDistribution{D, B, V} <: Distribution{V, Continuous} where {D<:Distribution{V, Continuous}, B<:Bijector}
     dist::D
@@ -530,43 +526,44 @@ transformed(d) = transformed(d, bijector(d))
 
 Returns the constrained-to-unconstrained bijector for distribution `d`.
 """
+bijector(d::Distribution) = DistributionBijector(d)
 bijector(d::Normal) = IdentityBijector
 bijector(d::MvNormal) = IdentityBijector
 bijector(d::PositiveDistribution) = Log()
 bijector(d::MvLogNormal) = Log()
 bijector(d::SimplexDistribution) = simplex_b_proj
+bijector(d::KSOneSided) = Logit(zero(eltype(d)), one(eltype(d)))
 
-_union2tuple(T1::Type, T2::Type) = (T1, T2)
-_union2tuple(T1::Type, T2::Union) = (T1, _union2tuple(T2.a, T2.b)...)
-_union2tuple(T::Union) = _union2tuple(T.a, T.b)
-
-bijector(d::KSOneSided) = Logit(zero(eltype(d)), zero(eltype(d)))
-for D in _union2tuple(UnitDistribution)
-    # Skipping KSOneSided because it's not a parametric type
-    if D == KSOneSided
-        continue
-    end
-    @eval bijector(d::$D{T}) where {T<:Real} = Logit(zero(T), one(T))
-end
+bijector_bounded(d, a=minimum(d), b=maximum(d)) = Logit(a, b)
+bijector_lowerbounded(d, a=minimum(d)) = Log() ∘ Shift(-a)
+bijector_upperbounded(d, b=maximum(d)) = Log() ∘ Shift(b) ∘ Scale(- one(typeof(b)))
 
 # FIXME: (TOR) Can we make this type-stable?
-# Everything but `Truncated` can probably be made type-stable
-# by explicit implementation. Can also make a `TruncatedBijector`
+# Can also make a `TruncatedBijector`
 # which has the same transform as the `link` function.
 # E.g. (b::Truncated)(x) = link(b.d, x) or smth
-function bijector(d::TransformDistribution) where {D<:Distribution}
+function bijector(d::Truncated)
     a, b = minimum(d), maximum(d)
     lowerbounded, upperbounded = isfinite(a), isfinite(b)
     if lowerbounded && upperbounded
-        return Logit(a, b)
+        return bijector_bounded(d)
     elseif lowerbounded
-        return (Log() ∘ Shift(- a))
+        return bijector_lowerbounded(d)
     elseif upperbounded
-        return (Log() ∘ Shift(b) ∘ Scale(- one(typeof(b))))
+        return bijector_upperbounded(d)
     else
         return IdentityBijector
     end
 end
+
+const BoundedDistribution = Union{
+    Arcsine, Biweight, Cosine, Epanechnikov, Beta, NoncentralBeta
+}
+bijector(d::BoundedDistribution) = bijector_bounded(d)
+
+const LowerboundedDistribution = Union{Pareto, Levy}
+bijector(d::LowerboundedDistribution) = bijector_lowerbounded(d)
+
 
 ##############################
 # Distributions.jl interface #
