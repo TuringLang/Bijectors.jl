@@ -309,7 +309,7 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD} end
         x = rand(d)
         y = b(x)
 
-        sb1 = vcat(b, b, inv(b), inv(b))             # <= tuple
+        sb1 = stack(b, b, inv(b), inv(b))             # <= tuple
         res1 = forward(sb1, [x, x, y, y])
 
         @test sb1([x, x, y, y]) == res1.rv
@@ -327,7 +327,7 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD} end
         b = DistributionBijector(d)
         y = b(x)
         
-        sb1 = vcat(b, b, inv(b), inv(b))             # <= tuple
+        sb1 = stack(b, b, inv(b), inv(b))             # <= tuple
         res1 = forward(sb1, [x, x, y, y])
 
         @test sb1([x, x, y, y]) == res1.rv
@@ -343,7 +343,7 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD} end
 
         # value-test
         x = ones(3)
-        sb = vcat(Bijectors.Exp(), Bijectors.Log(), Bijectors.Shift(5.0))
+        sb = stack(Bijectors.Exp(), Bijectors.Log(), Bijectors.Shift(5.0))
         res = forward(sb, x)
         @test sb(x) == [exp(x[1]), log(x[2]), x[3] + 5.0]
         @test res.rv == [exp(x[1]), log(x[2]), x[3] + 5.0]
@@ -405,7 +405,7 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD} end
             @test td isa Distribution{Multivariate, Continuous}
 
             # check that wrong ranges fails
-            sb = vcat(ibs...)
+            sb = stack(ibs...)
             td = transformed(d, sb)
             x = rand(d)
             @test_throws AssertionError sb(x)

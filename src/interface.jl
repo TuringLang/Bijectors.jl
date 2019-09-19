@@ -265,7 +265,7 @@ end
 """
     Stacked(bs)
     Stacked(bs, ranges)
-    vcat(bs::Bijector...)
+    stack(bs::Bijector...)
 
 A `Bijector` which stacks bijectors together which can then be applied to a vector
 where `bs[i]::Bijector` is applied to `x[ranges[i]]::UnitRange{Int}`.
@@ -279,9 +279,9 @@ where `bs[i]::Bijector` is applied to `x[ranges[i]]::UnitRange{Int}`.
 
 # Examples
 ```
-b1 = Logistic(0.0, 1.0)
+b1 = Logit(0.0, 1.0)
 b2 = Identity()
-b = vcat(b1, b2)
+b = stack(b1, b2)
 b([0.0, 1.0]) == [b1(0.0), 1.0]  # => true
 ```
 """
@@ -307,7 +307,7 @@ end
 Stacked(bs) = Stacked(bs, tuple([i:i for i = 1:length(bs)]...))
 Stacked(bs, ranges::AbstractArray) = Stacked(bs, tuple(ranges...))
 
-Base.vcat(bs::Bijector...) = Stacked(bs)
+stack(bs::Bijector...) = Stacked(bs)
 
 inv(sb::Stacked) = Stacked(inv.(sb.bs), sb.ranges)
 
