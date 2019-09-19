@@ -281,8 +281,6 @@ struct Identity{N} <: Bijector{N} end
 (::Identity)(x) = x
 inv(b::Identity) = b
 
-forward(::Identity, x) = (rv=x, logabsdetjac=zero(eltype(x)))
-
 logabsdetjac(::Identity, x::Real) = zero(eltype(x))
 @generated function logabsdetjac(
     b::Identity{N1},

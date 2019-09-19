@@ -159,29 +159,61 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD, 1} end
                 x_ = ib(y)
                 xs_ = ib(ys)
 
+                result = forward(b, x)
+                results = forward(b, xs)
+
+                iresult = forward(ib, y)
+                iresults = forward(ib, ys)
+
+                # Sizes
                 @test size(y) == size(x)
                 @test size(ys) == size(xs)
+
                 @test size(x_) == size(x)
                 @test size(xs_) == size(xs)
 
+                @test size(result.rv) == size(x)
+                @test size(results.rv) == size(xs)
+
+                @test size(iresult.rv) == size(y)
+                @test size(iresults.rv) == size(ys)
+
+                # Values
+                @test ys == mapslices(z -> b(z), xs; dims = 1)
+                @test ys ≈ results.rv
+
                 if D == 0
+                    # Sizes
                     @test y == ys[1]
 
                     @test length(logabsdetjac(b, xs)) == length(xs)
-                    @test logabsdetjac(b, x) == logabsdetjac(b, xs)[1]
-
                     @test length(logabsdetjac(ib, ys)) == length(xs)
-                    @test logabsdetjac(ib, y) == logabsdetjac(ib, ys)[1]
-                elseif Bijectors.dimension(b) == 1
+
+                    @test size(results.logabsdetjac) == size(xs, )
+                    @test size(iresults.logabsdetjac) == size(ys, )
+
+                    # Values
+                    @test logabsdetjac.(b, xs) == logabsdetjac(b, xs)
+                    @test logabsdetjac.(ib, ys) == logabsdetjac(ib, ys)
+
+                    @test results.logabsdetjac ≈ vec(logabsdetjac.(b, xs))
+                    @test iresults.logabsdetjac ≈ vec(logabsdetjac.(ib, ys))
+                elseif D == 1
                     @test y == ys[:, 1]
                     # Comparing sizes instead of lengths ensures we catch errors s.t.
                     # length(x) == 3 when size(x) == (1, 3).
-                    # We want the return value to
+                    # Sizes
                     @test size(logabsdetjac(b, xs)) == (size(xs, 2), )
-                    @test logabsdetjac(b, x) == logabsdetjac(b, xs)[1]
-
                     @test size(logabsdetjac(ib, ys)) == (size(xs, 2), )
-                    @test logabsdetjac(ib, y) == logabsdetjac(ib, ys)[1]
+
+                    @test size(results.logabsdetjac) == (size(xs, 2), )
+                    @test size(iresults.logabsdetjac) == (size(ys, 2), )
+
+                    # Test all values
+                    @test logabsdetjac(b, xs) == vec(mapslices(z -> logabsdetjac(b, z), xs; dims = 1))
+                    @test logabsdetjac(ib, ys) == vec(mapslices(z -> logabsdetjac(ib, z), ys; dims = 1))
+                    @test results.logabsdetjac ≈ vec(mapslices(z -> logabsdetjac(b, z), xs; dims = 1))
+                    @test iresults.logabsdetjac ≈ vec(mapslices(z -> logabsdetjac(ib, z), ys; dims = 1))
                 else
                     error("tests not implemented yet")
                 end
