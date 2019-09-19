@@ -388,9 +388,8 @@ logabsdetjac(b::Scale{<:AbstractVector, 1}, x::AbstractMatrix) = sum(log.(abs.(b
 # Simplex bijector #
 ####################
 struct SimplexBijector{T} <: Bijector{1} where {T} end
-
-const simplex_b = SimplexBijector{Val{false}}()
-const simplex_b_proj = SimplexBijector{Val{true}}()
+SimplexBijector(proj::Bool) = SimplexBijector{Val{proj}}()
+SimplexBijector() = SimplexBijector(true)
 
 # The following implementations are basically just copy-paste from `invlink` and
 # `link` for `SimplexDistributions` but dropping the dependence on the `Distribution`.
@@ -517,6 +516,10 @@ function logabsdetjac(b::SimplexBijector, x::AbstractVector{T}) where T
     return - lp
 end
 
+function logabsdetjac(b::SimplexBijector, x::AbstractMatrix{<:Real})
+    return vec(mapslices(z -> logabsdetjac(b, z), x; dims = 1))
+end
+
 #######################################################
 # Constrained to unconstrained distribution bijectors #
 #######################################################
@@ -532,8 +535,14 @@ the `jacobian` and `logabsdetjac`.
 struct DistributionBijector{AD, D, N} <: ADBijector{AD, N} where {D<:Distribution}
     dist::D
 end
-function DistributionBijector(dist::D) where {D<:Distribution}
-    DistributionBijector{ADBackend(), D, length(size(dist))}(dist)
+function DistributionBijector(dist::D) where {D<:UnivariateDistribution}
+    DistributionBijector{ADBackend(), D, 0}(dist)
+end
+function DistributionBijector(dist::D) where {D<:MultivariateDistribution}
+    DistributionBijector{ADBackend(), D, 1}(dist)
+end
+function DistributionBijector(dist::D) where {D<:MatrixDistribution}
+    DistributionBijector{ADBackend(), D, 2}(dist)
 end
 
 # Simply uses `link` and `invlink` as transforms with AD to get jacobian
@@ -574,11 +583,12 @@ transformed(d) = transformed(d, bijector(d))
 
 Returns the constrained-to-unconstrained bijector for distribution `d`.
 """
+bijector(d::Distribution) = DistributionBijector(d)
 bijector(d::Normal) = Identity{0}()
 bijector(d::MvNormal) = Identity{1}()
 bijector(d::PositiveDistribution) = Log{0}()
 bijector(d::MvLogNormal) = Log{0}()
-bijector(d::SimplexDistribution) = simplex_b_proj
+bijector(d::SimplexDistribution) = SimplexBijector{Val{true}}()
 bijector(d::KSOneSided) = Logit(zero(eltype(d)), one(eltype(d)))
 
 bijector_bounded(d, a=minimum(d), b=maximum(d)) = Logit(a, b)
