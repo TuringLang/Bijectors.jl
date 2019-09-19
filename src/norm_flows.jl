@@ -56,11 +56,11 @@ function _forward(flow::PlanarLayer, z)
     return (rv=transformed, logabsdetjac=vec(log_det_jacobian)) # from eq(10)
 end
 
-forward(flow::PlanarLayer, z) = _forward(flow, z)
+forward(flow::PlanarLayer, z::AbstractMatrix) = _forward(flow, z)
 
 function forward(flow::PlanarLayer, z::AbstractVector{<: Real})
     res = _forward(flow, z)
-    return (rv=res.rv, logabsdetjac=res.logabsdetjac[1])
+    return (rv=vec(res.rv), logabsdetjac=res.logabsdetjac[1])
 end
 
 
@@ -115,7 +115,8 @@ function _transform(flow::RadialLayer, z)
     return (transformed=transformed, α=α, β_hat=β_hat, r=r)
 end
 
-(b::RadialLayer)(z) = _transform(b, z).transformed
+(b::RadialLayer)(z::AbstractMatrix{<:Real}) = _transform(b, z).transformed
+(b::RadialLayer)(z::AbstractVector{<:Real}) = vec(_transform(b, z).transformed)
 
 function _forward(flow::RadialLayer, z)
     transformed, α, β_hat, r = _transform(flow, z)
@@ -131,13 +132,12 @@ end
 
 forward(flow::RadialLayer, z) = _forward(flow, z)
 
-function forward(flow::RadialLayer, z::AbstractVector{<: Real})
+function forward(flow::RadialLayer, z::AbstractVector{<:Real})
     res = _forward(flow, z)
-    return (rv=res.rv[:, 1], logabsdetjac=res.logabsdetjac[1])
+    return (rv=vec(res.rv), logabsdetjac=res.logabsdetjac[1])
 end
 
-# function inv(flow::RadialLayer, y)
-function (ib::Inversed{<: RadialLayer})(y)
+function (ib::Inversed{<:RadialLayer})(y)
     flow = ib.orig
     α = softplus(flow.α_[1])            # from A.2
     β_hat = - α + softplus(flow.β[1])   # from A.2
@@ -150,7 +150,7 @@ function (ib::Inversed{<: RadialLayer})(y)
     return z
 end
 
-function (ib::Inversed{<: RadialLayer})(y::AbstractVector{<: Real})
+function (ib::Inversed{<: RadialLayer})(y::AbstractVector{<:Real})
     return vec(ib(reshape(y, (length(y), 1))))
 end
 
