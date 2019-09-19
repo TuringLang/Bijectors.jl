@@ -302,7 +302,7 @@ b = vcat(b1, b2)
 b([0.0, 1.0]) == [b1(0.0), 1.0]  # => true
 ```
 """
-struct Stacked{B, N} <: Bijector where N
+struct Stacked{B, N} <: Bijector{1} where N
     bs::B
     ranges::NTuple{N, UnitRange{Int}}
 

@@ -141,7 +141,10 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD, 1} end
             (RadialLayer(2), randn(2, 3)),
             (PlanarLayer(2) ∘ RadialLayer(2), randn(2, 3)),
             (Exp{1}() ∘ PlanarLayer(2) ∘ RadialLayer(2), randn(2, 3)),
-            (SimplexBijector(), mapslices(z -> normalize(z, 1), rand(2, 3); dims = 1))
+            (SimplexBijector(), mapslices(z -> normalize(z, 1), rand(2, 3); dims = 1)),
+            (vcat(Exp{1}(), Scale(2.0)), randn(2, 3)),
+            (Stacked((Exp{1}(), SimplexBijector()), [1:1, 2:3]),
+             mapslices(z -> normalize(z, 1), rand(3, 2); dims = 1))
         ]
 
         for (b, xs) in bs_xs
@@ -451,7 +454,7 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD, 1} end
         res = forward(sb, x)
         @test sb(x) == [exp(x[1]), log(x[2]), x[3] + 5.0]
         @test res.rv == [exp(x[1]), log(x[2]), x[3] + 5.0]
-        @test logabsdetjac(sb, x) == sum([logabsdetjac(sb.bs[i], x[sb.ranges[i]]) for i = 1:3])
+        @test logabsdetjac(sb, x) == sum([sum(logabsdetjac(sb.bs[i], x[sb.ranges[i]])) for i = 1:3])
         @test res.logabsdetjac == logabsdetjac(sb, x)
         
 
@@ -461,7 +464,7 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD, 1} end
         res = forward(sb, x)
         @test sb(x) == [exp(x[1]), sb.bs[2](x[2:3])...]
         @test res.rv == [exp(x[1]), sb.bs[2](x[2:3])...]
-        @test logabsdetjac(sb, x) == sum([logabsdetjac(sb.bs[i], x[sb.ranges[i]]) for i = 1:2])
+        @test logabsdetjac(sb, x) == sum([sum(logabsdetjac(sb.bs[i], x[sb.ranges[i]])) for i = 1:2])
         @test res.logabsdetjac == logabsdetjac(sb, x)
 
         x = ones(4) ./ 4.0
