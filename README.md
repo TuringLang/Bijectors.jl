@@ -376,7 +376,7 @@ julia> d = MvNormal(zeros(2), ones(2));
 
 julia> ibs = inv.(bijector.((InverseGamma(2, 3), Beta())));
 
-julia> sb = vcat(ibs...) # == Stacked(ibs) == Stacked(ibs, [i:i for i = 1:length(ibs)]
+julia> sb = stack(ibs...) # == Stacked(ibs) == Stacked(ibs, [i:i for i = 1:length(ibs)]
 Stacked{Tuple{Exp,Inversed{Logit{Float64}}},2}((Exp(), Inversed{Logit{Float64}}(Logit{Float64}(0.0, 1.0))), (1:1, 2:2))
 
 julia> b = sb ∘ PlanarLayer(2)

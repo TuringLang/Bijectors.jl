@@ -279,16 +279,18 @@ end
 -###########
 -# Stacked #
 -###########
+const ZeroOrOneDimBijector = Union{Bijector{0}, Bijector{1}}
+
 """
     Stacked(bs)
     Stacked(bs, ranges)
-    vcat(bs::Bijector...)
+    stack(bs::Bijector{Dim=0}...)
 
 A `Bijector` which stacks bijectors together which can then be applied to a vector
 where `bs[i]::Bijector` is applied to `x[ranges[i]]::UnitRange{Int}`.
 
 # Arguments
-- `bs` can be either a `Tuple` or an `AbstractArray` of bijectors.
+- `bs` can be either a `Tuple` or an `AbstractArray` of 0- and/or 1-dimensional bijectors
   - If `bs` is a `Tuple`, implementations are type-stable using generated functions
   - If `bs` is an `AbstractArray`, implementations are _not_ type-stable and use iterative methods
 - `ranges` needs to be an iterable consisting of `UnitRange{Int}`
@@ -296,20 +298,20 @@ where `bs[i]::Bijector` is applied to `x[ranges[i]]::UnitRange{Int}`.
 
 # Examples
 ```
-b1 = Logistic(0.0, 1.0)
-b2 = Identity()
-b = vcat(b1, b2)
+b1 = Logit(0.0, 1.0)
+b2 = Identity{0}()
+b = stack(b1, b2)
 b([0.0, 1.0]) == [b1(0.0), 1.0]  # => true
 ```
 """
-struct Stacked{B, N} <: Bijector{1} where N
-    bs::B
+struct Stacked{Bs, N} <: Bijector{1} where N
+    bs::Bs
     ranges::NTuple{N, UnitRange{Int}}
 
     function Stacked(
         bs::C,
         ranges::NTuple{N, UnitRange{Int}}
-    ) where {N, C<:Tuple{Vararg{<:Bijector, N}}}
+    ) where {N, C<:Tuple{Vararg{<:ZeroOrOneDimBijector, N}}}
         return new{C, N}(bs, ranges)
     end
 
@@ -318,13 +320,14 @@ struct Stacked{B, N} <: Bijector{1} where N
         ranges::NTuple{N, UnitRange{Int}}
     ) where {N, A<:AbstractArray{<:Bijector}}
         @assert length(bs) == N "number of bijectors is not same as number of ranges"
+        @assert all(isa.(bs, ZeroOrOneDimBijector))
         return new{A, N}(bs, ranges)
     end
 end
-Stacked(bs) = Stacked(bs, tuple([i:i for i = 1:length(bs)]...))
 Stacked(bs, ranges::AbstractArray) = Stacked(bs, tuple(ranges...))
+Stacked(bs) = Stacked(bs, tuple([i:i for i = 1:length(bs)]...))
 
-Base.vcat(bs::Bijector...) = Stacked(bs)
+stack(bs::Bijector{0}...) = Stacked(bs)
 
 inv(sb::Stacked) = Stacked(inv.(sb.bs), sb.ranges)
 
@@ -350,7 +353,10 @@ function (sb::Stacked{<:AbstractArray, N})(x::AbstractVector{<:Real}) where {N}
     return y
 end
 
-(sb::Stacked)(x::AbstractMatrix{<: Real}) = hcat([sb(x[:, i]) for i = 1:size(x, 2)]...)
+# (sb::Stacked)(x::AbstractMatrix{<: Real}) = hcat([sb(x[:, i]) for i = 1:size(x, 2)]...)
+(sb::Stacked)(x::AbstractMatrix{<: Real}) = mapslices(z -> sb(z), x; dims = 1)
+
+# TODO: implement custom adjoint since we can exploit block-diagonal nature of `Stacked`
 function (sb::Stacked)(x::TrackedArray{A, 2}) where {A}
     return Tracker.collect(hcat([sb(x[:, i]) for i = 1:size(x, 2)]...))
 end
@@ -374,10 +380,10 @@ function logabsdetjac(
     return sum([sum(logabsdetjac(b.bs[i], x[b.ranges[i]])) for i = 1:N])
 end
 function logabsdetjac(b::Stacked, x::AbstractMatrix{<: Real})
-    return [logabsdetjac(b, x[:, i]) for i = 1:size(x, 2)]
+    return vec(mapslices(z -> logabsdetjac(b, z), x; dims = 1))
 end
 function logabsdetjac(b::Stacked, x::TrackedArray{A, 2}) where {A}
-    return Tracker.collect([logabsdetjac(b, x[:, i]) for i = 1:size(x, 2)])
+    return Tracker.collect(vec(mapslices(z -> logabsdetjac(b, z), x; dims = 1)))
 end
 
 # Generates something similar to:

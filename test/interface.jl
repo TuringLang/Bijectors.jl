@@ -142,7 +142,7 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD, 1} end
             (PlanarLayer(2) ∘ RadialLayer(2), randn(2, 3)),
             (Exp{1}() ∘ PlanarLayer(2) ∘ RadialLayer(2), randn(2, 3)),
             (SimplexBijector(), mapslices(z -> normalize(z, 1), rand(2, 3); dims = 1)),
-            (vcat(Exp{1}(), Scale(2.0)), randn(2, 3)),
+            (stack(Exp{0}(), Scale(2.0)), randn(2, 3)),
             (Stacked((Exp{1}(), SimplexBijector()), [1:1, 2:3]),
              mapslices(z -> normalize(z, 1), rand(3, 2); dims = 1))
         ]
@@ -416,7 +416,7 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD, 1} end
         x = rand(d)
         y = b(x)
 
-        sb1 = vcat(b, b, inv(b), inv(b))             # <= tuple
+        sb1 = stack(b, b, inv(b), inv(b))             # <= Tuple
         res1 = forward(sb1, [x, x, y, y])
 
         @test sb1([x, x, y, y]) == res1.rv
@@ -434,7 +434,7 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD, 1} end
         b = DistributionBijector(d)
         y = b(x)
         
-        sb1 = vcat(b, b, inv(b), inv(b))             # <= tuple
+        sb1 = stack(b, b, inv(b), inv(b))             # <= Tuple
         res1 = forward(sb1, [x, x, y, y])
 
         @test sb1([x, x, y, y]) == res1.rv
@@ -450,7 +450,7 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD, 1} end
 
         # value-test
         x = ones(3)
-        sb = vcat(Bijectors.Exp(), Bijectors.Log(), Bijectors.Shift(5.0))
+        sb = stack(Bijectors.Exp(), Bijectors.Log(), Bijectors.Shift(5.0))
         res = forward(sb, x)
         @test sb(x) == [exp(x[1]), log(x[2]), x[3] + 5.0]
         @test res.rv == [exp(x[1]), log(x[2]), x[3] + 5.0]
@@ -512,8 +512,8 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD, 1} end
             @test td isa Distribution{Multivariate, Continuous}
 
             # check that wrong ranges fails
-            sb = vcat(ibs...)
-            td = transformed(d, sb)
+            @test_throws MethodError stack(ibs...)
+            sb = Stacked(ibs)
             x = rand(d)
             @test_throws AssertionError sb(x)
 
