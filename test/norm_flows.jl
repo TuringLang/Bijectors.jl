@@ -59,5 +59,21 @@ end
     
     @test res.rv ≈ y
     @test logpdf(flow, y) ≈ lp rtol=0.1
-end
 
+    # flow with unconstrained-to-constrained
+    d1 = Beta()
+    b1 = inv(bijector(d1))
+    d2 = InverseGamma()
+    b2 = inv(bijector(d2))
+
+    x = rand(d) .+ 10
+    y = b(x)
+
+    sb = stack(b1, b1)
+    @test all((sb ∘ b)(x) .≤ 1.0)
+
+    sb = stack(b1, b2)
+    cb = (sb ∘ b)
+    y = cb(x)
+    @test (0 ≤ y[1] ≤ 1.0) && (0 < y[2])
+end

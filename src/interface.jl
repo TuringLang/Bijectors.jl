@@ -5,7 +5,8 @@ using Tracker
 import Base: inv, ∘
 
 import Random: AbstractRNG
-import Distributions: logpdf, rand, rand!, _rand!, _logpdf
+import Distributions: logpdf, rand, rand!, _rand!, _logpdf, params
+import StatsBase: entropy
 
 #######################################
 # AD stuff "extracted" from Turing.jl #
@@ -64,7 +65,7 @@ inv(ib::Inversed{<:Bijector}) = ib.orig
     logabsdetjac(b::Bijector, x)
     logabsdetjac(ib::Inversed{<:Bijector}, y)
 
-Computes the log(abs(det(J(x)))) where J is the jacobian of the transform.
+Computes the log(abs(det(J(b(x))))) where J is the jacobian of the transform.
 Similarily for the inverse-transform.
 
 Default implementation for `Inversed{<:Bijector}` is implemented as
@@ -123,7 +124,9 @@ end
 struct SingularJacobianException{B} <: Exception where {B<:Bijector}
     b::B
 end
-Base.showerror(io::IO, e::SingularJacobianException) = print(io, "jacobian of $(e.b) is singular")
+function Base.showerror(io::IO, e::SingularJacobianException)
+    print(io, "jacobian of $(e.b) is singular")
+end
 
 # TODO: allow batch-computation, especially for univariate case?
 "Computes the absolute determinant of the Jacobian of the inverse-transformation."
@@ -217,11 +220,11 @@ _transform(x, b::Bijector, bs::Bijector...) = _transform(b(x), bs...)
 
 function _logabsdetjac(x, b1::Bijector, b2::Bijector)
     res = forward(b1, x)
-    return logabsdetjac(b2, res.rv) .+ res.logabsdetjac
+    return logabsdetjac(b2, res.rv) + res.logabsdetjac
 end
 function _logabsdetjac(x, b1::Bijector, bs::Bijector...)
     res = forward(b1, x)
-    return _logabsdetjac(res.rv, bs...) .+ res.logabsdetjac
+    return _logabsdetjac(res.rv, bs...) + res.logabsdetjac
 end
 logabsdetjac(cb::Composed, x) = _logabsdetjac(x, cb.ts...)
 
@@ -254,6 +257,154 @@ function forward(cb::Composed, x)
         logjac = res.logabsdetjac .+ logjac
     end
     return (rv=rv, logabsdetjac=logjac)
+end
+
+-###########
+-# Stacked #
+-###########
+"""
+    Stacked(bs)
+    Stacked(bs, ranges)
+    stack(bs::Bijector...)
+
+A `Bijector` which stacks bijectors together which can then be applied to a vector
+where `bs[i]::Bijector` is applied to `x[ranges[i]]::UnitRange{Int}`.
+
+# Arguments
+- `bs` can be either a `Tuple` or an `AbstractArray` of bijectors.
+  - If `bs` is a `Tuple`, implementations are type-stable using generated functions
+  - If `bs` is an `AbstractArray`, implementations are _not_ type-stable and use iterative methods
+- `ranges` needs to be an iterable consisting of `UnitRange{Int}`
+  - `length(bs) == length(ranges)` needs to be true.
+
+# Examples
+```
+b1 = Logit(0.0, 1.0)
+b2 = Identity()
+b = stack(b1, b2)
+b([0.0, 1.0]) == [b1(0.0), 1.0]  # => true
+```
+"""
+struct Stacked{B, N} <: Bijector where N
+    bs::B
+    ranges::NTuple{N, UnitRange{Int}}
+
+    function Stacked(
+        bs::C,
+        ranges::NTuple{N, UnitRange{Int}}
+    ) where {N, C<:Tuple{Vararg{<:Bijector, N}}}
+        return new{C, N}(bs, ranges)
+    end
+
+    function Stacked(
+        bs::A,
+        ranges::NTuple{N, UnitRange{Int}}
+    ) where {N, A<:AbstractArray{<:Bijector}}
+        @assert length(bs) == N "number of bijectors is not same as number of ranges"
+        return new{A, N}(bs, ranges)
+    end
+end
+Stacked(bs) = Stacked(bs, tuple([i:i for i = 1:length(bs)]...))
+Stacked(bs, ranges::AbstractArray) = Stacked(bs, tuple(ranges...))
+
+stack(bs::Bijector...) = Stacked(bs)
+
+inv(sb::Stacked) = Stacked(inv.(sb.bs), sb.ranges)
+
+# TODO: Is there a better approach to this?
+@generated function _transform(x, rs::NTuple{N, UnitRange{Int}}, bs::Bijector...) where N
+    exprs = []
+    for i = 1:N
+        push!(exprs, :(bs[$i](x[rs[$i]])))
+    end
+
+    return :(vcat($(exprs...)))
+end
+_transform(x, rs::NTuple{1, UnitRange{Int}}, b::Bijector) = b(x)
+
+function (sb::Stacked{<:Tuple})(x::AbstractVector{<:Real})
+    y = _transform(x, sb.ranges, sb.bs...)
+    @assert size(y) == size(x) "x is size $(size(x)) but y is $(size(y))"
+    return y
+end
+function (sb::Stacked{<:AbstractArray, N})(x::AbstractVector{<:Real}) where {N}
+    y = vcat([sb.bs[i](x[sb.ranges[i]]) for i = 1:N]...)
+    @assert size(y) == size(x) "x is size $(size(x)) but y is $(size(y))"
+    return y
+end
+
+(sb::Stacked)(x::AbstractMatrix{<: Real}) = hcat([sb(x[:, i]) for i = 1:size(x, 2)]...)
+function (sb::Stacked)(x::TrackedArray{A, 2}) where {A}
+    return Tracker.collect(hcat([sb(x[:, i]) for i = 1:size(x, 2)]...))
+end
+
+@generated function logabsdetjac(
+    b::Stacked{<:Tuple, N},
+    x::AbstractVector{<:Real}
+) where {N}
+    exprs = []
+    for i = 1:N
+        push!(exprs, :(sum(logabsdetjac(b.bs[$i], x[b.ranges[$i]]))))
+    end
+
+    return :(sum([$(exprs...), ]))
+end
+function logabsdetjac(
+    b::Stacked{<:AbstractArray, N},
+    x::AbstractVector{<:Real}
+) where {N}
+    # TODO: drop the `sum` when we have dimensionality
+    return sum([sum(logabsdetjac(b.bs[i], x[b.ranges[i]])) for i = 1:N])
+end
+function logabsdetjac(b::Stacked, x::AbstractMatrix{<: Real})
+    return [logabsdetjac(b, x[:, i]) for i = 1:size(x, 2)]
+end
+function logabsdetjac(b::Stacked, x::TrackedArray{A, 2}) where {A}
+    return Tracker.collect([logabsdetjac(b, x[:, i]) for i = 1:size(x, 2)])
+end
+
+# Generates something similar to:
+#
+# quote
+#     (y_1, _logjac) = forward(b.bs[1], x[b.ranges[1]])
+#     logjac = sum(_logjac)
+#     (y_2, _logjac) = forward(b.bs[2], x[b.ranges[2]])
+#     logjac += sum(_logjac)
+#     return (rv = vcat(y_1, y_2), logabsdetjac = logjac)
+# end
+@generated function forward(b::Stacked{T, N}, x::AbstractVector) where {N, T<:Tuple}
+    expr = Expr(:block)
+    y_names = []
+
+    push!(expr.args, :((y_1, _logjac) = forward(b.bs[1], x[b.ranges[1]])))
+    # TODO: drop the `sum` when we have dimensionality
+    push!(expr.args, :(logjac = sum(_logjac)))
+    push!(y_names, :y_1)
+    for i = 2:length(T.parameters)
+        y_name = Symbol("y_$i")
+        push!(expr.args, :(($y_name, _logjac) = forward(b.bs[$i], x[b.ranges[$i]])))
+
+        # TODO: drop the `sum` when we have dimensionality
+        push!(expr.args, :(logjac += sum(_logjac)))
+
+        push!(y_names, y_name)
+    end
+
+    push!(expr.args, :(return (rv = vcat($(y_names...)), logabsdetjac = logjac)))
+    return expr
+end
+
+function forward(sb::Stacked{<:AbstractArray, N}, x::AbstractVector) where {N}
+    ys = []
+    logjacs = []
+    for i = 1:N
+        y, logjac = forward(sb.bs[i], x[sb.ranges[i]])
+        push!(ys, y)
+        # TODO: drop the `sum` when we have dimensionality
+        push!(logjacs, sum(logjac))
+    end
+
+    return (rv = vcat(ys...), logabsdetjac = sum(logjacs))
 end
 
 ##############################
@@ -340,13 +491,12 @@ logabsdetjac(b::Scale, x) = log(abs(b.a))
 # Simplex bijector #
 ####################
 struct SimplexBijector{T} <: Bijector where {T} end
-
-const simplex_b = SimplexBijector{Val{false}}()
-const simplex_b_proj = SimplexBijector{Val{true}}()
+SimplexBijector(proj::Bool) = SimplexBijector{Val{proj}}()
+SimplexBijector() = SimplexBijector(true)
 
 # The following implementations are basically just copy-paste from `invlink` and
 # `link` for `SimplexDistributions` but dropping the dependence on the `Distribution`.
-function _clamp(x::T, b::SimplexBijector) where {T}
+function _clamp(x::T, b::Union{SimplexBijector, Inversed{<:SimplexBijector}}) where {T}
     bounds = (zero(T), one(T))
     clamped_x = clamp(x, bounds...)
     DEBUG && @debug "x = $x, bounds = $bounds, clamped_x = $clamped_x"
@@ -355,6 +505,7 @@ end
 
 function (b::SimplexBijector{Val{proj}})(x::AbstractVector{T}) where {T, proj}
     y, K = similar(x), length(x)
+    @assert K > 1 "x needs to be of length greater than 1"
 
     ϵ = _eps(T)
     sum_tmp = zero(T)
@@ -380,6 +531,7 @@ end
 # Vectorised implementation of the above.
 function (b::SimplexBijector{Val{proj}})(X::AbstractMatrix{T}) where {T<:Real, proj}
     Y, K, N = similar(X), size(X, 1), size(X, 2)
+    @assert K > 1 "x needs to be of length greater than 1"
 
     ϵ = _eps(T)
     @inbounds @simd for n in 1:size(X, 2)
@@ -404,6 +556,7 @@ end
 
 function (ib::Inversed{<:SimplexBijector{Val{proj}}})(y::AbstractVector{T}) where {T, proj}
     x, K = similar(y), length(y)
+    @assert K > 1 "x needs to be of length greater than 1"
 
     ϵ = _eps(T)
     @inbounds z = StatsFuns.logistic(y[1] - log(T(K - 1)))
@@ -429,6 +582,7 @@ function (ib::Inversed{<:SimplexBijector{Val{proj}}})(
     Y::AbstractMatrix{T}
 ) where {T<:Real, proj}
     X, K, N = similar(Y), size(Y, 1), size(Y, 2)
+    @assert K > 1 "x needs to be of length greater than 1"
 
     ϵ = _eps(T)
     @inbounds @simd for n in 1:size(X, 2)
@@ -497,7 +651,10 @@ struct TransformedDistribution{D, B, V} <: Distribution{V, Continuous} where {D<
     dist::D
     transform::B
 end
-function TransformedDistribution(d::D, b::B) where {V<:VariateForm, B<:Bijector, D<:Distribution{V, Continuous}}
+function TransformedDistribution(
+    d::D,
+    b::B
+) where {V<:VariateForm, B<:Bijector, D<:Distribution{V, Continuous}}
     return TransformedDistribution{D, B, V}(d, b)
 end
 
@@ -531,7 +688,7 @@ bijector(d::Normal) = IdentityBijector
 bijector(d::MvNormal) = IdentityBijector
 bijector(d::PositiveDistribution) = Log()
 bijector(d::MvLogNormal) = Log()
-bijector(d::SimplexDistribution) = simplex_b_proj
+bijector(d::SimplexDistribution) = SimplexBijector{Val{true}}()
 bijector(d::KSOneSided) = Logit(zero(eltype(d)), one(eltype(d)))
 
 bijector_bounded(d, a=minimum(d), b=maximum(d)) = Logit(a, b)
@@ -655,7 +812,8 @@ function logpdf_with_jac(td::MvTransformed{<:Dirichlet}, y::AbstractVector{<:Rea
     ϵ = _eps(T)
 
     res = forward(inv(td.transform), y)
-    return (logpdf(td.dist, mappedarray(x->x+ϵ, res.rv)) .+ res.logabsdetjac, res.logabsdetjac)
+    lp = logpdf(td.dist, mappedarray(x->x+ϵ, res.rv)) .+ res.logabsdetjac
+    return (lp, res.logabsdetjac)
 end
 
 # TODO: should eventually drop using `logpdf_with_trans`
@@ -738,3 +896,34 @@ In the case where `d isa Distribution`, this means
 """
 forward(d::Distribution) = forward(GLOBAL_RNG, d)
 forward(d::Distribution, num_samples::Int) = forward(GLOBAL_RNG, d, num_samples)
+
+# utility stuff
+params(td::Transformed) = params(td.dist)
+
+#   ℍ(p̃(y))
+# = ∫ p̃(y) log p̃(y) dy
+# = ∫ p(f⁻¹(y)) |det J(f⁻¹, y)| log (p(f⁻¹(y)) |det J(f⁻¹, y)|) dy
+# = ∫ p(x) (log p(x) |det J(f⁻¹, f(x))|) dx
+# = ∫ p(x) (log p(x) |det J(f⁻¹ ∘ f, x)|) dx
+# = ∫ p(x) log (p(x) |det J(id, x)|) dx
+# = ∫ p(x) log (p(x) ⋅ 1) dx
+# = ∫ p(x) log p(x) dx
+# = ℍ(p(x))
+entropy(td::Transformed) = entropy(td.dist)
+
+# logabsdetjac for distributions
+logabsdetjacinv(d::UnivariateDistribution, x::T) where T <: Real = zero(T)
+logabsdetjacinv(d::MultivariateDistribution, x::AbstractVector{T}) where {T<:Real} = zero(T)
+
+
+"""
+    logabsdetjacinv(td::UnivariateTransformed, y::Real)
+    logabsdetjacinv(td::MultivariateTransformed, y::AbstractVector{<:Real})
+
+Computes the `logabsdetjac` of the _inverse_ transformation, since `rand(td)` returns
+the _transformed_ random variable.
+"""
+logabsdetjacinv(td::UnivariateTransformed, y::Real) = logabsdetjac(inv(td.transform), y)
+function logabsdetjacinv(td::MvTransformed, y::AbstractVector{<:Real})
+    return logabsdetjac(inv(td.transform), y)
+end

@@ -63,7 +63,7 @@ julia> logpdf_with_trans(dist, x, true) # considering the transformation
 ```
 
 ## `Bijector` interface
-A `Bijector` is a differentiable bijection with a differentiable inverse. That's basically it. 
+A `Bijector` is a differentiable bijection with a differentiable inverse. That's basically it.
 
 The primary application of `Bijector`s is the (very profitable) business of transforming (usually continuous) probability densities. If we transfrom a random variable `x ~ p(x)` to `y = b(x)` where `b` is a `Bijector`, we also get a canonical density `q(y) = p(b⁻¹(y)) |det J(b⁻¹, y)|` for `y`. Here `J(b⁻¹, y)` is the jacobian of the inverse transform evaluated at `y`. `q` is also known as the _push-forward_ of `p` by `b` in measure theory.
 
@@ -248,6 +248,82 @@ inv(td.transform)(rand(td))
 
 will never result in `0` or `1` though any sample arbitrarily close to either `0` or `1` is possible. _Disclaimer: numerical accuracy is limited, so you might still see `0` and `1` if you're lucky._
 
+### Multivariate ADVI example
+We can also do _multivariate_ ADVI using the `Stacked` bijector. `Stacked` gives us a way to combine univariate and/or multivariate bijectors into a singe multivariate bijector. Say you have a vector `x` of length 2 and you want to transform the first entry using `Exp` and the second entry using `Log`. `Stacked` gives you an easy and efficient way of representing such a bijector.
+
+```julia
+julia> using Bijectors
+
+julia> using Bijectors: Exp, Log, SimplexBijector
+
+julia> # Original distributions
+       dists = (
+           Beta(),
+           InverseGamma(),
+           Dirichlet(2, 3)
+       );
+
+julia> # Construct the corresponding ranges
+       ranges = [];
+
+julia> idx = 1;
+
+julia> for i = 1:length(dists)
+           d = dists[i]
+           push!(ranges, idx:idx + length(d) - 1)
+
+           global idx
+           idx += length(d)
+       end;
+
+julia> ranges
+3-element Array{Any,1}:
+ 1:1
+ 2:2
+ 3:4
+
+julia> # Base distribution; mean-field normal
+       num_params = ranges[end][end]
+4
+
+julia> d = MvNormal(zeros(num_params), ones(num_params))
+DiagNormal(
+dim: 4
+μ: [0.0, 0.0, 0.0, 0.0]
+Σ: [1.0 0.0 0.0 0.0; 0.0 1.0 0.0 0.0; 0.0 0.0 1.0 0.0; 0.0 0.0 0.0 1.0]
+)
+
+
+julia> # Construct the transform
+       bs = bijector.(dists)     # constrained-to-unconstrained bijectors for dists
+(Logit{Float64}(0.0, 1.0), Log(), SimplexBijector{Val{true}}())
+
+julia> ibs = inv.(bs)            # invert, so we get unconstrained-to-constrained
+(Inversed{Logit{Float64}}(Logit{Float64}(0.0, 1.0)), Exp(), Inversed{SimplexBijector{Val{true}}}(SimplexBijector{Val{true}}()))
+
+julia> sb = Stacked(ibs, ranges) # => Stacked <: Bijector
+Stacked{Tuple{Inversed{Logit{Float64}},Exp,Inversed{SimplexBijector{Val{true}}}},3}((Inversed{Logit{Float64}}(Logit{Float64}(0.0, 1.0)), Exp(), Inversed{SimplexBijector{Val{true}}}(SimplexBijector{Val{true}}())), (1:1, 2:2, 3:4))
+
+julia> # Mean-field normal with unconstrained-to-constrained stacked bijector
+       td = transformed(d, sb);
+
+julia> y = rand(td)
+4-element Array{Float64,1}:
+ 0.33551575658457006
+ 0.12139631354191643
+ 0.3900060432982573 
+ 0.6099939567017427 
+
+julia> 0.0 ≤ y[1] ≤ 1.0   # => true
+true
+
+julia> 0.0 < y[2]         # => true
+true
+
+julia> sum(y[3:4]) ≈ 1.0  # => true
+true
+```
+
 ### Normalizing flows
 A very interesting application is that of _normalizing flows_.[1] Usually this is done by sampling from a multivariate normal distribution, and then transforming this to a target distribution using invertible neural networks. Currently there are two such transforms available in Bijectors.jl: `PlanarFlow` and `RadialFlow`. Let's create a flow with a single `PlanarLayer`:
 
@@ -291,6 +367,33 @@ julia> x = rand(flow.dist)
 
 julia> logpdf_forward(flow, x) # more efficent and accurate
 -2.2489445532797867
+```
+
+Similarily to the multivariate ADVI example, we could use `Stacked` to get a _bounded_ flow:
+
+```julia
+julia> d = MvNormal(zeros(2), ones(2));
+
+julia> ibs = inv.(bijector.((InverseGamma(2, 3), Beta())));
+
+julia> sb = stack(ibs...) # == Stacked(ibs) == Stacked(ibs, [i:i for i = 1:length(ibs)]
+Stacked{Tuple{Exp,Inversed{Logit{Float64}}},2}((Exp(), Inversed{Logit{Float64}}(Logit{Float64}(0.0, 1.0))), (1:1, 2:2))
+
+julia> b = sb ∘ PlanarLayer(2)
+Composed{Tuple{PlanarLayer{Array{Float64,2},Array{Float64,1}},Stacked{Tuple{Exp,Inversed{Logit{Float64}}},2}}}((PlanarLayer{Array{Float64,2},Array{Float64,1}}([-2.00615; 1.17336], [0.248405; -0.319774], [0.481679]), Stacked{Tuple{Exp,Inversed{Logit{Float64}}},2}((Exp(), Inversed{Logit{Float64}}(Logit{Float64}(0.0, 1.0))), (1:1, 2:2))))
+
+julia> td = transformed(d, b);
+
+julia> y = rand(td)
+2-element Array{Float64,1}:
+ 1.026123210859092 
+ 0.4412529471603579
+
+julia> 0 < y[1]
+true
+
+julia> 0 ≤ y[2] ≤ 1
+true
 ```
 
 Want to fit the flow?
@@ -356,6 +459,10 @@ julia> x, y, logjac, logpdf_y = forward(flow) # sample + transform and returns a
 ```
 
 This method is for example useful when computing quantities such as the _expected lower bound (ELBO)_ between this transformed distribution and some other joint density. If no analytical expression is available, we have to approximate the ELBO by a Monte Carlo estimate. But one term in the ELBO is the entropy of the base density, which we _do_ know analytically in this case. Using the analytical expression for the entropy and then using a monte carlo estimate for the rest of the terms in the ELBO gives an estimate with lower variance than if we used the monte carlo estimate for the entire expectation.
+
+
+### Normalizing flows with bounded support
+
 
 ## Implementing your own `Bijector`
 There's mainly two ways you can implement your own `Bijector`, and which way you choose mainly depends on the following question: are you bothered enough to manually implement `logabsdetjac`? If the answer is "Yup!", then you subtype from `Bijector`, if "Naaaah" then you subtype `ADBijector`.
@@ -535,6 +642,7 @@ The following are the bijectors available:
   - `ADBijector{AD} <: Bijector`: subtypes of this only require the user to implement `(b::UserBijector)(x)` and `(ib::Inversed{<:UserBijector})(y)`. Automatic differentation will be used to compute the `jacobian(b, x)` and thus `logabsdetjac(b, x).
 - Concrete:
   - `Composed`: represents a composition of bijectors.
+  - `Stacked`: stacks univariate and multivariate bijectors
   - `Identity`: does what it says, i.e. nothing.
   - `Logit`
   - `Exp`
