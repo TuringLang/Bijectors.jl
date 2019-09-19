@@ -708,12 +708,13 @@ end
 (ib::Inversed{<:DistributionBijector})(y) = invlink(ib.orig.dist, y)
 
 # Transformed distributions
-struct TransformedDistribution{D, B, V, N} <: Distribution{V, Continuous} where {D<:Distribution{V, Continuous}, B<:Bijector{N}}
+struct TransformedDistribution{D, B, V} <: Distribution{V, Continuous} where {D<:Distribution{V, Continuous}, B<:Bijector}
     dist::D
     transform::B
-end
-function TransformedDistribution(d::D, b::B) where {V<:VariateForm, B<:Bijector, D<:Distribution{V, Continuous}}
-    return TransformedDistribution{D, B, V, length(size(d))}(d, b)
+
+    TransformedDistribution(d::UnivariateDistribution, b::Bijector{0}) = new{typeof(d), typeof(b), Univariate}(d, b)
+    TransformedDistribution(d::MultivariateDistribution, b::Bijector{1}) = new{typeof(d), typeof(b), Multivariate}(d, b)
+    TransformedDistribution(d::MatrixDistribution, b::Bijector{2}) = new{typeof(d), typeof(b), Matrixvariate}(d, b)
 end
 
 
