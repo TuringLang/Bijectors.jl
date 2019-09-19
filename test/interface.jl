@@ -4,7 +4,7 @@ using Random
 using LinearAlgebra
 using ForwardDiff
 
-using Bijectors: Log, Exp, Shift, Scale, Logit
+using Bijectors: Log, Exp, Shift, Scale, Logit, SimplexBijector
 
 Random.seed!(123)
 
@@ -136,7 +136,12 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD, 1} end
             (Log{1}() ∘ Exp{1}(), randn(2, 3)),
             (inv(Logit(-1.0, 1.0)), randn(3)),
             (Identity{0}(), randn(3)),
-            (Identity{1}(), randn(2, 3))
+            (Identity{1}(), randn(2, 3)),
+            (PlanarLayer(2), randn(2, 3)),
+            (RadialLayer(2), randn(2, 3)),
+            (PlanarLayer(2) ∘ RadialLayer(2), randn(2, 3)),
+            (Exp{1}() ∘ PlanarLayer(2) ∘ RadialLayer(2), randn(2, 3)),
+            (SimplexBijector(), mapslices(z -> normalize(z, 1), rand(2, 3); dims = 1))
         ]
 
         for (b, xs) in bs_xs
