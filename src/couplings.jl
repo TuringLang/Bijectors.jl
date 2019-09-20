@@ -107,7 +107,7 @@ Implements a coupling-layer as defined in [1].
 # References
 [1] Kobyzev, I., Prince, S., & Brubaker, M. A., Normalizing flows: introduction and ideas, CoRR, (),  (2019). 
 """
-struct CouplingLayer{B, M, F} <: Bijector where {B, M <: PartitionMask, F}
+struct CouplingLayer{B, M, F} <: Bijector{1} where {B <: ZeroOrOneDimBijector, M <: PartitionMask, F}
     mask::M
     θ::F
 end
