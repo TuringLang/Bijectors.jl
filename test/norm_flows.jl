@@ -69,10 +69,10 @@ end
     x = rand(d) .+ 10
     y = b(x)
 
-    sb = vcat(b1, b1)
+    sb = stack(b1, b1)
     @test all((sb ∘ b)(x) .≤ 1.0)
 
-    sb = vcat(b1, b2)
+    sb = stack(b1, b2)
     cb = (sb ∘ b)
     y = cb(x)
     @test (0 ≤ y[1] ≤ 1.0) && (0 < y[2])

@@ -125,17 +125,26 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD} end
         d = Truncated(Normal(), -1, 1)
         b = bijector(d)
         x = rand(d)
-        @test b(x) == link(d, x)
+        y = b(x)
+        @test y ≈ link(d, x)
+        @test inv(b)(y) ≈ x
+        @test logabsdetjac(b, x) ≈ logpdf_with_trans(d, x, false) - logpdf_with_trans(d, x, true)
 
         d = Truncated(Normal(), -Inf, 1)
         b = bijector(d)
         x = rand(d)
-        @test b(x) == link(d, x)
+        y = b(x)
+        @test y ≈ link(d, x)
+        @test inv(b)(y) ≈ x
+        @test logabsdetjac(b, x) ≈ logpdf_with_trans(d, x, false) - logpdf_with_trans(d, x, true)
 
         d = Truncated(Normal(), 1, Inf)
         b = bijector(d)
         x = rand(d)
-        @test b(x) == link(d, x)
+        y = b(x)
+        @test y ≈ link(d, x)
+        @test inv(b)(y) ≈ x
+        @test logabsdetjac(b, x) ≈ logpdf_with_trans(d, x, false) - logpdf_with_trans(d, x, true)
     end
 
     @testset "Multivariate" begin
@@ -205,7 +214,7 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD} end
             Wishart(v,S),
             InverseWishart(v,S)
         ]
-        
+
         for dist in matrix_dists
             @testset "$dist: dist" begin
                 td = transformed(dist)
@@ -241,6 +250,8 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD} end
 
         @test forward(b, x) == forward(td.transform, x)
         @test forward(ib, y) == forward(inv(td.transform), y)
+
+        @test forward(b, x) == forward(Bijectors.composer(b.ts...), x)
 
         # inverse works fine for composition
         cb = b ∘ ib
@@ -280,6 +291,150 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD} end
         f_a = forward(cb_a, x)
 
         @test f_t == f_a
+
+        # `composer` and `composel`
+        cb_l = Bijectors.composel(b⁻¹, b⁻¹, b)
+        cb_r = Bijectors.composer(reverse(cb_l.ts)...)
+        y = cb_l(x)
+        @test y == Bijectors.composel(cb_r.ts...)(x)
+
+        k = length(cb_l.ts)
+        @test all([cb_l.ts[i] == cb_r.ts[i] for i = 1:k])
+    end
+
+    @testset "Stacked <: Bijector" begin
+        # `logabsdetjac` withOUT AD
+        d = Beta()
+        b = bijector(d)
+        x = rand(d)
+        y = b(x)
+
+        sb1 = stack(b, b, inv(b), inv(b))             # <= tuple
+        res1 = forward(sb1, [x, x, y, y])
+
+        @test sb1([x, x, y, y]) == res1.rv
+        @test logabsdetjac(sb1, [x, x, y, y]) ≈ 0.0
+        @test res1.logabsdetjac ≈ 0.0
+
+        sb2 = Stacked([b, b, inv(b), inv(b)])        # <= Array
+        res2 = forward(sb2, [x, x, y, y])
+
+        @test sb2([x, x, y, y]) == res2.rv
+        @test logabsdetjac(sb2, [x, x, y, y]) ≈ 0.0
+        @test res2.logabsdetjac ≈ 0.0
+
+        # `logabsdetjac` with AD
+        b = DistributionBijector(d)
+        y = b(x)
+        
+        sb1 = stack(b, b, inv(b), inv(b))             # <= tuple
+        res1 = forward(sb1, [x, x, y, y])
+
+        @test sb1([x, x, y, y]) == res1.rv
+        @test logabsdetjac(sb1, [x, x, y, y]) ≈ 0.0
+        @test res1.logabsdetjac ≈ 0.0
+
+        sb2 = Stacked([b, b, inv(b), inv(b)])        # <= Array
+        res2 = forward(sb2, [x, x, y, y])
+
+        @test sb2([x, x, y, y]) == res2.rv
+        @test logabsdetjac(sb2, [x, x, y, y]) ≈ 0.0
+        @test res2.logabsdetjac ≈ 0.0
+
+        # value-test
+        x = ones(3)
+        sb = stack(Bijectors.Exp(), Bijectors.Log(), Bijectors.Shift(5.0))
+        res = forward(sb, x)
+        @test sb(x) == [exp(x[1]), log(x[2]), x[3] + 5.0]
+        @test res.rv == [exp(x[1]), log(x[2]), x[3] + 5.0]
+        @test logabsdetjac(sb, x) == sum([logabsdetjac(sb.bs[i], x[sb.ranges[i]]) for i = 1:3])
+        @test res.logabsdetjac == logabsdetjac(sb, x)
+        
+
+        # TODO: change when we have dimensionality in the type
+        sb = Stacked((Bijectors.Exp(), Bijectors.SimplexBijector()), [1:1, 2:3])
+        x = ones(3) ./ 3.0
+        res = forward(sb, x)
+        @test sb(x) == [exp(x[1]), sb.bs[2](x[2:3])...]
+        @test res.rv == [exp(x[1]), sb.bs[2](x[2:3])...]
+        @test logabsdetjac(sb, x) == sum([logabsdetjac(sb.bs[i], x[sb.ranges[i]]) for i = 1:2])
+        @test res.logabsdetjac == logabsdetjac(sb, x)
+
+        x = ones(4) ./ 4.0
+        @test_throws AssertionError sb(x)
+
+        @test_throws AssertionError Stacked([Bijectors.Exp(), ], (1:1, 2:3))
+        @test_throws MethodError Stacked((Bijectors.Exp(), ), (1:1, 2:3))
+
+        @testset "Stacked: ADVI with MvNormal" begin
+            # MvNormal test
+            dists = [
+                Beta(),
+                Beta(),
+                Beta(),
+                InverseGamma(),
+                InverseGamma(),
+                Gamma(),
+                Gamma(),
+                InverseGamma(),
+                Cauchy(),
+                Gamma(),
+                MvNormal(zeros(2), ones(2))
+            ]
+
+            ranges = []
+            idx = 1
+            for i = 1:length(dists)
+                d = dists[i]
+                push!(ranges, idx:idx + length(d) - 1)
+                idx += length(d)
+            end
+
+            num_params = ranges[end][end]
+            d = MvNormal(zeros(num_params), ones(num_params))
+
+            # Stacked{<:Array}
+            bs = bijector.(dists)     # constrained-to-unconstrained bijectors for dists
+            ibs = inv.(bs)            # invert, so we get unconstrained-to-constrained
+            sb = Stacked(ibs, ranges) # => Stacked <: Bijector
+            x = rand(d)
+
+            @test sb isa Stacked
+
+            td = transformed(d, sb)  # => MultivariateTransformed <: Distribution{Multivariate, Continuous}
+            @test td isa Distribution{Multivariate, Continuous}
+
+            # check that wrong ranges fails
+            sb = stack(ibs...)
+            td = transformed(d, sb)
+            x = rand(d)
+            @test_throws AssertionError sb(x)
+
+            # Stacked{<:Tuple}
+            bs = bijector.(tuple(dists...))
+            ibs = inv.(bs)
+            sb = Stacked(ibs, ranges)
+            isb = inv(sb)
+            @test sb isa Stacked{<: Tuple}
+
+            # inverse
+            td = transformed(d, sb)
+            y = rand(td)
+            x = isb(y)
+            @test sb(x) ≈ y
+
+            # verification of computation
+            x = rand(d)
+            y = sb(x)
+            y_ = vcat([ibs[i](x[ranges[i]]) for i = 1:length(dists)]...)
+            x_ = vcat([bs[i](y[ranges[i]]) for i = 1:length(dists)]...)
+            @test x ≈ x_
+            @test y ≈ y_
+
+            # AD verification
+            @test log(abs(det(ForwardDiff.jacobian(sb, x)))) ≈ logabsdetjac(sb, x)
+            @test log(abs(det(ForwardDiff.jacobian(isb, y)))) ≈ logabsdetjac(isb, y)
+        end
     end
 
     @testset "Stacked <: Bijector" begin
