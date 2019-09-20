@@ -2,7 +2,6 @@ module Bijectors
 
 using Reexport, Requires
 @reexport using Distributions
-@reexport using StatsBase
 using StatsFuns
 using LinearAlgebra
 using MappedArrays

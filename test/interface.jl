@@ -4,9 +4,11 @@ using Random
 using LinearAlgebra
 using ForwardDiff
 
+using Bijectors: Log, Exp, Shift, Scale, Logit, SimplexBijector
+
 Random.seed!(123)
 
-struct NonInvertibleBijector{AD} <: ADBijector{AD} end
+struct NonInvertibleBijector{AD} <: ADBijector{AD, 1} end
 
 # Scalar tests
 @testset "Interface" begin
@@ -95,7 +97,7 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD} end
 
             @testset "$dist: ForwardDiff AD" begin
                 x = rand(dist)
-                b = DistributionBijector{Bijectors.ADBackend(:forward_diff), typeof(dist)}(dist)
+                b = DistributionBijector{Bijectors.ADBackend(:forward_diff), typeof(dist), length(size(dist))}(dist)
                 
                 @test abs(det(Bijectors.jacobian(b, x))) > 0
                 @test logabsdetjac(b, x) ≠ Inf
@@ -108,7 +110,7 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD} end
 
             @testset "$dist: Tracker AD" begin
                 x = rand(dist)
-                b = DistributionBijector{Bijectors.ADBackend(:reverse_diff), typeof(dist)}(dist)
+                b = DistributionBijector{Bijectors.ADBackend(:reverse_diff), typeof(dist), length(size(dist))}(dist)
                 
                 @test abs(det(Bijectors.jacobian(b, x))) > 0
                 @test logabsdetjac(b, x) ≠ Inf
@@ -118,6 +120,111 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD} end
                 @test abs(det(Bijectors.jacobian(b⁻¹, y))) > 0
                 @test logabsdetjac(b⁻¹, y) ≠ Inf
             end
+        end
+    end
+
+    @testset "Batch computation" begin
+        bs_xs = [
+            (Scale(2.0), randn(3)),
+            (Scale([1.0, 2.0]), randn(2, 3)),
+            (Shift(2.0), randn(3)),
+            (Shift([1.0, 2.0]), randn(2, 3)),
+            (Log{0}(), exp.(randn(3))),
+            (Log{1}(), exp.(randn(2, 3))),
+            (Exp{0}(), randn(3)),
+            (Exp{1}(), randn(2, 3)),
+            (Log{1}() ∘ Exp{1}(), randn(2, 3)),
+            (inv(Logit(-1.0, 1.0)), randn(3)),
+            (Identity{0}(), randn(3)),
+            (Identity{1}(), randn(2, 3)),
+            (PlanarLayer(2), randn(2, 3)),
+            (RadialLayer(2), randn(2, 3)),
+            (PlanarLayer(2) ∘ RadialLayer(2), randn(2, 3)),
+            (Exp{1}() ∘ PlanarLayer(2) ∘ RadialLayer(2), randn(2, 3)),
+            (SimplexBijector(), mapslices(z -> normalize(z, 1), rand(2, 3); dims = 1)),
+            (stack(Exp{0}(), Scale(2.0)), randn(2, 3)),
+            (Stacked((Exp{1}(), SimplexBijector()), [1:1, 2:3]),
+             mapslices(z -> normalize(z, 1), rand(3, 2); dims = 1))
+        ]
+
+        for (b, xs) in bs_xs
+            @testset "$b" begin
+                D = Bijectors.dimension(b)
+                ib = inv(b)
+
+                @test Bijectors.dimension(ib) == D
+
+                x = D == 0 ? xs[1] : xs[:, 1]
+
+                y = b(x)
+                ys = b(xs)
+
+                x_ = ib(y)
+                xs_ = ib(ys)
+
+                result = forward(b, x)
+                results = forward(b, xs)
+
+                iresult = forward(ib, y)
+                iresults = forward(ib, ys)
+
+                # Sizes
+                @test size(y) == size(x)
+                @test size(ys) == size(xs)
+
+                @test size(x_) == size(x)
+                @test size(xs_) == size(xs)
+
+                @test size(result.rv) == size(x)
+                @test size(results.rv) == size(xs)
+
+                @test size(iresult.rv) == size(y)
+                @test size(iresults.rv) == size(ys)
+
+                # Values
+                @test ys == mapslices(z -> b(z), xs; dims = 1)
+                @test ys ≈ results.rv
+
+                if D == 0
+                    # Sizes
+                    @test y == ys[1]
+
+                    @test length(logabsdetjac(b, xs)) == length(xs)
+                    @test length(logabsdetjac(ib, ys)) == length(xs)
+
+                    @test size(results.logabsdetjac) == size(xs, )
+                    @test size(iresults.logabsdetjac) == size(ys, )
+
+                    # Values
+                    @test logabsdetjac.(b, xs) == logabsdetjac(b, xs)
+                    @test logabsdetjac.(ib, ys) == logabsdetjac(ib, ys)
+
+                    @test results.logabsdetjac ≈ vec(logabsdetjac.(b, xs))
+                    @test iresults.logabsdetjac ≈ vec(logabsdetjac.(ib, ys))
+                elseif D == 1
+                    @test y == ys[:, 1]
+                    # Comparing sizes instead of lengths ensures we catch errors s.t.
+                    # length(x) == 3 when size(x) == (1, 3).
+                    # Sizes
+                    @test size(logabsdetjac(b, xs)) == (size(xs, 2), )
+                    @test size(logabsdetjac(ib, ys)) == (size(xs, 2), )
+
+                    @test size(results.logabsdetjac) == (size(xs, 2), )
+                    @test size(iresults.logabsdetjac) == (size(ys, 2), )
+
+                    # Test all values
+                    @test logabsdetjac(b, xs) == vec(mapslices(z -> logabsdetjac(b, z), xs; dims = 1))
+                    @test logabsdetjac(ib, ys) == vec(mapslices(z -> logabsdetjac(ib, z), ys; dims = 1))
+                    @test results.logabsdetjac ≈ vec(mapslices(z -> logabsdetjac(b, z), xs; dims = 1))
+                    @test iresults.logabsdetjac ≈ vec(mapslices(z -> logabsdetjac(ib, z), ys; dims = 1))
+                else
+                    error("tests not implemented yet")
+                end
+            end
+        end
+
+        @testset "Composition" begin
+            @test_throws DimensionMismatch (Exp{1}() ∘ Log{0}())
         end
     end
 
@@ -245,7 +352,7 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD} end
         x = rand(d)
         y = td.transform(x)
 
-        b = Bijectors.composel(td.transform, Bijectors.Identity())
+        b = Bijectors.composel(td.transform, Bijectors.Identity{0}())
         ib = inv(b)
 
         @test forward(b, x) == forward(td.transform, x)
@@ -309,7 +416,7 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD} end
         x = rand(d)
         y = b(x)
 
-        sb1 = stack(b, b, inv(b), inv(b))             # <= tuple
+        sb1 = stack(b, b, inv(b), inv(b))             # <= Tuple
         res1 = forward(sb1, [x, x, y, y])
 
         @test sb1([x, x, y, y]) == res1.rv
@@ -327,7 +434,7 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD} end
         b = DistributionBijector(d)
         y = b(x)
         
-        sb1 = stack(b, b, inv(b), inv(b))             # <= tuple
+        sb1 = stack(b, b, inv(b), inv(b))             # <= Tuple
         res1 = forward(sb1, [x, x, y, y])
 
         @test sb1([x, x, y, y]) == res1.rv
@@ -347,7 +454,7 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD} end
         res = forward(sb, x)
         @test sb(x) == [exp(x[1]), log(x[2]), x[3] + 5.0]
         @test res.rv == [exp(x[1]), log(x[2]), x[3] + 5.0]
-        @test logabsdetjac(sb, x) == sum([logabsdetjac(sb.bs[i], x[sb.ranges[i]]) for i = 1:3])
+        @test logabsdetjac(sb, x) == sum([sum(logabsdetjac(sb.bs[i], x[sb.ranges[i]])) for i = 1:3])
         @test res.logabsdetjac == logabsdetjac(sb, x)
         
 
@@ -357,7 +464,7 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD} end
         res = forward(sb, x)
         @test sb(x) == [exp(x[1]), sb.bs[2](x[2:3])...]
         @test res.rv == [exp(x[1]), sb.bs[2](x[2:3])...]
-        @test logabsdetjac(sb, x) == sum([logabsdetjac(sb.bs[i], x[sb.ranges[i]]) for i = 1:2])
+        @test logabsdetjac(sb, x) == sum([sum(logabsdetjac(sb.bs[i], x[sb.ranges[i]])) for i = 1:2])
         @test res.logabsdetjac == logabsdetjac(sb, x)
 
         x = ones(4) ./ 4.0
@@ -405,8 +512,8 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD} end
             @test td isa Distribution{Multivariate, Continuous}
 
             # check that wrong ranges fails
-            sb = stack(ibs...)
-            td = transformed(d, sb)
+            @test_throws MethodError stack(ibs...)
+            sb = Stacked(ibs)
             x = rand(d)
             @test_throws AssertionError sb(x)
 
