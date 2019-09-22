@@ -2,7 +2,7 @@
 # https://github.com/FluxML/Flux.jl/blob/68ba6e4e2fa4b86e2fef8dc6d0a5d795428a6fac/src/layers/normalise.jl#L117-L206
 # License: https://github.com/FluxML/Flux.jl/blob/master/LICENSE.md
 
-mutable struct BatchNorm{T1,T2} <: Bijector
+mutable struct BatchNormFlow{T1,T2} <: Bijector
     β::T1
     logγ::T1
     μ  # moving mean
@@ -12,7 +12,7 @@ mutable struct BatchNorm{T1,T2} <: Bijector
     active::Bool # true when training
 end
 
-BatchNorm(dims::Int, container=Array; ϵ=1f-5, momentum=0.1f0) = BatchNorm(
+BatchNormFlow(dims::Int, container=Array; ϵ=1f-5, momentum=0.1f0) = BatchNormFlow(
     container(zeros(Float32, dims)),
     container(zeros(Float32, dims)),
     zeros(Float32, dims),
@@ -34,10 +34,10 @@ logabsdetjacob(
     t::T,
     x;
     σ²=reshape(t.σ², affinesize(x)...)
-) where {T<:BatchNorm} =  (sum(t.logγ - log.(σ² .+ t.ϵ) / 2)) .* typeof(Flux.data(x))(ones(Float32, size(x, 2))')
+) where {T<:BatchNormFlow} =  (sum(t.logγ - log.(σ² .+ t.ϵ) / 2)) .* typeof(Flux.data(x))(ones(Float32, size(x, 2))')
 
-function _transform(t::BatchNorm, x)
-     @assert size(x, ndims(x) - 1) == length(t.μ) "`BatchNorm` expected $(length(t.μ)) channels, got $(size(x, ndims(x) - 1))"
+function _transform(t::BatchNormFlow, x)
+     @assert size(x, ndims(x) - 1) == length(t.μ) "`BatchNormFlow` expected $(length(t.μ)) channels, got $(size(x, ndims(x) - 1))"
     as = affinesize(x)
     m = prod(size(x)[1:end-2]) * size(x)[end]
     γ = exp.(reshape(t.logγ, as...))
@@ -63,21 +63,21 @@ function _transform(t::BatchNorm, x)
     return (rv=γ .* x̂ .+ β, σ²=σ²)
 end
 
-(b::BatchNorm)(z) = _transform(b, z).rv
+(b::BatchNormFlow)(z) = _transform(b, z).rv
 
-function _forward(t::BatchNorm, x)
+function _forward(t::BatchNormFlow, x)
     rv, σ² = _transform(t, x)
     return (rv=rv, logabsdetjacob=logabsdetjacob(t, x; σ²=σ²))
 end
 
-forward(flow::BatchNorm, z) = _forward(flow, z)
+forward(flow::BatchNormFlow, z) = _forward(flow, z)
 
 # TODO: make this function take kw argument `σ²`
-logabsdetjacob(it::Inversed{T}, y) where {T<:BatchNorm} = (xsimilar = y; -logabsdetjacob(inv(it), xsimilar))
+logabsdetjacob(it::Inversed{T}, y) where {T<:BatchNormFlow} = (xsimilar = y; -logabsdetjacob(inv(it), xsimilar))
 
-function forward(it::Inversed{T}, y) where {T<:BatchNorm}
+function forward(it::Inversed{T}, y) where {T<:BatchNormFlow}
     t = inv(it)
-    @assert t.active == false "`forward(::Inversed{BatchNorm})` is only available in test mode but not in training mode."
+    @assert t.active == false "`forward(::Inversed{BatchNormFlow})` is only available in test mode but not in training mode."
     as = affinesize(y)
     γ = exp.(reshape(t.logγ, as...))
     β = reshape(t.β, as...)
@@ -89,10 +89,4 @@ function forward(it::Inversed{T}, y) where {T<:BatchNorm}
     return (rv=x, logabsdetjacob=logabsdetjacob(it, x))
 end
 
-(b::Inversed{<: BatchNorm})(z) = forward(b, z).rv
-
-# Flux support
-
-Flux.mapchildren(f, t::BatchNorm) = BatchNorm(f(t.β), f(t.logγ), f(t.μ), f(t.σ²), t.ϵ, t.momentum, t.active)
-Flux.children(t::BatchNorm) = (t.logγ, t.β, t.μ, t.σ², t.ϵ, t.momentum, t.active)
-Flux._testmode!(t::BatchNorm, test) = (t.active = !test)
+(b::Inversed{<: BatchNormFlow})(z) = forward(b, z).rv

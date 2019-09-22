@@ -4,14 +4,13 @@ using Random: seed!
 
 seed!(1)
 
-@testset "BatchNorm" begin
+@testset "BatchNormFlow" begin
     z = randn(2, 20)
-    flow = Bijectors.BatchNorm(2)
+    flow = Bijectors.BatchNormFlow(2)
+    flow.active=false
     forward_diff = log(abs(det(ForwardDiff.jacobian(t -> flow(t), z))))
     our_method = sum(forward(flow, z).logabsdetjacob)
-
-    flow.active=false
-    @test inv(flow)(flow(z)) ≈ z rtol=0.2
-    @test (inv(flow) ∘ flow)(z) ≈ z rtol=0.2
-    @test our_method ≈ forward_diff
+    @test inv(flow)(flow(z)) ≈ z
+    @test (inv(flow) ∘ flow)(z) ≈ z
+    @test our_method ≈ forward_diff rtol=1e-4
 end
