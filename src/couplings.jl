@@ -157,11 +157,11 @@ function logabsdetjac(cl::CouplingLayer{B}, x::AbstractVector) where {B}
     x_1, x_2, x_3 = partition(cl.mask, x)
     b = B(cl.θ(x_2))
 
-    return logabsdetjac(b, x_1)
+    # `B` might be 0-dim in which case it will treat `x_1` as a batch
+    # therefore we sum to ensure such a thing does not happen
+    return sum(logabsdetjac(b, x_1))
 end
 
 function logabsdetjac(cl::CouplingLayer{B}, x::AbstractMatrix) where {B}
     return vec(mapslices(z -> logabsdetjac(cl, z), x; dims = 1))
 end
-
-
