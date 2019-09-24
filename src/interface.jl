@@ -508,8 +508,9 @@ Shift(a::A) where {T, N, A<:AbstractArray{T, N}} = Shift{A, N}(a)
 
 inv(b::Shift) = Shift(-b.a)
 
+# FIXME: implement custom adjoint to ensure we don't get tracking
 logabsdetjac(b::Shift{<:Real, 0}, x::Real) = zero(eltype(x))
-logabsdetjac(b::Shift{<:Real, 0}, x::AbstractVector) = zeros(eltype(x), length(x))
+logabsdetjac(b::Shift{<:Real, 0}, x::AbstractVector{T}) where {T<:Real} = zeros(T, length(x))
 logabsdetjac(b::Shift{T, 1}, x::AbstractVector) where {T<:Union{Real, AbstractVector}} = zero(eltype(x))
 logabsdetjac(b::Shift{T, 1}, x::AbstractMatrix) where {T<:Union{Real, AbstractVector}} = zeros(eltype(x), size(x, 2))
 
@@ -527,11 +528,7 @@ Scale(a::A; dim::Val{D} = Val{N}()) where {T, D, N, A<:AbstractArray{T, N}} = Sc
 inv(b::Scale) = Scale(inv(b.a))
 inv(b::Scale{<:AbstractVector}) = Scale(inv.(b.a))
 
-# TODO: should this be implemented for batch-computation?
-# There's an ambiguity issue
-#      logabsdetjac(b::Scale{<: AbstractVector}, x::AbstractMatrix)
-# Is this a batch or is it simply a matrix we want to scale differently
-# in each component?
+# FIXME: implement custom adjoint to ensure we don't get tracking
 logabsdetjac(b::Scale{<:Real, 0}, x::Real) = log(abs(b.a))
 logabsdetjac(b::Scale{<:Real, 0}, x::AbstractVector) = log(abs(b.a)) .* ones(eltype(x), length(x))
 logabsdetjac(b::Scale{<:Real, 1}, x::AbstractVector) = log(abs(b.a)) * length(x)
