@@ -3,6 +3,7 @@ using Bijectors
 using Random
 using LinearAlgebra
 using ForwardDiff
+using Tracker
 
 using Bijectors: Log, Exp, Shift, Scale, Logit, SimplexBijector
 
@@ -225,6 +226,54 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD, 1} end
 
         @testset "Composition" begin
             @test_throws DimensionMismatch (Exp{1}() ∘ Log{0}())
+        end
+
+        @testset "Batch-computation with Tracker.jl" begin
+            @testset "Scale" begin
+                # 0-dim with `Real` parameter
+                b = Scale(param(2.0))
+                lj = logabsdetjac(b, 1.0)
+                Tracker.back!(lj, 1.0)
+                @test Tracker.extract_grad!(b.a) == 0.5
+
+                # 0-dim with `Real` parameter for batch-computation
+                lj = logabsdetjac(b, [1.0, 2.0, 3.0])
+                Tracker.back!(lj, [1.0, 1.0, 1.0])
+                @test Tracker.extract_grad!(b.a) == sum([0.5, 0.5, 0.5])
+
+
+                # 1-dim with `Vector` parameter
+                b = Scale(param([2.0, 3.0, 5.0]))
+                lj = logabsdetjac(b, [3.0, 4.0, 5.0])
+                Tracker.back!(lj)
+                @test Tracker.extract_grad!(b.a) == fill(sum(inv.(b.a)), 3)
+
+                lj = logabsdetjac(b, [3.0 4.0 5.0; 6.0 7.0 8.0])
+                Tracker.back!(lj, [1.0, 1.0, 1.0])
+                @test Tracker.extract_grad!(b.a) == fill(sum(inv.(b.a)), 3) .* 3
+            end
+
+            @testset "Shift" begin
+                b = Shift(param(1.0))
+                lj = logabsdetjac(b, 1.0)
+                Tracker.back!(lj, 1.0)
+                @test Tracker.extract_grad!(b.a) == 0.0
+
+                # 0-dim with `Real` parameter for batch-computation
+                lj = logabsdetjac(b, [1.0, 2.0, 3.0])
+                Tracker.back!(lj, [1.0, 1.0, 1.0])
+                @test Tracker.extract_grad!(b.a) == 0.0
+
+                # 1-dim with `Vector` parameter
+                b = Shift(param([2.0, 3.0, 5.0]))
+                lj = logabsdetjac(b, [3.0, 4.0, 5.0])
+                Tracker.back!(lj)
+                @test Tracker.extract_grad!(b.a) == zeros(3)
+
+                lj = logabsdetjac(b, [3.0 4.0 5.0; 6.0 7.0 8.0])
+                Tracker.back!(lj, [1.0, 1.0, 1.0])
+                @test Tracker.extract_grad!(b.a) == zeros(3)
+            end
         end
     end
 
