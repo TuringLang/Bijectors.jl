@@ -1,6 +1,7 @@
 using Distributions, Bijectors
 using ForwardDiff
 using Tracker
+using Tracker: TrackedReal, TrackedArray, track, @grad, data
 
 import Base: inv, ∘
 
@@ -509,10 +510,26 @@ Shift(a::A) where {T, N, A<:AbstractArray{T, N}} = Shift{A, N}(a)
 inv(b::Shift) = Shift(-b.a)
 
 # FIXME: implement custom adjoint to ensure we don't get tracking
-logabsdetjac(b::Shift{<:Real, 0}, x::Real) = zero(eltype(x))
-logabsdetjac(b::Shift{<:Real, 0}, x::AbstractVector{T}) where {T<:Real} = zeros(T, length(x))
-logabsdetjac(b::Shift{T, 1}, x::AbstractVector) where {T<:Union{Real, AbstractVector}} = zero(eltype(x))
-logabsdetjac(b::Shift{T, 1}, x::AbstractMatrix) where {T<:Union{Real, AbstractVector}} = zeros(eltype(x), size(x, 2))
+logabsdetjac(b::Shift{T, N}, x) where {T, N} = _logabsdetjac_shift(b.a, x, Val{N})
+
+_logabsdetjac_shift(a::Real, x::Real, ::Type{Val{0}}) = zero(eltype(x))
+_logabsdetjac_shift(a::Real, x::AbstractVector{T}, ::Type{Val{0}}) where {T<:Real} = zeros(T, length(x))
+_logabsdetjac_shift(a::T1, x::AbstractVector{T2}, ::Type{Val{1}}) where {T1<:Union{Real, AbstractVector}, T2<:Real} = zero(T2)
+_logabsdetjac_shift(a::T1, x::AbstractMatrix{T2}, ::Type{Val{1}}) where {T1<:Union{Real, AbstractVector}, T2<:Real} = zeros(T2, size(x, 2))
+
+function _logabsdetjac_shift(a::TrackedReal, x::Real, ::Type{Val{0}})
+    return Tracker.param(_logabsdetjac_shift(data(a), data(x), Val{0}))
+end
+function _logabsdetjac_shift(a::TrackedReal, x::AbstractVector{T}, ::Type{Val{0}}) where {T<:Real}
+    return Tracker.param(_logabsdetjac_shift(data(a), data(x), Val{0}))
+end
+function _logabsdetjac_shift(a::T1, x::AbstractVector{T2}, ::Type{Val{1}}) where {T1<:Union{TrackedReal, TrackedVector}, T2<:Real}
+    return Tracker.param(_logabsdetjac_shift(data(a), data(x), Val{1}))
+end
+function _logabsdetjac_shift(a::T1, x::AbstractMatrix{T2}, ::Type{Val{1}}) where {T1<:Union{TrackedReal, TrackedVector}, T2<:Real}
+    return Tracker.param(_logabsdetjac_shift(data(a), data(x), Val{1}))
+end
+
 
 struct Scale{T, N} <: Bijector{N}
     a::T
@@ -528,13 +545,62 @@ Scale(a::A; dim::Val{D} = Val{N}()) where {T, D, N, A<:AbstractArray{T, N}} = Sc
 inv(b::Scale) = Scale(inv(b.a))
 inv(b::Scale{<:AbstractVector}) = Scale(inv.(b.a))
 
-# FIXME: implement custom adjoint to ensure we don't get tracking
-logabsdetjac(b::Scale{<:Real, 0}, x::Real) = log(abs(b.a))
-logabsdetjac(b::Scale{<:Real, 0}, x::AbstractVector) = log(abs(b.a)) .* ones(eltype(x), length(x))
-logabsdetjac(b::Scale{<:Real, 1}, x::AbstractVector) = log(abs(b.a)) * length(x)
-logabsdetjac(b::Scale{<:Real, 1}, x::AbstractMatrix) = log(abs(b.a)) * length(x) * ones(eltype(x), size(x, 2))
-logabsdetjac(b::Scale{<:AbstractVector, 1}, x::AbstractVector) = sum(log.(abs.(b.a)))
-logabsdetjac(b::Scale{<:AbstractVector, 1}, x::AbstractMatrix) = sum(log.(abs.(b.a))) * ones(eltype(x), size(x, 2))
+# We're going to implement custom adjoint for this
+logabsdetjac(b::Scale{T, N}, x) where {T, N} = _logabsdetjac_scale(b.a, x, Val{N})
+
+_logabsdetjac_scale(a::Real, x::Real, ::Type{Val{0}}) = log(abs(a))
+_logabsdetjac_scale(a::Real, x::AbstractVector, ::Type{Val{0}}) = fill(log(abs(a)), length(x))
+_logabsdetjac_scale(a::Real, x::AbstractVector, ::Type{Val{1}}) = log(abs(a)) * length(x)
+_logabsdetjac_scale(a::Real, x::AbstractMatrix, ::Type{Val{1}}) = fill(log(abs(a)) * size(x, 1), size(x, 2))
+_logabsdetjac_scale(a::AbstractVector, x::AbstractVector, ::Type{Val{1}}) = sum(log.(abs.(a)))
+_logabsdetjac_scale(a::AbstractVector, x::AbstractMatrix, ::Type{Val{1}}) = fill(sum(log.(abs.(a))), size(x, 2))
+
+# adjoints for 0-dim and 1-dim `Scale` using `Real`
+function _logabsdetjac_scale(a::TrackedReal, x::Real, ::Type{Val{0}})
+    return track(_logabsdetjac_scale, a, data(x), Val{0})
+end
+@grad function _logabsdetjac_scale(a::Real, x::Real, ::Type{Val{0}})
+    return _logabsdetjac_scale(data(a), data(x), Val{0}), Δ -> (inv(data(a)) .* Δ, nothing, nothing)
+end
+
+# need to treat `AbstractVector` and `AbstractMatrix` separately due to ambiguity errors
+function _logabsdetjac_scale(a::TrackedReal, x::AbstractVector, ::Type{Val{0}})
+    return track(_logabsdetjac_scale, a, data(x), Val{0})
+end
+@grad function _logabsdetjac_scale(a::Real, x::AbstractVector, ::Type{Val{0}})
+    da = data(a)
+    J = fill(inv.(da), length(x))
+    return _logabsdetjac_scale(da, data(x), Val{0}), Δ -> (transpose(J) * Δ, nothing, nothing)
+end
+
+function _logabsdetjac_scale(a::TrackedReal, x::AbstractMatrix, ::Type{Val{0}})
+    return track(_logabsdetjac_scale, a, data(x), Val{0})
+end
+@grad function _logabsdetjac_scale(a::Real, x::AbstractMatrix, ::Type{Val{0}})
+    da = data(a)
+    J = fill(size(x, 1) / da, size(x, 2))
+    return _logabsdetjac_scale(da, data(x), Val{0}), Δ -> (transpose(J) * Δ, nothing, nothing)
+end
+
+# adjoints for 1-dim and 2-dim `Scale` using `AbstractVector`
+function _logabsdetjac_scale(a::TrackedVector, x::AbstractVector, ::Type{Val{1}})
+    return track(_logabsdetjac_scale, a, data(x), Val{1})
+end
+@grad function _logabsdetjac_scale(a::TrackedVector, x::AbstractVector, ::Type{Val{1}})
+    da = data(a)
+    J = sum(inv.(da))
+    return _logabsdetjac_scale(da, data(x), Val{1}), Δ -> (transpose(J) * Δ, nothing, nothing)
+end
+function _logabsdetjac_scale(a::TrackedVector, x::AbstractMatrix, ::Type{Val{1}})
+    return track(_logabsdetjac_scale, a, data(x), Val{1})
+end
+
+@grad function _logabsdetjac_scale(a::TrackedVector, x::AbstractMatrix, ::Type{Val{1}})
+    da = data(a)
+    J = sum(inv.(da)) .* ones(size(x, 2))
+    return _logabsdetjac_scale(da, data(x), Val{1}), Δ -> (transpose(J) * Δ, nothing, nothing)
+end
+
 
 ####################
 # Simplex bijector #
