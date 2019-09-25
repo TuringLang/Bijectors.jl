@@ -134,7 +134,7 @@ function (cl::CouplingLayer{B})(x::AbstractVector) where {B}
 end
 # TODO: drop when we have dimensionality
 function (cl::CouplingLayer{B})(x::AbstractMatrix) where {B}
-    return mapslices(z -> cl(z), x; dims = 1)
+    return hcat([cl(x[:, i]) for i = 1:size(x, 2)]...)
 end
 
 
@@ -150,7 +150,7 @@ function (icl::Inversed{<:CouplingLayer{B}})(y::AbstractVector) where {B}
 end
 # TODO: drop when we have dimensionality
 function (icl::Inversed{<:CouplingLayer{B}})(y::AbstractMatrix) where {B}
-    return mapslices(z -> icl(z), y; dims = 1)
+    return hcat([icl(y[:, i]) for i = 1:size(y, 2)]...)
 end
 
 function logabsdetjac(cl::CouplingLayer{B}, x::AbstractVector) where {B}
@@ -163,5 +163,13 @@ function logabsdetjac(cl::CouplingLayer{B}, x::AbstractVector) where {B}
 end
 
 function logabsdetjac(cl::CouplingLayer{B}, x::AbstractMatrix) where {B}
-    return vec(mapslices(z -> logabsdetjac(cl, z), x; dims = 1))
+    r = [logabsdetjac(cl, x[:, i]) for i = 1:size(x, 2)]
+
+    # FIXME: this really needs to be handled in a better way
+    # We need to return a `TrackedArray`
+    if Tracker.istracked(r[1])
+        return Tracker.collect(r)
+    else
+        return r
+    end
 end
