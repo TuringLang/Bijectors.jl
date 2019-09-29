@@ -500,8 +500,8 @@ struct Shift{T, N} <: Bijector{N}
     a::T
 end
 
-Shift(a::T) where {T<:Real} = Shift{T, 0}(a)
-Shift(a::A) where {T, N, A<:AbstractArray{T, N}} = Shift{A, N}(a)
+Shift(a::T; dim::Type{Val{D}} = Val{0}) where {T<:Real, D} = Shift{T, D}(a)
+Shift(a::A; dim::Type{Val{D}} = Val{N}) where {T, D, N, A<:AbstractArray{T, N}} = Shift{A, N}(a)
 
 (b::Shift)(x) = b.a + x
 (b::Shift{<:Real})(x::AbstractArray) = b.a .+ x
@@ -535,15 +535,16 @@ struct Scale{T, N} <: Bijector{N}
     a::T
 end
 
-Scale(a::T; dim::Val{D} = Val{0}()) where {T<:Real, D} = Scale{T, D}(a)
-Scale(a::A; dim::Val{D} = Val{N}()) where {T, D, N, A<:AbstractArray{T, N}} = Scale{A, D}(a)
+Scale(a::T; dim::Type{Val{D}} = Val{0}) where {T<:Real, D} = Scale{T, D}(a)
+Scale(a::A; dim::Type{Val{D}} = Val{N}) where {T, D, N, A<:AbstractArray{T, N}} = Scale{A, D}(a)
 
 (b::Scale)(x) = b.a .* x
 (b::Scale{<:Real})(x::AbstractArray) = b.a .* x
+(b::Scale{<:AbstractMatrix})(x::AbstractArray) = b.a * x
 (b::Scale{<:AbstractVector{<:Real}, 2})(x::AbstractMatrix{<:Real}) = b.a .* x
 
-inv(b::Scale) = Scale(inv(b.a))
-inv(b::Scale{<:AbstractVector}) = Scale(inv.(b.a))
+inv(b::Scale{T, D}) where {T, D} = Scale(inv(b.a); dim = Val{D})
+inv(b::Scale{<:AbstractVector, D}) where {D} = Scale(inv.(b.a); dim = Val{D})
 
 # We're going to implement custom adjoint for this
 logabsdetjac(b::Scale{T, N}, x) where {T, N} = _logabsdetjac_scale(b.a, x, Val{N})
@@ -554,6 +555,8 @@ _logabsdetjac_scale(a::Real, x::AbstractVector, ::Type{Val{1}}) = log(abs(a)) * 
 _logabsdetjac_scale(a::Real, x::AbstractMatrix, ::Type{Val{1}}) = fill(log(abs(a)) * size(x, 1), size(x, 2))
 _logabsdetjac_scale(a::AbstractVector, x::AbstractVector, ::Type{Val{1}}) = sum(log.(abs.(a)))
 _logabsdetjac_scale(a::AbstractVector, x::AbstractMatrix, ::Type{Val{1}}) = fill(sum(log.(abs.(a))), size(x, 2))
+_logabsdetjac_scale(a::AbstractMatrix, x::AbstractVector, ::Type{Val{1}}) = log(abs(det(a)))
+_logabsdetjac_scale(a::AbstractMatrix, x::AbstractMatrix{T}, ::Type{Val{1}}) where {T} = log(abs(det(a))) * ones(T, size(x, 2))
 
 # adjoints for 0-dim and 1-dim `Scale` using `Real`
 function _logabsdetjac_scale(a::TrackedReal, x::Real, ::Type{Val{0}})
@@ -591,15 +594,23 @@ end
     J = sum(inv.(da))
     return _logabsdetjac_scale(da, data(x), Val{1}), Δ -> (transpose(J) * Δ, nothing, nothing)
 end
+
 function _logabsdetjac_scale(a::TrackedVector, x::AbstractMatrix, ::Type{Val{1}})
     return track(_logabsdetjac_scale, a, data(x), Val{1})
 end
-
 @grad function _logabsdetjac_scale(a::TrackedVector, x::AbstractMatrix, ::Type{Val{1}})
     da = data(a)
     J = sum(inv.(da)) .* ones(size(x, 2))
     return _logabsdetjac_scale(da, data(x), Val{1}), Δ -> (transpose(J) * Δ, nothing, nothing)
 end
+
+# TODO: implement analytical gradient for scaling a vector using a matrix
+# function _logabsdetjac_scale(a::TrackedMatrix, x::AbstractVector, ::Type{Val{1}})
+#     track(_logabsdetjac_scale, a, data(x), Val{1})
+# end
+# @grad function _logabsdetjac_scale(a::TrackedMatrix, x::AbstractVector, ::Type{Val{1}})
+#     throw
+# end
 
 
 ####################
@@ -859,6 +870,12 @@ function logpdf(td::UnivariateTransformed, y::Real)
 end
 
 # TODO: implement more efficiently for flows in the case of `Matrix`
+function logpdf(td::MvTransformed, y::AbstractMatrix{<:Real})
+    # batch-implementation for multivariate
+    res = forward(inv(td.transform), y)
+    return logpdf(td.dist, res.rv) + res.logabsdetjac
+end
+
 function _logpdf(td::MvTransformed, y::AbstractVector{<:Real})
     res = forward(inv(td.transform), y)
     return logpdf(td.dist, res.rv) + res.logabsdetjac
