@@ -507,7 +507,7 @@ Shift(a::A; dim::Type{Val{D}} = Val{N}) where {T, D, N, A<:AbstractArray{T, N}} 
 (b::Shift{<:Real})(x::AbstractArray) = b.a .+ x
 (b::Shift{<:AbstractVector})(x::AbstractMatrix) = b.a .+ x
 
-inv(b::Shift) = Shift(-b.a)
+inv(b::Shift{T, N}) where {T, N} = Shift{T, N}(-b.a)
 
 # FIXME: implement custom adjoint to ensure we don't get tracking
 logabsdetjac(b::Shift{T, N}, x) where {T, N} = _logabsdetjac_shift(b.a, x, Val{N})
