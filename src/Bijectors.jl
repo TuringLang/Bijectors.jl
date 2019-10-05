@@ -16,7 +16,7 @@ export  TransformDistribution,
         invlink,
         logpdf_with_trans,
         link_jacobian,
-        invlink_jacobian
+        invlink_jacobian,
         transform,
         forward,
         logabsdetjac,
