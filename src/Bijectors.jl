@@ -4,7 +4,6 @@ using Reexport, Requires
 @reexport using Distributions
 using StatsFuns
 using LinearAlgebra
-using MappedArrays
 using Roots
 
 export  TransformDistribution,
@@ -389,7 +388,7 @@ function logpdf_with_trans(
 )
     T = eltype(x)
     ϵ = _eps(T)
-    lp = logpdf(d, x .+ ϵ)
+    lp = logpdf(d, mappedarray(x -> x + ϵ, x))
     if transform
         K = length(x)
 
