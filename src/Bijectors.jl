@@ -4,6 +4,7 @@ using Reexport, Requires
 @reexport using Distributions
 using StatsFuns
 using LinearAlgebra
+using MappedArrays
 using Roots
 
 export  TransformDistribution,
