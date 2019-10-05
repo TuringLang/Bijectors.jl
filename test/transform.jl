@@ -247,5 +247,7 @@ end
         @test @aeq jacobian(g2, y) Bijectors.invlink_jacobian(dist, y, Val{false})
         @test @aeq Bijectors.link_jacobian(dist, x, Val{false}) * Bijectors.invlink_jacobian(dist, y, Val{false}) I
     end
-    test_link_and_invlink()
+    for i in 1:4
+        test_link_and_invlink()
+    end
 end
