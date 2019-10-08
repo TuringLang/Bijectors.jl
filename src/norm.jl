@@ -2,7 +2,20 @@
 # https://github.com/FluxML/Flux.jl/blob/68ba6e4e2fa4b86e2fef8dc6d0a5d795428a6fac/src/layers/normalise.jl#L117-L206
 # License: https://github.com/FluxML/Flux.jl/blob/master/LICENSE.md
 
-mutable struct BatchNormFlow{T1,T2} <: Bijector
+"""
+InvertibleBatchNorm(β, logγ, μ, σ², ϵ::Float32, momentum::Float32, active::Bool)
+
+β, logγ - learned parameters
+
+`InvertibleBatchNorm` computes the mean and variance for each each `NxD` slice and
+shifts them to have a new mean and variance (corresponding to the learnable,
+per-channel `bias` and `scale` parameters). 
+
+See [Batch Normalization: Accelerating Deep Network Training by Reducing
+Internal Covariate Shift](https://arxiv.org/pdf/1502.03167.pdf).
+
+"""
+mutable struct InvertibleBatchNorm{T1,T2} <: Bijector
     β::T1
     logγ::T1
     μ  # moving mean
@@ -12,11 +25,11 @@ mutable struct BatchNormFlow{T1,T2} <: Bijector
     active::Bool # true when training
 end
 
-BatchNormFlow(dims::Int, container=Array; ϵ=1f-5, momentum=0.1f0) = BatchNormFlow(
-    container(zeros(Float32, dims)),
-    container(zeros(Float32, dims)),
-    zeros(Float32, dims),
-    ones(Float32, dims),
+InvertibleBatchNorm(dims::Int, container=Array; ϵ=1f-5, momentum=0.1f0) = InvertibleBatchNorm(
+    container(zeros(Float32, dims, 1)),
+    container(zeros(Float32, dims, 1)),
+    zeros(Float32, dims, 1),
+    ones(Float32, dims, 1),
     ϵ,
     momentum,
     true
@@ -24,22 +37,23 @@ BatchNormFlow(dims::Int, container=Array; ϵ=1f-5, momentum=0.1f0) = BatchNormFl
 
 function affinesize(x)
     dims = length(size(x))
-    channels = size(x, dims-1)
+    channels = size(x, dims)
     affinesize = ones(Int, dims)
     affinesize[end-1] = channels
     return affinesize
 end
 
-logabsdetjacob(
+logabsdetjac(
     t::T,
-    x;
-    σ²=reshape(t.σ², affinesize(x)...)
-) where {T<:BatchNormFlow} =  (sum(t.logγ - log.(σ² .+ t.ϵ) / 2)) .* typeof(Flux.data(x))(ones(Float32, size(x, 2))')
+    x
+) where{T<:InvertibleBatchNorm} = forward(t, x).logabsdetjac
 
-function _transform(t::BatchNormFlow, x)
-     @assert size(x, ndims(x) - 1) == length(t.μ) "`BatchNormFlow` expected $(length(t.μ)) channels, got $(size(x, ndims(x) - 1))"
+function _compute_μ_σ²(t::InvertibleBatchNorm, x)
+    @assert size(x, ndims(x)) == 
+    length(t.μ) "`InvertibleBatchNorm` expected $(length(t.μ)) channels, got $(
+        size(x,ndims(x)))"
     as = affinesize(x)
-    m = prod(size(x)[1:end-2]) * size(x)[end]
+    m = size(x)[1]
     γ = exp.(reshape(t.logγ, as...))
     β = reshape(t.β, as...)
     if !t.active
@@ -48,45 +62,53 @@ function _transform(t::BatchNormFlow, x)
         ϵ = t.ϵ
     else
         Tx = eltype(x)
-        dims = length(size(x))
-        axes = [1:dims-2; dims] # axes to reduce along (all but channels axis)
-        μ = mean(x, dims=axes)
-        σ² = sum((x .- μ) .^ 2, dims=axes) ./ m
-        ϵ = Flux.data(convert(Tx, t.ϵ))
-        # Update moving mean/std
-        mtm = Flux.data(convert(Tx, t.momentum))
-        t.μ = (1 - mtm) .* t.μ .+ mtm .* reshape(Flux.data(μ), :)
-        t.σ² = (1 - mtm) .* t.σ² .+ (mtm * m / (m - 1)) .* reshape(Flux.data(σ²), :)
+        axes = 1
+        μ = mean(x, dims=axes)'
+        σ² = sum((x .- μ') .^ 2, dims=axes)' ./ m
     end
-
-    x̂ = (x .- μ) ./ sqrt.(σ² .+ ϵ)
-    return (rv=γ .* x̂ .+ β, σ²=σ²)
+    return μ, σ²
 end
 
-(b::BatchNormFlow)(z) = _transform(b, z).rv
+function forward(t::InvertibleBatchNorm, x)
+    μ, σ² = _compute_μ_σ²(t, x)
+    as = affinesize(x)
+    m = size(x)[1]
+    γ = exp.(reshape(t.logγ, as...))
+    β = reshape(t.β, as...)
+    Tx = eltype(x)
+    if t.active
+        ϵ = convert(Tracker.data(Tx), t.ϵ)
+        # Update moving mean/std
+        mtm = convert(Tracker.data(Tx), t.momentum)
+        t.μ = (1 - mtm) .* t.μ .+ mtm .* reshape(Tracker.data(μ), :)
+        t.σ² = ((1 - mtm) .* t.σ² .+ (mtm * m / (m - 1)) 
+                .* reshape(Tracker.data(σ²), :))
+    end
+    x̂ = (x .- μ') ./ sqrt.(σ² .+ t.ϵ)'
+    
+    logabsdetjac = ((sum(t.logγ - log.(σ² .+ t.ϵ) / 2))
+                    .* typeof(Tracker.data(x))(ones(Float32, size(x))))
 
-function _forward(t::BatchNormFlow, x)
-    rv, σ² = _transform(t, x)
-    return (rv=rv, logabsdetjacob=logabsdetjacob(t, x; σ²=σ²))
+    return (rv=γ' .* x̂ .+ β', logabsdetjac=logabsdetjac)
 end
 
-forward(flow::BatchNormFlow, z) = _forward(flow, z)
+(b::InvertibleBatchNorm)(z) = forward(b, z).rv
 
-# TODO: make this function take kw argument `σ²`
-logabsdetjacob(it::Inversed{T}, y) where {T<:BatchNormFlow} = (xsimilar = y; -logabsdetjacob(inv(it), xsimilar))
-
-function forward(it::Inversed{T}, y) where {T<:BatchNormFlow}
+function forward(it::Inversed{T}, y) where {T<:InvertibleBatchNorm}
     t = inv(it)
-    @assert t.active == false "`forward(::Inversed{BatchNormFlow})` is only available in test mode but not in training mode."
+    @assert t.active ==
+     false "`forward(::Inversed{InvertibleBatchNorm})` is only available in test mode but not in 
+     training mode."
     as = affinesize(y)
     γ = exp.(reshape(t.logγ, as...))
     β = reshape(t.β, as...)
     μ = reshape(t.μ, as...)
     σ² = reshape(t.σ², as...)
 
-    ŷ = (y .- β) ./ γ
-    x = ŷ .* sqrt.(σ² .+ t.ϵ) .+ μ
-    return (rv=x, logabsdetjacob=logabsdetjacob(it, x))
+    ŷ = (y .- β') ./ γ'
+    x = ŷ .* sqrt.(σ²' .+ t.ϵ) .+ μ'
+
+    return (rv=x, logabsdetjac=-logabsdetjac(t, x))
 end
 
-(b::Inversed{<: BatchNormFlow})(z) = forward(b, z).rv
+(b::Inversed{<: InvertibleBatchNorm})(z) = forward(b, z).rv

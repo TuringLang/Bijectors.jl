@@ -34,7 +34,7 @@ export  TransformDistribution,
         logpdf_forward,
         PlanarLayer,
         RadialLayer,
-        BatchNormFlow
+        InvertibleBatchNorm
 
 const DEBUG = Bool(parse(Int, get(ENV, "DEBUG_BIJECTORS", "0")))
 
