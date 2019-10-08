@@ -14,12 +14,12 @@ seed!(1)
 
     @test_throws AssertionError forward(flow, randn(2,10))
     
-    @test logabsdetjac(inv(flow), flow(x)) ≈ - logabsdetjac(flow, x)
+    @test logabsdetjac(inv(flow), flow(z)) ≈ - logabsdetjac(flow, z)
 
     y = flow(z)
-    @test_broken log(abs(det(ForwardDiff.jacobian(flow, z)))) ≈
+    @test log(abs(det(ForwardDiff.jacobian(flow, z)))) ≈
      sum(logabsdetjac(flow, z)) rtol=1e-4 # fails return double
-    @test_broken log(abs(det(ForwardDiff.jacobian(inv(flow), y)))) ≈
+    @test log(abs(det(ForwardDiff.jacobian(inv(flow), y)))) ≈
      sum(logabsdetjac(inv(flow), y)) rtol=1e-4 # fails return double
 
     

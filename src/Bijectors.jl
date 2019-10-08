@@ -449,6 +449,6 @@ include("interface.jl")
 
 include("norm_flows.jl")
 
-include("norm.jl")
+include("batch_norm.jl")
 
 end # module

@@ -15,13 +15,13 @@ See [Batch Normalization: Accelerating Deep Network Training by Reducing
 Internal Covariate Shift](https://arxiv.org/pdf/1502.03167.pdf).
 
 """
-mutable struct InvertibleBatchNorm{T1,T2} <: Bijector
+mutable struct InvertibleBatchNorm{T1,T2,T3} <: Bijector
     β::T1
     logγ::T1
-    μ  # moving mean
-    σ² # moving st
-    ϵ::T2
-    momentum::T2
+    μ::T2  # moving mean
+    σ²::T2 # moving st
+    ϵ::T3
+    momentum::T3
     active::Bool # true when training
 end
 
@@ -87,7 +87,7 @@ function forward(t::InvertibleBatchNorm, x)
     x̂ = (x .- μ') ./ sqrt.(σ² .+ t.ϵ)'
     
     logabsdetjac = ((sum(t.logγ - log.(σ² .+ t.ϵ) / 2))
-                    .* typeof(Tracker.data(x))(ones(Float32, size(x))))
+                    .* typeof(Tracker.data(x))(ones(Float32, size(x, 1))'))'
 
     return (rv=γ' .* x̂ .+ β', logabsdetjac=logabsdetjac)
 end
