@@ -695,7 +695,7 @@ bijector_bounded(d, a=minimum(d), b=maximum(d)) = Logit(a, b)
 bijector_lowerbounded(d, a=minimum(d)) = Log() ∘ Shift(-a)
 bijector_upperbounded(d, b=maximum(d)) = Log() ∘ Shift(b) ∘ Scale(- one(typeof(b)))
 
-# FIXME: (TOR) Can we make this type-stable?
+# FIXME: Can we make this type-stable?
 # Can also make a `TruncatedBijector`
 # which has the same transform as the `link` function.
 # E.g. (b::Truncated)(x) = link(b.d, x) or smth
