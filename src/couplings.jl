@@ -122,6 +122,17 @@ function CouplingLayer(cl::CouplingLayer{B}, mask::PartitionMask) where {B}
     return CouplingLayer(B, mask, cl.θ)
 end
 
+coupling(cl::CouplingLayer{B}) where {B} = B
+function couple(cl::CouplingLayer{B}, x::AbstractVector) where {B}
+    # partition vector using `cl.mask::PartitionMask`
+    x_1, x_2, x_3 = partition(cl.mask, x)
+
+    # construct bijector `B` using θ(x₂)
+    b = B(cl.θ(x_2))
+
+    return b
+end
+
 function (cl::CouplingLayer{B})(x::AbstractVector) where {B}
     # partition vector using `cl.mask::PartitionMask`
     x_1, x_2, x_3 = partition(cl.mask, x)
