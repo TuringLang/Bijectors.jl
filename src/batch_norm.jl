@@ -3,7 +3,7 @@
 # License: https://github.com/FluxML/Flux.jl/blob/master/LICENSE.md
 
 """
-InvertibleBatchNorm(β, logγ, μ, σ², ϵ::Float32, momentum::Float32, active::Bool)
+InvertibleBatchNorm(β, logγ, μ, σ², ϵ::AbstractFloat, momentum::AbstractFloat, active::Bool)
 
 β, logγ - learned parameters
 
@@ -25,15 +25,19 @@ mutable struct InvertibleBatchNorm{T1,T2,T3} <: Bijector
     active::Bool # true when training
 end
 
-InvertibleBatchNorm(dims::Int, container=Array; ϵ=1f-5, momentum=0.1f0) = InvertibleBatchNorm(
-    container(zeros(Float32, dims, 1)),
-    container(zeros(Float32, dims, 1)),
-    zeros(Float32, dims, 1),
-    ones(Float32, dims, 1),
-    ϵ,
-    momentum,
-    true
-)
+InvertibleBatchNorm(dims::Int,
+                    container=Array; 
+                    ϵ::AbstractFloat=1f-5,
+                    momentum::AbstractFloat=0.1f0) = (
+                    InvertibleBatchNorm(
+                            container(zeros(dims, 1)),
+                            container(zeros(dims, 1)),
+                            zeros(dims, 1),
+                            ones(dims, 1),
+                            ϵ,
+                            momentum,
+                            true
+                    ))
 
 function affinesize(x)
     dims = length(size(x))
@@ -97,8 +101,8 @@ end
 function forward(it::Inversed{T}, y) where {T<:InvertibleBatchNorm}
     t = inv(it)
     @assert t.active ==
-     false "`forward(::Inversed{InvertibleBatchNorm})` is only available in test mode but not in 
-     training mode."
+     false "`forward(::Inversed{InvertibleBatchNorm})` is only available in test mode 
+     but not in training mode."
     as = affinesize(y)
     γ = exp.(reshape(t.logγ, as...))
     β = reshape(t.β, as...)

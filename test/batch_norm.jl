@@ -20,7 +20,7 @@ seed!(1)
     @test log(abs(det(ForwardDiff.jacobian(flow, z)))) ≈
      sum(logabsdetjac(flow, z)) rtol=1e-4 # fails return double
     @test log(abs(det(ForwardDiff.jacobian(inv(flow), y)))) ≈
-     sum(logabsdetjac(inv(flow), y)) rtol=1e-4 # fails return double
+     sum(logabsdetjac(inv(flow), y)) # fails return double
 
     
 end
