@@ -8,11 +8,43 @@ This is used to partition and recombine a vector into 3 disjoint "subvectors".
 Implements
 - `partition(m::PartitionMask, x)`: partitions `x` into 3 disjoint "subvectors"
 - `combine(m::PartitionMask, x_1, x_2, x_3)`: combines 3 disjoint vectors into a single one
+
+Note that `PartitionMask` is _not_ a `Bijector`. It is indeed a bijection, but
+does not follow the `Bijector` interface.
+
+Its main use is in `CouplingLayer` where we want to partition the input into 3 parts,
+one part to transform, one part to map into the parameter-space of the transform applied
+to the first part, and the last part of the vector is not used for anything.
+
+# Examples
+```julia-repl
+julia> m = PartitionMask(3, [1], [2]) # <= assumes input-length 3
+PartitionMask{SparseArrays.SparseMatrixCSC{Float64,Int64}}(
+  [1, 1]  =  1.0,
+  [2, 1]  =  1.0,
+  [3, 1]  =  1.0)
+
+julia> # Partition into 3 parts; the last part is inferred to be indices `[3, ]` from
+       # the fact that `[1]` and `[2]` does not make up all indices in `1:3`.
+       x1, x2, x3 = partition(m, [1., 2., 3.])
+([1.0], [2.0], [3.0])
+
+julia> # Recombines the partitions into a vector
+       combine(m, x1, x2, x3)
+3-element Array{Float64,1}:
+ 1.0
+ 2.0
+ 3.0
+```
+
 """
 struct PartitionMask{A}
     A_1::A
     A_2::A
     A_3::A
+
+    # Only make it possible to construct using matrices
+    PartitionMask(A_1::A, A_2::A, A_3::A) where {A <: AbstractMatrix{<:Real}} = new{A}(A_1, A_2, A_3)
 end
 
 function PartitionMask(
@@ -43,16 +75,22 @@ end
 PartitionMask(
     n::Int,
     indices_1::AbstractVector{Int},
+    indices_2::AbstractVector{Int}
+) = PartitionMask(n, indices_1, indices_2, nothing)
+
+PartitionMask(
+    n::Int,
+    indices_1::AbstractVector{Int},
     indices_2::AbstractVector{Int},
     indices_3::Nothing
-) = PartitionMask(n, indices_1, indices_2, Int[])
+) = PartitionMask(n, indices_1, indices_2, [i for i in 1:n if i ∉ (indices_1 ∪ indices_2)])
 
 PartitionMask(
     n::Int,
     indices_1::AbstractVector{Int},
     indices_2::Nothing,
     indices_3::AbstractVector{Int}
-) = PartitionMask(n, indices_1, Int[], indices_3)
+) = PartitionMask(n, indices_1, [i for i in 1:n if i ∉ (indices_1 ∪ indices_3)], indices_3)
 
 """
     PartitionMask(n::Int, indices)
@@ -104,10 +142,29 @@ Partitions `x` into 3 disjoint subvectors.
 
 Implements a coupling-layer as defined in [1].
 
+# Examples
+```julia-repl
+julia> m = PartitionMask(3, [1], [2]) # <= going to use x[2] to parameterize transform of x[1]
+PartitionMask{SparseArrays.SparseMatrixCSC{Float64,Int64}}(
+  [1, 1]  =  1.0, 
+  [2, 1]  =  1.0, 
+  [3, 1]  =  1.0)
+
+julia> cl = CouplingLayer(Shift, m, identity) # <= will do `y[1:1] = x[1:1] + x[2:2]`;
+
+julia> x = [1., 2., 3.];
+
+julia> cl(x)
+3-element Array{Float64,1}:
+ 3.0
+ 2.0
+ 3.0
+```
+
 # References
 [1] Kobyzev, I., Prince, S., & Brubaker, M. A., Normalizing flows: introduction and ideas, CoRR, (),  (2019). 
 """
-struct CouplingLayer{B, M, F} <: Bijector{1} where {B <: ZeroOrOneDimBijector, M <: PartitionMask, F}
+struct CouplingLayer{B, M, F} <: Bijector{1} where {B, M <: PartitionMask, F}
     mask::M
     θ::F
 end
@@ -122,7 +179,10 @@ function CouplingLayer(cl::CouplingLayer{B}, mask::PartitionMask) where {B}
     return CouplingLayer(B, mask, cl.θ)
 end
 
+"Returns the constructor of the coupling law."
 coupling(cl::CouplingLayer{B}) where {B} = B
+
+"Returns the coupling law constructed from `x`."
 function couple(cl::CouplingLayer{B}, x::AbstractVector) where {B}
     # partition vector using `cl.mask::PartitionMask`
     x_1, x_2, x_3 = partition(cl.mask, x)
@@ -143,7 +203,6 @@ function (cl::CouplingLayer{B})(x::AbstractVector) where {B}
     # recombine the vector again using the `PartitionMask`
     return combine(cl.mask, b(x_1), x_2, x_3)
 end
-# TODO: drop when we have dimensionality
 function (cl::CouplingLayer{B})(x::AbstractMatrix) where {B}
     return hcat([cl(x[:, i]) for i = 1:size(x, 2)]...)
 end
@@ -159,7 +218,6 @@ function (icl::Inversed{<:CouplingLayer{B}})(y::AbstractVector) where {B}
 
     return combine(cl.mask, ib(y_1), y_2, y_3)
 end
-# TODO: drop when we have dimensionality
 function (icl::Inversed{<:CouplingLayer{B}})(y::AbstractMatrix) where {B}
     return hcat([icl(y[:, i]) for i = 1:size(y, 2)]...)
 end
