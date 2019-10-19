@@ -83,7 +83,6 @@ function Permute(indices::AbstractVector{Int})
 end
 
 function Permute(n::Int, indices::Pair{Int, Int}...)
-    # A = spzeros(n, n)
     A = spdiagm(0 => ones(n))
 
     dests = Set{Int}()
@@ -103,8 +102,6 @@ function Permute(n::Int, indices::Pair{Int, Int}...)
     @assert (sources ∩ dests) == (sources ∪ dests) "$sources ∩ $dests ≠ $sources ∪ $dests"
 
     dropzeros!(A)
-    # @assert isempty(to_be_src) "following should be but weren't permuted $to_be_src"
-    
     return Permute(A)
 end
 
