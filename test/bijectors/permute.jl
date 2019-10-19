@@ -1,0 +1,56 @@
+using Test
+
+using Bijectors
+using Bijectors: Permute
+
+@testset "Permute" begin
+    # Should fail because the permutation is non-injective
+    # in the sense that the map is {1, 2} => {1}
+    @test_throws AssertionError Permute(2, 2 => 1)
+    
+    # Simplest case
+    b1 = Permute([
+        0 1;
+        1 0
+    ])
+    b2 = Permute([2, 1])
+    b3 = Permute(2, 2 => 1, 1 => 2)
+
+    @test b1.A == b2.A == b3.A
+
+    x = [1., 2.]
+    @test (inv(b1) ∘ b1)(x) == x
+    @test (inv(b2) ∘ b2)(x) == x
+    @test (inv(b3) ∘ b3)(x) == x
+
+    # Slightly more complex case; one entry is not permuted
+    b1 = Permute([
+        0 1 0;
+        1 0 0;
+        0 0 1
+    ])
+    b2 = Permute([2, 1, 3])
+    b3 = Permute(3, 2 => 1, 1 => 2)
+
+    @test b1.A == b2.A == b3.A
+    
+    x = [1., 2., 3.]
+    @test (inv(b1) ∘ b1)(x) == x
+    @test (inv(b2) ∘ b2)(x) == x
+    @test (inv(b3) ∘ b3)(x) == x
+
+    # logabsdetjac
+    @test logabsdetjac(b1, x) == 0.0
+    @test logabsdetjac(b2, x) == 0.0
+    @test logabsdetjac(b3, x) == 0.0
+
+    # forward
+    y, logjac = forward(b1, x)
+    @test (y == b1(x)) & (logjac == 0.0)
+
+    y, logjac = forward(b2, x)
+    @test (y == b2(x)) & (logjac == 0.0)
+
+    y, logjac = forward(b3, x)
+    @test (y == b3(x)) & (logjac == 0.0)
+end

@@ -452,4 +452,6 @@ include("interface.jl")
 
 include("norm_flows.jl")
 
+include("bijectors/permute.jl")
+
 end # module
