@@ -449,7 +449,7 @@ function logpdf_with_trans(
 end
 
 include("interface.jl")
-
 include("norm_flows.jl")
+include("bijectors/rational_quadratic_spline.jl")
 
 end # module
