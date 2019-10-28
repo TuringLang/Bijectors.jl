@@ -38,7 +38,8 @@ end
 ######################
 
 "Abstract type for a `Bijector`."
-abstract type Bijector{N} end
+abstract type AbstractBijector end
+abstract type Bijector{N} <:AbstractBijector end
 
 dimension(b::Bijector{N}) where {N} = N
 
