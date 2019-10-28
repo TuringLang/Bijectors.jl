@@ -11,6 +11,16 @@ Random.seed!(123)
 
 struct NonInvertibleBijector{AD} <: ADBijector{AD, 1} end
 
+isclosedform(b::Bijector) = true
+isclosedform(b::Inversed{<:PlanarLayer}) = false
+isclosedform(b::Inversed{<:RadialLayer}) = false
+isclosedform(b::Composed) = all(isclosedform.(b.ts))
+isclosedform(b::Stacked) = all(isclosedform.(b.bs))
+
+contains(predicate::Function, b::Bijector) = predicate(b)
+contains(predicate::Function, b::Composed) = any(contains.(predicate, b.ts))
+contains(predicate::Function, b::Stacked) = any(contains.(predicate, b.bs))
+
 # Scalar tests
 @testset "Interface" begin
     @testset "<: ADBijector{AD}" begin
@@ -197,8 +207,12 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD, 1} end
                     @test size(iresults.logabsdetjac) == size(ys, )
 
                     # Values
+                    b_logjac_ad = [(log ∘ abs)(ForwardDiff.derivative(b, xs[i])) for i = 1:length(xs)]
+                    ib_logjac_ad = [(log ∘ abs)(ForwardDiff.derivative(ib, ys[i])) for i = 1:length(ys)]
                     @test logabsdetjac.(b, xs) == logabsdetjac(b, xs)
+                    @test logabsdetjac(b, xs) ≈ b_logjac_ad atol=1e-9
                     @test logabsdetjac.(ib, ys) == logabsdetjac(ib, ys)
+                    @test logabsdetjac(ib, ys) ≈ ib_logjac_ad atol=1e-9
 
                     @test results.logabsdetjac ≈ vec(logabsdetjac.(b, xs))
                     @test iresults.logabsdetjac ≈ vec(logabsdetjac.(ib, ys))
@@ -216,8 +230,21 @@ struct NonInvertibleBijector{AD} <: ADBijector{AD, 1} end
                     # Test all values
                     @test logabsdetjac(b, xs) == vec(mapslices(z -> logabsdetjac(b, z), xs; dims = 1))
                     @test logabsdetjac(ib, ys) == vec(mapslices(z -> logabsdetjac(ib, z), ys; dims = 1))
+
                     @test results.logabsdetjac ≈ vec(mapslices(z -> logabsdetjac(b, z), xs; dims = 1))
                     @test iresults.logabsdetjac ≈ vec(mapslices(z -> logabsdetjac(ib, z), ys; dims = 1))
+
+                    # some have issues with numerically solving the inverse
+                    # FIXME: `SimplexBijector` results in ∞ gradient if not in the domain
+                    if isclosedform(b) && !contains(t -> t isa SimplexBijector, b)
+                        b_logjac_ad = [logabsdet(ForwardDiff.jacobian(b, xs[:, i]))[1] for i = 1:size(xs, 2)]
+                        @test logabsdetjac(b, xs) ≈ b_logjac_ad atol=1e-9
+                    end
+
+                    if isclosedform(inv(b)) && !contains(t -> t isa SimplexBijector, b)
+                        ib_logjac_ad = [logabsdet(ForwardDiff.jacobian(ib, ys[:, i]))[1] for i = 1:size(ys, 2)]
+                        @test logabsdetjac(ib, ys) ≈ ib_logjac_ad atol=1e-9
+                    end
                 else
                     error("tests not implemented yet")
                 end

@@ -558,7 +558,7 @@ _logabsdetjac_scale(a::AbstractVector, x::AbstractMatrix, ::Type{Val{1}}) = fill
 _logabsdetjac_scale(a::AbstractMatrix, x::AbstractVector, ::Type{Val{1}}) = log(abs(det(a)))
 _logabsdetjac_scale(a::AbstractMatrix, x::AbstractMatrix{T}, ::Type{Val{1}}) where {T} = log(abs(det(a))) * ones(T, size(x, 2))
 
-# adjoints for 0-dim and 1-dim `Scale` using `Real`
+# Adjoints for 0-dim and 1-dim `Scale` using `Real`
 function _logabsdetjac_scale(a::TrackedReal, x::Real, ::Type{Val{0}})
     return track(_logabsdetjac_scale, a, data(x), Val{0})
 end
@@ -566,7 +566,7 @@ end
     return _logabsdetjac_scale(data(a), data(x), Val{0}), Δ -> (inv(data(a)) .* Δ, nothing, nothing)
 end
 
-# need to treat `AbstractVector` and `AbstractMatrix` separately due to ambiguity errors
+# Need to treat `AbstractVector` and `AbstractMatrix` separately due to ambiguity errors
 function _logabsdetjac_scale(a::TrackedReal, x::AbstractVector, ::Type{Val{0}})
     return track(_logabsdetjac_scale, a, data(x), Val{0})
 end
@@ -874,6 +874,14 @@ function logpdf(td::MvTransformed, y::AbstractMatrix{<:Real})
     # batch-implementation for multivariate
     res = forward(inv(td.transform), y)
     return logpdf(td.dist, res.rv) + res.logabsdetjac
+end
+
+function logpdf(td::MvTransformed{<:Dirichlet}, y::AbstractMatrix{<:Real})
+    T = eltype(y)
+    ϵ = _eps(T)
+
+    res = forward(inv(td.transform), y)
+    return logpdf(td.dist, mappedarray(x->x+ϵ, res.rv)) + res.logabsdetjac
 end
 
 function _logpdf(td::MvTransformed, y::AbstractVector{<:Real})
