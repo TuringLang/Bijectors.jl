@@ -701,6 +701,8 @@ The following methods are implemented by all subtypes of `Bijector`, this also i
 - `forward(b::Bijector, x)`: returns named tuple `(rv=b(x), logabsdetjac=logabsdetjac(b, x))` in the most efficient manner.
 - `∘`, `composel`, `composer`: convenient and type-safe constructors for `Composed`. `composel(bs...)` composes s.t. the resulting composition is evaluated left-to-right, while `composer(bs...)` is evaluated right-to-left. `∘` is right-to-left, as excepted from standard mathematical notation.
 - `jacobian(b::Bijector, x)` [OPTIONAL]: returns the jacobian of the transformation. In some cases the analytical jacobian has been implemented for efficiency.
+- `dimension(b::Bijector)`: returns the dimensionality of `b`.
+- `isclosedform(b::Bijector)`: returns `true` or `false` depending on whether or not `b(x)` has a closed-form implementation.
 
 For `TransformedDistribution`, together with default implementations for `Distribution`, we have the following methods:
 - `bijector(d::Distribution)`: returns the default constrained-to-unconstrained bijector for `d`
