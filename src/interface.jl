@@ -366,7 +366,7 @@ function (sb::Stacked{<:AbstractArray, N})(x::AbstractVector{<:Real}) where {N}
     return y
 end
 
-(sb::Stacked)(x::AbstractMatrix{<: Real}) = mapslices(z -> sb(z), x; dims = 1)
+(sb::Stacked)(x::AbstractMatrix{<:Real}) = mapslices(z -> sb(z), x; dims = 1)
 
 # TODO: implement custom adjoint since we can exploit block-diagonal nature of `Stacked`
 function (sb::Stacked)(x::TrackedArray{A, 2}) where {A}
