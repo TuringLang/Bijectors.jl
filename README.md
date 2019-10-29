@@ -114,7 +114,9 @@ julia> b⁻¹(y) == invlink(dist, y)
 true
 ```
 
-Pretty neat, huh? `Inversed{Logit}` is also a `Bijector` where we've defined `(ib::Inversed{<:Logit})(y)` as the inverse transformation of `(b::Logit)(x)`. Note that it's not always the case that `inv(b) isa Inversed`, e.g. the inverse of `Exp` is simply `Log` so `inv(Exp()) isa Log` is true. 
+Pretty neat, huh? `Inversed{Logit}` is also a `Bijector` where we've defined `(ib::Inversed{<:Logit})(y)` as the inverse transformation of `(b::Logit)(x)`. Note that it's not always the case that `inv(b) isa Inversed`, e.g. the inverse of `Exp` is simply `Log` so `inv(Exp()) isa Log` is true.
+
+One more thing. See the `0` in `Inversed{Logit{Float64}, 0}`? It represents the *dimensionality* of the bijector, in the same sense as for an `AbstractArray` with the exception of `0` which means it expects 0-dim input and output, i.e. `<:Real`. In most cases specification of the dimensionality is unnecessary as a `Bijector{N}` is usually only defined for a particular value of `N`, e.g. `Logit isa Bijector{0}` since it only makes sense to apply `Logit` to a real number (or a vector of reals if you're doing batch-computation). As a user, you'll rarely have to deal with this dimensionality specification. Unfortunately there are exceptions, e.g. `Exp` which can be applied to both real numbers and a vector of real numbers, in both cases treating it as a single input. This means that when `Exp` receives a vector input `x` as input, it's ambiguous whether or not to treat `x` as a *batch* of 0-dim inputs or as a single 1-dim input. As a result, to support batch-computation it is necessary to know the expected dimensionality of the input and output. Notice that we assume the dimensionality of the input and output to be the *same*. This is a reasonable assumption considering we're working with *bijections*.
 
 #### Composition
 Also, we can _compose_ bijectors:
