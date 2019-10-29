@@ -48,6 +48,19 @@ dimension(b::Bijector{N}) where {N} = N
 Broadcast.broadcastable(b::Bijector) = Ref(b)
 
 """
+    isclosedform(b::Bijector)::bool
+    isclosedform(b⁻¹::Inversed{<:Bijector})::bool
+
+Returns `true` or `false` depending on whether or not evaluation of `b`
+has a closed-form implementation.
+
+Most bijectors have closed-form evaluations, but there are cases where
+this is not the case. For example the *inverse* evaluation of `PlanarLayer`
+requires an iterative procedure to evaluate and thus is not differentiable.
+"""
+isclosedform(b::Bijector) = true
+
+"""
 Abstract type for a `Bijector{N}` making use of auto-differentation (AD) to
 implement `jacobian` and, by impliciation, `logabsdetjac`.
 """
@@ -204,6 +217,8 @@ struct Composed{A, N} <: Bijector{N}
     Composed(bs::A) where {N, A<:AbstractArray{<:Bijector{N}}} = new{A, N}(bs)
 end
 
+isclosedform(b::Composed) = all(isclosedform.(b.ts))
+
 
 """
     composel(ts::Bijector...)::Composed{<:Tuple}
@@ -339,6 +354,8 @@ struct Stacked{Bs, N} <: Bijector{1} where N
 end
 Stacked(bs, ranges::AbstractArray) = Stacked(bs, tuple(ranges...))
 Stacked(bs) = Stacked(bs, tuple([i:i for i = 1:length(bs)]...))
+
+isclosedform(b::Stacked) = all(isclosedform.(b.bs))
 
 stack(bs::Bijector{0}...) = Stacked(bs)
 

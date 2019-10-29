@@ -11,12 +11,6 @@ Random.seed!(123)
 
 struct NonInvertibleBijector{AD} <: ADBijector{AD, 1} end
 
-isclosedform(b::Bijector) = true
-isclosedform(b::Inversed{<:PlanarLayer}) = false
-isclosedform(b::Inversed{<:RadialLayer}) = false
-isclosedform(b::Composed) = all(isclosedform.(b.ts))
-isclosedform(b::Stacked) = all(isclosedform.(b.bs))
-
 contains(predicate::Function, b::Bijector) = predicate(b)
 contains(predicate::Function, b::Composed) = any(contains.(predicate, b.ts))
 contains(predicate::Function, b::Stacked) = any(contains.(predicate, b.bs))
