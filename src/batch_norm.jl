@@ -89,7 +89,11 @@ function forward(t::InvertibleBatchNorm, x)
     if t.active
         ϵ = convert(Tracker.data(Tx), t.ϵ)
         # Update moving mean/std
-        mtm = convert(Tracker.data(Tx), t.momentum)
+        _temp = Tx(one(1))
+        while Tracker.istracked(_temp)
+            _temp = Tracker.data(_temp)
+        end
+        mtm = convert(typeof(_temp), t.momentum)
         t.μ = (1 - mtm) .* t.μ .+ mtm .* Tracker.data(μ)
         t.σ² = ((1 - mtm) .* t.σ² .+ (mtm * m / (m - 1)) 
                 .* reshape(Tracker.data(σ²), :))
