@@ -5,14 +5,14 @@ using Random: seed!
 seed!(1)
 
 @testset "InvertibleBatchNorm" begin
-    z = randn(20, 2)
+    z = randn(2, 20)
     flow = Bijectors.InvertibleBatchNorm(2)
     flow.active = false
     @test inv(inv(flow)) == flow 
     @test inv(flow)(flow(z)) ≈ z
     @test (inv(flow) ∘ flow)(z) ≈ z
 
-    @test_throws AssertionError forward(flow, randn(2,10))
+    @test_throws AssertionError forward(flow, randn(10,2))
     
     @test logabsdetjac(inv(flow), flow(z)) ≈ - logabsdetjac(flow, z)
 

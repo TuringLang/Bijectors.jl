@@ -25,8 +25,9 @@ mutable struct InvertibleBatchNorm{T1,T2,T3} <: Bijector
     active::Bool # true when training
 end
 
-function InvertibleBatchNorm(dims::Int,
-    container=Arr1ay; 
+function InvertibleBatchNorm(
+    dims::Int,
+    container=Array; 
     ϵ::AbstractFloat=1f-5,
     momentum::AbstractFloat=0.1f0
     )
@@ -43,7 +44,7 @@ end
 
 function affinesize(x)
     dims = length(size(x))
-    channels = size(x, dims)
+    channels = size(x, dims-1)
     affinesize = ones(Int, dims)
     affinesize[end-1] = channels
     return affinesize
@@ -53,11 +54,13 @@ logabsdetjac(t::InvertibleBatchNorm, x) = forward(t, x).logabsdetjac
 
 function _compute_μ_σ²(t::InvertibleBatchNorm, x)
     @assert(
-        size(x, ndims(x)) == length(t.μ),
-         "`InvertibleBatchNorm` expected $(length(t.μ)) channels, got $(size(x,ndims(x)))"
+        size(x, ndims(x) - 1) == length(t.μ),
+         "`InvertibleBatchNorm` expected $(length(t.μ)) channels, got $( 
+             size(x, ndims(x) - 1)
+             )"
     ) 
     as = affinesize(x)
-    m = size(x)[1]
+    m = prod(size(x)[1:end-2]) * size(x)[end]
     γ = exp.(reshape(t.logγ, as...))
     β = reshape(t.β, as...)
     if !t.active
@@ -66,9 +69,10 @@ function _compute_μ_σ²(t::InvertibleBatchNorm, x)
         ϵ = t.ϵ
     else
         Tx = eltype(x)
-        axes = 1
-        μ = mean(x, dims=axes)'
-        σ² = sum((x .- μ') .^ 2, dims=axes)' ./ m
+        dims = length(size(x))
+        axes = [1:dims-2; dims]
+        μ = mean(x, dims=axes)
+        σ² = sum((x .- μ) .^ 2, dims=axes) ./ m
     end
     return μ, σ²
 end
@@ -80,20 +84,23 @@ function forward(t::InvertibleBatchNorm, x)
     γ = exp.(reshape(t.logγ, as...))
     β = reshape(t.β, as...)
     Tx = eltype(x)
+    dims = length(size(x))
+    axes = [1:dims-2; dims]
     if t.active
         ϵ = convert(Tracker.data(Tx), t.ϵ)
         # Update moving mean/std
         mtm = convert(Tracker.data(Tx), t.momentum)
-        t.μ = (1 - mtm) .* t.μ .+ mtm .* reshape(Tracker.data(μ), :)
+        t.μ = (1 - mtm) .* t.μ .+ mtm .* Tracker.data(μ)
         t.σ² = ((1 - mtm) .* t.σ² .+ (mtm * m / (m - 1)) 
                 .* reshape(Tracker.data(σ²), :))
     end
-    x̂ = (x .- μ') ./ sqrt.(σ² .+ t.ϵ)'
-    
-    logabsdetjac = ((sum(t.logγ - log.(σ² .+ t.ϵ) / 2))
-                    .* typeof(Tracker.data(x))(ones(Float32, size(x, 1))'))'
+    x̂ = (x .- μ) ./ sqrt.(σ² .+ t.ϵ)
+    logabsdetjac = (
+        (sum(t.logγ - log.(σ² .+ t.ϵ) / 2))
+        .* typeof(Tracker.data(x))(ones(Float32, size(x, 2))')
+        )
 
-    return (rv=γ' .* x̂ .+ β', logabsdetjac=logabsdetjac)
+    return (rv=γ .* x̂ .+ β, logabsdetjac=logabsdetjac)
 end
 
 (b::InvertibleBatchNorm)(z) = forward(b, z).rv
@@ -109,8 +116,8 @@ function forward(it::Inversed{T}, y) where {T<:InvertibleBatchNorm}
     μ = reshape(t.μ, as...)
     σ² = reshape(t.σ², as...)
 
-    ŷ = (y .- β') ./ γ'
-    x = ŷ .* sqrt.(σ²' .+ t.ϵ) .+ μ'
+    ŷ = (y .- β) ./ γ
+    x = ŷ .* sqrt.(σ² .+ t.ϵ) .+ μ
 
     return (rv=x, logabsdetjac=-logabsdetjac(t, x))
 end
