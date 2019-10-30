@@ -25,19 +25,21 @@ mutable struct InvertibleBatchNorm{T1,T2,T3} <: Bijector
     active::Bool # true when training
 end
 
-InvertibleBatchNorm(dims::Int,
-                    container=Array; 
-                    ϵ::AbstractFloat=1f-5,
-                    momentum::AbstractFloat=0.1f0) = (
-                    InvertibleBatchNorm(
-                            container(zeros(dims, 1)),
-                            container(zeros(dims, 1)),
-                            zeros(dims, 1),
-                            ones(dims, 1),
-                            ϵ,
-                            momentum,
-                            true
-                    ))
+function InvertibleBatchNorm(dims::Int,
+    container=Arr1ay; 
+    ϵ::AbstractFloat=1f-5,
+    momentum::AbstractFloat=0.1f0
+    )
+    return InvertibleBatchNorm(
+        container(zeros(dims, 1)),
+        container(zeros(dims, 1)),
+        zeros(dims, 1),
+        ones(dims, 1),
+        ϵ,
+        momentum,
+        true
+    )
+end
 
 function affinesize(x)
     dims = length(size(x))
@@ -47,15 +49,13 @@ function affinesize(x)
     return affinesize
 end
 
-logabsdetjac(
-    t::T,
-    x
-) where{T<:InvertibleBatchNorm} = forward(t, x).logabsdetjac
+logabsdetjac(t::InvertibleBatchNorm, x) = forward(t, x).logabsdetjac
 
 function _compute_μ_σ²(t::InvertibleBatchNorm, x)
-    @assert size(x, ndims(x)) == 
-    length(t.μ) "`InvertibleBatchNorm` expected $(length(t.μ)) channels, got $(
-        size(x,ndims(x)))"
+    @assert(
+        size(x, ndims(x)) == length(t.μ),
+         "`InvertibleBatchNorm` expected $(length(t.μ)) channels, got $(size(x,ndims(x)))"
+    ) 
     as = affinesize(x)
     m = size(x)[1]
     γ = exp.(reshape(t.logγ, as...))
