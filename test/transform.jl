@@ -1,7 +1,7 @@
 using Test
 using Bijectors
 using ForwardDiff: derivative, jacobian
-using LinearAlgebra: logabsdet, I
+using LinearAlgebra: logabsdet, I, norm
 using Random
 
 Random.seed!(123)
@@ -220,3 +220,34 @@ r2 = [-1., -2., 0.0]
 # test logpdf_with_trans
 #@test logpdf_with_trans(d, invlink(d, r), true) -1999.30685281944 1e-9 ≈ # atol=NaN
 @test logpdf_with_trans(d, invlink(d, r2), true) ≈ -3.760398892580863 atol=1e-9
+
+macro aeq(x, y)
+    return quote
+        x = $(esc(x))
+        y = $(esc(y))
+        norm = $(esc(:norm))
+        norm(x - y) <= 1e-10
+    end
+end
+
+@testset "Dirichlet Jacobians" begin
+    function test_link_and_invlink()
+        dist = Dirichlet(4, 4)
+        x = rand(dist)
+        y = link(dist, x)
+
+        f1 = x -> link(dist, x, Val{true})
+        f2 = x -> link(dist, x, Val{false})
+        g1 = y -> invlink(dist, y, Val{true})
+        g2 = y -> invlink(dist, y, Val{false})
+
+        @test @aeq jacobian(f1, x) Bijectors.link_jacobian(dist, x, Val{true})
+        @test @aeq jacobian(f2, x) Bijectors.link_jacobian(dist, x, Val{false})
+        @test @aeq jacobian(g1, y) Bijectors.invlink_jacobian(dist, y, Val{true})
+        @test @aeq jacobian(g2, y) Bijectors.invlink_jacobian(dist, y, Val{false})
+        @test @aeq Bijectors.link_jacobian(dist, x, Val{false}) * Bijectors.invlink_jacobian(dist, y, Val{false}) I
+    end
+    for i in 1:4
+        test_link_and_invlink()
+    end
+end
