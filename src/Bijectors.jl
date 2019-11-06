@@ -216,7 +216,7 @@ function link(
 end
 
 function link_jacobian(
-    d::SimplexDistribution
+    d::SimplexDistribution,
     x::AbstractVector{T},
     ::Type{Val{proj}} = Val{true}
 ) where {T<:Real, proj}
