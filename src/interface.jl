@@ -804,6 +804,20 @@ function (b::TruncatedBijector)(x::Real)
     end 
 end
 
+function (b::TruncatedBijector)(x::AbstractVector{<:Real})
+    a, b = b.lb, b.ub
+    lowerbounded, upperbounded = isfinite(a), isfinite(b)
+    if lowerbounded && upperbounded
+        return @. StatsFuns.logit((x - a) / (b - a))
+    elseif lowerbounded
+        return log.(x - a)
+    elseif upperbounded
+        return log.(b - x)
+    else
+        return x
+    end
+end
+
 function (ib::Inversed{<:TruncatedBijector})(y::Real)
     a, b = ib.orig.lb, ib.orig.ub
     lowerbounded, upperbounded = isfinite(a), isfinite(b)
@@ -818,6 +832,20 @@ function (ib::Inversed{<:TruncatedBijector})(y::Real)
     end
 end
 
+function (ib::Inversed{<:TruncatedBijector})(y::AbstractVector{<:Real})
+    a, b = ib.orig.lb, ib.orig.ub
+    lowerbounded, upperbounded = isfinite(a), isfinite(b)
+    if lowerbounded && upperbounded
+        return @. (b - a) * StatsFuns.logistic(y) + a
+    elseif lowerbounded
+        return @. exp(y) + a
+    elseif upperbounded
+        return @. b - exp(y)
+    else
+        return y
+    end
+end
+
 function logabsdetjac(b::TruncatedBijector, x::Real)
     a, b = b.lb, b.ub
     lowerbounded, upperbounded = isfinite(a), isfinite(b)
@@ -827,6 +855,20 @@ function logabsdetjac(b::TruncatedBijector, x::Real)
         return - log(x - a)
     elseif upperbounded
         return - log(b - x)
+    else
+        return zero(x)
+    end
+end
+
+function logabsdetjac(b::TruncatedBijector, x::AbstractVector{<:Real})
+    a, b = b.lb, b.ub
+    lowerbounded, upperbounded = isfinite(a), isfinite(b)
+    if lowerbounded && upperbounded
+        return @. - log((x - a) * (b - x) / (b - a))
+    elseif lowerbounded
+        return @. - log(x - a)
+    elseif upperbounded
+        return @. - log(b - x)
     else
         return zero(x)
     end
@@ -905,24 +947,6 @@ bijector(d::KSOneSided) = Logit(zero(eltype(d)), one(eltype(d)))
 bijector_bounded(d, a=minimum(d), b=maximum(d)) = Logit(a, b)
 bijector_lowerbounded(d, a=minimum(d)) = Log() ∘ Shift(-a)
 bijector_upperbounded(d, b=maximum(d)) = Log() ∘ Shift(b) ∘ Scale(- one(typeof(b)))
-
-# FIXME: Can we make this type-stable?
-# Can also make a `TruncatedBijector`
-# which has the same transform as the `link` function.
-# E.g. (b::Truncated)(x) = link(b.d, x) or smth
-function bijector(d::Truncated)
-    a, b = minimum(d), maximum(d)
-    lowerbounded, upperbounded = isfinite(a), isfinite(b)
-    if lowerbounded && upperbounded
-        return bijector_bounded(d)
-    elseif lowerbounded
-        return bijector_lowerbounded(d)
-    elseif upperbounded
-        return bijector_upperbounded(d)
-    else
-        return Identity{0}()
-    end
-end
 
 const BoundedDistribution = Union{
     Arcsine, Biweight, Cosine, Epanechnikov, Beta, NoncentralBeta
