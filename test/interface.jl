@@ -623,3 +623,4 @@ end
     @test 0 ≤ x ≤ 1
 end
 
+include("couplings.jl")
