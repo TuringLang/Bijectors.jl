@@ -11,6 +11,9 @@ Random.seed!(123)
 
 struct NonInvertibleBijector{AD} <: ADBijector{AD, 1} end
 
+# TODO: `hcat` used for some batch-computations; not type-stable Julia v1.0
+const BATCH_INFER_TYPES = VERSION ≥ v"1.1"
+
 contains(predicate::Function, b::Bijector) = predicate(b)
 contains(predicate::Function, b::Composed) = any(contains.(predicate, b.ts))
 contains(predicate::Function, b::Stacked) = any(contains.(predicate, b.bs))
@@ -56,13 +59,13 @@ end
     
     for dist in uni_dists
         @testset "$dist: dist" begin
-            td = transformed(dist)
+            td = @inferred transformed(dist)
 
             # single sample
-            y = rand(td)
-            x = inv(td.transform)(y)
-            @test y == td.transform(x)
-            @test logpdf(td, y) ≈ logpdf_with_trans(dist, x, true)
+            y = @inferred rand(td)
+            x = @inferred inv(td.transform)(y)
+            @test y == @inferred td.transform(x)
+            @test @inferred logpdf(td, y) ≈ @inferred logpdf_with_trans(dist, x, true)
 
             # logpdf_with_jac
             lp, logjac = logpdf_with_jac(td, y)
@@ -70,20 +73,20 @@ end
             @test logjac ≈ logabsdetjacinv(td.transform, y)
 
             # multi-sample
-            y = rand(td, 10)
+            y = @inferred rand(td, 10)
             x = inv(td.transform).(y)
             @test logpdf.(td, y) ≈ logpdf_with_trans.(dist, x, true)
 
             # logpdf corresponds to logpdf_with_trans
             d = dist
-            b = bijector(d)
+            b = @inferred bijector(d)
             x = rand(d)
-            y = b(x)
+            y = @inferred b(x)
             @test logpdf(d, inv(b)(y)) + logabsdetjacinv(b, y) ≈ logpdf_with_trans(d, x, true)
             @test logpdf(d, x) - logabsdetjac(b, x) ≈ logpdf_with_trans(d, x, true)
 
             # forward
-            f = forward(td)
+            f = @inferred forward(td)
             @test f.x ≈ inv(td.transform)(f.y)
             @test f.y ≈ td.transform(f.x)
             @test f.logabsdetjac ≈ logabsdetjac(td.transform, f.x)
@@ -153,24 +156,25 @@ end
 
     for (b, xs) in bs_xs
         @testset "$b" begin
-            D = Bijectors.dimension(b)
-            ib = inv(b)
+            D = @inferred Bijectors.dimension(b)
+            ib = @inferred inv(b)
 
             @test Bijectors.dimension(ib) == D
 
             x = D == 0 ? xs[1] : xs[:, 1]
 
-            y = b(x)
-            ys = b(xs)
+            y = @inferred b(x)
 
-            x_ = ib(y)
-            xs_ = ib(ys)
+            ys = !BATCH_INFER_TYPES ? b(xs) : @inferred b(xs)
 
-            result = forward(b, x)
-            results = forward(b, xs)
+            x_ = @inferred ib(y)
+            xs_ = !BATCH_INFER_TYPES ? ib(ys) : @inferred ib(ys)
 
-            iresult = forward(ib, y)
-            iresults = forward(ib, ys)
+            result = @inferred forward(b, x)
+            results = !BATCH_INFER_TYPES ? forward(b, xs) : @inferred forward(b, xs)
+
+            iresult = @inferred forward(ib, y)
+            iresults = !BATCH_INFER_TYPES ? forward(ib, ys) : @inferred forward(ib, ys)
 
             # Sizes
             @test size(y) == size(x)
@@ -186,7 +190,7 @@ end
             @test size(iresults.rv) == size(ys)
 
             # Values
-            @test ys == mapslices(z -> b(z), xs; dims = 1)
+            @test ys ≈ hcat([b(xs[:, i]) for i = 1:size(xs, 2)]...)
             @test ys ≈ results.rv
 
             if D == 0
@@ -202,10 +206,10 @@ end
                 # Values
                 b_logjac_ad = [(log ∘ abs)(ForwardDiff.derivative(b, xs[i])) for i = 1:length(xs)]
                 ib_logjac_ad = [(log ∘ abs)(ForwardDiff.derivative(ib, ys[i])) for i = 1:length(ys)]
-                @test logabsdetjac.(b, xs) == logabsdetjac(b, xs)
-                @test logabsdetjac(b, xs) ≈ b_logjac_ad atol=1e-9
-                @test logabsdetjac.(ib, ys) == logabsdetjac(ib, ys)
-                @test logabsdetjac(ib, ys) ≈ ib_logjac_ad atol=1e-9
+                @test logabsdetjac.(b, xs) == @inferred(logabsdetjac(b, xs))
+                @test @inferred(logabsdetjac(b, xs)) ≈ b_logjac_ad atol=1e-9
+                @test logabsdetjac.(ib, ys) == @inferred(logabsdetjac(ib, ys))
+                @test @inferred(logabsdetjac(ib, ys)) ≈ ib_logjac_ad atol=1e-9
 
                 @test results.logabsdetjac ≈ vec(logabsdetjac.(b, xs))
                 @test iresults.logabsdetjac ≈ vec(logabsdetjac.(ib, ys))
@@ -221,8 +225,13 @@ end
                 @test size(iresults.logabsdetjac) == (size(ys, 2), )
 
                 # Test all values
-                @test logabsdetjac(b, xs) == vec(mapslices(z -> logabsdetjac(b, z), xs; dims = 1))
-                @test logabsdetjac(ib, ys) == vec(mapslices(z -> logabsdetjac(ib, z), ys; dims = 1))
+                if !BATCH_INFER_TYPES
+                    @test logabsdetjac(b, xs) == @inferred(vec(mapslices(z -> logabsdetjac(b, z), xs; dims = 1)))
+                    @test logabsdetjac(ib, ys) == @inferred(vec(mapslices(z -> logabsdetjac(ib, z), ys; dims = 1)))
+                else
+                    @test @inferred(logabsdetjac(b, xs)) == @inferred(vec(mapslices(z -> logabsdetjac(b, z), xs; dims = 1)))
+                    @test @inferred(logabsdetjac(ib, ys)) == @inferred(vec(mapslices(z -> logabsdetjac(ib, z), ys; dims = 1)))
+                end
 
                 @test results.logabsdetjac ≈ vec(mapslices(z -> logabsdetjac(b, z), xs; dims = 1))
                 @test iresults.logabsdetjac ≈ vec(mapslices(z -> logabsdetjac(ib, z), ys; dims = 1))
