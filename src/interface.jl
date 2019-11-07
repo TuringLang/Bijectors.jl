@@ -44,6 +44,7 @@ abstract type AbstractBijector end
 abstract type Bijector{N} <:AbstractBijector end
 
 dimension(b::Bijector{N}) where {N} = N
+dimension(b::Type{<:Bijector{N}}) where {N} = N
 
 Broadcast.broadcastable(b::Bijector) = Ref(b)
 
@@ -406,7 +407,8 @@ function (sb::Stacked{<:AbstractArray, N})(x::AbstractVector{<:Real}) where {N}
     return y
 end
 
-(sb::Stacked)(x::AbstractMatrix{<:Real}) = hcat([sb(x[:, i]) for i = 1:size(x, 2)]...)
+# HACK: `reshape` to get around the fact that `hcat` isn't type-stable
+(sb::Stacked)(x::AbstractMatrix{<:Real}) = reshape(foldl(hcat, [sb(x[:, i]) for i = 1:size(x, 2)]), size(x)...)
 
 # TODO: implement custom adjoint since we can exploit block-diagonal nature of `Stacked`
 function (sb::Stacked)(x::TrackedArray{A, 2}) where {A}
@@ -431,11 +433,11 @@ function logabsdetjac(
     # TODO: drop the `sum` when we have dimensionality
     return sum([sum(logabsdetjac(b.bs[i], x[b.ranges[i]])) for i = 1:N])
 end
-function logabsdetjac(b::Stacked, x::AbstractMatrix{<: Real})
-    return vec(mapslices(z -> logabsdetjac(b, z), x; dims = 1))
+function logabsdetjac(b::Stacked, x::AbstractMatrix{<:Real})
+    return [logabsdetjac(b, x[:, i]) for i = 1:size(x, 2)]
 end
 function logabsdetjac(b::Stacked, x::TrackedArray{A, 2}) where {A}
-    return Tracker.collect(vec(mapslices(z -> logabsdetjac(b, z), x; dims = 1)))
+    return Tracker.collect([logabsdetjac(b, x[:, i]) for i = 1:size(x, 2)])
 end
 
 # Generates something similar to:
@@ -780,7 +782,7 @@ function logabsdetjac(b::SimplexBijector, x::AbstractVector{T}) where T
 end
 
 function logabsdetjac(b::SimplexBijector, x::AbstractMatrix{<:Real})
-    return vec(mapslices(z -> logabsdetjac(b, z), x; dims = 1))
+    return [logabsdetjac(b, x[:, i]) for i = 1:size(x, 2)]
 end
 
 #######################################################

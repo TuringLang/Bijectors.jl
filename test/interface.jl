@@ -11,9 +11,6 @@ Random.seed!(123)
 
 struct NonInvertibleBijector{AD} <: ADBijector{AD, 1} end
 
-# TODO: `hcat` used for some batch-computations; not type-stable Julia v1.0
-const BATCH_INFER_TYPES = VERSION ≥ v"1.1"
-
 contains(predicate::Function, b::Bijector) = predicate(b)
 contains(predicate::Function, b::Composed) = any(contains.(predicate, b.ts))
 contains(predicate::Function, b::Stacked) = any(contains.(predicate, b.bs))
@@ -165,16 +162,16 @@ end
 
             y = @inferred b(x)
 
-            ys = !BATCH_INFER_TYPES ? b(xs) : @inferred b(xs)
+            ys = @inferred b(xs)
 
             x_ = @inferred ib(y)
-            xs_ = !BATCH_INFER_TYPES ? ib(ys) : @inferred ib(ys)
+            xs_ = @inferred ib(ys)
 
             result = @inferred forward(b, x)
-            results = !BATCH_INFER_TYPES ? forward(b, xs) : @inferred forward(b, xs)
+            results = @inferred forward(b, xs)
 
             iresult = @inferred forward(ib, y)
-            iresults = !BATCH_INFER_TYPES ? forward(ib, ys) : @inferred forward(ib, ys)
+            iresults = @inferred forward(ib, ys)
 
             # Sizes
             @test size(y) == size(x)
@@ -225,13 +222,8 @@ end
                 @test size(iresults.logabsdetjac) == (size(ys, 2), )
 
                 # Test all values
-                if !BATCH_INFER_TYPES
-                    @test logabsdetjac(b, xs) == @inferred(vec(mapslices(z -> logabsdetjac(b, z), xs; dims = 1)))
-                    @test logabsdetjac(ib, ys) == @inferred(vec(mapslices(z -> logabsdetjac(ib, z), ys; dims = 1)))
-                else
-                    @test @inferred(logabsdetjac(b, xs)) == @inferred(vec(mapslices(z -> logabsdetjac(b, z), xs; dims = 1)))
-                    @test @inferred(logabsdetjac(ib, ys)) == @inferred(vec(mapslices(z -> logabsdetjac(ib, z), ys; dims = 1)))
-                end
+                @test @inferred(logabsdetjac(b, xs)) == vec(mapslices(z -> logabsdetjac(b, z), xs; dims = 1))
+                @test @inferred(logabsdetjac(ib, ys)) == vec(mapslices(z -> logabsdetjac(ib, z), ys; dims = 1))
 
                 @test results.logabsdetjac ≈ vec(mapslices(z -> logabsdetjac(b, z), xs; dims = 1))
                 @test iresults.logabsdetjac ≈ vec(mapslices(z -> logabsdetjac(ib, z), ys; dims = 1))
