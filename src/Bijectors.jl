@@ -15,6 +15,7 @@ export  TransformDistribution,
         link,
         invlink,
         logpdf_with_trans,
+        isclosedform,
         link_jacobian,
         invlink_jacobian,
         transform,
@@ -35,7 +36,6 @@ export  TransformDistribution,
         TransformedDistribution,
         UnivariateTransformed,
         MultivariateTransformed,
-        entropy,
         logpdf_with_jac,
         logpdf_forward,
         PlanarLayer,
@@ -216,8 +216,8 @@ function link(
 end
 
 function link_jacobian(
-    d::SimplexDistribution, 
-    x::AbstractVector{T}, 
+    d::SimplexDistribution,
+    x::AbstractVector{T},
     ::Type{Val{proj}} = Val{true}
 ) where {T<:Real, proj}
     K = length(x)
@@ -303,8 +303,8 @@ function invlink(
 end
 
 function invlink_jacobian(
-    d::SimplexDistribution, 
-    y::AbstractVector{T}, 
+    d::SimplexDistribution,
+    y::AbstractVector{T},
     ::Type{Val{proj}} = Val{true}
 ) where {T<:Real, proj}
     K = length(y)
