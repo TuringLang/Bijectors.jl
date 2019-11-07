@@ -1,6 +1,9 @@
 using Bijectors, Random
+using Test
 
 Random.seed!(123456)
 
-include("interface.jl")
+@testset "Interface" begin
+    include("interface.jl")
+end
 include("transform.jl")

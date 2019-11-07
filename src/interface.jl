@@ -7,7 +7,6 @@ import Base: inv, ∘
 
 import Random: AbstractRNG
 import Distributions: logpdf, rand, rand!, _rand!, _logpdf, params
-import StatsBase: entropy
 
 #######################################
 # AD stuff "extracted" from Turing.jl #
@@ -38,15 +37,31 @@ end
 # Bijector interface #
 ######################
 
-"Abstract type for a `Bijector`."
-abstract type Bijector{N} end
+"Abstract type for a bijector."
+abstract type AbstractBijector end
+
+"Abstract type of bijectors with fixed dimensionality."
+abstract type Bijector{N} <:AbstractBijector end
 
 dimension(b::Bijector{N}) where {N} = N
 
 Broadcast.broadcastable(b::Bijector) = Ref(b)
 
 """
-Abstract type for a `Bijector` making use of auto-differentation (AD) to
+    isclosedform(b::Bijector)::bool
+    isclosedform(b⁻¹::Inversed{<:Bijector})::bool
+
+Returns `true` or `false` depending on whether or not evaluation of `b`
+has a closed-form implementation.
+
+Most bijectors have closed-form evaluations, but there are cases where
+this is not the case. For example the *inverse* evaluation of `PlanarLayer`
+requires an iterative procedure to evaluate and thus is not differentiable.
+"""
+isclosedform(b::Bijector) = true
+
+"""
+Abstract type for a `Bijector{N}` making use of auto-differentation (AD) to
 implement `jacobian` and, by impliciation, `logabsdetjac`.
 """
 abstract type ADBijector{AD, N} <: Bijector{N} end
@@ -161,15 +176,26 @@ logabsdetjacinv(b::Bijector, y) = logabsdetjac(inv(b), y)
 """
     Composed(ts::A)
 
-    ∘(b1::Bijector, b2::Bijector)::Composed{<:Tuple}
-    composel(ts::Bijector...)::Composed{<:Tuple}
-    composer(ts::Bijector...)::Composed{<:Tuple}
+    ∘(b1::Bijector{N}, b2::Bijector{N})::Composed{<:Tuple}
+    composel(ts::Bijector{N}...)::Composed{<:Tuple}
+    composer(ts::Bijector{N}...)::Composed{<:Tuple}
+
+where `A` refers to either
+- `Tuple{Vararg{<:Bijector{N}}}`: a tuple of bijectors of dimensionality `N`
+- `AbstractArray{<:Bijector{N}}`: an array of bijectors of dimensionality `N`
 
 A `Bijector` representing composition of bijectors. `composel` and `composer` results in a
 `Composed` for which application occurs from left-to-right and right-to-left, respectively.
 
-Note that all the propsed ways of constructing a `Composed` returns a `Tuple` of bijectors.
+Note that all the alternative ways of constructing a `Composed` returns a `Tuple` of bijectors.
 This ensures type-stability of implementations of all relating methdos, e.g. `inv`.
+
+If you want to use an `Array` as the container instead you can do
+
+    Composed([b1, b2, ...])
+
+In general this is not advised since you lose type-stability, but there might be cases
+where this is desired, e.g. if you have a insanely large number of bijectors to compose.
 
 # Examples
 It's important to note that `∘` does what is expected mathematically, which means that the
@@ -186,26 +212,27 @@ cb1(x) == cb2(x) == b1(b2(x))  # => true
 """
 struct Composed{A, N} <: Bijector{N}
     ts::A
+
+    Composed(bs::C) where {N, C<:Tuple{Vararg{<:Bijector{N}}}} = new{C, N}(bs)
+    Composed(bs::A) where {N, A<:AbstractArray{<:Bijector{N}}} = new{A, N}(bs)
 end
 
-Composed(ts::A) where {N, A <: AbstractArray{<: Bijector{N}}} = Composed{A, N}(ts)
+isclosedform(b::Composed) = all(isclosedform.(b.ts))
+
 
 """
     composel(ts::Bijector...)::Composed{<:Tuple}
 
 Constructs `Composed` such that `ts` are applied left-to-right.
 """
-composel(ts::Bijector{N}...) where {N} = Composed{typeof(ts), N}(ts)
+composel(ts::Bijector{N}...) where {N} = Composed(ts)
 
 """
     composer(ts::Bijector...)::Composed{<:Tuple}
 
 Constructs `Composed` such that `ts` are applied right-to-left.
 """
-function composer(ts::Bijector{N}...) where {N}
-    its = reverse(ts)
-    return Composed{typeof(its), N}(its)
-end
+composer(ts::Bijector{N}...) where {N} = Composed(reverse(ts))
 
 # The transformation of `Composed` applies functions left-to-right
 # but in mathematics we usually go from right-to-left; this reversal ensures that
@@ -285,7 +312,7 @@ const ZeroOrOneDimBijector = Union{Bijector{0}, Bijector{1}}
 """
     Stacked(bs)
     Stacked(bs, ranges)
-    stack(bs::Bijector{Dim=0}...)
+    stack(bs::Bijector{0}...) # where `0` means 0-dim `Bijector`
 
 A `Bijector` which stacks bijectors together which can then be applied to a vector
 where `bs[i]::Bijector` is applied to `x[ranges[i]]::UnitRange{Int}`.
@@ -328,6 +355,8 @@ end
 Stacked(bs, ranges::AbstractArray) = Stacked(bs, tuple(ranges...))
 Stacked(bs) = Stacked(bs, tuple([i:i for i = 1:length(bs)]...))
 
+isclosedform(b::Stacked) = all(isclosedform.(b.bs))
+
 stack(bs::Bijector{0}...) = Stacked(bs)
 
 inv(sb::Stacked) = Stacked(inv.(sb.bs), sb.ranges)
@@ -354,7 +383,7 @@ function (sb::Stacked{<:AbstractArray, N})(x::AbstractVector{<:Real}) where {N}
     return y
 end
 
-(sb::Stacked)(x::AbstractMatrix{<: Real}) = mapslices(z -> sb(z), x; dims = 1)
+(sb::Stacked)(x::AbstractMatrix{<:Real}) = mapslices(z -> sb(z), x; dims = 1)
 
 # TODO: implement custom adjoint since we can exploit block-diagonal nature of `Stacked`
 function (sb::Stacked)(x::TrackedArray{A, 2}) where {A}
@@ -558,7 +587,7 @@ _logabsdetjac_scale(a::AbstractVector, x::AbstractMatrix, ::Type{Val{1}}) = fill
 _logabsdetjac_scale(a::AbstractMatrix, x::AbstractVector, ::Type{Val{1}}) = log(abs(det(a)))
 _logabsdetjac_scale(a::AbstractMatrix, x::AbstractMatrix{T}, ::Type{Val{1}}) where {T} = log(abs(det(a))) * ones(T, size(x, 2))
 
-# adjoints for 0-dim and 1-dim `Scale` using `Real`
+# Adjoints for 0-dim and 1-dim `Scale` using `Real`
 function _logabsdetjac_scale(a::TrackedReal, x::Real, ::Type{Val{0}})
     return track(_logabsdetjac_scale, a, data(x), Val{0})
 end
@@ -566,7 +595,7 @@ end
     return _logabsdetjac_scale(data(a), data(x), Val{0}), Δ -> (inv(data(a)) .* Δ, nothing, nothing)
 end
 
-# need to treat `AbstractVector` and `AbstractMatrix` separately due to ambiguity errors
+# Need to treat `AbstractVector` and `AbstractMatrix` separately due to ambiguity errors
 function _logabsdetjac_scale(a::TrackedReal, x::AbstractVector, ::Type{Val{0}})
     return track(_logabsdetjac_scale, a, data(x), Val{0})
 end
@@ -829,7 +858,7 @@ bijector_bounded(d, a=minimum(d), b=maximum(d)) = Logit(a, b)
 bijector_lowerbounded(d, a=minimum(d)) = Log() ∘ Shift(-a)
 bijector_upperbounded(d, b=maximum(d)) = Log() ∘ Shift(b) ∘ Scale(- one(typeof(b)))
 
-# FIXME: (TOR) Can we make this type-stable?
+# FIXME: Can we make this type-stable?
 # Can also make a `TruncatedBijector`
 # which has the same transform as the `link` function.
 # E.g. (b::Truncated)(x) = link(b.d, x) or smth
@@ -874,6 +903,14 @@ function logpdf(td::MvTransformed, y::AbstractMatrix{<:Real})
     # batch-implementation for multivariate
     res = forward(inv(td.transform), y)
     return logpdf(td.dist, res.rv) + res.logabsdetjac
+end
+
+function logpdf(td::MvTransformed{<:Dirichlet}, y::AbstractMatrix{<:Real})
+    T = eltype(y)
+    ϵ = _eps(T)
+
+    res = forward(inv(td.transform), y)
+    return logpdf(td.dist, mappedarray(x->x+ϵ, res.rv)) + res.logabsdetjac
 end
 
 function _logpdf(td::MvTransformed, y::AbstractVector{<:Real})
@@ -1039,17 +1076,6 @@ forward(d::Distribution, num_samples::Int) = forward(GLOBAL_RNG, d, num_samples)
 
 # utility stuff
 params(td::Transformed) = params(td.dist)
-
-#   ℍ(p̃(y))
-# = ∫ p̃(y) log p̃(y) dy
-# = ∫ p(f⁻¹(y)) |det J(f⁻¹, y)| log (p(f⁻¹(y)) |det J(f⁻¹, y)|) dy
-# = ∫ p(x) (log p(x) |det J(f⁻¹, f(x))|) dx
-# = ∫ p(x) (log p(x) |det J(f⁻¹ ∘ f, x)|) dx
-# = ∫ p(x) log (p(x) |det J(id, x)|) dx
-# = ∫ p(x) log (p(x) ⋅ 1) dx
-# = ∫ p(x) log p(x) dx
-# = ℍ(p(x))
-entropy(td::Transformed) = entropy(td.dist)
 
 # logabsdetjac for distributions
 logabsdetjacinv(d::UnivariateDistribution, x::T) where T <: Real = zero(T)

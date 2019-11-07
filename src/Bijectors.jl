@@ -15,6 +15,9 @@ export  TransformDistribution,
         link,
         invlink,
         logpdf_with_trans,
+        isclosedform,
+        link_jacobian,
+        invlink_jacobian,
         transform,
         forward,
         logabsdetjac,
@@ -33,7 +36,6 @@ export  TransformDistribution,
         TransformedDistribution,
         UnivariateTransformed,
         MultivariateTransformed,
-        entropy,
         logpdf_with_jac,
         logpdf_forward,
         PlanarLayer,
@@ -214,6 +216,39 @@ function link(
     return y
 end
 
+function link_jacobian(
+    d::SimplexDistribution,
+    x::AbstractVector{T},
+    ::Type{Val{proj}} = Val{true}
+) where {T<:Real, proj}
+    K = length(x)
+    dydxt = similar(x, length(x), length(x))
+    @inbounds dydxt .= 0
+    ϵ = _eps(T)
+    sum_tmp = zero(T)
+
+    @inbounds z = x[1] * (one(T) - 2ϵ) + ϵ # z ∈ [ϵ, 1-ϵ]
+    @inbounds dydxt[1,1] = (1/z + 1/(1-z)) * (one(T) - 2ϵ)
+    @inbounds @simd for k in 2:(K - 1)
+        sum_tmp += x[k - 1]
+        # z ∈ [ϵ, 1-ϵ]
+        # x[k] = 0 && sum_tmp = 1 -> z ≈ 1
+        z = (x[k] + ϵ)*(one(T) - 2ϵ)/((one(T) + ϵ) - sum_tmp)
+        dydxt[k,k] = (1/z + 1/(1-z)) * (one(T) - 2ϵ)/((one(T) + ϵ) - sum_tmp)
+        for i in 1:k-1
+            dydxt[i,k] = (1/z + 1/(1-z)) * (x[k] + ϵ)*(one(T) - 2ϵ)/((one(T) + ϵ) - sum_tmp)^2
+        end
+    end
+    @inbounds sum_tmp += x[K - 1]
+    @inbounds if !proj
+        @simd for i in 1:K
+            dydxt[i,K] = -1
+        end
+    end
+
+    return UpperTriangular(dydxt)'
+end
+
 # Vectorised implementation of the above.
 function link(
     d::SimplexDistribution,
@@ -268,6 +303,58 @@ function invlink(
     return x
 end
 
+function invlink_jacobian(
+    d::SimplexDistribution,
+    y::AbstractVector{T},
+    ::Type{Val{proj}} = Val{true}
+) where {T<:Real, proj}
+    K = length(y)
+    dxdy = similar(y, length(y), length(y))
+    @inbounds dxdy .= 0
+
+    ϵ = _eps(T)
+    @inbounds z = StatsFuns.logistic(y[1] - log(T(K - 1)))
+    unclamped_x = (z - ϵ) / (one(T) - 2ϵ)
+    clamped_x = _clamp(unclamped_x, d)
+    @inbounds if unclamped_x == clamped_x
+        dxdy[1,1] = z * (1 - z) / (one(T) - 2ϵ)
+    end
+    sum_tmp = zero(T)
+    @inbounds for k = 2:(K - 1)
+        z = StatsFuns.logistic(y[k] - log(T(K - k)))
+        sum_tmp += clamped_x
+        unclamped_x = ((one(T) + ϵ) - sum_tmp) / (one(T) - 2ϵ) * z - ϵ
+        clamped_x = _clamp(unclamped_x, d)
+        if unclamped_x == clamped_x
+            dxdy[k,k] = z * (1 - z) * ((one(T) + ϵ) - sum_tmp) / (one(T) - 2ϵ)
+            for i in 1:k-1
+                for j in i:k-1
+                    dxdy[k,i] += -dxdy[j,i] * z / (one(T) - 2ϵ)
+                end
+            end
+        end
+    end
+    @inbounds sum_tmp += clamped_x
+    @inbounds if proj
+    	unclamped_x = one(T) - sum_tmp
+        clamped_x = _clamp(unclamped_x, d)
+    else
+    	unclamped_x = one(T) - sum_tmp - y[K]
+        clamped_x = _clamp(unclamped_x, d)
+        if unclamped_x == clamped_x
+            dxdy[K,K] = -1
+        end
+    end
+    @inbounds if unclamped_x == clamped_x
+        for i in 1:K-1
+            @simd for j in i:K-1
+                dxdy[K,i] += -dxdy[j,i]
+            end
+        end
+    end
+    return LowerTriangular(dxdy)
+end
+
 # Vectorised implementation of the above.
 function invlink(
     d::SimplexDistribution,
@@ -303,7 +390,7 @@ function logpdf_with_trans(
 )
     T = eltype(x)
     ϵ = _eps(T)
-    lp = logpdf(d, mappedarray(x->x+ϵ, x))
+    lp = logpdf(d, mappedarray(x -> x + ϵ, x))
     if transform
         K = length(x)
 

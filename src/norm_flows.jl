@@ -63,7 +63,6 @@ function forward(flow::PlanarLayer, z::AbstractVector{<: Real})
     return (rv=vec(res.rv), logabsdetjac=res.logabsdetjac[1])
 end
 
-
 function (ib::Inversed{<: PlanarLayer})(y::AbstractMatrix{<: Real})
     flow = ib.orig
     u_hat = get_u_hat(flow.u, flow.w)
@@ -83,6 +82,7 @@ function (ib::Inversed{<: PlanarLayer})(y::AbstractVector{<: Real})
 end
 
 logabsdetjac(flow::PlanarLayer, x) = forward(flow, x).logabsdetjac
+isclosedform(b::Inversed{<:PlanarLayer}) = false
 
 ###############
 # RadialLayer #
@@ -155,3 +155,4 @@ function (ib::Inversed{<: RadialLayer})(y::AbstractVector{<:Real})
 end
 
 logabsdetjac(flow::RadialLayer, x) = forward(flow, x).logabsdetjac
+isclosedform(b::Inversed{<:RadialLayer}) = false
