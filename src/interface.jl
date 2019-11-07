@@ -169,6 +169,28 @@ Just an alias for `logabsdetjac(inv(b), y)`.
 """
 logabsdetjacinv(b::Bijector, y) = logabsdetjac(inv(b), y)
 
+##############################
+# Example bijector: Identity #
+##############################
+
+struct Identity{N} <: Bijector{N} end
+(::Identity)(x) = x
+inv(b::Identity) = b
+
+logabsdetjac(::Identity, x::Real) = zero(eltype(x))
+@generated function logabsdetjac(
+    b::Identity{N1},
+    x::AbstractArray{T2, N2}
+) where {N1, T2, N2}
+    if N1 == N2
+        return :(zero(eltype(x)))
+    elseif N1 + 1 == N2
+        return :(zeros(eltype(x), size(x, $N2)))
+    else
+        return :(throw(MethodError(logabsdetjac, (b, x))))
+    end
+end
+
 ###############
 # Composition #
 ###############
@@ -246,6 +268,14 @@ composer(ts::Bijector{N}...) where {N} = Composed(reverse(ts))
     end
 end
 
+∘(b1::Composed, b2::Bijector) = composel(b2, b1.ts...)
+∘(b1::Bijector, b2::Composed) = composel(b2.ts..., b1)
+∘(b1::Composed, b2::Composed) = composel(b2.ts..., b1.ts...)
+
+∘(::Identity{N}, ::Identity{N}) where {N} = Identity{N}()
+∘(::Identity{N}, b::Bijector{N}) where {N} = b
+∘(b::Bijector{N}, ::Identity{N}) where {N} = b
+
 inv(ct::Composed) = composer(map(inv, ct.ts)...)
 
 # # TODO: should arrays also be using recursive implementation instead?
@@ -273,25 +303,18 @@ function _logabsdetjac(x, b1::Bijector, bs::Bijector...)
 end
 logabsdetjac(cb::Composed, x) = _logabsdetjac(x, cb.ts...)
 
-# Recursive implementation of `forward`
-# NOTE: we need this one in the case where `length(cb.ts) == 2`
-# in which case forward(...) immediately calls `_forward(::NamedTuple, b::Bijector)`
-function _forward(f::NamedTuple, b::Bijector)
-    y, logjac = forward(b, f.rv)
-    return (rv=y, logabsdetjac=logjac + f.logabsdetjac)
+@generated function forward(cb::Composed{T}, x) where {T<:Tuple}
+    expr = Expr(:block)
+    push!(expr.args, :((y, logjac) = forward(cb.ts[1], x)))
+    for i = 2:length(T.parameters)
+        push!(expr.args, :(res = forward(cb.ts[$i], y)))
+        push!(expr.args, :(y = res.rv))
+        push!(expr.args, :(logjac += res.logabsdetjac))
+    end
+    push!(expr.args, :(return (rv = y, logabsdetjac = logjac)))
+
+    return expr
 end
-function _forward(f::NamedTuple, b1::Bijector, b2::Bijector)
-    f1 = forward(b1, f.rv)
-    f2 = forward(b2, f1.rv)
-    return (rv=f2.rv, logabsdetjac=f2.logabsdetjac + f1.logabsdetjac + f.logabsdetjac)
-end
-function _forward(f::NamedTuple, b::Bijector, bs::Bijector...)
-    f1 = forward(b, f.rv)
-    f_ = (rv=f1.rv, logabsdetjac=f1.logabsdetjac + f.logabsdetjac)
-    return _forward(f_, bs...)
-end
-_forward(x, b::Bijector, bs::Bijector...) = _forward(forward(b, x), bs...)
-forward(cb::Composed{<:Tuple}, x) = _forward(x, cb.ts...)
 
 function forward(cb::Composed, x)
     rv, logjac = forward(cb.ts[1], x)
@@ -383,7 +406,7 @@ function (sb::Stacked{<:AbstractArray, N})(x::AbstractVector{<:Real}) where {N}
     return y
 end
 
-(sb::Stacked)(x::AbstractMatrix{<:Real}) = mapslices(z -> sb(z), x; dims = 1)
+(sb::Stacked)(x::AbstractMatrix{<:Real}) = hcat([sb(x[:, i]) for i = 1:size(x, 2)]...)
 
 # TODO: implement custom adjoint since we can exploit block-diagonal nature of `Stacked`
 function (sb::Stacked)(x::TrackedArray{A, 2}) where {A}
@@ -457,28 +480,6 @@ function forward(sb::Stacked{<:AbstractArray, N}, x::AbstractVector) where {N}
     end
 
     return (rv = vcat(ys...), logabsdetjac = sum(logjacs))
-end
-
-##############################
-# Example bijector: Identity #
-##############################
-
-struct Identity{N} <: Bijector{N} end
-(::Identity)(x) = x
-inv(b::Identity) = b
-
-logabsdetjac(::Identity, x::Real) = zero(eltype(x))
-@generated function logabsdetjac(
-    b::Identity{N1},
-    x::AbstractArray{T2, N2}
-) where {N1, T2, N2}
-    if N1 == N2
-        return :(zero(eltype(x)))
-    elseif N1 + 1 == N2
-        return :(zeros(eltype(x), size(x, $N2)))
-    else
-        return :(throw(MethodError(logabsdetjac, (b, x))))
-    end
 end
 
 ###############################
