@@ -383,7 +383,14 @@ isclosedform(b::Stacked) = all(isclosedform.(b.bs))
 
 stack(bs::Bijector{0}...) = Stacked(bs)
 
-inv(sb::Stacked) = Stacked(inv.(sb.bs), sb.ranges)
+# For some reason `inv.(sb.bs)` was unstable... This works though.
+@generated function inv(sb::Stacked{A}) where {A <: Tuple}
+    exprs = []
+    for i = 1:length(A.parameters)
+        push!(exprs, :(inv(sb.bs[$i])))
+    end
+    :(Stacked(($(exprs...), ), sb.ranges))
+end
 
 # TODO: Is there a better approach to this?
 @generated function _transform(x, rs::NTuple{N, UnitRange{Int}}, bs::Bijector...) where N

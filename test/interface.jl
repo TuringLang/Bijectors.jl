@@ -422,7 +422,7 @@ end
     x = rand(d)
     y = td.transform(x)
 
-    b = Bijectors.composel(td.transform, Bijectors.Identity{0}())
+    b = @inferred Bijectors.composel(td.transform, Bijectors.Identity{0}())
     ib = inv(b)
 
     @test forward(b, x) == forward(td.transform, x)
@@ -431,10 +431,10 @@ end
     @test forward(b, x) == forward(Bijectors.composer(b.ts...), x)
 
     # inverse works fine for composition
-    cb = b ∘ ib
+    cb = @inferred b ∘ ib
     @test cb(x) ≈ x
 
-    cb2 = cb ∘ cb
+    cb2 = @inferred cb ∘ cb
     @test cb(x) ≈ x
 
     # ensures that the `logabsdetjac` is correct
@@ -451,9 +451,9 @@ end
 
     # contrived example
     b = bijector(d)
-    cb = inv(b) ∘ b
-    cb = cb ∘ cb
-    @test (cb ∘ cb ∘ cb ∘ cb ∘ cb)(x) ≈ x
+    cb = @inferred inv(b) ∘ b
+    cb = @inferred cb ∘ cb
+    @test @inferred(cb ∘ cb ∘ cb ∘ cb ∘ cb)(x) ≈ x
 
     # forward for tuple and array
     d = Beta()
@@ -486,7 +486,7 @@ end
     x = rand(d)
     y = b(x)
 
-    sb1 = stack(b, b, inv(b), inv(b))             # <= Tuple
+    sb1 = @inferred stack(b, b, inv(b), inv(b))             # <= Tuple
     res1 = forward(sb1, [x, x, y, y])
 
     @test sb1([x, x, y, y]) == res1.rv
@@ -520,7 +520,7 @@ end
 
     # value-test
     x = ones(3)
-    sb = stack(Bijectors.Exp(), Bijectors.Log(), Bijectors.Shift(5.0))
+    sb = @inferred stack(Bijectors.Exp(), Bijectors.Log(), Bijectors.Shift(5.0))
     res = forward(sb, x)
     @test sb(x) == [exp(x[1]), log(x[2]), x[3] + 5.0]
     @test res.rv == [exp(x[1]), log(x[2]), x[3] + 5.0]
@@ -529,9 +529,9 @@ end
     
 
     # TODO: change when we have dimensionality in the type
-    sb = Stacked((Bijectors.Exp(), Bijectors.SimplexBijector()), [1:1, 2:3])
+    sb = @inferred Stacked((Bijectors.Exp(), Bijectors.SimplexBijector()), [1:1, 2:3])
     x = ones(3) ./ 3.0
-    res = forward(sb, x)
+    res = @inferred forward(sb, x)
     @test sb(x) == [exp(x[1]), sb.bs[2](x[2:3])...]
     @test res.rv == [exp(x[1]), sb.bs[2](x[2:3])...]
     @test logabsdetjac(sb, x) == sum([sum(logabsdetjac(sb.bs[i], x[sb.ranges[i]])) for i = 1:2])
@@ -590,14 +590,14 @@ end
         # Stacked{<:Tuple}
         bs = bijector.(tuple(dists...))
         ibs = inv.(bs)
-        sb = Stacked(ibs, ranges)
-        isb = inv(sb)
+        sb = @inferred Stacked(ibs, ranges)
+        isb = @inferred inv(sb)
         @test sb isa Stacked{<: Tuple}
 
         # inverse
-        td = transformed(d, sb)
-        y = rand(td)
-        x = isb(y)
+        td = @inferred transformed(d, sb)
+        y = @inferred rand(td)
+        x = @inferred isb(y)
         @test sb(x) ≈ y
 
         # verification of computation
