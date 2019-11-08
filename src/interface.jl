@@ -278,6 +278,13 @@ end
 ∘(b::Bijector{N}, ::Identity{N}) where {N} = b
 
 inv(ct::Composed) = composer(map(inv, ct.ts)...)
+@generated function inv(cb::Composed{A}) where {A<:Tuple}
+    exprs = []
+    for i = 1:length(A.parameters)
+        push!(exprs, :(inv(cb.ts[$i])))
+    end
+    return :(Composed(($(exprs...), )))
+end
 
 # # TODO: should arrays also be using recursive implementation instead?
 function (cb::Composed{<:AbstractArray{<:Bijector}})(x)
@@ -382,7 +389,16 @@ Stacked(bs) = Stacked(bs, tuple([i:i for i = 1:length(bs)]...))
 isclosedform(b::Stacked) = all(isclosedform.(b.bs))
 
 stack(bs::Bijector{0}...) = Stacked(bs)
+
+# For some reason `inv.(sb.bs)` was unstable... This works though.
 inv(sb::Stacked) = Stacked(map(inv, sb.bs), sb.ranges)
+@generated function inv(sb::Stacked{A}) where {A <: Tuple}
+    exprs = []
+    for i = 1:length(A.parameters)
+        push!(exprs, :(inv(sb.bs[$i])))
+    end
+    :(Stacked(($(exprs...), ), sb.ranges))
+end
 
 # TODO: Is there a better approach to this?
 @generated function _transform(x, rs::NTuple{N, UnitRange{Int}}, bs::Bijector...) where N
