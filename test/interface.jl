@@ -423,7 +423,7 @@ end
     y = td.transform(x)
 
     b = @inferred Bijectors.composel(td.transform, Bijectors.Identity{0}())
-    ib = inv(b)
+    ib = @inferred inv(b)
 
     @test forward(b, x) == forward(td.transform, x)
     @test forward(ib, y) == forward(inv(td.transform), y)
@@ -457,8 +457,8 @@ end
 
     # forward for tuple and array
     d = Beta()
-    b = inv(bijector(d))
-    b⁻¹ = inv(b)
+    b = @inferred inv(bijector(d))
+    b⁻¹ = @inferred inv(b)
     x = rand(d)
 
     cb_t = b⁻¹ ∘ b⁻¹
