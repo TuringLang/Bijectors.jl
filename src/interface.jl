@@ -280,7 +280,9 @@ end
 inv(ct::Composed) = composer(map(inv, ct.ts)...)
 @generated function inv(cb::Composed{A}) where {A<:Tuple}
     exprs = []
-    for i = 1:length(A.parameters)
+
+    # inversion → reversing order
+    for i = length(A.parameters):-1:1
         push!(exprs, :(inv(cb.ts[$i])))
     end
     return :(Composed(($(exprs...), )))
