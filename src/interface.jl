@@ -221,17 +221,63 @@ In general this is not advised since you lose type-stability, but there might be
 where this is desired, e.g. if you have a insanely large number of bijectors to compose.
 
 # Examples
+## Simple example
+Let's consider a simple example of `Exp`:
+```julia-repl
+julia> using Bijectors: Exp
+
+julia> b = Exp()
+Exp{0}()
+
+julia> b ∘ b
+Composed{Tuple{Exp{0},Exp{0}},0}((Exp{0}(), Exp{0}()))
+
+julia> (b ∘ b)(1.0) == exp(exp(1.0))    # evaluation
+true
+
+julia> inv(b ∘ b)(exp(exp(1.0))) == 1.0 # inversion
+true
+
+julia> logabsdetjac(b ∘ b, 1.0)         # determinant of jacobian
+3.718281828459045
+```
+
+# Notes
+## Order
 It's important to note that `∘` does what is expected mathematically, which means that the
 bijectors are applied to the input right-to-left, e.g. first applying `b2` and then `b1`:
-```
+```julia
 (b1 ∘ b2)(x) == b1(b2(x))     # => true
 ```
 But in the `Composed` struct itself, we store the bijectors left-to-right, so that
-```
+```julia
 cb1 = b1 ∘ b2                  # => Composed.ts == (b2, b1)
 cb2 = composel(b2, b1)         # => Composed.ts == (b2, b1)
 cb1(x) == cb2(x) == b1(b2(x))  # => true
 ```
+
+## Structure
+`∘` will result in "flatten" the composition structure while `composel` and
+`composer` preserve the compositional structure. This is most easily seen by an example:
+```julia-repl
+julia> b = Exp()
+Exp{0}()
+
+julia> cb1 = b ∘ b; cb2 = b ∘ b;
+
+julia> (cb1 ∘ cb2).ts # <= different
+(Exp{0}(), Exp{0}(), Exp{0}(), Exp{0}())
+
+julia> (cb1 ∘ cb2).ts isa NTuple{4, Exp{0}}
+true
+
+julia> Bijectors.composer(cb1, cb2).ts
+(Composed{Tuple{Exp{0},Exp{0}},0}((Exp{0}(), Exp{0}())), Composed{Tuple{Exp{0},Exp{0}},0}((Exp{0}(), Exp{0}())))
+
+julia> Bijectors.composer(cb1, cb2).ts isa Tuple{Composed, Composed}
+true
+```
+
 """
 struct Composed{A, N} <: Bijector{N}
     ts::A
