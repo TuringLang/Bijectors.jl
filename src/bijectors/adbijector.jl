@@ -5,32 +5,25 @@ implement `jacobian` and, by impliciation, `logabsdetjac`.
 abstract type ADBijector{AD, N} <: Bijector{N} end
 
 # AD implementations
-function jacobian(b::ADBijector{<:ForwardDiffAD}, x::Real)
+function jacobian(b::Union{B, Inversed{B}}, x::Real) where {B<:ADBijector{<:ForwardDiffAD}}
     return ForwardDiff.derivative(b, x)
 end
-function jacobian(b::Inversed{<:ADBijector{<:ForwardDiffAD}}, y::Real)
-    return ForwardDiff.derivative(b, y)
-end
-function jacobian(b::ADBijector{<:ForwardDiffAD}, x::AbstractVector{<:Real})
+function jacobian(
+    b::Union{B, Inversed{B}},
+    x::AbstractVector{<:Real}
+) where {B<:ADBijector{<:ForwardDiffAD}}
     return ForwardDiff.jacobian(b, x)
 end
-function jacobian(b::Inversed{<:ADBijector{<:ForwardDiffAD}}, y::AbstractVector{<:Real})
-    return ForwardDiff.jacobian(b, y)
-end
 
-function jacobian(b::ADBijector{<:TrackerAD}, x::Real)
+function jacobian(b::Union{B, Inversed{B}}, x::Real) where {B<:ADBijector{<:TrackerAD}}
     return Tracker.data(Tracker.gradient(b, x)[1])
 end
-function jacobian(b::Inversed{<:ADBijector{<:TrackerAD}}, y::Real)
-    return Tracker.data(Tracker.gradient(b, y)[1])
-end
-function jacobian(b::ADBijector{<:TrackerAD}, x::AbstractVector{<:Real})
+function jacobian(
+    b::Union{B, Inversed{B}},
+    x::AbstractVector{<:Real}
+) where {B<:ADBijector{<:TrackerAD}}
     # We extract `data` so that we don't returne a `Tracked` type
     return Tracker.data(Tracker.jacobian(b, x))
-end
-function jacobian(b::Inversed{<:ADBijector{<:TrackerAD}}, y::AbstractVector{<:Real})
-    # We extract `data` so that we don't returne a `Tracked` type
-    return Tracker.data(Tracker.jacobian(b, y))
 end
 
 struct SingularJacobianException{B} <: Exception where {B<:Bijector}
