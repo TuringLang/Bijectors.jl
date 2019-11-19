@@ -22,7 +22,7 @@ function jacobian(
     b::Union{B, Inversed{B}},
     x::AbstractVector{<:Real}
 ) where {B<:ADBijector{<:TrackerAD}}
-    # We extract `data` so that we don't returne a `Tracked` type
+    # We extract `data` so that we don't return a `Tracked` type
     return Tracker.data(Tracker.jacobian(b, x))
 end
 
