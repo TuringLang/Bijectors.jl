@@ -14,6 +14,27 @@ This package implements a set of functions for transforming constrained random v
 
 All exported names from the [Distributions.jl](https://github.com/TuringLang/Bijectors.jl) package are reexported from `Bijectors`.
 
+Bijectors.jl also provides a nice interface for working with these maps: composition, inversion, etc.
+The following table lists mathematical operations for a bijector and the corresponding code in Bijectors.jl.
+
+| Operation                          | Method          | Automatic |
+|:------------------------------------:|:-----------------:|:-----------:|
+| `b ↦ b⁻¹`                                      | `inv(b)`                | ✓         |
+| `(b₁, b₂) ↦ (b₁ ∘ b₂)`                         | `b1 ∘ b2`               | ✓         |
+| `(b₁, b₂) ↦ [b₁, b₂]`                          | `stack(b1, b2)`         | ✓         |
+| `x ↦ b(x)`                                     | `b(x)`                  | ×         |
+| `y ↦ b⁻¹(y)`                                   | `inv(b)(y)`             | ×         |
+| `x ↦ log｜det J(b, x)｜`                       | `logabsdetjac(b, x)`    | AD        |
+| `x ↦ b(x), log｜det J(b, x)｜`                 | `forward(b, x)`         | ✓         |
+| `p ↦ q := b_* p`                                | `q = transformed(p, b)` | ✓         |
+| `y ∼ q`                                        | `y = rand(q)`           | ✓         |
+| `p ↦ b` such that `support(b_* p) = ℝᵈ`               | `bijector(p)`           | ✓         |
+| `(x ∼ p, b(x), log｜det J(b, x)｜, log q(y))` | `forward(q)`            | ✓         |
+
+In this table, `b` denotes a `Bijector`, `J(b, x)` denotes the jacobian of `b` evaluated at `x`, `b_*` denotes the (https://www.wikiwand.com/en/Pushforward_measure)[push-forward] of `p` by `b`, and `x ∼ p` denotes `x` sampled from the distribution with density `p`.
+
+The "Automatic" column in the table refers to whether or not you are required to implement the feature for a custom `Bijector`. "AD" refers to the fact that it can be implemented "automatically" using automatic differentiation, i.e. `ADBijector`.
+
 ## Functions
 
 1. `link`: maps a sample of a random distribution `dist` from its support to a value in R^n. Example:
@@ -632,26 +653,6 @@ julia> logabsdetjac(b_ad, 0.6)
 
 
 ### Reference
-The following table lists mathematical operations for a bijector and the corresponding code in Bijectors.jl.
-
-| Operation                          | Method          | Automatic |
-|:------------------------------------:|:-----------------:|:-----------:|
-| `b ↦ b⁻¹`                                      | `inv(b)`                | ✓         |
-| `(b₁, b₂) ↦ (b₁ ∘ b₂)`                         | `b1 ∘ b2`               | ✓         |
-| `(b₁, b₂) ↦ [b₁, b₂]`                          | `stack(b1, b2)`         | ✓         |
-| `x ↦ b(x)`                                     | `b(x)`                  | ×         |
-| `y ↦ b⁻¹(y)`                                   | `inv(b)(y)`             | ×         |
-| `x ↦ log｜det J(b, x)｜`                       | `logabsdetjac(b, x)`    | AD        |
-| `x ↦ b(x), log｜det J(b, x)｜`                 | `forward(b, x)`         | ✓         |
-| `p ↦ q := b_* p`                                | `q = transformed(p, b)` | ✓         |
-| `y ∼ q`                                        | `y = rand(q)`           | ✓         |
-| `p ↦ b` such that `support(b_* p) = ℝᵈ`               | `bijector(p)`           | ✓         |
-| `(x ∼ p, b(x), log｜det J(b, x)｜, log q(y))` | `forward(q)`            | ✓         |
-
-In this table, `b` denotes a `Bijector`, `J(b, x)` denotes the jacobian of `b` evaluated at `x`, `b_*` denotes the (https://www.wikiwand.com/en/Pushforward_measure)[push-forward] of `p` by `b`, and `x ∼ p` denotes `x` sampled from the distribution with density `p`.
-
-The "Automatic" column in the table refers to whether or not you are required to implement the feature for a custom `Bijector`. "AD" refers to the fact that it can be implemented "automatically" using automatic differentiation, i.e. `ADBijector`.
-
 Most of the methods and types mention below will have docstrings with more elaborate explanation and examples, e.g.
 ```julia
 help?> Bijectors.Composed
