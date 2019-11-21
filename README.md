@@ -20,8 +20,8 @@ The following table lists mathematical operations for a bijector and the corresp
 | Operation                          | Method          | Automatic |
 |:------------------------------------:|:-----------------:|:-----------:|
 | `b ↦ b⁻¹`                                      | `inv(b)`                | ✓         |
-| `(b₁, b₂) ↦ (b₁ ∘ b₂)`                         | `b1 ∘ b2`               | ✓         |
-| `(b₁, b₂) ↦ [b₁, b₂]`                          | `stack(b1, b2)`         | ✓         |
+| `(b₁, b₂) ↦ (b₁ ∘ b₂)`                         | `b₁ ∘ b₂`               | ✓         |
+| `(b₁, b₂) ↦ [b₁, b₂]`                          | `stack(b₁, b₂)`         | ✓         |
 | `x ↦ b(x)`                                     | `b(x)`                  | ×         |
 | `y ↦ b⁻¹(y)`                                   | `inv(b)(y)`             | ×         |
 | `x ↦ log｜det J(b, x)｜`                       | `logabsdetjac(b, x)`    | AD        |
@@ -31,7 +31,7 @@ The following table lists mathematical operations for a bijector and the corresp
 | `p ↦ b` such that `support(b_* p) = ℝᵈ`               | `bijector(p)`           | ✓         |
 | `(x ∼ p, b(x), log｜det J(b, x)｜, log q(y))` | `forward(q)`            | ✓         |
 
-In this table, `b` denotes a `Bijector`, `J(b, x)` denotes the jacobian of `b` evaluated at `x`, `b_*` denotes the (https://www.wikiwand.com/en/Pushforward_measure)[push-forward] of `p` by `b`, and `x ∼ p` denotes `x` sampled from the distribution with density `p`.
+In this table, `b` denotes a `Bijector`, `J(b, x)` denotes the jacobian of `b` evaluated at `x`, `b_*` denotes the [push-forward](https://www.wikiwand.com/en/Pushforward_measure) of `p` by `b`, and `x ∼ p` denotes `x` sampled from the distribution with density `p`.
 
 The "Automatic" column in the table refers to whether or not you are required to implement the feature for a custom `Bijector`. "AD" refers to the fact that it can be implemented "automatically" using automatic differentiation, i.e. `ADBijector`.
 
