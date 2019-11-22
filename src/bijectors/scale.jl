@@ -57,9 +57,13 @@ function _logabsdetjac_scale(a::TrackedVector, x::AbstractVector, ::Val{1})
     return track(_logabsdetjac_scale, a, data(x), Val(1))
 end
 @grad function _logabsdetjac_scale(a::TrackedVector, x::AbstractVector, ::Val{1})
+    # ∂ᵢ (∑ⱼ log|aⱼ|) = ∑ⱼ δᵢⱼ ∂ᵢ log|aⱼ|
+    #                 = ∂ᵢ log |aᵢ|
+    #                 = (1 / aᵢ) ∂ᵢ aᵢ
+    #                 = (1 / aᵢ)
     da = data(a)
-    J = sum(inv.(da))
-    return _logabsdetjac_scale(da, data(x), Val(1)), Δ -> (transpose(J) * Δ, nothing, nothing)
+    J = inv.(da)
+    return _logabsdetjac_scale(da, data(x), Val(1)), Δ -> (J .* Δ, nothing, nothing)
 end
 
 function _logabsdetjac_scale(a::TrackedVector, x::AbstractMatrix, ::Val{1})
@@ -67,8 +71,8 @@ function _logabsdetjac_scale(a::TrackedVector, x::AbstractMatrix, ::Val{1})
 end
 @grad function _logabsdetjac_scale(a::TrackedVector, x::AbstractMatrix, ::Val{1})
     da = data(a)
-    J = sum(inv.(da)) .* ones(size(x, 2))
-    return _logabsdetjac_scale(da, data(x), Val(1)), Δ -> (transpose(J) * Δ, nothing, nothing)
+    Jᵀ = repeat(inv.(da), 1, size(x, 2))
+    return _logabsdetjac_scale(da, data(x), Val(1)), Δ -> (Jᵀ * Δ, nothing, nothing)
 end
 
 # TODO: implement analytical gradient for scaling a vector using a matrix

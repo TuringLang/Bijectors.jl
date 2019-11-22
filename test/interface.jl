@@ -264,14 +264,24 @@ end
 
 
             # 1-dim with `Vector` parameter
-            b = Scale(param([2.0, 3.0, 5.0]))
-            lj = logabsdetjac(b, [3.0, 4.0, 5.0])
-            Tracker.back!(lj)
-            @test Tracker.extract_grad!(b.a) == fill(sum(inv.(b.a)), 3)
+            x = [3.0, 4.0, 5.0]
+            xs = [3.0 4.0; 4.0 7.0; 5.0 8.0]
+            a = [2.0, 3.0, 5.0]
 
-            lj = logabsdetjac(b, [3.0 4.0 5.0; 6.0 7.0 8.0])
-            Tracker.back!(lj, [1.0, 1.0, 1.0])
-            @test Tracker.extract_grad!(b.a) == fill(sum(inv.(b.a)), 3) .* 3
+            b = Scale(param(a))
+            lj = logabsdetjac(b, x)
+            Tracker.back!(lj)
+            @test Tracker.extract_grad!(b.a) == ForwardDiff.gradient(a -> logabsdetjac(Scale(a), x), a)
+
+            # batch
+            lj = logabsdetjac(b, xs)
+            Tracker.back!(mean(lj), 1.0)
+            @test Tracker.extract_grad!(b.a) == ForwardDiff.gradient(a -> mean(logabsdetjac(Scale(a), xs)), a)
+
+            # Forward when doing a composition
+            y, logjac = logabsdetjac(b, xs)
+            Tracker.back!(mean(logjac), 1.0)
+            @test Tracker.extract_grad!(b.a) == ForwardDiff.gradient(a -> mean(logabsdetjac(Scale(a), xs)), a)
         end
 
         @testset "Shift" begin
