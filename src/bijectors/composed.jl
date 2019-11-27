@@ -133,6 +133,14 @@ function ∘(b1::Composed{<:AbstractArray}, b2::Composed{<:AbstractArray})
     return Composed(append!(copy(b2.ts), copy(b1.ts)))
 end
 
+# if combining type-unstable and type-stable, return type-unstable
+function ∘(b1::T1, b2::T2) where {T1<:Composed{<:Tuple}, T2<:Composed{<:AbstractArray}}
+    error("Cannot compose compositions of different container-types; ($T1, $T2)")
+end
+function ∘(b1::T1, b2::T2) where {T1<:Composed{<:AbstractArray}, T2<:Composed{<:Tuple}}
+    error("Cannot compose compositions of different container-types; ($T1, $T2)")
+end
+
 
 ∘(::Identity{N}, ::Identity{N}) where {N} = Identity{N}()
 ∘(::Identity{N}, b::Bijector{N}) where {N} = b

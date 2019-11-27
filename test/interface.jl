@@ -271,6 +271,10 @@ end
         @test inv(cb1) isa Composed{<:AbstractArray}
         @test inv(cb2) isa Composed{<:AbstractArray}
         @test inv(cb3) isa Composed{<:AbstractArray}
+
+        # combining the two
+        @test_throws ErrorException (Log() ∘ Exp()) ∘ cb1
+        @test_throws ErrorException cb1 ∘ (Log() ∘ Exp())
     end
 
     @testset "Batch-computation with Tracker.jl" begin
