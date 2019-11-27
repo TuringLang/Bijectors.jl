@@ -26,7 +26,7 @@ function jacobian(
     return Tracker.data(Tracker.jacobian(b, x))
 end
 
-struct SingularJacobianException{B} <: Exception where {B<:Bijector}
+struct SingularJacobianException{B<:Bijector} <: Exception
     b::B
 end
 function Base.showerror(io::IO, e::SingularJacobianException)

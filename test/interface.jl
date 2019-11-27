@@ -247,6 +247,30 @@ end
 
     @testset "Composition" begin
         @test_throws DimensionMismatch (Exp{1}() ∘ Log{0}())
+
+        # Check that type-stable composition stays type-stable
+        cb1 = Composed((Exp(), Log())) ∘ Exp()
+        @test cb1 isa Composed{<:Tuple}
+        cb2 = Exp() ∘ Composed((Exp(), Log()))
+        @test cb2 isa Composed{<:Tuple}
+        cb3 = cb1 ∘ cb2
+        @test cb3 isa Composed{<:Tuple}
+
+        @test inv(cb1) isa Composed{<:Tuple}
+        @test inv(cb2) isa Composed{<:Tuple}
+        @test inv(cb3) isa Composed{<:Tuple}
+
+        # Check that type-unstable composition stays type-unstable
+        cb1 = Composed([Exp(), Log()]) ∘ Exp()
+        @test cb1 isa Composed{<:AbstractArray}
+        cb2 = Exp() ∘ Composed([Exp(), Log()])
+        @test cb2 isa Composed{<:AbstractArray}
+        cb3 = cb1 ∘ cb2
+        @test cb3 isa Composed{<:AbstractArray}
+
+        @test inv(cb1) isa Composed{<:AbstractArray}
+        @test inv(cb2) isa Composed{<:AbstractArray}
+        @test inv(cb3) isa Composed{<:AbstractArray}
     end
 
     @testset "Batch-computation with Tracker.jl" begin
