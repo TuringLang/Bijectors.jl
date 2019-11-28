@@ -109,5 +109,5 @@ end
 @inline (b::Permute)(x::AbstractMatrix) = b.A * x
 @inline inv(b::Permute) = Permute(transpose(b.A))
 
-logabsdetjac(b, x::AbstractVector) = zero(eltype(x))
-logabsdetjac(b, x::AbstractMatrix) = zero(eltype(x), size(x, 2))
+logabsdetjac(b::Permute, x::AbstractVector) = zero(eltype(x))
+logabsdetjac(b::Permute, x::AbstractMatrix) = zero(eltype(x), size(x, 2))
