@@ -54,7 +54,7 @@ end
 
     x = rand(d)
     y = flow.transform(x)
-    res = forward(flow, x)
+    res = forward(flow.transform, x)
     lp = logpdf_forward(flow, x, res.logabsdetjac)
     
     @test res.rv ≈ y
