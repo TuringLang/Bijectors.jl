@@ -537,6 +537,4 @@ end
 
 include("interface.jl")
 
-include("norm_flows.jl")
-
 end # module

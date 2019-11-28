@@ -56,13 +56,13 @@ end
     
     for dist in uni_dists
         @testset "$dist: dist" begin
-            td = transformed(dist)
+            td = @inferred transformed(dist)
 
             # single sample
-            y = rand(td)
-            x = inv(td.transform)(y)
-            @test y == td.transform(x)
-            @test logpdf(td, y) ≈ logpdf_with_trans(dist, x, true)
+            y = @inferred rand(td)
+            x = @inferred inv(td.transform)(y)
+            @test y == @inferred td.transform(x)
+            @test @inferred logpdf(td, y) ≈ @inferred logpdf_with_trans(dist, x, true)
 
             # logpdf_with_jac
             lp, logjac = logpdf_with_jac(td, y)
@@ -70,20 +70,20 @@ end
             @test logjac ≈ logabsdetjacinv(td.transform, y)
 
             # multi-sample
-            y = rand(td, 10)
+            y = @inferred rand(td, 10)
             x = inv(td.transform).(y)
             @test logpdf.(td, y) ≈ logpdf_with_trans.(dist, x, true)
 
             # logpdf corresponds to logpdf_with_trans
             d = dist
-            b = bijector(d)
+            b = @inferred bijector(d)
             x = rand(d)
-            y = b(x)
+            y = @inferred b(x)
             @test logpdf(d, inv(b)(y)) + logabsdetjacinv(b, y) ≈ logpdf_with_trans(d, x, true)
             @test logpdf(d, x) - logabsdetjac(b, x) ≈ logpdf_with_trans(d, x, true)
 
             # forward
-            f = forward(td)
+            f = @inferred forward(td)
             @test f.x ≈ inv(td.transform)(f.y)
             @test f.y ≈ td.transform(f.x)
             @test f.logabsdetjac ≈ logabsdetjac(td.transform, f.x)
@@ -153,24 +153,25 @@ end
 
     for (b, xs) in bs_xs
         @testset "$b" begin
-            D = Bijectors.dimension(b)
-            ib = inv(b)
+            D = @inferred Bijectors.dimension(b)
+            ib = @inferred inv(b)
 
             @test Bijectors.dimension(ib) == D
 
             x = D == 0 ? xs[1] : xs[:, 1]
 
-            y = b(x)
-            ys = b(xs)
+            y = @inferred b(x)
 
-            x_ = ib(y)
-            xs_ = ib(ys)
+            ys = @inferred b(xs)
 
-            result = forward(b, x)
-            results = forward(b, xs)
+            x_ = @inferred ib(y)
+            xs_ = @inferred ib(ys)
 
-            iresult = forward(ib, y)
-            iresults = forward(ib, ys)
+            result = @inferred forward(b, x)
+            results = @inferred forward(b, xs)
+
+            iresult = @inferred forward(ib, y)
+            iresults = @inferred forward(ib, ys)
 
             # Sizes
             @test size(y) == size(x)
@@ -186,7 +187,7 @@ end
             @test size(iresults.rv) == size(ys)
 
             # Values
-            @test ys == mapslices(z -> b(z), xs; dims = 1)
+            @test ys ≈ hcat([b(xs[:, i]) for i = 1:size(xs, 2)]...)
             @test ys ≈ results.rv
 
             if D == 0
@@ -202,10 +203,10 @@ end
                 # Values
                 b_logjac_ad = [(log ∘ abs)(ForwardDiff.derivative(b, xs[i])) for i = 1:length(xs)]
                 ib_logjac_ad = [(log ∘ abs)(ForwardDiff.derivative(ib, ys[i])) for i = 1:length(ys)]
-                @test logabsdetjac.(b, xs) == logabsdetjac(b, xs)
-                @test logabsdetjac(b, xs) ≈ b_logjac_ad atol=1e-9
-                @test logabsdetjac.(ib, ys) == logabsdetjac(ib, ys)
-                @test logabsdetjac(ib, ys) ≈ ib_logjac_ad atol=1e-9
+                @test logabsdetjac.(b, xs) == @inferred(logabsdetjac(b, xs))
+                @test @inferred(logabsdetjac(b, xs)) ≈ b_logjac_ad atol=1e-9
+                @test logabsdetjac.(ib, ys) == @inferred(logabsdetjac(ib, ys))
+                @test @inferred(logabsdetjac(ib, ys)) ≈ ib_logjac_ad atol=1e-9
 
                 @test results.logabsdetjac ≈ vec(logabsdetjac.(b, xs))
                 @test iresults.logabsdetjac ≈ vec(logabsdetjac.(ib, ys))
@@ -221,8 +222,8 @@ end
                 @test size(iresults.logabsdetjac) == (size(ys, 2), )
 
                 # Test all values
-                @test logabsdetjac(b, xs) == vec(mapslices(z -> logabsdetjac(b, z), xs; dims = 1))
-                @test logabsdetjac(ib, ys) == vec(mapslices(z -> logabsdetjac(ib, z), ys; dims = 1))
+                @test @inferred(logabsdetjac(b, xs)) == vec(mapslices(z -> logabsdetjac(b, z), xs; dims = 1))
+                @test @inferred(logabsdetjac(ib, ys)) == vec(mapslices(z -> logabsdetjac(ib, z), ys; dims = 1))
 
                 @test results.logabsdetjac ≈ vec(mapslices(z -> logabsdetjac(b, z), xs; dims = 1))
                 @test iresults.logabsdetjac ≈ vec(mapslices(z -> logabsdetjac(ib, z), ys; dims = 1))
@@ -246,6 +247,34 @@ end
 
     @testset "Composition" begin
         @test_throws DimensionMismatch (Exp{1}() ∘ Log{0}())
+
+        # Check that type-stable composition stays type-stable
+        cb1 = Composed((Exp(), Log())) ∘ Exp()
+        @test cb1 isa Composed{<:Tuple}
+        cb2 = Exp() ∘ Composed((Exp(), Log()))
+        @test cb2 isa Composed{<:Tuple}
+        cb3 = cb1 ∘ cb2
+        @test cb3 isa Composed{<:Tuple}
+
+        @test inv(cb1) isa Composed{<:Tuple}
+        @test inv(cb2) isa Composed{<:Tuple}
+        @test inv(cb3) isa Composed{<:Tuple}
+
+        # Check that type-unstable composition stays type-unstable
+        cb1 = Composed([Exp(), Log()]) ∘ Exp()
+        @test cb1 isa Composed{<:AbstractArray}
+        cb2 = Exp() ∘ Composed([Exp(), Log()])
+        @test cb2 isa Composed{<:AbstractArray}
+        cb3 = cb1 ∘ cb2
+        @test cb3 isa Composed{<:AbstractArray}
+
+        @test inv(cb1) isa Composed{<:AbstractArray}
+        @test inv(cb2) isa Composed{<:AbstractArray}
+        @test inv(cb3) isa Composed{<:AbstractArray}
+
+        # combining the two
+        @test_throws ErrorException (Log() ∘ Exp()) ∘ cb1
+        @test_throws ErrorException cb1 ∘ (Log() ∘ Exp())
     end
 
     @testset "Batch-computation with Tracker.jl" begin
@@ -263,14 +292,24 @@ end
 
 
             # 1-dim with `Vector` parameter
-            b = Scale(param([2.0, 3.0, 5.0]))
-            lj = logabsdetjac(b, [3.0, 4.0, 5.0])
-            Tracker.back!(lj)
-            @test Tracker.extract_grad!(b.a) == fill(sum(inv.(b.a)), 3)
+            x = [3.0, 4.0, 5.0]
+            xs = [3.0 4.0; 4.0 7.0; 5.0 8.0]
+            a = [2.0, 3.0, 5.0]
 
-            lj = logabsdetjac(b, [3.0 4.0 5.0; 6.0 7.0 8.0])
-            Tracker.back!(lj, [1.0, 1.0, 1.0])
-            @test Tracker.extract_grad!(b.a) == fill(sum(inv.(b.a)), 3) .* 3
+            b = Scale(param(a))
+            lj = logabsdetjac(b, x)
+            Tracker.back!(lj)
+            @test Tracker.extract_grad!(b.a) == ForwardDiff.gradient(a -> logabsdetjac(Scale(a), x), a)
+
+            # batch
+            lj = logabsdetjac(b, xs)
+            Tracker.back!(mean(lj), 1.0)
+            @test Tracker.extract_grad!(b.a) == ForwardDiff.gradient(a -> mean(logabsdetjac(Scale(a), xs)), a)
+
+            # Forward when doing a composition
+            y, logjac = logabsdetjac(b, xs)
+            Tracker.back!(mean(logjac), 1.0)
+            @test Tracker.extract_grad!(b.a) == ForwardDiff.gradient(a -> mean(logabsdetjac(Scale(a), xs)), a)
         end
 
         @testset "Shift" begin
@@ -421,8 +460,8 @@ end
     x = rand(d)
     y = td.transform(x)
 
-    b = Bijectors.composel(td.transform, Bijectors.Identity{0}())
-    ib = inv(b)
+    b = @inferred Bijectors.composel(td.transform, Bijectors.Identity{0}())
+    ib = @inferred inv(b)
 
     @test forward(b, x) == forward(td.transform, x)
     @test forward(ib, y) == forward(inv(td.transform), y)
@@ -430,10 +469,10 @@ end
     @test forward(b, x) == forward(Bijectors.composer(b.ts...), x)
 
     # inverse works fine for composition
-    cb = b ∘ ib
+    cb = @inferred b ∘ ib
     @test cb(x) ≈ x
 
-    cb2 = cb ∘ cb
+    cb2 = @inferred cb ∘ cb
     @test cb(x) ≈ x
 
     # ensures that the `logabsdetjac` is correct
@@ -450,14 +489,14 @@ end
 
     # contrived example
     b = bijector(d)
-    cb = inv(b) ∘ b
-    cb = cb ∘ cb
-    @test (cb ∘ cb ∘ cb ∘ cb ∘ cb)(x) ≈ x
+    cb = @inferred inv(b) ∘ b
+    cb = @inferred cb ∘ cb
+    @test @inferred(cb ∘ cb ∘ cb ∘ cb ∘ cb)(x) ≈ x
 
     # forward for tuple and array
     d = Beta()
-    b = inv(bijector(d))
-    b⁻¹ = inv(b)
+    b = @inferred inv(bijector(d))
+    b⁻¹ = @inferred inv(b)
     x = rand(d)
 
     cb_t = b⁻¹ ∘ b⁻¹
@@ -485,7 +524,7 @@ end
     x = rand(d)
     y = b(x)
 
-    sb1 = stack(b, b, inv(b), inv(b))             # <= Tuple
+    sb1 = @inferred stack(b, b, inv(b), inv(b))             # <= Tuple
     res1 = forward(sb1, [x, x, y, y])
 
     @test sb1([x, x, y, y]) == res1.rv
@@ -519,7 +558,7 @@ end
 
     # value-test
     x = ones(3)
-    sb = stack(Bijectors.Exp(), Bijectors.Log(), Bijectors.Shift(5.0))
+    sb = @inferred stack(Bijectors.Exp(), Bijectors.Log(), Bijectors.Shift(5.0))
     res = forward(sb, x)
     @test sb(x) == [exp(x[1]), log(x[2]), x[3] + 5.0]
     @test res.rv == [exp(x[1]), log(x[2]), x[3] + 5.0]
@@ -528,9 +567,9 @@ end
     
 
     # TODO: change when we have dimensionality in the type
-    sb = Stacked((Bijectors.Exp(), Bijectors.SimplexBijector()), [1:1, 2:3])
+    sb = @inferred Stacked((Bijectors.Exp(), Bijectors.SimplexBijector()), [1:1, 2:3])
     x = ones(3) ./ 3.0
-    res = forward(sb, x)
+    res = @inferred forward(sb, x)
     @test sb(x) == [exp(x[1]), sb.bs[2](x[2:3])...]
     @test res.rv == [exp(x[1]), sb.bs[2](x[2:3])...]
     @test logabsdetjac(sb, x) == sum([sum(logabsdetjac(sb.bs[i], x[sb.ranges[i]])) for i = 1:2])
@@ -589,14 +628,14 @@ end
         # Stacked{<:Tuple}
         bs = bijector.(tuple(dists...))
         ibs = inv.(bs)
-        sb = Stacked(ibs, ranges)
-        isb = inv(sb)
+        sb = @inferred Stacked(ibs, ranges)
+        isb = @inferred inv(sb)
         @test sb isa Stacked{<: Tuple}
 
         # inverse
-        td = transformed(d, sb)
-        y = rand(td)
-        x = isb(y)
+        td = @inferred transformed(d, sb)
+        y = @inferred rand(td)
+        x = @inferred isb(y)
         @test sb(x) ≈ y
 
         # verification of computation
