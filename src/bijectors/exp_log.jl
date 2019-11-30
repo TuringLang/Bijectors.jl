@@ -8,6 +8,9 @@ struct Log{N} <: Bijector{N} end
 Exp() = Exp{0}()
 Log() = Log{0}()
 
+(b::Exp)(y::Real) = exp(y)
+(b::Log)(x::Real) = log(x)
+
 (b::Exp)(y) = @. exp(y)
 (b::Log)(x) = @. log(x)
 
