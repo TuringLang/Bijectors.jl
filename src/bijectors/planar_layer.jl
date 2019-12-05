@@ -25,10 +25,8 @@ end
 
 function get_u_hat(u, w)
     # To preserve invertibility
-    return (
-        u + (planar_flow_m(w' * u) - w' * u)[1]
-        * w / (norm(w[:,1],2) ^ 2)
-    )   # from A.1
+    # From A.1
+    return u .+ (planar_flow_m(w' * u) .- w' * u) .* w ./ sum(abs2, w)
 end
 
 function PlanarLayer(dims::Int, container=Array)
@@ -38,7 +36,10 @@ function PlanarLayer(dims::Int, container=Array)
     return PlanarLayer(w, u, b)
 end
 
+const softplus_gpu = CUDAnative.log1p ∘ CUDAnative.exp
+
 planar_flow_m(x) = -1 .+ softplus.(x)   # for planar flow from A.1
+planar_flow_m(x::CuArray) = - 1 .+ softplus_gpu.(x)
 dtanh(x) = 1 .- (tanh.(x)) .^ 2         # for planar flow
 ψ(z, w, b) = dtanh(w' * z .+ b) .* w    # for planar flow from eq(11)
 

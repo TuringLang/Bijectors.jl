@@ -33,12 +33,29 @@ dh(α, r) = - h(α, r) .^ 2   # for radial flow; derivative of h()
 
 # An internal version of transform that returns intermediate variables
 function _transform(flow::RadialLayer, z)
-    α = softplus(flow.α_[1])            # from A.2
-    β_hat = -α + softplus(flow.β[1])    # from A.2
+    # from A.2
+    α = if flow.α_ isa CuArray
+        softplus_gpu.(flow.α_)
+    else
+        softplus(flow.α_[1])
+    end
+    # from A.2
+    β_hat = if flow.β isa CuArray
+        -α + softplus_gpu.(flow.β)
+    else
+        -α + softplus(flow.β[1])
+    end
     r = sqrt.(sum((z .- flow.z_0).^2; dims = 1))
     transformed = z + β_hat .* h(α, r) .* (z .- flow.z_0)   # from eq(14)
     return (transformed=transformed, α=α, β_hat=β_hat, r=r)
 end
+# function _transform(flow::RadialLayer{<:CuArray, <:CuArray}, z::CuArray)
+#     α = softplus_gpu.(flow.α_)            # from A.2
+#     β_hat = -α + softplus_gpu.(flow.β)    # from A.2
+#     r = sqrt.(sum((z .- flow.z_0).^2; dims = 1))
+#     transformed = z + β_hat .* h(α, r) .* (z .- flow.z_0)   # from eq(14)
+#     return (transformed=transformed, α=α, β_hat=β_hat, r=r)
+# end
 
 (b::RadialLayer)(z::AbstractMatrix{<:Real}) = _transform(b, z).transformed
 (b::RadialLayer)(z::AbstractVector{<:Real}) = vec(_transform(b, z).transformed)

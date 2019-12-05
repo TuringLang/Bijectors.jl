@@ -7,6 +7,8 @@ using LinearAlgebra
 using MappedArrays
 using Roots
 
+using CuArrays, CUDAnative
+
 export  TransformDistribution,
         PositiveDistribution,
         UnitDistribution,
