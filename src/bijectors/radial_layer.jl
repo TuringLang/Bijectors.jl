@@ -49,13 +49,6 @@ function _transform(flow::RadialLayer, z)
     transformed = z + β_hat .* h(α, r) .* (z .- flow.z_0)   # from eq(14)
     return (transformed=transformed, α=α, β_hat=β_hat, r=r)
 end
-# function _transform(flow::RadialLayer{<:CuArray, <:CuArray}, z::CuArray)
-#     α = softplus_gpu.(flow.α_)            # from A.2
-#     β_hat = -α + softplus_gpu.(flow.β)    # from A.2
-#     r = sqrt.(sum((z .- flow.z_0).^2; dims = 1))
-#     transformed = z + β_hat .* h(α, r) .* (z .- flow.z_0)   # from eq(14)
-#     return (transformed=transformed, α=α, β_hat=β_hat, r=r)
-# end
 
 (b::RadialLayer)(z::AbstractMatrix{<:Real}) = _transform(b, z).transformed
 (b::RadialLayer)(z::AbstractVector{<:Real}) = vec(_transform(b, z).transformed)
