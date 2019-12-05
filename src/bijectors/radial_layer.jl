@@ -1,6 +1,6 @@
 using LinearAlgebra
 using Random
-using StatsFuns: softplus
+using NNlib: softplus
 using Roots # for inverse
 
 ################################################################################
@@ -34,17 +34,11 @@ dh(α, r) = - h(α, r) .^ 2   # for radial flow; derivative of h()
 # An internal version of transform that returns intermediate variables
 function _transform(flow::RadialLayer, z)
     # from A.2
-    α = if flow.α_ isa CuArray
-        softplus_gpu.(flow.α_)
-    else
-        softplus(flow.α_[1])
-    end
+    α = softplus.(flow.α_)
+
     # from A.2
-    β_hat = if flow.β isa CuArray
-        -α + softplus_gpu.(flow.β)
-    else
-        -α + softplus(flow.β[1])
-    end
+    β_hat = -α + softplus.(flow.β)
+
     r = sqrt.(sum((z .- flow.z_0).^2; dims = 1))
     transformed = z + β_hat .* h(α, r) .* (z .- flow.z_0)   # from eq(14)
     return (transformed=transformed, α=α, β_hat=β_hat, r=r)
@@ -74,8 +68,8 @@ end
 
 function (ib::Inversed{<:RadialLayer})(y)
     flow = ib.orig
-    α = softplus(flow.α_[1])            # from A.2
-    β_hat = - α + softplus(flow.β[1])   # from A.2
+    α = softplus.(flow.α_[1])            # from A.2
+    β_hat = - α + softplus.(flow.β[1])   # from A.2
     # Define the objective functional
     f(y) = r -> norm(y - flow.z_0, 2) - r * (1 + β_hat / (α + r))   # from eq(26)
     # Run solver 

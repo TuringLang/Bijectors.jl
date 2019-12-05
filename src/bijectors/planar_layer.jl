@@ -1,6 +1,6 @@
 using LinearAlgebra
 using Random
-using StatsFuns: softplus
+using NNlib: softplus
 using Roots # for inverse
 
 ################################################################################
@@ -36,10 +36,7 @@ function PlanarLayer(dims::Int, container=Array)
     return PlanarLayer(w, u, b)
 end
 
-const softplus_gpu = CUDAnative.log1p ∘ CUDAnative.exp
-
 planar_flow_m(x) = -1 .+ softplus.(x)   # for planar flow from A.1
-planar_flow_m(x::CuArray) = - 1 .+ softplus_gpu.(x)
 dtanh(x) = 1 .- (tanh.(x)) .^ 2         # for planar flow
 ψ(z, w, b) = dtanh(w' * z .+ b) .* w    # for planar flow from eq(11)
 
