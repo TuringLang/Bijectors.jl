@@ -10,8 +10,8 @@ Scale(a::A; dim::Val{D} = Val(N)) where {T, D, N, A<:AbstractArray{T, N}} = Scal
 (b::Scale{<:AbstractMatrix})(x::AbstractVecOrMat) = b.a * x
 (b::Scale{<:AbstractVector{<:Real}, 2})(x::AbstractMatrix{<:Real}) = b.a .* x
 
-(ib::Inversed{Scale})(y) = Scale(inv(ib.orig.a))(y)
-(ib::Scale{<:AbstractVector})(y) = Scale(inv.(ib.orig.a))(y)
+(ib::Inversed{<:Scale})(y) = Scale(inv(ib.orig.a))(y)
+(ib::Inversed{<:Scale{<:AbstractVector}})(y) = Scale(inv.(ib.orig.a))(y)
 function (ib::Inversed{<:Scale{<:AbstractMatrix, 1}})(y::AbstractVecOrMat)
     return ib.orig.a \ y
 end
