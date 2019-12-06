@@ -26,7 +26,7 @@ end
 function get_u_hat(u, w)
     # To preserve invertibility
     # From A.1
-    return u .+ (planar_flow_m(w' * u) .- w' * u) .* w ./ sum(abs2, w)
+    return u .+ (planar_flow_m.(w' * u) .- w' * u) .* w ./ sum(abs2, w)
 end
 
 function PlanarLayer(dims::Int, container=Array)
@@ -36,9 +36,9 @@ function PlanarLayer(dims::Int, container=Array)
     return PlanarLayer(w, u, b)
 end
 
-planar_flow_m(x) = -1 .+ softplus.(x)   # for planar flow from A.1
-dtanh(x) = 1 .- (tanh.(x)) .^ 2         # for planar flow
-ψ(z, w, b) = dtanh(w' * z .+ b) .* w    # for planar flow from eq(11)
+planar_flow_m(x) = -1 + softplus(x)   # for planar flow from A.1
+dtanh(x) = 1 - (tanh(x)) ^ 2         # for planar flow
+ψ(z, w, b) = dtanh.(w' * z .+ b) .* w    # for planar flow from eq(11)
 
 # An internal version of transform that returns intermediate variables
 function _transform(flow::PlanarLayer, z)
@@ -64,21 +64,22 @@ function forward(flow::PlanarLayer, z::AbstractVector{<: Real})
     return (rv=vec(res.rv), logabsdetjac=res.logabsdetjac[1])
 end
 
-function (ib::Inversed{<: PlanarLayer})(y::AbstractMatrix{<: Real})
+function (ib::Inversed{<:PlanarLayer})(y::AbstractMatrix{<: Real})
     flow = ib.orig
-    u_hat = get_u_hat(flow.u, flow.w)
+    u_hat = Bijectors.get_u_hat(flow.u, flow.w)
+
     # Define the objective functional; implemented with reference from A.1
-    f(y) = alpha -> (flow.w' * y)[1] - alpha - (flow.w' * u_hat)[1] * tanh(alpha+flow.b[1])
+    f(y) = alpha -> first((flow.w' * y) .- alpha .- (flow.w' * u_hat) .* tanh.(alpha .+ flow.b))
+    
     # Run solver 
-    alphas_ = [find_zero(f(y[:,i:i]), 0.0, Order16()) for i in 1:size(y, 2)]
-    alphas = alphas_'
+    alphas = [find_zero(f(y[:, i]), 0.0, Order16()) for i in 1:size(y, 2)]'
     z_para = (flow.w ./ norm(flow.w,2)) * alphas
     z_per = y - z_para - u_hat * tanh.(flow.w' * z_para .+ flow.b)
 
     return z_para + z_per
 end
 
-function (ib::Inversed{<: PlanarLayer})(y::AbstractVector{<: Real})
+function (ib::Inversed{<:PlanarLayer})(y::AbstractVector{<:Real})
     return vec(ib(reshape(y, (length(y), 1))))
 end
 
