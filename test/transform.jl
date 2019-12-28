@@ -112,7 +112,7 @@ let
         Pareto(),
         Rayleigh(1.0),
         TDist(2),
-        TruncatedNormal(0, 1, -Inf, 2),
+        truncated(Normal(0, 1), -Inf, 2),
     ]
     for dist in uni_dists
 

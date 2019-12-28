@@ -51,7 +51,7 @@ end
         Pareto(),
         Rayleigh(1.0),
         TDist(2),
-        TruncatedNormal(0, 1, -Inf, 2),
+        truncated(Normal(0, 1), -Inf, 2),
     ]
     
     for dist in uni_dists
@@ -337,7 +337,7 @@ end
 end
 
 @testset "Truncated" begin
-    d = Truncated(Normal(), -1, 1)
+    d = truncated(Normal(), -1, 1)
     b = bijector(d)
     x = rand(d)
     y = b(x)
@@ -345,7 +345,7 @@ end
     @test inv(b)(y) ≈ x
     @test logabsdetjac(b, x) ≈ logpdf_with_trans(d, x, false) - logpdf_with_trans(d, x, true)
 
-    d = Truncated(Normal(), -Inf, 1)
+    d = truncated(Normal(), -Inf, 1)
     b = bijector(d)
     x = rand(d)
     y = b(x)
@@ -353,7 +353,7 @@ end
     @test inv(b)(y) ≈ x
     @test logabsdetjac(b, x) ≈ logpdf_with_trans(d, x, false) - logpdf_with_trans(d, x, true)
 
-    d = Truncated(Normal(), 1, Inf)
+    d = truncated(Normal(), 1, Inf)
     b = bijector(d)
     x = rand(d)
     y = b(x)
