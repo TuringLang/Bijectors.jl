@@ -2,8 +2,9 @@ struct Scale{T, N} <: Bijector{N}
     a::T
 end
 
-Scale(a::T; dim::Val{D} = Val(0)) where {T<:Real, D} = Scale{T, D}(a)
-Scale(a::A; dim::Val{D} = Val(N)) where {T, D, N, A<:AbstractArray{T, N}} = Scale{A, D}(a)
+function Scale(a::Union{Real,AbstractArray}; dim::Val{D} = Val(ndims(a))) where D
+    return Scale{typeof(a), D}(a)
+end
 
 (b::Scale)(x) = b.a .* x
 (b::Scale{<:Real})(x::AbstractArray) = b.a .* x

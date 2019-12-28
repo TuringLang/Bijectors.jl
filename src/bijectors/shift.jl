@@ -5,8 +5,9 @@ struct Shift{T, N} <: Bijector{N}
     a::T
 end
 
-Shift(a::T; dim::Val{D} = Val(0)) where {T<:Real, D} = Shift{T, D}(a)
-Shift(a::A; dim::Val{D} = Val(N)) where {T, D, N, A<:AbstractArray{T, N}} = Shift{A, N}(a)
+function Shift(a::Union{Real,AbstractArray}; dim::Val{D} = Val(ndims(a))) where D
+    return Shift{typeof(a), D}(a)
+end
 
 (b::Shift)(x) = b.a + x
 (b::Shift{<:Real})(x::AbstractArray) = b.a .+ x
