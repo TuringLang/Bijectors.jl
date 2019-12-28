@@ -80,12 +80,15 @@ function (sb::Stacked{<:AbstractArray, N})(x::AbstractVector{<:Real}) where {N}
     return y
 end
 
-# HACK: `reshape` to get around the fact that `hcat` isn't type-stable
-(sb::Stacked)(x::AbstractMatrix{<:Real}) = reshape(foldl(hcat, [sb(x[:, i]) for i = 1:size(x, 2)]), size(x)...)
+@views function (sb::Stacked)(x::AbstractMatrix{<:Real})
+    init = reshape(sb(x[:, 1]), :, 1)
+    return mapreduce(i -> sb(x[:, i]), hcat, 2:size(x, 2); init = init)
+end
 
 # TODO: implement custom adjoint since we can exploit block-diagonal nature of `Stacked`
 function (sb::Stacked)(x::TrackedArray{A, 2}) where {A}
-    return Tracker.collect(hcat([sb(x[:, i]) for i = 1:size(x, 2)]...))
+    init = reshape(sb(x[:, 1]), :, 1)
+    return Tracker.collect(mapreduce(i -> sb(x[:, i]), hcat, 2:size(x, 2); init = init))
 end
 
 @generated function logabsdetjac(
