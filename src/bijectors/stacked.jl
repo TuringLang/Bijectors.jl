@@ -85,12 +85,6 @@ end
     return mapreduce(i -> sb(x[:, i]), hcat, 2:size(x, 2); init = init)
 end
 
-# TODO: implement custom adjoint since we can exploit block-diagonal nature of `Stacked`
-function (sb::Stacked)(x::TrackedArray{A, 2}) where {A}
-    init = reshape(sb(x[:, 1]), :, 1)
-    return Tracker.collect(mapreduce(i -> sb(x[:, i]), hcat, 2:size(x, 2); init = init))
-end
-
 @generated function logabsdetjac(
     b::Stacked{<:Tuple, N},
     x::AbstractVector{<:Real}
@@ -111,9 +105,6 @@ function logabsdetjac(
 end
 function logabsdetjac(b::Stacked, x::AbstractMatrix{<:Real})
     return [logabsdetjac(b, x[:, i]) for i = 1:size(x, 2)]
-end
-function logabsdetjac(b::Stacked, x::TrackedArray{A, 2}) where {A}
-    return Tracker.collect([logabsdetjac(b, x[:, i]) for i = 1:size(x, 2)])
 end
 
 # Generates something similar to:

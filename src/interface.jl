@@ -1,5 +1,3 @@
-using Tracker: TrackedReal, TrackedArray, track, @grad, data
-
 import Base: inv, ∘
 
 import Random: AbstractRNG
