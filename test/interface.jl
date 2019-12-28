@@ -404,7 +404,7 @@ end
             # verify against AD
             # similar to what we do in test/transform.jl for Dirichlet
             if dist isa Dirichlet
-                b = Bijectors.SimplexBijector{Val{false}}()
+                b = Bijectors.SimplexBijector{false}()
                 x = rand(dist)
                 y = b(x)
                 @test log(abs(det(ForwardDiff.jacobian(b, x)))) ≈ logabsdetjac(b, x)

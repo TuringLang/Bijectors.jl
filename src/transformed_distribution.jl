@@ -39,7 +39,7 @@ bijector(d::Normal) = Identity{0}()
 bijector(d::MvNormal) = Identity{1}()
 bijector(d::PositiveDistribution) = Log{0}()
 bijector(d::MvLogNormal) = Log{0}()
-bijector(d::SimplexDistribution) = SimplexBijector{Val{true}}()
+bijector(d::SimplexDistribution) = SimplexBijector{true}()
 bijector(d::KSOneSided) = Logit(zero(eltype(d)), one(eltype(d)))
 
 bijector_bounded(d, a=minimum(d), b=maximum(d)) = Logit(a, b)
