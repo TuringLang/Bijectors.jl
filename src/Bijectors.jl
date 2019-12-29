@@ -530,8 +530,8 @@ include("interface.jl")
 
 # optional dependencies
 function __init__()
-    @require ForwardDiff="f6369f11-7733-5829-9624-2563aa707210" include("forwarddiff.jl")
-    @require Tracker="9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c" include("tracker.jl")
+    @require ForwardDiff="f6369f11-7733-5829-9624-2563aa707210" include("compat/forwarddiff.jl")
+    @require Tracker="9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c" include("compat/tracker.jl")
 end
 
 end # module
