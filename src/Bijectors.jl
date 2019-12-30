@@ -43,17 +43,8 @@ export  TransformDistribution,
 
 const DEBUG = Bool(parse(Int, get(ENV, "DEBUG_BIJECTORS", "0")))
 
-# Workaround for eps(::ForwardDiff.Dual)
 _eps(::Type{T}) where {T} = T(eps(T))
 _eps(::Type{Real}) = eps(Float64)
-function __init__()
-    @require ForwardDiff="f6369f11-7733-5829-9624-2563aa707210" @eval begin
-        _eps(::Type{<:ForwardDiff.Dual{<:Any, Real}}) = _eps(Real)
-    end
-    @require Flux="587475ba-b771-5e3f-ad9e-33799f191a9c" @eval begin
-        _eps(::Type{<:Flux.Tracker.TrackedReal{T}}) where {T} = eps(T)
-    end
-end
 
 #=
   NOTE: Codes below are adapted from
@@ -536,5 +527,11 @@ function logpdf_with_trans(
 end
 
 include("interface.jl")
+
+# optional dependencies
+function __init__()
+    @require ForwardDiff="f6369f11-7733-5829-9624-2563aa707210" include("compat/forwarddiff.jl")
+    @require Tracker="9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c" include("compat/tracker.jl")
+end
 
 end # module
