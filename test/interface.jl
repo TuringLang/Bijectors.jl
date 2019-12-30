@@ -375,7 +375,6 @@ end
 
     for dist in vector_dists
         @testset "$dist: dist" begin
-            dist = Dirichlet([eps(Float64), 1000 * one(Float64)])
             td = transformed(dist)
 
             # single sample

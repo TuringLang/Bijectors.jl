@@ -38,7 +38,7 @@ bijector(d::UnivariateDistribution) = TruncatedBijector(minimum(d), maximum(d))
 bijector(d::Normal) = Identity{0}()
 bijector(d::MvNormal) = Identity{1}()
 bijector(d::PositiveDistribution) = Log{0}()
-bijector(d::MvLogNormal) = Log{0}()
+bijector(d::MvLogNormal) = Log{1}()
 bijector(d::SimplexDistribution) = SimplexBijector{true}()
 bijector(d::KSOneSided) = Logit(zero(eltype(d)), one(eltype(d)))
 
