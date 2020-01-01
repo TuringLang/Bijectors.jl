@@ -1,21 +1,24 @@
-using .Bijectors
-import ForwardDiff
+module ForwardDiffCompat
 
-using .Bijectors: ForwardDiffAD
-import .Bijectors: _eps, jacobian
+using ..Bijectors: ADBijector, ForwardDiffAD, Inversed
+import ..Bijectors: _eps, _jacobian
 
-_eps(::Type{<:ForwardDiff.Dual{<:Any, Real}}) = _eps(Real)
+using ..ForwardDiff: Dual, derivative, jacobian
+
+_eps(::Type{<:Dual{<:Any, Real}}) = _eps(Real)
 
 # AD implementations
-function jacobian(
+function _jacobian(
     b::Union{<:ADBijector{<:ForwardDiffAD}, Inversed{<:ADBijector{<:ForwardDiffAD}}},
     x::Real
 )
-    return ForwardDiff.derivative(b, x)
+    return derivative(b, x)
 end
-function jacobian(
+function _jacobian(
     b::Union{<:ADBijector{<:ForwardDiffAD}, Inversed{<:ADBijector{<:ForwardDiffAD}}},
     x::AbstractVector{<:Real}
 )
-    return ForwardDiff.jacobian(b, x)
+    return jacobian(b, x)
+end
+
 end

@@ -13,6 +13,7 @@ end
 
 # concrete implementations with optional dependencies ForwardDiff and Tracker
 function jacobian end
+const _jacobian = jacobian
 
 # TODO: allow batch-computation, especially for univariate case?
 "Computes the absolute determinant of the Jacobian of the inverse-transformation."
