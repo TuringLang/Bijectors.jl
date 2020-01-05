@@ -1,8 +1,4 @@
-using .Bijectors
-import ForwardDiff
-
-using .Bijectors: ForwardDiffAD
-import .Bijectors: _eps, jacobian
+import .ForwardDiff
 
 _eps(::Type{<:ForwardDiff.Dual{<:Any, Real}}) = _eps(Real)
 
