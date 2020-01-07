@@ -171,39 +171,15 @@ end
 ###########
 
 const SimplexDistribution = Union{Dirichlet}
-function _clamp(x::T, dist::SimplexDistribution) where T
-    bounds = (zero(T), one(T))
-    clamped_x = clamp(x, bounds...)
-    DEBUG && @debug "x = $x, bounds = $bounds, clamped_x = $clamped_x"
-    return clamped_x
-end
+
+_clamp(x, ::SimplexDistribution) = _clamp(x, SimplexBijector())
 
 function link(
     d::SimplexDistribution,
-    x::AbstractVector{T},
-    ::Type{Val{proj}} = Val{true}
-) where {T<:Real, proj}
-    y, K = similar(x), length(x)
-
-    ϵ = _eps(T)
-    sum_tmp = zero(T)
-    @inbounds z = x[1] * (one(T) - 2ϵ) + ϵ # z ∈ [ϵ, 1-ϵ]
-    @inbounds y[1] = StatsFuns.logit(z) + log(T(K - 1))
-    @inbounds @simd for k in 2:(K - 1)
-        sum_tmp += x[k - 1]
-        # z ∈ [ϵ, 1-ϵ]
-        # x[k] = 0 && sum_tmp = 1 -> z ≈ 1
-        z = (x[k] + ϵ)*(one(T) - 2ϵ)/((one(T) + ϵ) - sum_tmp)
-        y[k] = StatsFuns.logit(z) + log(T(K - k))
-    end
-    @inbounds sum_tmp += x[K - 1]
-    @inbounds if proj
-        y[K] = zero(T)
-    else
-        y[K] = one(T) - sum_tmp - x[K]
-    end
-
-    return y
+    x::AbstractVecOrMat{<:Real},
+    proj = Val{true}
+)
+    return bijector(d, proj)(x)
 end
 
 function link_jacobian(
@@ -239,58 +215,12 @@ function link_jacobian(
     return UpperTriangular(dydxt)'
 end
 
-# Vectorised implementation of the above.
-function link(
-    d::SimplexDistribution,
-    X::AbstractMatrix{T},
-    ::Type{Val{proj}} = Val{true}
-) where {T<:Real, proj}
-    Y, K, N = similar(X), size(X, 1), size(X, 2)
-
-    ϵ = _eps(T)
-    @inbounds @simd for n in 1:size(X, 2)
-        sum_tmp = zero(T)
-        z = X[1, n] * (one(T) - 2ϵ) + ϵ
-        Y[1, n] = StatsFuns.logit(z) + log(T(K - 1))
-        for k in 2:(K - 1)
-            sum_tmp += X[k - 1, n]
-            z = (X[k, n] + ϵ)*(one(T) - 2ϵ)/((one(T) + ϵ) - sum_tmp)
-            Y[k, n] = StatsFuns.logit(z) + log(T(K - k))
-        end
-        sum_tmp += X[K-1, n]
-        if proj
-            Y[K, n] = zero(T)
-        else
-            Y[K, n] = one(T) - sum_tmp - X[K, n]
-        end
-    end
-
-    return Y
-end
-
 function invlink(
     d::SimplexDistribution,
-    y::AbstractVector{T},
-    ::Type{Val{proj}} = Val{true}
-) where {T<:Real, proj}
-    x, K = similar(y), length(y)
-
-    ϵ = _eps(T)
-    @inbounds z = StatsFuns.logistic(y[1] - log(T(K - 1)))
-    @inbounds x[1] = _clamp((z - ϵ) / (one(T) - 2ϵ), d)
-    sum_tmp = zero(T)
-    @inbounds @simd for k = 2:(K - 1)
-        z = StatsFuns.logistic(y[k] - log(T(K - k)))
-        sum_tmp += x[k-1]
-        x[k] = _clamp(((one(T) + ϵ) - sum_tmp) / (one(T) - 2ϵ) * z - ϵ, d)
-    end
-    @inbounds sum_tmp += x[K - 1]
-    @inbounds if proj
-        x[K] = _clamp(one(T) - sum_tmp, d)
-    else
-        x[K] = _clamp(one(T) - sum_tmp - y[K], d)
-    end
-    return x
+    y::AbstractVecOrMat{<:Real},
+    proj = Val{true}
+)
+    return inv(bijector(d, proj))(y)
 end
 
 function invlink_jacobian(
@@ -345,53 +275,15 @@ function invlink_jacobian(
     return LowerTriangular(dxdy)
 end
 
-# Vectorised implementation of the above.
-function invlink(
-    d::SimplexDistribution,
-    Y::AbstractMatrix{T},
-    ::Type{Val{proj}} = Val{true}
-) where {T<:Real, proj}
-    X, K, N = similar(Y), size(Y, 1), size(Y, 2)
-
-    ϵ = _eps(T)
-    @inbounds @simd for n in 1:size(X, 2)
-        sum_tmp, z = zero(T), StatsFuns.logistic(Y[1, n] - log(T(K - 1)))
-        X[1, n] = _clamp((z - ϵ) / (one(T) - 2ϵ), d)
-        for k in 2:(K - 1)
-            z = StatsFuns.logistic(Y[k, n] - log(T(K - k)))
-            sum_tmp += X[k - 1]
-            X[k, n] = _clamp(((one(T) + ϵ) - sum_tmp) / (one(T) - 2ϵ) * z - ϵ, d)
-        end
-        sum_tmp += X[K - 1, n]
-        if proj
-            X[K, n] = _clamp(one(T) - sum_tmp, d)
-        else
-            X[K, n] = _clamp(one(T) - sum_tmp - Y[K, n], d)
-        end
-    end
-
-    return X
-end
-
 function logpdf_with_trans(
     d::SimplexDistribution,
     x::AbstractVector{<:Real},
     transform::Bool,
 )
-    T = eltype(x)
-    ϵ = _eps(T)
+    ϵ = _eps(eltype(x))
     lp = logpdf(d, mappedarray(x -> x + ϵ, x))
     if transform
-        K = length(x)
-
-        sum_tmp = zero(eltype(x))
-        @inbounds z = x[1]
-        lp += log(z + ϵ) + log((one(T) + ϵ) - z)
-        @inbounds @simd for k in 2:(K - 1)
-            sum_tmp += x[k-1]
-            z = x[k] / ((one(T) + ϵ) - sum_tmp)
-            lp += log(z + ϵ) + log((one(T) + ϵ) - z) + log((one(T) + ϵ) - sum_tmp)
-        end
+        lp -= logabsdetjac(bijector(d), x)
     end
     return lp
 end
@@ -489,11 +381,9 @@ end
 # MultivariateDistributions
 using Distributions: MultivariateDistribution
 
-link(d::MultivariateDistribution, x::AbstractVector{<:Real}) = copy(x)
-link(d::MultivariateDistribution, X::AbstractMatrix{<:Real}) = copy(X)
+link(d::MultivariateDistribution, x::AbstractVecOrMat{<:Real}) = copy(x)
 
-invlink(d::MultivariateDistribution, y::AbstractVector{<:Real}) = copy(y)
-invlink(d::MultivariateDistribution, Y::AbstractMatrix{<:Real}) = copy(Y)
+invlink(d::MultivariateDistribution, y::AbstractVecOrMat{<:Real}) = copy(y)
 
 function logpdf_with_trans(d::MultivariateDistribution, x::AbstractVector{<:Real}, ::Bool)
     return logpdf(d, x)

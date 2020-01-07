@@ -4,8 +4,6 @@
 struct SimplexBijector{T} <: Bijector{1} where {T} end
 SimplexBijector() = SimplexBijector{true}()
 
-# The following implementations are basically just copy-paste from `invlink` and
-# `link` for `SimplexDistributions` but dropping the dependence on the `Distribution`.
 function _clamp(x::T, b::Union{SimplexBijector, Inversed{<:SimplexBijector}}) where {T}
     bounds = (zero(T), one(T))
     clamped_x = clamp(x, bounds...)
