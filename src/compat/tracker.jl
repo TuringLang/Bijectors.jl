@@ -18,28 +18,6 @@ function jacobian(
     return Tracker.data(Tracker.jacobian(b, x))
 end
 
-# implementations for Shift bijector
-function _logabsdetjac_shift(a::TrackedReal, x::Real, ::Val{0})
-    return Tracker.param(_logabsdetjac_shift(Tracker.data(a), Tracker.data(x), Val(0)))
-end
-function _logabsdetjac_shift(a::TrackedReal, x::AbstractVector{<:Real}, ::Val{0})
-    return Tracker.param(_logabsdetjac_shift(Tracker.data(a), Tracker.data(x), Val(0)))
-end
-function _logabsdetjac_shift(
-    a::Union{TrackedReal, TrackedVector{<:Real}},
-    x::AbstractVector{<:Real},
-    ::Val{1}
-)
-    return Tracker.param(_logabsdetjac_shift(Tracker.data(a), Tracker.data(x), Val(1)))
-end
-function _logabsdetjac_shift(
-    a::Union{TrackedReal, TrackedVector{<:Real}},
-    x::AbstractMatrix{<:Real},
-    ::Val{1}
-)
-    return Tracker.param(_logabsdetjac_shift(Tracker.data(a), Tracker.data(x), Val(1)))
-end
-
 # implementations for Scale bijector
 # Adjoints for 0-dim and 1-dim `Scale` using `Real`
 function _logabsdetjac_scale(a::TrackedReal, x::Real, ::Val{0})
