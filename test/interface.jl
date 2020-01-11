@@ -320,6 +320,7 @@ end
 
             # 0-dim with `Real` parameter for batch-computation
             lj = logabsdetjac(b, [1.0, 2.0, 3.0])
+            @test lj isa Tracker.TrackedArray
             Tracker.back!(lj, [1.0, 1.0, 1.0])
             @test Tracker.extract_grad!(b.a) == 0.0
 
@@ -330,6 +331,7 @@ end
             @test Tracker.extract_grad!(b.a) == zeros(3)
 
             lj = logabsdetjac(b, [3.0 4.0 5.0; 6.0 7.0 8.0])
+            @test lj isa Tracker.TrackedArray
             Tracker.back!(lj, [1.0, 1.0, 1.0])
             @test Tracker.extract_grad!(b.a) == zeros(3)
         end
