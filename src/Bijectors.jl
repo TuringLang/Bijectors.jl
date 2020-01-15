@@ -42,6 +42,7 @@ export  TransformDistribution,
         RadialLayer
 
 const DEBUG = Bool(parse(Int, get(ENV, "DEBUG_BIJECTORS", "0")))
+_debug(str) = @debug str
 
 _eps(::Type{T}) where {T} = T(eps(T))
 _eps(::Type{Real}) = eps(Float64)
@@ -83,7 +84,7 @@ const TransformDistribution{T<:ContinuousUnivariateDistribution} = Union{T, Trun
     ϵ = _eps(T)
     bounds = (minimum(dist) + ϵ, maximum(dist) - ϵ)
     clamped_x = ifelse(x < bounds[1], bounds[1], ifelse(x > bounds[2], bounds[2], x))
-    DEBUG && @debug "x = $x, bounds = $bounds, clamped_x = $clamped_x"
+    DEBUG && _debug("x = $x, bounds = $bounds, clamped_x = $clamped_x")
     return clamped_x
 end
 
@@ -174,7 +175,7 @@ const SimplexDistribution = Union{Dirichlet}
 function _clamp(x::T, dist::SimplexDistribution) where T
     bounds = (zero(T), one(T))
     clamped_x = clamp(x, bounds...)
-    DEBUG && @debug "x = $x, bounds = $bounds, clamped_x = $clamped_x"
+    DEBUG && _debug("x = $x, bounds = $bounds, clamped_x = $clamped_x")
     return clamped_x
 end
 
@@ -532,6 +533,7 @@ include("interface.jl")
 function __init__()
     @require ForwardDiff="f6369f11-7733-5829-9624-2563aa707210" include("compat/forwarddiff.jl")
     @require Tracker="9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c" include("compat/tracker.jl")
+    @require Zygote="e88e6eb3-aa80-5325-afca-941959d7151f" include("compat/zygote.jl")
 end
 
 end # module
