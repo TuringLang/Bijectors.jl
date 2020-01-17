@@ -4,8 +4,6 @@
 struct SimplexBijector{T} <: Bijector{1} where {T} end
 SimplexBijector() = SimplexBijector{true}()
 
-# The following implementations are basically just copy-paste from `invlink` and
-# `link` for `SimplexDistributions` but dropping the dependence on the `Distribution`.
 function _clamp(x::T, b::Union{SimplexBijector, Inversed{<:SimplexBijector}}) where {T}
     bounds = (zero(T), one(T))
     clamped_x = clamp(x, bounds...)
@@ -100,7 +98,7 @@ function (ib::Inversed{<:SimplexBijector{proj}})(
         X[1, n] = _clamp((z - ϵ) / (one(T) - 2ϵ), ib.orig)
         for k in 2:(K - 1)
             z = StatsFuns.logistic(Y[k, n] - log(T(K - k)))
-            sum_tmp += X[k - 1]
+            sum_tmp += X[k - 1, n]
             X[k, n] = _clamp(((one(T) + ϵ) - sum_tmp) / (one(T) - 2ϵ) * z - ϵ, ib.orig)
         end
         sum_tmp += X[K - 1, n]
