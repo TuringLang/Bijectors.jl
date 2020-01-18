@@ -1,3 +1,5 @@
+using .DistributionsAD: TuringWishart, TuringInverseWishart
+
 function logpdf_with_trans(
     d::TuringWishart,
     X::AbstractMatrix{<:Real},
