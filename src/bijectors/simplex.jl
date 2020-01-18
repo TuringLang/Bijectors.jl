@@ -7,12 +7,22 @@ SimplexBijector() = SimplexBijector{true}()
 function _clamp(x::T, b::Union{SimplexBijector, Inversed{<:SimplexBijector}}) where {T}
     bounds = (zero(T), one(T))
     clamped_x = clamp(x, bounds...)
-    DEBUG && @debug "x = $x, bounds = $bounds, clamped_x = $clamped_x"
+    DEBUG && _debug("x = $x, bounds = $bounds, clamped_x = $clamped_x")
     return clamped_x
 end
 
 function (b::SimplexBijector{proj})(x::AbstractVector{T}) where {T, proj}
-    y, K = similar(x), length(x)
+    y = similar(x)
+    b(y, x)
+end
+function (b::SimplexBijector{proj})(
+    y::AbstractVector{T},
+    x::AbstractVector{T},
+) where {T, proj}
+    _simplex_bijector!(y, x, Val(proj))
+end
+function _simplex_bijector!(y, x::AbstractVector{T}, ::Val{proj}) where {T, proj}
+    K = length(x)
     @assert K > 1 "x needs to be of length greater than 1"
 
     ϵ = _eps(T)
@@ -38,7 +48,17 @@ end
 
 # Vectorised implementation of the above.
 function (b::SimplexBijector{proj})(X::AbstractMatrix{T}) where {T<:Real, proj}
-    Y, K, N = similar(X), size(X, 1), size(X, 2)
+    Y = similar(X)
+    b(Y, X)
+end
+function (b::SimplexBijector{proj})(
+    Y::AbstractMatrix{T},
+    X::AbstractMatrix{T},
+) where {T<:Real, proj}
+    _simplex_bijector!(Y, X, Val(proj))
+end
+function _simplex_bijector!(Y, X::AbstractMatrix{T}, ::Val{proj}) where {T, proj}
+    K, N = size(X, 1), size(X, 2)
     @assert K > 1 "x needs to be of length greater than 1"
 
     ϵ = _eps(T)
@@ -63,7 +83,17 @@ function (b::SimplexBijector{proj})(X::AbstractMatrix{T}) where {T<:Real, proj}
 end
 
 function (ib::Inversed{<:SimplexBijector{proj}})(y::AbstractVector{T}) where {T, proj}
-    x, K = similar(y), length(y)
+    x = similar(y)
+    ib(x, y)
+end
+function (ib::Inversed{<:SimplexBijector{proj}})(
+    x::AbstractVector{T},
+    y::AbstractVector{T},
+) where {T, proj}
+    _simplex_inv_bijector!(x, y, ib, Val(proj))
+end
+function _simplex_inv_bijector!(x, y::AbstractVector{T}, ib, ::Val{proj}) where {T, proj}
+    K = length(y)
     @assert K > 1 "x needs to be of length greater than 1"
 
     ϵ = _eps(T)
@@ -87,9 +117,19 @@ end
 
 # Vectorised implementation of the above.
 function (ib::Inversed{<:SimplexBijector{proj}})(
-    Y::AbstractMatrix{T}
+    Y::AbstractMatrix{T},
 ) where {T<:Real, proj}
-    X, K, N = similar(Y), size(Y, 1), size(Y, 2)
+    X = similar(Y)
+    ib(X, Y)
+end
+function (ib::Inversed{<:SimplexBijector{proj}})(
+    X::AbstractMatrix{T},
+    Y::AbstractMatrix{T},
+) where {T<:Real, proj}
+    _simplex_inv_bijector!(X, Y, ib, Val(proj))
+end
+function _simplex_inv_bijector!(X, Y::AbstractMatrix{T}, ib, ::Val{proj}) where {T, proj}
+    K, N = size(Y, 1), size(Y, 2)
     @assert K > 1 "x needs to be of length greater than 1"
 
     ϵ = _eps(T)
@@ -113,7 +153,10 @@ function (ib::Inversed{<:SimplexBijector{proj}})(
 end
 
 
-function logabsdetjac(b::SimplexBijector, x::AbstractVector{T}) where T
+function logabsdetjac(b::SimplexBijector, x::AbstractVector)
+    _logabsdetjac(b, x)
+end
+function _logabsdetjac(b::SimplexBijector, x::AbstractVector{T}) where {T}
     ϵ = _eps(T)
     lp = zero(T)
     

@@ -180,8 +180,10 @@ function link(
     x::AbstractVecOrMat{<:Real},
     ::Type{Val{proj}} = Val{true}
 ) where {proj}
-    return SimplexBijector{proj}()(x)
+    return _bcall(SimplexBijector{proj}(), x)
 end
+# Workaround because ::Type{Val{proj}} seems to break Zygote adjoint
+_bcall(f, x) = f(x)
 
 function link_jacobian(
     d::SimplexDistribution,
@@ -221,7 +223,7 @@ function invlink(
     y::AbstractVecOrMat{<:Real},
     ::Type{Val{proj}} = Val{true}
 ) where {proj}
-    return inv(SimplexBijector{proj}())(y)
+    return _bcall(inv(SimplexBijector{proj}()), y)
 end
 
 function invlink_jacobian(
@@ -282,7 +284,7 @@ function logpdf_with_trans(
     transform::Bool,
 )
     ϵ = _eps(eltype(x))
-    lp = logpdf(d, mappedarray(x -> x + ϵ, x))
+    lp = logpdf(d, x .+ ϵ)
     if transform
         lp -= logabsdetjac(bijector(d), x)
     end
@@ -318,12 +320,18 @@ end
 const PDMatDistribution = Union{InverseWishart, Wishart}
 
 function link(d::PDMatDistribution, X::AbstractMatrix{<:Real})
+    _link_pd(d, X)
+end
+function _link_pd(d, X::AbstractMatrix{<:Real})
     Y = Matrix(cholesky(X).L)
     Y[diagind(Y)] .= log.(view(Y, diagind(Y)))
     return Y
 end
 
 function invlink(d::PDMatDistribution, Y::AbstractMatrix{<:Real})
+    _invlink_pd(d, Y)
+end
+function _invlink_pd(d, Y::AbstractMatrix{<:Real})
     X = copy(Y)
     X[diagind(X)] .= exp.(view(X, diagind(X)))
     return LowerTriangular(X) * LowerTriangular(X)'
@@ -334,8 +342,15 @@ function logpdf_with_trans(
     X::AbstractMatrix{<:Real},
     transform::Bool
 )
+    _logpdf_with_trans_pd(d, X, transform)
+end
+function _logpdf_with_trans_pd(
+    d,
+    X::AbstractMatrix{<:Real},
+    transform::Bool,
+)
     T = eltype(X)
-    Xcf = cholesky(X, check=false)
+    Xcf = cholesky(X, check = false)
     if !issuccess(Xcf)
         Xcf = cholesky(X + (eps(T) * norm(X)) * I)
     end
@@ -423,7 +438,10 @@ include("interface.jl")
 function __init__()
     @require ForwardDiff="f6369f11-7733-5829-9624-2563aa707210" include("compat/forwarddiff.jl")
     @require Tracker="9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c" include("compat/tracker.jl")
-    @require Zygote="e88e6eb3-aa80-5325-afca-941959d7151f" include("compat/zygote.jl")
+    #@require Zygote="e88e6eb3-aa80-5325-afca-941959d7151f" include("compat/zygote.jl")
 end
+using Zygote, PDMats, DistributionsAD
+include("compat/zygote.jl")
+include("compat/distributionsad.jl")
 
 end # module
