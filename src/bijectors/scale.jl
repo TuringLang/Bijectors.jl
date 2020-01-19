@@ -8,11 +8,17 @@ end
 
 (b::Scale)(x) = b.a .* x
 (b::Scale{<:Real})(x::AbstractArray) = b.a .* x
-(b::Scale{<:AbstractMatrix})(x::AbstractArray) = b.a * x
+(b::Scale{<:AbstractMatrix})(x::AbstractVecOrMat) = b.a * x
 (b::Scale{<:AbstractVector{<:Real}, 2})(x::AbstractMatrix{<:Real}) = b.a .* x
 
-inv(b::Scale{T, D}) where {T, D} = Scale(inv(b.a); dim = Val(D))
-inv(b::Scale{<:AbstractVector, D}) where {D} = Scale(inv.(b.a); dim = Val(D))
+(ib::Inversed{<:Scale})(y) = Scale(inv(ib.orig.a))(y)
+(ib::Inversed{<:Scale{<:AbstractVector}})(y) = Scale(inv.(ib.orig.a))(y)
+function (ib::Inversed{<:Scale{<:AbstractMatrix, 1}})(y::AbstractVecOrMat)
+    return ib.orig.a \ y
+end
+
+# inv(b::Scale{T, D}) where {T, D} = Scale(inv(b.a); dim = Val(D))
+# inv(b::Scale{<:AbstractVector, D}) where {D} = Scale(inv.(b.a); dim = Val(D))
 
 # We're going to implement custom adjoint for this
 logabsdetjac(b::Scale{T, N}, x) where {T, N} = _logabsdetjac_scale(b.a, x, Val(N))
