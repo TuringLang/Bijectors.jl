@@ -51,7 +51,7 @@ end
         Pareto(),
         Rayleigh(1.0),
         TDist(2),
-        TruncatedNormal(0, 1, -Inf, 2),
+        truncated(Normal(0, 1), -Inf, 2),
     ]
     
     for dist in uni_dists
@@ -320,6 +320,7 @@ end
 
             # 0-dim with `Real` parameter for batch-computation
             lj = logabsdetjac(b, [1.0, 2.0, 3.0])
+            @test lj isa Tracker.TrackedArray
             Tracker.back!(lj, [1.0, 1.0, 1.0])
             @test Tracker.extract_grad!(b.a) == 0.0
 
@@ -330,6 +331,7 @@ end
             @test Tracker.extract_grad!(b.a) == zeros(3)
 
             lj = logabsdetjac(b, [3.0 4.0 5.0; 6.0 7.0 8.0])
+            @test lj isa Tracker.TrackedArray
             Tracker.back!(lj, [1.0, 1.0, 1.0])
             @test Tracker.extract_grad!(b.a) == zeros(3)
         end
@@ -337,7 +339,7 @@ end
 end
 
 @testset "Truncated" begin
-    d = Truncated(Normal(), -1, 1)
+    d = truncated(Normal(), -1, 1)
     b = bijector(d)
     x = rand(d)
     y = b(x)
@@ -345,7 +347,7 @@ end
     @test inv(b)(y) ≈ x
     @test logabsdetjac(b, x) ≈ logpdf_with_trans(d, x, false) - logpdf_with_trans(d, x, true)
 
-    d = Truncated(Normal(), -Inf, 1)
+    d = truncated(Normal(), -Inf, 1)
     b = bijector(d)
     x = rand(d)
     y = b(x)
@@ -353,7 +355,7 @@ end
     @test inv(b)(y) ≈ x
     @test logabsdetjac(b, x) ≈ logpdf_with_trans(d, x, false) - logpdf_with_trans(d, x, true)
 
-    d = Truncated(Normal(), 1, Inf)
+    d = truncated(Normal(), 1, Inf)
     b = bijector(d)
     x = rand(d)
     y = b(x)
@@ -375,7 +377,6 @@ end
 
     for dist in vector_dists
         @testset "$dist: dist" begin
-            dist = Dirichlet([eps(Float64), 1000 * one(Float64)])
             td = transformed(dist)
 
             # single sample
@@ -404,7 +405,7 @@ end
             # verify against AD
             # similar to what we do in test/transform.jl for Dirichlet
             if dist isa Dirichlet
-                b = Bijectors.SimplexBijector{Val{false}}()
+                b = Bijectors.SimplexBijector{false}()
                 x = rand(dist)
                 y = b(x)
                 @test log(abs(det(ForwardDiff.jacobian(b, x)))) ≈ logabsdetjac(b, x)
@@ -663,3 +664,4 @@ end
 end
 
 include("couplings.jl")
+include("norm_flows.jl")

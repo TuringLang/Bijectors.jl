@@ -112,7 +112,7 @@ let
         Pareto(),
         Rayleigh(1.0),
         TDist(2),
-        TruncatedNormal(0, 1, -Inf, 2),
+        truncated(Normal(0, 1), -Inf, 2),
     ]
     for dist in uni_dists
 
@@ -210,6 +210,11 @@ end
 d  = Dirichlet([1., 1., 1.])
 r  = [-1000., -1000., 0.0]
 r2 = [-1., -2., 0.0]
+
+# test vector invlink
+dist = Dirichlet(ones(5))
+x = [[-2.72689, -2.92751, 1.63114, -1.62054, 0.0] [-1.24249, 2.58902, -3.73043, -3.53685, 0.0]]
+@test all(sum(Bijectors.invlink(dist, x), dims = 1) .== 1)
 
 # test link
 #link(d, r)
