@@ -60,8 +60,9 @@ end
     x = [1., 2., 3.]
 
     m = PartitionMask(length(x), [1], [2])
-    nn = Chain(Dense(1, 2, relu), Dense(2, 1))
-    cl = CouplingLayer(Shift, m, nn)
+    nn = Chain(Dense(1, 2, sigmoid), Dense(2, 1))
+    nn_tracked = Flux.fmap(x -> (x isa AbstractArray) ? Tracker.param(x) : x, nn)
+    cl = CouplingLayer(Shift, m, nn_tracked)
 
     # should leave two last indices unchanged
     @test cl(x)[2:3] == x[2:3]
