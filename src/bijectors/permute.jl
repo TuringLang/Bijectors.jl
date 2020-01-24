@@ -7,9 +7,10 @@ using ArgCheck
 A bijector implementation of a permutation. The permutation is performed
 using a matrix of type `A`. There are a couple of different ways to construct `Permute`:
 
-    Permute([0 1; 1 0])         # will map [1, 2] => [2, 1]
-    Permute([2, 1])             # will map [1, 2] => [2, 1]
-    Permute(2, 2 => 1, 1 => 2)  # will map [1, 2] => [2, 1]
+    Permute([0 1; 1 0])          # will map [1, 2] => [2, 1]
+    Permute([2, 1])              # will map [1, 2] => [2, 1]
+    Permute(2, 2 => 1, 1 => 2)   # will map [1, 2] => [2, 1]
+    Permute(2, [1, 2] => [2, 1]) # will map [1, 2] => [2, 1]
 
 If this is not clear, the examples might be of help.
 
