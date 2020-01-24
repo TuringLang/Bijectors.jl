@@ -1,4 +1,5 @@
 using SparseArrays
+using ArgCheck
 
 """
     Permute{A} <: Bijector{1}
@@ -23,19 +24,26 @@ julia> b1 = Permute([
        ])
 Permute{Array{Int64,2}}([0 1 0; 1 0 0; 0 0 1])
 
-julia> b2 = Permute([2, 1, 3])
+julia> b2 = Permute([2, 1, 3])           # specify all elements at once
+Permute{SparseArrays.SparseMatrixCSC{Float64,Int64}}(
+
+  [2, 1]  =  1.0
+  [1, 2]  =  1.0
+  [3, 3]  =  1.0)
+
+julia> b3 = Permute(3, 2 => 1, 1 => 2)    # element-wise
 Permute{SparseArrays.SparseMatrixCSC{Float64,Int64}}(
   [2, 1]  =  1.0
   [1, 2]  =  1.0
   [3, 3]  =  1.0)
 
-julia> b3 = Permute(3, 2 => 1, 1 => 2)
+julia> b4 = Permute(3, [1, 2] => [2, 1])  # block-wise
 Permute{SparseArrays.SparseMatrixCSC{Float64,Int64}}(
   [2, 1]  =  1.0
   [1, 2]  =  1.0
   [3, 3]  =  1.0)
 
-julia> b1.A == b2.A == b3.A
+julia> b1.A == b2.A == b3.A == b4.A
 true
 
 julia> b1([1., 2., 3.])
@@ -51,6 +59,12 @@ julia> b2([1., 2., 3.])
  3.0
 
 julia> b3([1., 2., 3.])
+3-element Array{Float64,1}:
+ 2.0
+ 1.0
+ 3.0
+
+julia> b4([1., 2., 3.])
 3-element Array{Float64,1}:
  2.0
  1.0
@@ -89,8 +103,8 @@ function Permute(n::Int, indices::Pair{Int, Int}...)
     sources = Set{Int}()
 
     for (src, dst) in indices
-        @assert dst ∉ dests
-        @assert src ∉ sources
+        @argcheck dst ∉ dests
+        @argcheck src ∉ sources
 
         push!(dests, dst)
         push!(sources, src)
@@ -99,14 +113,41 @@ function Permute(n::Int, indices::Pair{Int, Int}...)
         A[src, src] = 0.0  # <= remove `src => src`
     end
 
-    @assert (sources ∩ dests) == (sources ∪ dests) "$sources ∩ $dests ≠ $sources ∪ $dests"
+    @argcheck (sources ∩ dests) == (sources ∪ dests) "$sources ∩ $dests ≠ $sources ∪ $dests"
 
     dropzeros!(A)
     return Permute(A)
 end
 
-@inline (b::Permute)(x::AbstractVector) = b.A * x
-@inline (b::Permute)(x::AbstractMatrix) = b.A * x
+function Permute(n::Int, indices::Pair{Vector{Int}, Vector{Int}}...)
+    A = spdiagm(0 => ones(n))
+
+    dests = Set{Int}()
+    sources = Set{Int}()
+
+    for (srcs, dsts) in indices
+        @argcheck length(srcs) == length(dsts) "$srcs => $dsts is not bijective"
+        
+        for (src, dst) in zip(srcs, dsts)
+            @argcheck dst ∉ dests "$dst used more than once"
+            @argcheck src ∉ sources "$src used more than once"
+
+            push!(dests, dst)
+            push!(sources, src)
+            
+            A[dst, src] = 1.0
+            A[src, src] = 0.0  # <= remove `src => src`
+        end
+    end
+
+    @argcheck (sources ∩ dests) == (sources ∪ dests) "$sources ∩ $dests ≠ $sources ∪ $dests"
+
+    dropzeros!(A)
+    return Permute(A)
+end
+
+
+@inline (b::Permute)(x::AbstractVecOrMat) = b.A * x
 @inline inv(b::Permute) = Permute(transpose(b.A))
 
 logabsdetjac(b::Permute, x::AbstractVector) = zero(eltype(x))
