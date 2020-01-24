@@ -10,7 +10,7 @@ seed!(1)
         z = randn(2, 20)
         forward_diff = log(abs(det(ForwardDiff.jacobian(t -> flow(t), z))))
         our_method = sum(forward(flow, z).logabsdetjac)
-        
+
         @test our_method ≈ forward_diff
         @test inv(flow)(flow(z)) ≈ z rtol=0.2
         @test (inv(flow) ∘ flow)(z) ≈ z rtol=0.2

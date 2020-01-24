@@ -1,6 +1,6 @@
 using LinearAlgebra
 using Random
-using StatsFuns: softplus
+using NNlib: softplus
 using Roots # for inverse
 
 ################################################################################
@@ -28,15 +28,19 @@ function RadialLayer(dims::Int, container=Array)
     return RadialLayer(α_, β, z_0)
 end
 
-h(α, r) = 1 ./ (α .+ r)     # for radial flow from eq(14)
-dh(α, r) = - h(α, r) .^ 2   # for radial flow; derivative of h()
+h(α, r) = 1 / (α + r)    # for radial flow from eq(14)
+dh(α, r) = - h(α, r) ^ 2 # for radial flow; derivative of h()
 
 # An internal version of transform that returns intermediate variables
 function _transform(flow::RadialLayer, z)
-    α = softplus(flow.α_[1])            # from A.2
-    β_hat = -α + softplus(flow.β[1])    # from A.2
+    # from A.2
+    α = softplus.(flow.α_)
+
+    # from A.2
+    β_hat = @. -α + softplus(flow.β)
+
     r = sqrt.(sum((z .- flow.z_0).^2; dims = 1))
-    transformed = z + β_hat .* h(α, r) .* (z .- flow.z_0)   # from eq(14)
+    transformed = @. z + β_hat * h(α, r) * (z - flow.z_0)   # from eq(14)
     return (transformed=transformed, α=α, β_hat=β_hat, r=r)
 end
 
@@ -47,7 +51,7 @@ function _forward(flow::RadialLayer, z)
     transformed, α, β_hat, r = _transform(flow, z)
     # Compute log_det_jacobian
     d = size(flow.z_0, 1)
-    h_ = h(α, r)
+    h_ = h.(α, r)
     log_det_jacobian = @. (
         (d - 1) * log(1.0 + β_hat * h_)
         + log(1.0 +  β_hat * h_ + β_hat * (- h_ ^ 2) * r)
@@ -64,18 +68,21 @@ end
 
 function (ib::Inversed{<:RadialLayer})(y)
     flow = ib.orig
-    α = softplus(flow.α_[1])            # from A.2
-    β_hat = - α + softplus(flow.β[1])   # from A.2
+    α = first(Bijectors.softplus.(flow.α_))                             # from A.2
+    β_hat = first(.- α .+ Bijectors.softplus.(flow.β))                  # from A.2
+
     # Define the objective functional
-    f(y) = r -> norm(y - flow.z_0, 2) - r * (1 + β_hat / (α + r))   # from eq(26)
-    # Run solver 
-    rs = [find_zero(f(y[:,i:i]), 0.0, Order16()) for i in 1:size(y, 2)]'    # from A.2
-    z_hat = (y .- flow.z_0) ./ (rs .* (1 .+ β_hat ./ (α .+ rs)))            # from eq(25)
-    z = flow.z_0 .+ rs .* z_hat # from A.2
+    f(y) = r -> norm(y - flow.z_0, 2) - r * (1 + β_hat / (α + r))       # from eq(26)
+
+    # Run solver
+    rs = [find_zero(f(y[:, i]), 0.0, Order16()) for i in 1:size(y, 2)]' # from A.2
+    z_hat = @. (y - flow.z_0) / (rs * (1 + β_hat / (α + rs)))           # from eq(25)
+    z = @. flow.z_0 + rs * z_hat                                        # from A.2
+
     return z
 end
 
-function (ib::Inversed{<: RadialLayer})(y::AbstractVector{<:Real})
+function (ib::Inversed{<:RadialLayer})(y::AbstractVector{<:Real})
     return vec(ib(reshape(y, (length(y), 1))))
 end
 
