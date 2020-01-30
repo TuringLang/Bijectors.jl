@@ -1,4 +1,5 @@
 using Test
+using DistributionsAD
 using Bijectors
 using Random
 using LinearAlgebra
@@ -428,7 +429,9 @@ end
 
     matrix_dists = [
         Wishart(v,S),
-        InverseWishart(v,S)
+        InverseWishart(v,S),
+        TuringWishart(v,S),
+        TuringInverseWishart(v,S)
     ]
 
     for dist in matrix_dists
