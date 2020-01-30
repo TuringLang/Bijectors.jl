@@ -135,8 +135,7 @@ function _simplex_inv_bijector_nosimd!(
 end
 
 Zygote.@adjoint function logabsdetjac(b::SimplexBijector, x::AbstractVector)
-    val, back = Zygote.pullback(_logabsdetjac_nosimd, b, x)
-    val, x -> back(x)
+    return Zygote.pullback(_logabsdetjac_nosimd, b, x)
 end
 function _logabsdetjac_nosimd(b::SimplexBijector, x::AbstractVector{T}) where {T}
     ϵ = _eps(T)
@@ -160,8 +159,7 @@ Zygote.@adjoint function _link_pd(
     d,
     X::AbstractMatrix{<:Real},
 )
-    val, back = Zygote.pullback(_link_pd_zygote, d, X)
-    val, x -> back(x)
+    return Zygote.pullback(_link_pd_zygote, d, X)
 end
 function _link_pd_zygote(
     d,
@@ -179,8 +177,7 @@ Zygote.@adjoint function _invlink_pd(
     d,
     X::AbstractMatrix{<:Real},
 )
-    val, back = Zygote.pullback(_invlink_pd_zygote, d, X)
-    val, x -> back(x)
+    return Zygote.pullback(_invlink_pd_zygote, d, X)
 end
 function _invlink_pd_zygote(
     d,
@@ -200,8 +197,7 @@ Zygote.@adjoint function _logpdf_with_trans_pd(
     X::AbstractMatrix{<:Real},
     transform::Bool,
 )
-    val, back = Zygote.pullback(_logpdf_with_trans_pd_zygote, d, X, transform)
-    val, x -> back(x)
+    return Zygote.pullback(_logpdf_with_trans_pd_zygote, d, X, transform)
 end
 function _logpdf_with_trans_pd_zygote(
     d,
