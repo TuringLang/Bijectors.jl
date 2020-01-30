@@ -1,5 +1,4 @@
 using Test
-using DistributionsAD
 using Bijectors
 using Random
 using LinearAlgebra
