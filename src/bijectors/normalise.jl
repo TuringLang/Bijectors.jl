@@ -36,7 +36,8 @@ function forward(bn::InvertibleBatchNorm, x)
         error("InvertibleBatchNorm expected $(length(bn.b)) channels, got $(size(x, dims - 1))")
     channels = size(x, dims - 1)
     as = ntuple(i -> i == ndims(x) - 1 ? size(x, i) : 1, dims)
-    s = reshape(exp.(bn.logs), as...)
+    logs = reshape(bn.logs, as...)
+    s = exp.(logs)
     b = reshape(bn.b, as...)
     if istraining()
         n = div(prod(size(x)), channels)
@@ -55,7 +56,7 @@ function forward(bn::InvertibleBatchNorm, x)
 
     rv = s .* (x .- m) ./ sqrt.(v .+ bn.eps) .+ b
     logabsdetjac = (
-        fill(sum(bn.logs - log.(v .+ bn.eps) / 2), size(x, dims))
+        fill(sum(logs - log.(v .+ bn.eps) / 2), size(x, dims))
     )
     return (rv=rv, logabsdetjac=logabsdetjac)
 end
