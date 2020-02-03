@@ -42,7 +42,7 @@ function forward(bn::InvertibleBatchNorm, x)
     if istraining()
         axes = [1:dims-2; dims] # axes to reduce along (all but channels axis)
         m = mean(x, dims = axes)
-        v = sum((x .- m) .^ 2, dims = axes) ./ m
+        v = sum((x .- m) .^ 2, dims = axes) ./ n
         # Update moving mean and variance
         mtm = bn.mtm
         T = eltype(bn.m)
