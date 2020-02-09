@@ -1,0 +1,127 @@
+using Test
+
+using Bijectors
+using Bijectors: LeakyReLU
+
+using LinearAlgebra
+using ForwardDiff
+
+true_logabsdetjac(b::Bijector{0}, x::Real) = (log ∘ abs)(ForwardDiff.derivative(b, x))
+true_logabsdetjac(b::Bijector{0}, x::AbstractVector) = (log ∘ abs).(ForwardDiff.derivative.(b, x))
+true_logabsdetjac(b::Bijector{1}, x::AbstractVector) = logabsdet(ForwardDiff.jacobian(b, x))[1]
+true_logabsdetjac(b::Bijector{1}, xs::AbstractMatrix) = mapreduce(z -> true_logabsdetjac(b, z), vcat, eachcol(xs))
+
+@testset "0-dim parameter, 0-dim input" begin
+    b = LeakyReLU(0.1; dim=Val(0))
+    x = 1.
+    @test inv(b)(b(x)) == x
+    @test inv(b)(b(-x)) == -x
+
+    # Mixing of types
+    # 1. Changes in input-type
+    @assert eltype(b(Float32(1.))) == Float64
+    @assert eltype(b(Float64(1.))) == Float64
+
+    # 2. Changes in parameter-type
+    b = LeakyReLU(Float32(0.1); dim=Val(0))
+    @assert eltype(b(Float32(1.))) == Float32
+    @assert eltype(b(Float64(1.))) == Float64
+
+    # logabsdetjac
+    @test logabsdetjac(b, x) == true_logabsdetjac(b, x)
+    @test logabsdetjac(b, Float32(x)) == true_logabsdetjac(b, x)
+
+    # Batch
+    xs = randn(10)
+    @test logabsdetjac(b, xs) == true_logabsdetjac(b, xs)
+    @test logabsdetjac(b, Float32.(x)) == true_logabsdetjac(b, Float32.(x))
+
+    @test logabsdetjac(b, -xs) == true_logabsdetjac(b, -xs)
+    @test logabsdetjac(b, -Float32.(xs)) == true_logabsdetjac(b, -Float32.(xs))
+
+    # Forward
+    f = forward(b, xs)
+    @test f.logabsdetjac ≈ logabsdetjac(b, xs)
+    @test f.rv ≈ b(xs)
+
+    f = forward(b, Float32.(xs))
+    @test f.logabsdetjac == logabsdetjac(b, Float32.(xs))
+    @test f.rv ≈ b(Float32.(xs))
+end
+
+@testset "0-dim parameter, 1-dim input" begin
+    d = 2
+
+    b = LeakyReLU(0.1; dim=Val(1))
+    x = ones(d)
+    @test inv(b)(b(x)) == x
+    @test inv(b)(b(-x)) == -x
+
+    # Batch
+    xs = randn(d, 10)
+    @test logabsdetjac(b, xs) == true_logabsdetjac(b, xs)
+    @test logabsdetjac(b, Float32.(x)) == true_logabsdetjac(b, Float32.(x))
+
+    @test logabsdetjac(b, -xs) == true_logabsdetjac(b, -xs)
+    @test logabsdetjac(b, -Float32.(xs)) == true_logabsdetjac(b, -Float32.(xs))
+
+    # Forward
+    f = forward(b, xs)
+    @test f.logabsdetjac ≈ logabsdetjac(b, xs)
+    @test f.rv ≈ b(xs)
+
+    f = forward(b, Float32.(xs))
+    @test f.logabsdetjac == logabsdetjac(b, Float32.(xs))
+    @test f.rv ≈ b(Float32.(xs))
+
+    # Mixing of types
+    # 1. Changes in input-type
+    @assert eltype(b(ones(Float32, 2))) == Float64
+    @assert eltype(b(ones(Float64, 2))) == Float64
+
+    # 2. Changes in parameter-type
+    b = LeakyReLU(Float32(0.1); dim=Val(1))
+    @assert eltype(b(ones(Float32, 2))) == Float32
+    @assert eltype(b(ones(Float64, 2))) == Float64
+
+    # grad_test_f(α, x) = (sum ∘ LeakyReLU(α; dim=Val(1)))(x)
+    # x = ones(2)
+    # α = [0.1]
+
+    # # Tracker.jl should have a gradient-type that is the same as the INPUT
+    # using Tracker
+    # res = Tracker.data(Tracker.gradient(x -> grad_test_f(Float64(α[1]), x), Float32.(x))[1])
+    # @test eltype(res) == Float32
+    # res = Tracker.data(Tracker.gradient(x -> grad_test_f(Float32(α[1]), x), Float64.(x))[1])
+    # @test eltype(res) == Float64
+
+    # res = Tracker.data(Tracker.gradient(α -> grad_test_f(α[1], Float64.(x)), Float32.(α))[1])
+    # @test eltype(res) == Float64
+    # res = Tracker.data(Tracker.gradient(α -> grad_test_f(α[1], Float32.(x)), Float64.(α))[1])
+    # @test eltype(res) == Float64
+
+    # x = Tracker.param(ones(Float32, 2))
+    # @test b(x) isa TrackedArray
+
+    # using Zygote
+    # res = Zygote.gradient(x -> grad_test_f(Float64(α[1]), x), Float32.(x))[1]
+    # @test eltype(res) == Float32
+    # res = Zygote.gradient(x -> grad_test_f(Float32(α[1]), x), Float64.(x))[1]
+    # @test eltype(res) == Float64
+
+    # res = Zygote.gradient(α -> grad_test_f(α[1], Float64.(x)), Float32.(α))[1]
+    # @test eltype(res) == Float64
+    # res = Zygote.gradient(α -> grad_test_f(α[1], Float32.(x)), Float64.(α))[1]
+    # @test eltype(res) == Float64
+
+    # using ForwardDiff
+    # res = ForwardDiff.gradient(x -> grad_test_f(Float64(α[1]), x), Float32.(x))
+    # @test eltype(res) == Float64
+    # res = ForwardDiff.gradient(x -> grad_test_f(Float32(α[1]), x), Float64.(x))
+    # @test eltype(res) == Float64
+
+    # res = ForwardDiff.gradient(α -> grad_test_f(α[1], Float64.(x)), Float32.(α))
+    # @test eltype(res) == Float64
+    # res = ForwardDiff.gradient(α -> grad_test_f(α[1], Float32.(x)), Float64.(α))
+    # @test eltype(res) == Float64
+end
