@@ -8,7 +8,7 @@ struct RationalQuadraticSpline{T, D} <: Bijector{D}
     function RationalQuadraticSpline(widths::T, heights::T, derivatives::T) where {T<:AbstractVector}
         # FIXME: add a `NoArgCheck` type and argument so we can circumvent if we want
 
-        @assert length(widths) == length(heights) == length(derivatives) "widths $(length(widths)) ≠ heights $(length(heights)) ≠ $(length(derivatives))"
+        @assert length(widths) == length(heights) == length(derivatives) + 1 "widths $(length(widths)) ≠ heights $(length(heights)) ≠ $(length(derivatives)) + 1"
         # @assert all(widths .> 0) "widths need to be positive"
         # @assert all(heights .> 0) "heights need to be positive"
         # @assert widths[1] ≈ heights[1] "widths and heights need equal left endpoint"
@@ -67,7 +67,7 @@ function rqs_univariate(widths, heights, derivatives, x::Real)
     denominator = s + (dₖ₊₁ + dₖ - 2s) * ξ * (1 - ξ)
     g = hₖ + numerator / denominator
 
-    @info k w Δy s ξ numerator denominator
+    # @info k w Δy s ξ numerator denominator
 
     return g
 end
@@ -250,10 +250,6 @@ end
 
 function rqs_forward(widths::AbstractMatrix, heights::AbstractMatrix, derivatives::AbstractMatrix, x::AbstractVector)
     return merge_nt((rv = vcat, logabsdetjac = +), (rqs_forward.(eachcol(widths), eachcol(heights), eachcol(derivatives), x))...)
-end
-
-function forward(b::RationalQuadraticSpline{<:AbstractMatrix, 1}, x::AbstractMatrix)
-    return rqs_forward(b.widths, b.heights, b.derivatives, x)
 end
 
 function forward(b::RationalQuadraticSpline{<:AbstractMatrix, 1}, x::AbstractMatrix)

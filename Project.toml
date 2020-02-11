@@ -3,6 +3,7 @@ uuid = "76274a88-744f-5084-9051-94815aaf08c4"
 version = "0.5.3"
 
 [deps]
+Compat = "34da2185-b29b-5c13-b0c7-acf172513d20"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 MappedArrays = "dbb5928d-eab1-5f90-85c2-b9b0edb7c900"
@@ -15,6 +16,7 @@ SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 StatsFuns = "4c63d2b9-4356-54db-8cca-17b64c39e42c"
 
 [compat]
+Compat = "3.4"
 Distributions = "0.21.11, 0.22"
 ForwardDiff = "0.10.3"
 MappedArrays = "0.2.2"
