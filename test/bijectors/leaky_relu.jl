@@ -1,5 +1,7 @@
 using Test
 
+using Compat
+
 using Bijectors
 using Bijectors: LeakyReLU
 
