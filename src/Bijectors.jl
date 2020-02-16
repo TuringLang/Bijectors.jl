@@ -40,7 +40,8 @@ export  TransformDistribution,
         logpdf_forward,
         PlanarLayer,
         RadialLayer,
-        CouplingLayer
+        CouplingLayer,
+        InvertibleBatchNorm
 
 const DEBUG = Bool(parse(Int, get(ENV, "DEBUG_BIJECTORS", "0")))
 _debug(str) = @debug str
@@ -423,8 +424,9 @@ include("interface.jl")
 # optional dependencies
 function __init__()
     @require ForwardDiff="f6369f11-7733-5829-9624-2563aa707210" include("compat/forwarddiff.jl")
-    @require Tracker="9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c" include("compat/tracker.jl")
-    @require Zygote="e88e6eb3-aa80-5325-afca-941959d7151f" include("compat/zygote.jl")
+    @require Tracker="9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c"     include("compat/tracker.jl")
+    @require Zygote="e88e6eb3-aa80-5325-afca-941959d7151f"      include("compat/zygote.jl")
+    @require Flux="587475ba-b771-5e3f-ad9e-33799f191a9c"        include("compat/flux.jl")
 end
 
 end # module

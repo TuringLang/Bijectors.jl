@@ -707,6 +707,7 @@ The following are the bijectors available:
   - `Log`
   - `Scale`: scaling by scalar value, though at the moment only well-defined `logabsdetjac` for univariate. 
   - `Shift`: shifts by a scalar value.
+  - `Permute`: permutes the input array using matrix multiplication
   - `SimplexBijector`: mostly used as the constrained-to-unconstrained bijector for `SimplexDistribution`, e.g. `Dirichlet`.
   - `PlanarLayer`: §4.1 Eq. (10) in [1]
   - `RadialLayer`: §4.1 Eq. (14) in [1]
