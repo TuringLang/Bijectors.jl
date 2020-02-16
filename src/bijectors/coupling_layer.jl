@@ -58,15 +58,15 @@ function PartitionMask(
     A_3 = spzeros(Bool, n, length(indices_3));
 
     for (i, idx) in enumerate(indices_1)
-        A_1[idx, i] = 1.0
+        A_1[idx, i] = true
     end
 
     for (i, idx) in enumerate(indices_2)
-        A_2[idx, i] = 1.0
+        A_2[idx, i] = true
     end
 
     for (i, idx) in enumerate(indices_3)
-        A_3[idx, i] = 1.0
+        A_3[idx, i] = true
     end
 
     return PartitionMask(A_1, A_2, A_3)
@@ -109,11 +109,11 @@ function PartitionMask(n::Int, indices)
     #    A[1, 1] = 1.0
     #    A[3, 2] = 1.0
     for (i, idx) in enumerate(indices)
-        A_1[idx, i] = 1.0
+        A_1[idx, i] = true
     end
 
     for (i, idx) in enumerate(indices_2)
-        A_2[idx, i] = 1.0
+        A_2[idx, i] = true
     end
 
     return PartitionMask(A_1, A_2, spzeros(Bool, n, 0))
