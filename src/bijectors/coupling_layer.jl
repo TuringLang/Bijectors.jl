@@ -53,9 +53,9 @@ function PartitionMask(
     indices_2::AbstractVector{Int},
     indices_3::AbstractVector{Int}
 )
-    A_1 = spzeros(n, length(indices_1));
-    A_2 = spzeros(n, length(indices_2));
-    A_3 = spzeros(n, length(indices_3));
+    A_1 = spzeros(Bool, n, length(indices_1));
+    A_2 = spzeros(Bool, n, length(indices_2));
+    A_3 = spzeros(Bool, n, length(indices_3));
 
     for (i, idx) in enumerate(indices_1)
         A_1[idx, i] = 1.0
@@ -102,8 +102,8 @@ function PartitionMask(n::Int, indices)
     indices_2 = [i for i in 1:n if i ∉ indices]
 
     # sparse arrays <3
-    A_1 = spzeros(n, length(indices));
-    A_2 = spzeros(n, length(indices_2));
+    A_1 = spzeros(Bool, n, length(indices));
+    A_2 = spzeros(Bool, n, length(indices_2));
 
     # Like doing:
     #    A[1, 1] = 1.0
@@ -116,7 +116,7 @@ function PartitionMask(n::Int, indices)
         A_2[idx, i] = 1.0
     end
 
-    return PartitionMask(A_1, A_2, spzeros(n, 0))
+    return PartitionMask(A_1, A_2, spzeros(Bool, n, 0))
 end
 PartitionMask(x::AbstractVector, indices) = PartitionMask(length(x), indices)
 
