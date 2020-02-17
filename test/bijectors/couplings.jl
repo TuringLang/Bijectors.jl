@@ -61,7 +61,7 @@ using Bijectors:
         x = [1., 2., 3.]
 
         m = PartitionMask(length(x), [1], [2])
-        nn = Chain(Dense(1, 2, sigmoid), Dense(2, 1))
+        nn = Flux.Chain(Flux.Dense(1, 2, Flux.sigmoid), Flux.Dense(2, 1))
         nn_tracked = Flux.fmap(x -> (x isa AbstractArray) ? Tracker.param(x) : x, nn)
         cl = CouplingLayer(Shift, m, nn_tracked)
 
