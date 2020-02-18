@@ -103,3 +103,22 @@ function (sb::Stacked)(x::TrackedMatrix{<:Real})
     init = reshape(sb(x[:, 1]), :, 1)
     return Tracker.collect(mapreduce(i -> sb(x[:, i]), hcat, 2:size(x, 2); init = init))
 end
+
+# Stuff
+function _simplex_bijector(b::SimplexBijector{proj}, x::TrackedVector{T}) where {proj, T}
+    Tracker.track(_simplex_bijector, b, x)
+end
+
+Tracker.@grad function _simplex_bijector(b::SimplexBijector{proj}, x::AbstractVector{T}) where {proj, T}
+    x_untracked = Tracker.data(x)
+    return _simplex_bijector(b, x_untracked), Δ -> (nothing, jacobian(b, x_untracked)' * Δ)
+end
+
+function _simplex_bijector_inv(ib::Inversed{<:SimplexBijector{proj}}, y::TrackedVector{T}) where {proj, T}
+    Tracker.track(_simplex_bijector_inv, ib, y)
+end
+
+Tracker.@grad function _simplex_bijector_inv(ib::Inversed{<:SimplexBijector{proj}}, y::AbstractVector{T}) where {proj, T}
+    y_untracked = Tracker.data(y)
+    return _simplex_bijector_inv(ib, y_untracked), Δ -> (nothing, jacobian(ib, y_untracked)' * Δ)
+end
