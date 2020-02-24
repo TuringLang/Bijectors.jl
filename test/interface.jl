@@ -1,10 +1,10 @@
 using Test
-using Bijectors
 using Random
 using LinearAlgebra
 using ForwardDiff
 using Tracker
 
+using Bijectors
 using Bijectors: Log, Exp, Shift, Scale, Logit, SimplexBijector
 
 Random.seed!(123)
@@ -661,6 +661,43 @@ end
     td = transformed(Normal(), ib) # x ∼ 𝓝(0, 1) then f(x) ∈ [0, 1]
     x = rand(td)                   # ∈ [0, 1]
     @test 0 ≤ x ≤ 1
+end
+
+@testset "Jacobians of SimplexBijector" begin
+    b = SimplexBijector()
+    ib = inv(b)
+
+    x = ib(randn(10))
+    y = b(x)
+
+    @test Bijectors.jacobian(b, x) ≈ ForwardDiff.jacobian(b, x)
+    @test Bijectors.jacobian(ib, y) ≈ ForwardDiff.jacobian(ib, y)
+
+    # Just some additional computation so we also ensure the pullbacks are the same
+    weights = randn(10)
+
+    # Tracker.jl
+    x_tracked = Tracker.param(x)
+    z = sum(weights .* b(x_tracked))
+    Tracker.back!(z)
+    Δ_tracker = Tracker.grad(x_tracked)
+
+    # ForwardDiff.jl
+    Δ_forwarddiff = ForwardDiff.gradient(z -> sum(weights .* b(z)), x)
+
+    # Compare
+    @test Δ_forwarddiff ≈ Δ_tracker
+
+    # Tracker.jl
+    y_tracked = Tracker.param(y)
+    z = sum(weights .* ib(y_tracked))
+    Tracker.back!(z)
+    Δ_tracker = Tracker.grad(y_tracked)
+
+    # ForwardDiff.jl
+    Δ_forwarddiff = ForwardDiff.gradient(z -> sum(weights .* ib(z)), y)
+
+    @test Δ_forwarddiff ≈ Δ_tracker
 end
 
 include("norm_flows.jl")
