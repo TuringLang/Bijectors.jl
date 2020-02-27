@@ -531,7 +531,7 @@ function jacobian(b::SimplexBijector{proj}, x::AbstractVector{T}) where {proj, T
     return UpperTriangular(dydxt)'
 end
 
-function jacobian(ib::Inversed{<:SimplexBijector{proj}}, y::AbstractVector{T}) where {proj, T}
+function jacobian(ib::Inverse{<:SimplexBijector{proj}}, y::AbstractVector{T}) where {proj, T}
     b = ib.orig
     
     K = length(y)

@@ -65,8 +65,8 @@ logabsdetjac(bn::InvertibleBatchNorm, x) = forward(bn, x).logabsdetjac
 
 (bn::InvertibleBatchNorm)(x) = forward(bn, x).rv
 
-function forward(invbn::Inversed{<:InvertibleBatchNorm}, y)
-    @assert !istraining() "`forward(::Inversed{InvertibleBatchNorm})` is only available in test mode."
+function forward(invbn::Inverse{<:InvertibleBatchNorm}, y)
+    @assert !istraining() "`forward(::Inverse{InvertibleBatchNorm})` is only available in test mode."
     dims = ndims(y)
     as = ntuple(i -> i == ndims(y) - 1 ? size(y, i) : 1, dims)
     bn = inv(invbn)
@@ -79,7 +79,7 @@ function forward(invbn::Inversed{<:InvertibleBatchNorm}, y)
     return (rv=x, logabsdetjac=-logabsdetjac(bn, x))
 end
 
-(bn::Inversed{<:InvertibleBatchNorm})(y) = forward(bn, y).rv
+(bn::Inverse{<:InvertibleBatchNorm})(y) = forward(bn, y).rv
 
 function Base.show(io::IO, l::InvertibleBatchNorm)
     print(io, "InvertibleBatchNorm($(join(size(l.b), ", ")))")

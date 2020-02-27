@@ -201,32 +201,32 @@ _clamp(x, ::SimplexDistribution) = _clamp(x, SimplexBijector())
 function link(
     d::SimplexDistribution,
     x::AbstractVecOrMat{<:Real},
-    ::Type{Val{proj}} = Val{true}
-) where {proj}
+    proj::Bool = true,
+)
     return SimplexBijector{proj}()(x)
 end
 
 function link_jacobian(
     d::SimplexDistribution,
     x::AbstractVector{T},
-    ::Type{Val{proj}} = Val{true}
-) where {T<:Real, proj}
+    proj::Bool = true,
+) where {T<:Real}
     return jacobian(SimplexBijector{proj}(), x)
 end
 
 function invlink(
     d::SimplexDistribution,
     y::AbstractVecOrMat{<:Real},
-    ::Type{Val{proj}} = Val{true}
-) where {proj}
+    proj::Bool = true
+)
     return inv(SimplexBijector{proj}())(y)
 end
 
 function invlink_jacobian(
     d::SimplexDistribution,
     y::AbstractVector{T},
-    ::Type{Val{proj}} = Val{true}
-) where {T<:Real, proj}
+    proj::Bool = true
+) where {T<:Real}
     return jacobian(inv(SimplexBijector{proj}()), y)
 end
 

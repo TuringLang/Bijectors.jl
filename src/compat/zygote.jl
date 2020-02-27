@@ -1,4 +1,4 @@
-using .Zygote: Zygote, @adjoint
+using .Zygote: Zygote, @adjoint, @nograd
 
 @adjoint istraining() = true, _ -> nothing
 @nograd Bijectors._debug
