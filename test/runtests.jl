@@ -1,4 +1,4 @@
-using Bijectors, Random
+using DistributionsAD, Bijectors, Random
 using Test
 
 Random.seed!(123456)

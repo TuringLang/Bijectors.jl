@@ -92,7 +92,7 @@ struct Composed{A, N} <: Bijector{N}
     Composed(bs::A) where {N, A<:AbstractArray{<:Bijector{N}}} = new{A, N}(bs)
 end
 
-isclosedform(b::Composed) = all(isclosedform.(b.ts))
+isclosedform(b::Composed) = all(isclosedform, b.ts)
 
 
 """
@@ -147,20 +147,12 @@ end
 ∘(b::Bijector{N}, ::Identity{N}) where {N} = b
 
 inv(ct::Composed) = Composed(reverse(map(inv, ct.ts)))
-@generated function inv(cb::Composed{A}) where {A<:Tuple}
-    exprs = []
-
-    # inversion → reversing order
-    for i = length(A.parameters):-1:1
-        push!(exprs, :(inv(cb.ts[$i])))
-    end
-    return :(Composed(($(exprs...), )))
-end
 
 # # TODO: should arrays also be using recursive implementation instead?
 function (cb::Composed{<:AbstractArray{<:Bijector}})(x)
-    res = x
-    for b ∈ cb.ts
+    @assert length(cb.ts) > 0
+    res = cb.ts[1](x)
+    for b ∈ Base.Iterators.drop(cb.ts, 1)
         res = b(res)
     end
 
@@ -168,13 +160,11 @@ function (cb::Composed{<:AbstractArray{<:Bijector}})(x)
 end
 
 @generated function (cb::Composed{T})(x) where {T<:Tuple}
-    expr = Expr(:block)
-    push!(expr.args, :(y = cb.ts[1](x)))
-    for i = 2:length(T.parameters)
-        push!(expr.args, :(y = cb.ts[$i](y)))
+    @assert length(T.parameters) > 0
+    expr = :(x)
+    for i in 1:length(T.parameters)
+        expr = :(cb.ts[$i]($expr))
     end
-    push!(expr.args, :(return y))
-
     return expr
 end
 
@@ -196,9 +186,10 @@ end
     push!(expr.args, :((y, logjac) = forward(cb.ts[1], x)))
 
     for i = 2:N - 1
-        push!(expr.args, :(res = forward(cb.ts[$i], y)))
-        push!(expr.args, :(y = res.rv))
-        push!(expr.args, :(logjac += res.logabsdetjac))
+        temp = gensym(:res)
+        push!(expr.args, :($temp = forward(cb.ts[$i], y)))
+        push!(expr.args, :(y = $temp.rv))
+        push!(expr.args, :(logjac += $temp.logabsdetjac))
     end
     # don't need to evaluate the last bijector, only it's `logabsdetjac`
     push!(expr.args, :(logjac += logabsdetjac(cb.ts[$N], y)))
@@ -225,9 +216,10 @@ end
     expr = Expr(:block)
     push!(expr.args, :((y, logjac) = forward(cb.ts[1], x)))
     for i = 2:length(T.parameters)
-        push!(expr.args, :(res = forward(cb.ts[$i], y)))
-        push!(expr.args, :(y = res.rv))
-        push!(expr.args, :(logjac += res.logabsdetjac))
+        temp = gensym(:temp)
+        push!(expr.args, :($temp = forward(cb.ts[$i], y)))
+        push!(expr.args, :(y = $temp.rv))
+        push!(expr.args, :(logjac += $temp.logabsdetjac))
     end
     push!(expr.args, :(return (rv = y, logabsdetjac = logjac)))
 

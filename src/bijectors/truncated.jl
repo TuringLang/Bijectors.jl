@@ -34,7 +34,7 @@ function (b::TruncatedBijector)(x::AbstractVector{<:Real})
     end
 end
 
-function (ib::Inversed{<:TruncatedBijector})(y::Real)
+function (ib::Inverse{<:TruncatedBijector})(y::Real)
     a, b = ib.orig.lb, ib.orig.ub
     lowerbounded, upperbounded = isfinite(a), isfinite(b)
     if lowerbounded && upperbounded
@@ -48,7 +48,7 @@ function (ib::Inversed{<:TruncatedBijector})(y::Real)
     end
 end
 
-function (ib::Inversed{<:TruncatedBijector})(y::AbstractVector{<:Real})
+function (ib::Inverse{<:TruncatedBijector})(y::AbstractVector{<:Real})
     a, b = ib.orig.lb, ib.orig.ub
     lowerbounded, upperbounded = isfinite(a), isfinite(b)
     if lowerbounded && upperbounded

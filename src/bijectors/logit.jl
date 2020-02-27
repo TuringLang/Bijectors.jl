@@ -8,7 +8,11 @@ struct Logit{T<:Real} <: Bijector{0}
     b::T
 end
 
-(b::Logit)(x) = @. logit((x - b.a) / (b.b - b.a))
-(ib::Inversed{<:Logit{<:Real}})(y) = @. (ib.orig.b - ib.orig.a) * logistic(y) + ib.orig.a
+(b::Logit)(x::Real) = @. logit((x - b.a) / (b.b - b.a))
+(b::Logit)(x) = b.(x)
 
-logabsdetjac(b::Logit{<:Real}, x) = @. - log((x - b.a) * (b.b - x) / (b.b - b.a))
+(ib::Inverse{<:Logit})(y::Real) = (ib.orig.b - ib.orig.a) * logistic(y) + ib.orig.a
+(ib::Inverse{<:Logit})(y) = ib.(y)
+
+_logabsdetjac(b::Logit, x::Real) = -log((x - b.a) * (b.b - x) / (b.b - b.a))
+logabsdetjac(b::Logit, x) = @. _logabsdetjac(b, x)
