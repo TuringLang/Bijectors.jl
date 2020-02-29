@@ -15,7 +15,7 @@ using Roots # for inverse
 
 # TODO: add docstring
 
-mutable struct PlanarLayer{T1 <: AbstractVector{<:Real}, T2 <: Real} <: Bijector{1}
+mutable struct PlanarLayer{T1<:AbstractVector{<:Real}, T2<:Real} <: Bijector{1}
     w::T1
     u::T1
     b::T2

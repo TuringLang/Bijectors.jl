@@ -45,41 +45,29 @@ end
     return _logabsdetjac_scale(a, x, Val(1)), Δ -> (Jᵀ * Δ, nothing, nothing)
 end
 
-Zygote.@adjoint function _link_pd(
-    d,
-    X::AbstractMatrix{<:Real},
-)
-    return Zygote.pullback(_link_pd_zygote, d, X)
-end
-function _link_pd_zygote(
-    d,
-    X::AbstractMatrix{T},
-) where {T <: Real}
-    Y = Zygote.Buffer(X)
-    Y .= cholesky(X).L
-    @inbounds for i in diagind(X)
-        Y[i] = log(Y[i])
+Zygote.@adjoint function (b::PDBijector)(X::AbstractMatrix{<:Real})
+    function f(X::AbstractMatrix{<:Real})
+        Y = Zygote.Buffer(X)
+        Y .= cholesky(X).L
+        @inbounds for i in diagind(X)
+            Y[i] = log(Y[i])
+        end
+        return copy(Y)
     end
-    return copy(Y)
+    return Zygote.pullback(f, X)
 end
 
-Zygote.@adjoint function _invlink_pd(
-    d,
-    X::AbstractMatrix{<:Real},
-)
-    return Zygote.pullback(_invlink_pd_zygote, d, X)
-end
-function _invlink_pd_zygote(
-    d,
-    Y::AbstractMatrix{T},
-) where {T <: Real}
-    X = Zygote.Buffer(Y)
-    X .= Y
-    @inbounds for i in diagind(Y)
-        X[i] = exp(X[i])
+Zygote.@adjoint function (ib::Inverse{PDBijector})(Y::AbstractMatrix{<:Real})
+    function f(Y::AbstractMatrix{<:Real})
+        X = Zygote.Buffer(Y)
+        X .= Y
+        @inbounds for i in diagind(Y)
+            X[i] = exp(X[i])
+        end
+        _X = copy(X)
+        return LowerTriangular(_X) * LowerTriangular(_X)'
     end
-    _X = copy(X)
-    return LowerTriangular(_X) * LowerTriangular(_X)'
+    return Zygote.pullback(f, Y)
 end
 
 Zygote.@adjoint function _logpdf_with_trans_pd(

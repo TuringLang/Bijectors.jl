@@ -50,6 +50,15 @@ stack(bs::Bijector{0}...) = Stacked(bs)
 
 # For some reason `inv.(sb.bs)` was unstable... This works though.
 inv(sb::Stacked) = Stacked(map(inv, sb.bs), sb.ranges)
+# map is not type stable for many stacked bijectors as a large tuple
+# hence the generated function
+@generated function inv(sb::Stacked{A}) where {A <: Tuple}
+    exprs = []
+    for i = 1:length(A.parameters)
+        push!(exprs, :(inv(sb.bs[$i])))
+    end
+    :(Stacked(($(exprs...), ), sb.ranges))
+end
 
 @generated function _transform(x, rs::NTuple{N, UnitRange{Int}}, bs::Bijector...) where N
     exprs = []

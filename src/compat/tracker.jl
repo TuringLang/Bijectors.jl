@@ -212,22 +212,6 @@ end
     end
 end
 
-(ib::Inverse{<:Logit{<:TrackedReal}})(y::AbstractArray) = ib.(y)::TrackedArray
-(ib::Inverse{<:Logit{<:Real}})(y::TrackedArray) = ib.(y)::TrackedArray
-(ib::Inverse{<:Logit{<:TrackedReal}})(y::TrackedArray) = ib.(y)::TrackedArray
-
-logabsdetjac(b::Logit{<:TrackedReal}, y::AbstractArray) = _logabsdetjac.(b, y)::TrackedArray
-logabsdetjac(b::Logit{<:Real}, y::TrackedArray) = _logabsdetjac.(b, y)::TrackedArray
-logabsdetjac(b::Logit{<:TrackedReal}, y::TrackedArray) = _logabsdetjac.(b, y)::TrackedArray
-
-(b::PlanarLayer{<:TrackedArray})(z::AbstractArray) = _transform(b, z).transformed::TrackedArray
-(b::PlanarLayer{<:Any, <:TrackedReal})(z::AbstractArray) = _transform(b, z).transformed::TrackedArray
-(b::PlanarLayer)(z::TrackedArray) = _transform(b, z).transformed::TrackedArray
-(b::PlanarLayer{<:TrackedArray, <:TrackedReal})(z::AbstractArray) = _transform(b, z).transformed::TrackedArray
-(b::PlanarLayer{<:TrackedArray, <:Any})(z::TrackedArray) = _transform(b, z).transformed::TrackedArray
-(b::PlanarLayer{<:Any, <:TrackedReal})(z::TrackedArray) = _transform(b, z).transformed::TrackedArray
-(b::PlanarLayer{<:TrackedArray, <:TrackedReal})(z::TrackedArray) = _transform(b, z).transformed::TrackedArray
-
 for header in [
     (:(u::TrackedArray), :w),
     (:u, :(w::TrackedArray)),
@@ -410,80 +394,9 @@ function vectorof(::Type{TrackedReal{T}}) where {T <: Real}
     return TrackedArray{T, 1, Vector{T}}
 end
 
-(b::Exp)(y::TrackedVector) = (@. exp(y))::vectorof(float(eltype(y)))
-(b::Exp)(y::TrackedMatrix) = (@. exp(y))::matrixof(float(eltype(y)))
-
-(b::Log)(x::TrackedVector) = (@. log(x))::vectorof(float(eltype(x)))
-(b::Log)(x::TrackedMatrix) = (@. log(x))::matrixof(float(eltype(x)))
-
-function (b::Scale)(x::TrackedVector)
-    return (b.a .* x)::vectorof(promote_type(eltype(x), eltype(b.a)))
-end
-function (b::Scale)(x::TrackedMatrix)
-    return (b.a .* x)::matrixof(promote_type(eltype(x), eltype(b.a)))
-end
-
-function (b::Logit)(x::TrackedVector)
-    T = vectorof(float(promote_type(eltype(x), eltype(b.a), eltype(b.b))))
-    return b.(x)::T
-end
-function (b::Logit)(x::TrackedMatrix)
-    T = matrixof(float(promote_type(eltype(x), eltype(b.a), eltype(b.b))))
-    return b.(x)::T
-end
-
-function (ib::Inverse{<:Logit})(x::TrackedVector)
-    T = vectorof(float(promote_type(eltype(x), eltype(ib.orig.a), eltype(ib.orig.b))))
-    return ib.(x)::T
-end
-function (ib::Inverse{<:Logit})(x::TrackedMatrix)
-    T = matrixof(float(promote_type(eltype(x), eltype(ib.orig.a), eltype(ib.orig.b))))
-    return ib.(x)::T
-end
-
-(b::Shift)(x::TrackedVector) = (b.a .+ x)::vectorof(promote_type(eltype(b.a), eltype(x)))
-(b::Shift)(x::TrackedMatrix) = (b.a .+ x)::matrixof(promote_type(eltype(b.a), eltype(x)))
+logabsdetjac(b::Log{0}, x::TrackedVector) = .-log.(x)::vectorof(float(eltype(x)))
 
 _logabsdetjac_shift(a::Real, x::TrackedVector{T}, ::Val{0}) where {T<:Real} = zeros(T, length(x))
 _logabsdetjac_shift(a::T1, x::TrackedVector{T2}, ::Val{1}) where {T1<:Union{Real, TrackedVector}, T2<:Real} = zero(T2)
 _logabsdetjac_shift(a::T1, x::TrackedMatrix{T2}, ::Val{1}) where {T1<:Union{Real, TrackedVector}, T2<:Real} = zeros(T2, size(x, 2))
 
-## Batch univariate
-
-function logpdf_with_trans(
-    d::TransformDistribution,
-    x::TrackedArray{<:Real},
-    trans::Bool,
-)
-    init = vcat(logpdf_with_trans(d, x[1], trans))
-    return reshape(mapreduce(vcat, 2:length(x); init = init) do i
-        logpdf_with_trans(d, x[i], trans)
-    end, size(x))
-end
-function logpdf_with_trans(
-    d::TransformDistribution,
-    x::TrackedReal,
-    transform::Bool,
-)
-    x = transform ? _clamp(x, d) : x
-    return _logpdf_with_trans(d, x, transform)
-end
-
-function logpdf_with_trans(
-    d::UnivariateDistribution,
-    x::TrackedArray{<:Real},
-    trans::Bool,
-)
-    init = vcat(logpdf_with_trans(d, x[1], trans))
-    return reshape(mapreduce(vcat, 2:length(x); init = init) do i
-        logpdf_with_trans(d, x[i], trans)
-    end, size(x))
-end
-function logpdf_with_trans(
-    d::UnivariateDistribution,
-    x::TrackedReal,
-    transform::Bool,
-)
-    x = transform ? _clamp(x, d) : x
-    return _logpdf_with_trans(d, x, transform)
-end

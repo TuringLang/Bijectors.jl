@@ -530,10 +530,14 @@ struct Logit{T<:Real} <: Bijector{0}
     b::T
 end
 
-(b::Logit)(x) = @. logit((x - b.a) / (b.b - b.a))
-(ib::Inverse{<:Logit})(y) = @. (ib.orig.b - ib.orig.a) * logistic(y) + ib.orig.a  # `orig` contains the `Bijector` which was inverted
+(b::Logit)(x::Real) = logit((x - b.a) / (b.b - b.a))
+(b::Logit)(x) = mapvcat(b, x)
+# `orig` contains the `Bijector` which was inverted
+(ib::Inverse{<:Logit})(y::Real) = (ib.orig.b - ib.orig.a) * logistic(y) + ib.orig.a
+(ib::Inverse{<:Logit})(y) = mapvcat(ib, y)
 
-logabsdetjac(b::Logit, x) = @. - log((x - b.a) * (b.b - x) / (b.b - b.a))
+logabsdetjac(b::Logit, x::Real) = - log((x - b.a) * (b.b - x) / (b.b - b.a))
+logabsdetjac(b::Logit, x) = mapvcat(logabsdetjac, x)
 ```
 
 (Batch computation is not fully supported by all bijectors yet (see issue #35), but is actively worked on. In the particular case of `Logit` there's only one thing that makes sense, which is elementwise application. Therefore we've added `@.` to the implementation above, thus this works for any `AbstractArray{<:Real}`.)

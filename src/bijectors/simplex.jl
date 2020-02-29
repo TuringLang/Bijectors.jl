@@ -151,10 +151,7 @@ function _simplex_inv_bijector!(X, Y::AbstractMatrix, b::SimplexBijector{proj}) 
     return X
 end
 
-function logabsdetjac(b::SimplexBijector, x::AbstractVector)
-    _logabsdetjac(b, x)
-end
-function _logabsdetjac(b::SimplexBijector, x::AbstractVector{T}) where {T}
+function logabsdetjac(b::SimplexBijector, x::AbstractVector{T}) where {T}
     ϵ = _eps(T)
     lp = zero(T)
     

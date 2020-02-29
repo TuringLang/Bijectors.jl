@@ -142,6 +142,7 @@ include("bijectors/scale.jl")
 include("bijectors/shift.jl")
 include("bijectors/permute.jl")
 include("bijectors/simplex.jl")
+include("bijectors/pd.jl")
 include("bijectors/truncated.jl")
 include("bijectors/distribution_bijector.jl")
 
