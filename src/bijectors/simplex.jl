@@ -211,8 +211,9 @@ function simplex_logabsdetjac_gradient(x::AbstractVector)
 end
 
 function logabsdetjac(b::SimplexBijector, x::AbstractMatrix{<:Real})
-    @views init = vcat(logabsdetjac(b, x[:,1]))
-    return mapreduce(c -> logabsdetjac(b, c), vcat, drop(eachcol(x), 1); init = init)
+    mapvcat(eachcol(x)) do c
+        logabsdetjac(b, c)
+    end
 end
 
 #=

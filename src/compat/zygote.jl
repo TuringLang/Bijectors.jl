@@ -142,15 +142,14 @@ end
 
 @adjoint function _simplex_bijector(X::AbstractMatrix, b::SimplexBijector)
     return _simplex_bijector(X, b), Δ -> begin
-        mapreduce(hcat, eachcol(X), eachcol(Δ)) do c1, c2
+        maphcat(eachcol(X), eachcol(Δ)) do c1, c2
             simplex_link_jacobian(c1)' * c2
         end, nothing
     end
 end
 @adjoint function _simplex_inv_bijector(Y::AbstractMatrix, b::SimplexBijector)
     return _simplex_inv_bijector(Y, b), Δ -> begin
-        @views init = reshape(simplex_invlink_jacobian(Y[:,1])' * Δ[:,1], :, 1)
-        mapreduce(hcat, drop(eachcol(Y), 1), drop(eachcol(Δ), 1); init = init) do c1, c2
+        maphcat(eachcol(Y), eachcol(Δ)) do c1, c2
             simplex_invlink_jacobian(c1)' * c2
         end, nothing
     end
@@ -163,8 +162,7 @@ end
 end
 @adjoint function logabsdetjac(b::SimplexBijector, x::AbstractMatrix)
     return logabsdetjac(b, x), Δ -> begin
-        @views init = reshape(simplex_logabsdetjac_gradient(x[:,1]) * Δ[1], :, 1)
-        (nothing, mapreduce(hcat, drop(eachcol(x), 1), drop(Δ, 1); init = init) do c, g
+        (nothing, maphcat(eachcol(x), Δ) do c, g
             simplex_logabsdetjac_gradient(c) * g
         end)
     end

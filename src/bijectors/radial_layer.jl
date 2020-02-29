@@ -86,8 +86,7 @@ function (ib::Inverse{<:RadialLayer})(y::AbstractMatrix{<:Real})
     # Define the objective functional
     f(y) = r -> norm(y .- flow.z_0) - r * (1 + β_hat / (α + r))   # from eq(26)
     # Run solver
-    init = @views vcat(find_zero(f(y[:,1]), zero(T), Order16()))
-    rs::typeof(init) = mapreduce(vcat, drop(eachcol(y), 1); init = init) do c 
+    rs = mapvcat(eachcol(y)) do c
         find_zero(f(c), zero(T), Order16())
     end
     return (flow.z_0 .+ (y .- flow.z_0) ./ (1 .+ β_hat ./ (α .+ rs')))::TM

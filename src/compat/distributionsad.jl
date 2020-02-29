@@ -95,9 +95,9 @@ function logpdf_with_trans(
     x::AbstractMatrix{<:Real},
     istrans::Bool,
 )
-    temp = vec(sum(reshape(logpdf_with_trans.(dist.v.value, x, istrans), size(x)), dims = 1))
-    init = vcat(temp[1])
-    return reduce(vcat, drop(temp, 1); init = init)
+    return mapvcat(eachcol(x)) do c
+        logpdf_with_trans(dist, c)
+    end
 end
 function link(
     dist::FillVectorOfUnivariate,
@@ -190,15 +190,17 @@ function link(
     dist::VectorOfMultivariate,
     x::AbstractMatrix{<:Real},
 )
-    @views init = reshape(link(dist.dists[1], x[:,1]), :, 1)
-    return mapreduce((dist, c) -> link(dist, c), hcat, drop(dist.dists, 1), drop(eachcol(x), 1); init = init)
+    return maphcat(dist.dists, eachcol(x)) do dist, c
+        link(dist, c)
+    end
 end
 function invlink(
     dist::VectorOfMultivariate,
     x::AbstractMatrix{<:Real},
 )
-    @views init = reshape(invlink(dist.dists[1], x[:,1]), :, 1)
-    return mapreduce((dist, c) -> invlink(dist, c), hcat, drop(dist.dists, 1), drop(eachcol(x), 1); init = init)
+    return maphcat(dist.dists, eachcol(x)) do dist, c
+        invlink(dist, c)
+    end
 end
 
 function logpdf_with_trans(

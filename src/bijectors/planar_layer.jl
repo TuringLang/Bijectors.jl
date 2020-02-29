@@ -82,8 +82,7 @@ function (ib::Inverse{<: PlanarLayer})(y::AbstractMatrix{<:Real})
     # Define the objective functional; implemented with reference from A.1
     f(y) = alpha -> (flow.w' * y) - alpha - (flow.w' * u_hat) * tanh(alpha + flow.b)
     # Run solver
-    @views init = vcat(find_zero(f(y[:,1]), zero(T), Order16()))
-    alpha::typeof(init) = mapreduce(vcat, drop(eachcol(y), 1); init = init) do c 
+    alpha = mapvcat(eachcol(y)) do c
         find_zero(f(c), zero(T), Order16())
     end
     z_para::TM = (flow.w ./ norm(flow.w, 2)) .* alpha'

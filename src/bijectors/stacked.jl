@@ -78,18 +78,14 @@ function (sb::Stacked{<:Tuple})(x::AbstractVector{<:Real})
 end
 # The Stacked{<:AbstractArray} version is not TrackedArray friendly
 function (sb::Stacked{<:AbstractArray, N})(x::AbstractVector{<:Real}) where {N}
-    init = vcat(sb.bs[1](x[sb.ranges[1]]))
-    y = mapreduce(vcat, 2:N; init = init) do i 
+    y = mapvcat(1:N; callvcat = true) do i
         sb.bs[i](x[sb.ranges[i]])
     end
     @assert size(y) == size(x) "x is size $(size(x)) but y is $(size(y))"
     return y
 end
 
-@views function (sb::Stacked)(x::AbstractMatrix{<:Real})
-    init = reshape(sb(x[:, 1]), :, 1)
-    return mapreduce(c -> sb(c), hcat, Base.Iterators.drop(eachcol(x), 1); init=init)
-end
+(sb::Stacked)(x::AbstractMatrix{<:Real}) = maphcat(sb, eachcol(x))
 function logabsdetjac(
     b::Stacked{<:Any, N},
     x::AbstractVector{<:Real}
@@ -101,8 +97,7 @@ function logabsdetjac(
 end
 
 function logabsdetjac(b::Stacked, x::AbstractMatrix{<:Real})
-    @views init = vcat(logabsdetjac(b, x[:,1]))
-    return mapreduce(vcat, Base.Iterators.drop(eachcol(x), 1); init=init) do c
+    return mapvcat(eachcol(x)) do c
         logabsdetjac(b, c)
     end
 end
@@ -139,12 +134,12 @@ end
 end
 
 function forward(sb::Stacked{<:AbstractArray, N}, x::AbstractVector) where {N}
-    y, _logjac = forward(sb.bs[1], x[sb.ranges[1]])
-    logjac = sum(_logjac)
-    ys = mapreduce(vcat, drop(sb.bs, 1), drop(sb.ranges, 1); init = vcat(y)) do b, r
-        _y, _logjac = forward(b, x[r])
-        logjac += sum(_logjac)
-        _y
+    yinit, linit = forward(sb.bs[1], x[sb.ranges[1]])
+    logjac = sum(linit)
+    ys = mapvcat(drop(sb.bs, 1), drop(sb.ranges, 1); callvcat = true) do b, r
+        y, l = forward(b, x[r])
+        logjac += sum(l)
+        y
     end
-    return (rv = ys, logabsdetjac = logjac)
+    return (rv = vcat(yinit, ys), logabsdetjac = logjac)
 end

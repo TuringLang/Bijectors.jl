@@ -146,17 +146,13 @@ end
 
 # implementations for Stacked bijector
 function logabsdetjac(b::Stacked, x::TrackedMatrix{<:Real})
-    @views init = vcat(logabsdetjac(b, x[:, 1]))
-    return mapreduce(vcat, drop(eachcol(x), 1); init = init) do c
+    return mapvcat(eachcol(x)) do c
         logabsdetjac(b, c)
     end
 end
 # TODO: implement custom adjoint since we can exploit block-diagonal nature of `Stacked`
 function (sb::Stacked)(x::TrackedMatrix{<:Real})
-    @views init = reshape(sb(x[:, 1]), :, 1)
-    return mapreduce(hcat, drop(eachcol(x), 1); init = init) do c
-        sb(c)
-    end
+    return maphcat(sb, eachcol(x))
 end
 
 # Simplex adjoints
@@ -180,7 +176,7 @@ end
 @grad function _simplex_bijector(X::AbstractMatrix, b::SimplexBijector)
     Xd = data(X)
     return _simplex_bijector(Xd, b), Δ -> begin
-        mapreduce(hcat, eachcol(Xd), eachcol(Δ)) do c1, c2
+        maphcat(eachcol(Xd), eachcol(Δ)) do c1, c2
             simplex_link_jacobian(c1)' * c2
         end, nothing
     end
@@ -188,8 +184,7 @@ end
 @grad function _simplex_inv_bijector(Y::AbstractMatrix, b::SimplexBijector)
     Yd = data(Y)
     return _simplex_inv_bijector(Yd, b), Δ -> begin
-        @views init = reshape(simplex_invlink_jacobian(Yd[:,1])' * Δ[:,1], :, 1)
-        mapreduce(hcat, drop(eachcol(Yd), 1), drop(eachcol(Δ), 1); init = init) do c1, c2
+        maphcat(eachcol(Yd), eachcol(Δ)) do c1, c2
             simplex_invlink_jacobian(c1)' * c2
         end, nothing
     end
@@ -205,8 +200,7 @@ end
 @grad function logabsdetjac(b::SimplexBijector, x::AbstractMatrix)
     xd = data(x)
     return logabsdetjac(b, xd), Δ -> begin
-        @views init = reshape(simplex_logabsdetjac_gradient(xd[:,1]) * Δ[1], :, 1)
-        (nothing, mapreduce(hcat, drop(eachcol(xd), 1), drop(Δ, 1); init = init) do c, g
+        (nothing, maphcat(eachcol(xd), Δ) do c, g
             simplex_logabsdetjac_gradient(c) * g
         end)
     end
@@ -371,10 +365,7 @@ for header in [
                 T = typeof(z)
                 TV = vectorof(T)
             end
-            @views init = vcat(norm((z[:,1] .- z_0)::TV))
-            r::TV = mapreduce(vcat, drop(eachcol(z .- z_0), 1); init = init) do c
-                norm(c)
-            end
+            r::TV = mapvcat(norm, eachcol(z .- z_0))
             transformed::T = z .+ β_hat ./ (α .+ r') .* (z .- z_0)   # from eq(14)
             return (transformed = transformed, α = α, β_hat = β_hat, r = r)
         end
@@ -394,9 +385,11 @@ function vectorof(::Type{TrackedReal{T}}) where {T <: Real}
     return TrackedArray{T, 1, Vector{T}}
 end
 
+(b::Exp)(x::TrackedVector) = exp.(x)::vectorof(float(eltype(x)))
+(b::Log)(x::TrackedVector) = log.(x)::vectorof(float(eltype(x)))
 logabsdetjac(b::Log{0}, x::TrackedVector) = .-log.(x)::vectorof(float(eltype(x)))
+logabsdetjac(b::Log{1}, x::TrackedMatrix) = - vec(sum(log.(x); dims = 1))
 
 _logabsdetjac_shift(a::Real, x::TrackedVector{T}, ::Val{0}) where {T<:Real} = zeros(T, length(x))
 _logabsdetjac_shift(a::T1, x::TrackedVector{T2}, ::Val{1}) where {T1<:Union{Real, TrackedVector}, T2<:Real} = zero(T2)
 _logabsdetjac_shift(a::T1, x::TrackedMatrix{T2}, ::Val{1}) where {T1<:Union{Real, TrackedVector}, T2<:Real} = zeros(T2, size(x, 2))
-

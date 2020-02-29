@@ -41,6 +41,10 @@ export  TransformDistribution,
         RadialLayer,
         InvertibleBatchNorm
 
+if VERSION < v"1.1"
+    using Compat: eachcol
+end
+
 const DEBUG = Bool(parse(Int, get(ENV, "DEBUG_BIJECTORS", "0")))
 _debug(str) = @debug str
 
@@ -48,14 +52,19 @@ _eps(::Type{T}) where {T} = T(eps(T))
 _eps(::Type{Real}) = eps(Float64)
 _istracked(::Any) = false
 
-function mapvcat(f, args...)
+function mapvcat(f, args...; callvcat = false)
     out = map(f, args...)
-    if _istracked(out)
+    if _istracked(out) || callvcat
         init = vcat(out[1])
         return reshape(reduce(vcat, drop(out, 1); init = init), size(out))
     else
         return out
     end
+end
+function maphcat(f, args...)
+    out = map(f, args...)
+    init = reshape(out[1], :, 1)
+    return reduce(hcat, drop(out, 1); init = init)
 end
 
 #=
@@ -273,7 +282,7 @@ function logpdf_with_trans(
     transform::Bool,
 )
     if transform
-        return logpdf(d, x) .+ vec(sum(log, x, dims = 1))
+        return logpdf(d, x) .- logabsdetjac(Log{1}(), x)
     else
         return logpdf(d, x)
     end
