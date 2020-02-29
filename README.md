@@ -2,6 +2,7 @@
 
 [![Build Status](https://travis-ci.org/TuringLang/Bijectors.jl.svg?branch=master)](https://travis-ci.org/TuringLang/Bijectors.jl)
 [![Build status](https://ci.appveyor.com/api/projects/status/mvfs8eio2cscwk1m?svg=true)](https://ci.appveyor.com/project/TuringLang/bijectors-jl)
+[![Coverage Status](https://coveralls.io/repos/github/TuringLang/Bijectors.jl/badge.svg?branch=master)](https://coveralls.io/github/TuringLang/Bijectors.jl?branch=master)
 
 
 This package implements a set of functions for transforming constrained random variables (e.g. simplexes, intervals) to Euclidean space. The 3 main functions implemented in this package are the `link`, `invlink` and `logpdf_with_trans` for a number of distributions. The distributions supported are:
