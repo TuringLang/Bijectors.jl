@@ -1,6 +1,7 @@
 import .ForwardDiff
 
 _eps(::Type{<:ForwardDiff.Dual{<:Any, Real}}) = _eps(Real)
+_eps(::Type{<:ForwardDiff.Dual{<:Any, <:Integer}}) = _eps(Real)
 
 # AD implementations
 function jacobian(

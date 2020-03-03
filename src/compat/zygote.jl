@@ -1,4 +1,4 @@
-using .Zygote: Zygote, @adjoint, @nograd
+using .Zygote: Zygote, @adjoint, @nograd, pullback
 
 @adjoint istraining() = true, _ -> nothing
 @nograd Bijectors._debug
@@ -6,6 +6,10 @@ using .Zygote: Zygote, @adjoint, @nograd
 @adjoint function mapvcat(f, args...)
     g(f, args...) = map(f, args...)
     return pullback(g, f, args...)
+end
+@adjoint function eachcolmapvcat(f, x)
+    g(f, args...) = [f(view(x, :, i)) for i in 1:size(x, 2)]
+    return pullback(g, f, x)
 end
 
 # AD implementations
@@ -45,7 +49,7 @@ end
     return _logabsdetjac_scale(a, x, Val(1)), Δ -> (Jᵀ * Δ, nothing, nothing)
 end
 
-Zygote.@adjoint function (b::PDBijector)(X::AbstractMatrix{<:Real})
+@adjoint function (b::PDBijector)(X::AbstractMatrix{<:Real})
     function f(X::AbstractMatrix{<:Real})
         Y = Zygote.Buffer(X)
         Y .= cholesky(X).L
@@ -54,10 +58,10 @@ Zygote.@adjoint function (b::PDBijector)(X::AbstractMatrix{<:Real})
         end
         return copy(Y)
     end
-    return Zygote.pullback(f, X)
+    return pullback(f, X)
 end
 
-Zygote.@adjoint function (ib::Inverse{PDBijector})(Y::AbstractMatrix{<:Real})
+@adjoint function (ib::Inverse{PDBijector})(Y::AbstractMatrix{<:Real})
     function f(Y::AbstractMatrix{<:Real})
         X = Zygote.Buffer(Y)
         X .= Y
@@ -67,15 +71,15 @@ Zygote.@adjoint function (ib::Inverse{PDBijector})(Y::AbstractMatrix{<:Real})
         _X = copy(X)
         return LowerTriangular(_X) * LowerTriangular(_X)'
     end
-    return Zygote.pullback(f, Y)
+    return pullback(f, Y)
 end
 
-Zygote.@adjoint function _logpdf_with_trans_pd(
+@adjoint function _logpdf_with_trans_pd(
     d,
     X::AbstractMatrix{<:Real},
     transform::Bool,
 )
-    return Zygote.pullback(_logpdf_with_trans_pd_zygote, d, X, transform)
+    return pullback(_logpdf_with_trans_pd_zygote, d, X, transform)
 end
 function _logpdf_with_trans_pd_zygote(
     d,
@@ -101,21 +105,21 @@ end
 # Zygote doesn't support kwargs, e.g. cholesky(A, check = false), hence this workaround
 # Copied from DistributionsAD
 unsafe_cholesky(x, check) = cholesky(x, check=check)
-Zygote.@adjoint function unsafe_cholesky(Σ::Real, check)
+@adjoint function unsafe_cholesky(Σ::Real, check)
     C = cholesky(Σ; check=check)
     return C, function(Δ::NamedTuple)
         issuccess(C) || return (zero(Σ), nothing)
         (Δ.factors[1, 1] / (2 * C.U[1, 1]), nothing)
     end
 end
-Zygote.@adjoint function unsafe_cholesky(Σ::Diagonal, check)
+@adjoint function unsafe_cholesky(Σ::Diagonal, check)
     C = cholesky(Σ; check=check)
     return C, function(Δ::NamedTuple)
         issuccess(C) || (Diagonal(zero(diag(Δ.factors))), nothing)
         (Diagonal(diag(Δ.factors) .* inv.(2 .* C.factors.diag)), nothing)
     end
 end
-Zygote.@adjoint function unsafe_cholesky(Σ::Union{StridedMatrix, Symmetric{<:Real, <:StridedMatrix}}, check)
+@adjoint function unsafe_cholesky(Σ::Union{StridedMatrix, Symmetric{<:Real, <:StridedMatrix}}, check)
     C = cholesky(Σ; check=check)
     return C, function(Δ::NamedTuple)
         issuccess(C) || return (zero(Δ.factors), nothing)

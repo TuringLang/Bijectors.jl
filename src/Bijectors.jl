@@ -50,11 +50,12 @@ _debug(str) = @debug str
 
 _eps(::Type{T}) where {T} = T(eps(T))
 _eps(::Type{Real}) = eps(Float64)
+_eps(::Type{<:Integer}) = eps(Float64)
 _istracked(::Any) = false
 
-function mapvcat(f, args...; callvcat = false)
+function mapvcat(f, args...; callvcat = false, novcat = false)
     out = map(f, args...)
-    if _istracked(out) || callvcat
+    if !novcat && (_istracked(out) || callvcat)
         init = vcat(out[1])
         return reshape(reduce(vcat, drop(out, 1); init = init), size(out))
     else
@@ -65,6 +66,36 @@ function maphcat(f, args...)
     out = map(f, args...)
     init = reshape(out[1], :, 1)
     return reduce(hcat, drop(out, 1); init = init)
+end
+function eachcolmapvcat(f, x)
+    return mapvcat(f, eachcol(x))
+end
+function _mapreduce(f1, f2, args...)
+    out = map(f1, args...)
+    init = f1(first.(args)...)
+    return mapreduce(f1, f2, drop.(out, 1)...; init = init)
+end
+
+# Discrete distributions
+
+function logpdf_with_trans(d::DiscreteUnivariateDistribution, x::Integer, transform::Bool)
+    return logpdf(d, x)
+end
+function logpdf_with_trans(
+    d::DiscreteUnivariateDistribution,
+    x::AbstractArray{<:Real},
+    transform::Bool,
+)
+    return mapvcat(x) do x
+        logpdf(d, x)
+    end
+end
+function logpdf_with_trans(
+    d::DiscreteMultivariateDistribution,
+    x::AbstractVecOrMat{<:Real},
+    transform::Bool,
+)
+    return logpdf(d, x)
 end
 
 #=
