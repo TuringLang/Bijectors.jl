@@ -7,9 +7,34 @@ using .Zygote: Zygote, @adjoint, @nograd, pullback
     g(f, args...) = map(f, args...)
     return pullback(g, f, args...)
 end
-@adjoint function eachcolmapvcat(f, x)
-    g(f, args...) = [f(view(x, :, i)) for i in 1:size(x, 2)]
+@adjoint function eachcolmaphcat(f, x1, x2)
+    function g(f, x1, x2)
+        init = reshape(f(view(x1, :, 1), x2[1]), :, 1)
+        return reduce(hcat, [f(view(x1, :, i), x2[i]) for i in 2:size(x1, 2)]; init = init)
+    end
+    return pullback(g, f, x1, x2)
+end
+@adjoint function eachcolmaphcat(f, x)
+    function g(f, x)
+        init = reshape(f(view(x, :, 1)), :, 1)
+        return reduce(hcat, [f(view(x, :, i)) for i in 2:size(x, 2)]; init = init)
+    end
     return pullback(g, f, x)
+end
+@adjoint function _sum(f, args...)
+    g(f, args...) = sum(map(f, args...))
+    return pullback(g, f, args...)
+end
+@adjoint function _sumeachcol(f, x1, x2)
+    g(f, x1, x2) = sum([f(view(x1, :, i), x2[i]) for i in 1:size(x1, 2)])
+    return pullback(g, f, x1, x2)
+end
+
+@adjoint function logabsdetjac(b::Log{1}, x::AbstractVector)
+    return -sum(log, x), Δ -> (nothing, -Δ ./ x)
+end
+@adjoint function logabsdetjac(b::Log{1}, x::AbstractMatrix)
+    return -vec(sum(log, x; dims = 1)), Δ -> (nothing, .- Δ' ./ x)
 end
 
 # AD implementations
@@ -170,4 +195,23 @@ end
             simplex_logabsdetjac_gradient(c) * g
         end)
     end
+end
+
+# LocationScale fix
+
+@adjoint function _clamp(x::T, dist::LocationScale) where {T <: Real}
+    function f(x, dist)
+        ϵ = _eps(T)
+        bounds = (minimum(dist) + ϵ, maximum(dist) - ϵ)
+        if x < bounds[1]
+            clamped_x = bounds[1]
+        elseif x > bounds[2]
+            clamped_x = bounds[2]
+        else
+            clamped_x = x
+        end
+        DEBUG && _debug("x = $x, bounds = $bounds, clamped_x = $clamped_x")
+        return clamped_x
+    end
+    return pullback(f, x, dist)
 end

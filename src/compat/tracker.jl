@@ -90,6 +90,15 @@ function _logabsdetjac_shift(
     return param(_logabsdetjac_shift(data(a), data(x), Val(1)))
 end
 
+# Log bijector
+
+@grad function logabsdetjac(b::Log{1}, x::AbstractVector)
+    return -sum(log, data(x)), Δ -> (nothing, -Δ ./ data(x))
+end
+@grad function logabsdetjac(b::Log{1}, x::AbstractMatrix)
+    return -vec(sum(log, data(x); dims = 1)), Δ -> (nothing, .- Δ' ./ data(x))
+end
+
 # implementations for Scale bijector
 # Adjoints for 0-dim and 1-dim `Scale` using `Real`
 function _logabsdetjac_scale(a::TrackedReal, x::Real, ::Val{0})
@@ -152,7 +161,7 @@ function logabsdetjac(b::Stacked, x::TrackedMatrix{<:Real})
 end
 # TODO: implement custom adjoint since we can exploit block-diagonal nature of `Stacked`
 function (sb::Stacked)(x::TrackedMatrix{<:Real})
-    return maphcat(sb, eachcol(x))
+    return eachcolmaphcat(sb, x)
 end
 
 # Simplex adjoints

@@ -35,7 +35,10 @@
         (dist.name == :Weibull && n isa Tuple) && return
         # Tests are failing for matrix covariance vectorized MvNormal
         # Note the 2 MvNormal cases in broken_multi_cont_dists
-        dist.name == :MvNormal && any(x -> isa(x, Matrix), dist.θ) && return
+        if dist.name in (:MvNormal, :TuringMvNormal, :MvLogNormal, :TuringMvNormal) && 
+            any(x -> isa(x, Matrix), dist.θ)
+            return
+        end
         if disttype == :multi
             name = filldist_expr(dist.name, length(dist.θ); dims = (n,))
             x = hcat(fill(dist.x, n)...,)
@@ -60,7 +63,10 @@
         # Broken
         (dist.name in (:VonMises, :TriangularDist)) && return
         (dist.name == :NormalInverseGaussian && n isa Tuple) && return
-        dist.name == :MvNormal && any(x -> isa(x, Matrix), dist.θ) && return
+        if dist.name in (:MvNormal, :TuringMvNormal, :MvLogNormal, :TuringMvNormal) && 
+            any(x -> isa(x, Matrix), dist.θ)
+            return
+        end
         if disttype == :multi
             name = arraydist_expr(dist.name, length(dist.θ); dims = (n,))
             x = hcat(fill(dist.x, n)...,)
@@ -84,7 +90,7 @@
         DistSpec(:Bernoulli, (0.45,), [1, 1]),
         DistSpec(:Bernoulli, (0.45,), 0),
         DistSpec(:Bernoulli, (0.45,), [0, 0]),
-
+        
         DistSpec(:((a, b) -> BetaBinomial(10, a, b)), (2, 1), 5),
         DistSpec(:((a, b) -> BetaBinomial(10, a, b)), (2, 1), [5, 5]),
 
@@ -120,7 +126,7 @@
         DistSpec(:Arcsine, (), [0.5]),
         #DistSpec(:Arcsine, (1,), [0.5]),
         #DistSpec(:Arcsine, (0, 2), [0.5]),
-
+        
         DistSpec(:Beta, (), 0.5),
         DistSpec(:Beta, (1,), 0.5),
         DistSpec(:Beta, (1, 2), 0.5),
@@ -231,10 +237,10 @@
         #DistSpec(:Levy, (), [0.5]),
         #DistSpec(:Levy, (0.0,), [0.5]),
         #DistSpec(:Levy, (0.0, 2.0), [0.5]),
-
+        
         DistSpec(:((a, b) -> LocationScale(a, b, Normal())), (1.0, 2.0), 0.5),
         #DistSpec(:((a, b) -> LocationScale(a, b, Normal())), (1.0, 2.0), [0.5]),
-
+        
         DistSpec(:Logistic, (), 0.5),
         DistSpec(:Logistic, (1,), 0.5),
         DistSpec(:Logistic, (1, 2), 0.5),
@@ -311,9 +317,9 @@
         #DistSpec(:((mu, sigma, l, u) -> truncated(Normal(mu, sigma), l, u)), (0.0, 1.0, 1.0, 2.0), [1.5]),
 
         DistSpec(:Uniform, (), 0.5),
-        DistSpec(:Uniform, (0, 1), 0.5),
+        DistSpec(:Uniform, (0.0, 1.0), 0.5),
         #DistSpec(:Uniform, (), [0.5]),
-        #DistSpec(:Uniform, (0, 1), [0.5]),
+        #DistSpec(:Uniform, (0.0, 1.0), [0.5]),
 
         DistSpec(:TuringUniform, (), 0.5),
         DistSpec(:TuringUniform, (0, 1), 0.5),
@@ -373,7 +379,7 @@
         DistSpec(:MvNormal, (cov_mat,), norm_val_vec),
         DistSpec(:MvNormal, (cov_vec,), norm_val_vec),
         DistSpec(:MvNormal, (Diagonal(cov_vec),), norm_val_vec),
-        DistSpec(:(cov_num -> MvNormal(ddim, cov_num)), (cov_num,), norm_val_vec),
+        DistSpec(:(cov_num -> MvNormal($ddim, cov_num)), (cov_num,), norm_val_vec),
         DistSpec(:TuringMvNormal, (dmean, cov_mat), norm_val_vec),
         DistSpec(:TuringMvNormal, (dmean, cov_vec), norm_val_vec),
         DistSpec(:TuringMvNormal, (dmean, Diagonal(cov_vec)), norm_val_vec),
@@ -382,7 +388,8 @@
         DistSpec(:TuringMvNormal, (cov_mat,), norm_val_vec),
         DistSpec(:TuringMvNormal, (cov_vec,), norm_val_vec),
         DistSpec(:TuringMvNormal, (Diagonal(cov_vec),), norm_val_vec),
-        DistSpec(:(cov_num -> TuringMvNormal(ddim, cov_num)), (cov_num,), norm_val_vec),
+        DistSpec(:(cov_num -> TuringMvNormal($ddim, cov_num)), (cov_num,), norm_val_vec),
+
         DistSpec(:MvLogNormal, (dmean, cov_mat), norm_val_vec),
         DistSpec(:MvLogNormal, (dmean, cov_vec), norm_val_vec),
         DistSpec(:MvLogNormal, (dmean, Diagonal(cov_vec)), norm_val_vec),
@@ -390,8 +397,9 @@
         DistSpec(:MvLogNormal, (cov_mat,), norm_val_vec),
         DistSpec(:MvLogNormal, (cov_vec,), norm_val_vec),
         DistSpec(:MvLogNormal, (Diagonal(cov_vec),), norm_val_vec),
-        DistSpec(:(cov_num -> MvLogNormal(ddim, cov_num)), (cov_num,), norm_val_vec),
+        DistSpec(:(cov_num -> MvLogNormal($ddim, cov_num)), (cov_num,), norm_val_vec),
         DistSpec(:Dirichlet, (alpha,), dir_val_vec),
+
         # Matrix case
         DistSpec(:MvNormal, (dmean, cov_vec), norm_val_mat),
         DistSpec(:MvNormal, (dmean, Diagonal(cov_vec)), norm_val_mat),
@@ -399,13 +407,14 @@
         DistSpec(:((m, v) -> MvNormal(m, v*I)), (dmean, cov_num), norm_val_mat),
         DistSpec(:MvNormal, (cov_vec,), norm_val_mat),
         DistSpec(:MvNormal, (Diagonal(cov_vec),), norm_val_mat),
-        DistSpec(:(cov_num -> MvNormal(ddim, cov_num)), (cov_num,), norm_val_mat),
+        DistSpec(:(cov_num -> MvNormal($ddim, cov_num)), (cov_num,), norm_val_mat),
         DistSpec(:MvLogNormal, (dmean, cov_vec), norm_val_mat),
         DistSpec(:MvLogNormal, (dmean, Diagonal(cov_vec)), norm_val_mat),
         DistSpec(:MvLogNormal, (dmean, cov_num), norm_val_mat),
         DistSpec(:MvLogNormal, (cov_vec,), norm_val_mat),
         DistSpec(:MvLogNormal, (Diagonal(cov_vec),), norm_val_mat),
-        DistSpec(:(cov_num -> MvLogNormal(ddim, cov_num)), (cov_num,), norm_val_mat),
+        DistSpec(:(cov_num -> MvLogNormal($ddim, cov_num)), (cov_num,), norm_val_mat),
+
         DistSpec(:Dirichlet, (alpha,), dir_val_mat),
     ]
     xmulti_cont_dists = [
@@ -427,31 +436,31 @@
         DistSpec(:MvNormalCanon, (dmean, cov_num), norm_val_vec),
         DistSpec(:MvNormalCanon, (cov_mat,), norm_val_vec),
         DistSpec(:MvNormalCanon, (cov_vec,), norm_val_vec),
-        DistSpec(:(cov_num -> MvNormalCanon(ddim, cov_num)), (cov_num,), norm_val_vec),
+        DistSpec(:(cov_num -> MvNormalCanon($ddim, cov_num)), (cov_num,), norm_val_vec),
         DistSpec(:MvNormalCanon, (dmean, cov_mat), norm_val_mat),
         DistSpec(:MvNormalCanon, (dmean, cov_vec), norm_val_mat),
         DistSpec(:MvNormalCanon, (dmean, cov_num), norm_val_mat),
         DistSpec(:MvNormalCanon, (cov_mat,), norm_val_mat),
         DistSpec(:MvNormalCanon, (cov_vec,), norm_val_mat),
-        DistSpec(:(cov_num -> MvNormalCanon(ddim, cov_num)), (cov_num,), norm_val_mat),
+        DistSpec(:(cov_num -> MvNormalCanon($ddim, cov_num)), (cov_num,), norm_val_mat),
         # Test failure
         DistSpec(:MvNormal, (dmean, cov_mat), norm_val_mat),
         DistSpec(:MvNormal, (cov_mat,), norm_val_mat),
         DistSpec(:MvLogNormal, (dmean, cov_mat), norm_val_mat),
         DistSpec(:MvLogNormal, (cov_mat,), norm_val_mat),
-        DistSpec(:(() -> Product(Normal.(randn(ddim), 1))), (), norm_val_vec),
-        DistSpec(:(() -> Product(Normal.(randn(ddim), 1))), (), norm_val_mat),
+        DistSpec(:(() -> Product(Normal.(randn($ddim), 1))), (), norm_val_vec),
+        DistSpec(:(() -> Product(Normal.(randn($ddim), 1))), (), norm_val_mat),
     ]
 
     matrix_cont_dists = [
         # Matrix x
-        DistSpec(:((n1, n2)->MatrixBeta(ddim, n1, n2)), (ddim, ddim), beta_mat),
+        DistSpec(:((n1, n2)->MatrixBeta($ddim, n1, n2)), (ddim, ddim), beta_mat),
         DistSpec(:Wishart, (ddim, cov_mat), cov_mat),
         DistSpec(:InverseWishart, (ddim, cov_mat), cov_mat),
         #DistSpec(:TuringWishart, (ddim, cov_mat), cov_mat),
         #DistSpec(:TuringInverseWishart, (ddim, cov_mat), cov_mat),
         # Vector of matrices x
-        DistSpec(:((n1, n2)->MatrixBeta(ddim, n1, n2)), (ddim, ddim), fill(beta_mat, 2)),
+        DistSpec(:((n1, n2)->MatrixBeta($ddim, n1, n2)), (ddim, ddim), fill(beta_mat, 2)),
         DistSpec(:Wishart, (ddim, cov_mat), fill(cov_mat, 2)),
         DistSpec(:InverseWishart, (ddim, cov_mat), fill(cov_mat, 2)),
         #DistSpec(:TuringWishart, (ddim, cov_mat), fill(cov_mat, 2)),
@@ -475,15 +484,14 @@
     broken_matrix_cont_dists = [
         # Other
         DistSpec(:MatrixNormal, (cov_mat, cov_mat, cov_mat), cov_mat),
-        DistSpec(:(()->MatrixNormal(ddim, ddim)), (), cov_mat),
+        DistSpec(:(()->MatrixNormal($ddim, $ddim)), (), cov_mat),
         DistSpec(:MatrixTDist, (1.0, cov_mat, cov_mat, cov_mat), cov_mat),
         DistSpec(:MatrixFDist, (ddim, ddim, cov_mat), cov_mat),
     ]
 
     test_head(s) = println("\n"*s*"\n")
     separator() = println("\n"*"="^50)
-    #=
-    =#
+
     separator()
     @testset "Univariate discrete distributions" begin
         test_head("Testing: Univariate discrete distributions")
@@ -500,6 +508,7 @@
     # Tracker. Ref: https://github.com/FluxML/Tracker.jl/issues/65
     # filldist works around this so it is the recommended way for AD-friendly "broadcasting"
     # of logpdf with univariate distributions
+
     @testset "Univariate continuous distributions" begin
         test_head("Testing: Univariate continuous distributions")
         for d in uni_cont_dists

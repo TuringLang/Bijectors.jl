@@ -67,13 +67,23 @@ function maphcat(f, args...)
     init = reshape(out[1], :, 1)
     return reduce(hcat, drop(out, 1); init = init)
 end
-function eachcolmapvcat(f, x)
-    return mapvcat(f, eachcol(x))
+function eachcolmaphcat(f, x1, x2)
+    out = [f(x1[:,i], x2[i]) for i in 1:size(x1, 2)]
+    init = reshape(out[1], :, 1)
+    return reduce(hcat, drop(out, 1); init = init)
 end
-function _mapreduce(f1, f2, args...)
-    out = map(f1, args...)
-    init = f1(first.(args)...)
-    return mapreduce(f1, f2, drop.(out, 1)...; init = init)
+function eachcolmaphcat(f, x)
+    out = map(f, eachcol(x))
+    init = reshape(out[1], :, 1)
+    return reduce(hcat, drop(out, 1); init = init)
+end
+function _sum(f, args...)
+    init = f(first.(args)...)
+    return mapreduce(f, +, drop.(args, 1)...; init = init)
+end
+function _sumeachcol(f, x1, x2)
+    # Using a view below for x1 breaks Tracker
+    return sum(f(x1[:,i], x2[i]) for i in 1:size(x1, 2))
 end
 
 # Discrete distributions
@@ -302,7 +312,7 @@ function logpdf_with_trans(
     transform::Bool,
 )
     if transform
-        return logpdf(d, x) + sum(log, x)
+        return logpdf(d, x) - logabsdetjac(Log{1}(), x)
     else
         return logpdf(d, x)
     end

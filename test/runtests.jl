@@ -1,6 +1,7 @@
 using Tracker, ForwardDiff, Zygote, DistributionsAD, Bijectors
 using Random, LinearAlgebra, Combinatorics, Test
-using DistributionsAD: TuringUniform, TuringPoissonBinomial
+using DistributionsAD: TuringUniform, TuringMvNormal, TuringMvLogNormal, 
+                        TuringPoissonBinomial
 
 Random.seed!(123456)
 
@@ -24,7 +25,8 @@ if stg in ("nonAD", "all")
     include("transform.jl")
     include("norm_flows.jl")
     include("bijectors/permute.jl")
-elseif stg != "nonAD"
+end
+if stg != "nonAD"
     include("ad/ad_test_utils.jl")
     include("ad/distributions.jl")
 end

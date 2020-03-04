@@ -85,7 +85,7 @@ function (sb::Stacked{<:AbstractArray, N})(x::AbstractVector{<:Real}) where {N}
     return y
 end
 
-(sb::Stacked)(x::AbstractMatrix{<:Real}) = maphcat(sb, eachcol(x))
+(sb::Stacked)(x::AbstractMatrix{<:Real}) = eachcolmaphcat(sb, x)
 function logabsdetjac(
     b::Stacked{<:Any, N},
     x::AbstractVector{<:Real}
