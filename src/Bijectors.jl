@@ -53,15 +53,21 @@ _eps(::Type{Real}) = eps(Float64)
 _eps(::Type{<:Integer}) = eps(Float64)
 _istracked(::Any) = false
 
-function mapvcat(f, args...; callvcat = false, novcat = false)
+function mapvcat(f, args...)
     out = map(f, args...)
-    if !novcat && (_istracked(out) || callvcat)
+    if _istracked(out)
         init = vcat(out[1])
         return reshape(reduce(vcat, drop(out, 1); init = init), size(out))
     else
         return out
     end
 end
+function mapvcat2(f, args...)
+    out = map(f, args...)
+    init = vcat(out[1])
+    return reshape(reduce(vcat, drop(out, 1); init = init), size(out))
+end
+
 function maphcat(f, args...)
     out = map(f, args...)
     init = reshape(out[1], :, 1)
