@@ -166,32 +166,8 @@ function logabsdetjac(b::SimplexBijector, x::AbstractVector{T}) where {T}
         lp += log(z + ϵ) + log((one(T) + ϵ) - z) + log((one(T) + ϵ) - sum_tmp)
     end
 
-    return - lp
+    return -lp
 end
-#=
-function logabsdetjac_val_gradient(b::SimplexBijector, x::AbstractVector)
-    T = eltype(x)
-    ϵ = _eps(T)
-    lp = zero(T)
-    
-    K = length(x)
-
-    g = similar(x)
-    g .= 0
-    sum_tmp = zero(eltype(x))
-    @inbounds z = x[1]
-    lp += log(z + ϵ) + log((one(T) + ϵ) - z)
-    g[1] = -1/(z + ϵ) + 1/((one(T) + ϵ) - z)
-    @inbounds @simd for k in 2:(K - 1)
-        sum_tmp += x[k-1]
-        z = x[k] / ((one(T) + ϵ) - sum_tmp)
-        lp += log(z + ϵ) + log((one(T) + ϵ) - z) + log((one(T) + ϵ) - sum_tmp)
-        g[k-1] -= (1/(z + ϵ) - 1/((one(T) + ϵ) - z)) * x[k] / ((one(T) + ϵ) - sum_tmp)^2 - 1
-        g[k] -= (1/(z + ϵ) - 1/((one(T) + ϵ) - z)) * 1 / ((one(T) + ϵ) - sum_tmp)
-    end
-    return -lp, g
-end
-=#
 function simplex_logabsdetjac_gradient(x::AbstractVector)
     T = eltype(x)
     ϵ = _eps(T)    
@@ -200,16 +176,25 @@ function simplex_logabsdetjac_gradient(x::AbstractVector)
     g .= 0
     sum_tmp = zero(eltype(x))
     @inbounds z = x[1]
+    #lp += log(z + ϵ) + log((one(T) + ϵ) - z)
     g[1] = -1/(z + ϵ) + 1/((one(T) + ϵ) - z)
     @inbounds @simd for k in 2:(K - 1)
         sum_tmp += x[k-1]
-        z = x[k] / ((one(T) + ϵ) - sum_tmp)
-        g[k-1] -= (1/(z + ϵ) - 1/((one(T) + ϵ) - z)) * x[k] / ((one(T) + ϵ) - sum_tmp)^2 - 1
-        g[k] -= (1/(z + ϵ) - 1/((one(T) + ϵ) - z)) * 1 / ((one(T) + ϵ) - sum_tmp)
+        temp = ((one(T) + ϵ) - sum_tmp)
+        z = x[k] / temp
+        #lp += log(z + ϵ) + log((one(T) + ϵ) - z) + log(temp)
+        dzdx = 1 / temp
+        dldz = (1/(z + ϵ) - 1/((one(T) + ϵ) - z))
+        dldx = dldz * dzdx
+	    g[k] -= (1/(z + ϵ) - 1/((one(T) + ϵ) - z)) * 1 / ((one(T) + ϵ) - sum_tmp)
+        for i in 1:k-1
+	        dzdxp = x[k] * dzdx^2
+	        dldxp = dldz * dzdxp - 1 / temp
+	        g[i] -= dldxp
+	    end
     end
     return g
 end
-
 function logabsdetjac(b::SimplexBijector, x::AbstractMatrix{<:Real})
     mapvcat(eachcol(x)) do c
         logabsdetjac(b, c)
