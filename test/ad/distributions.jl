@@ -371,12 +371,10 @@
 
     multi_cont_dists = [
         # Vector x
-        DistSpec(:MvNormal, (dmean, cov_mat), norm_val_vec),
         DistSpec(:MvNormal, (dmean, cov_vec), norm_val_vec),
         DistSpec(:MvNormal, (dmean, Diagonal(cov_vec)), norm_val_vec),
         DistSpec(:MvNormal, (dmean, cov_num), norm_val_vec),
         DistSpec(:((m, v) -> MvNormal(m, v*I)), (dmean, cov_num), norm_val_vec),
-        DistSpec(:MvNormal, (cov_mat,), norm_val_vec),
         DistSpec(:MvNormal, (cov_vec,), norm_val_vec),
         DistSpec(:MvNormal, (Diagonal(cov_vec),), norm_val_vec),
         DistSpec(:(cov_num -> MvNormal($ddim, cov_num)), (cov_num,), norm_val_vec),
@@ -390,14 +388,13 @@
         DistSpec(:TuringMvNormal, (Diagonal(cov_vec),), norm_val_vec),
         DistSpec(:(cov_num -> TuringMvNormal($ddim, cov_num)), (cov_num,), norm_val_vec),
 
-        DistSpec(:MvLogNormal, (dmean, cov_mat), norm_val_vec),
         DistSpec(:MvLogNormal, (dmean, cov_vec), norm_val_vec),
         DistSpec(:MvLogNormal, (dmean, Diagonal(cov_vec)), norm_val_vec),
         DistSpec(:MvLogNormal, (dmean, cov_num), norm_val_vec),
-        DistSpec(:MvLogNormal, (cov_mat,), norm_val_vec),
         DistSpec(:MvLogNormal, (cov_vec,), norm_val_vec),
         DistSpec(:MvLogNormal, (Diagonal(cov_vec),), norm_val_vec),
         DistSpec(:(cov_num -> MvLogNormal($ddim, cov_num)), (cov_num,), norm_val_vec),
+
         DistSpec(:Dirichlet, (alpha,), dir_val_vec),
 
         # Matrix case
@@ -448,8 +445,6 @@
         DistSpec(:MvNormal, (cov_mat,), norm_val_mat),
         DistSpec(:MvLogNormal, (dmean, cov_mat), norm_val_mat),
         DistSpec(:MvLogNormal, (cov_mat,), norm_val_mat),
-        DistSpec(:(() -> Product(Normal.(randn($ddim), 1))), (), norm_val_vec),
-        DistSpec(:(() -> Product(Normal.(randn($ddim), 1))), (), norm_val_mat),
     ]
 
     matrix_cont_dists = [
