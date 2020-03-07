@@ -378,12 +378,10 @@
         DistSpec(:MvNormal, (cov_vec,), norm_val_vec),
         DistSpec(:MvNormal, (Diagonal(cov_vec),), norm_val_vec),
         DistSpec(:(cov_num -> MvNormal($ddim, cov_num)), (cov_num,), norm_val_vec),
-        DistSpec(:TuringMvNormal, (dmean, cov_mat), norm_val_vec),
         DistSpec(:TuringMvNormal, (dmean, cov_vec), norm_val_vec),
         DistSpec(:TuringMvNormal, (dmean, Diagonal(cov_vec)), norm_val_vec),
         DistSpec(:TuringMvNormal, (dmean, cov_num), norm_val_vec),
         DistSpec(:((m, v) -> TuringMvNormal(m, v*I)), (dmean, cov_num), norm_val_vec),
-        DistSpec(:TuringMvNormal, (cov_mat,), norm_val_vec),
         DistSpec(:TuringMvNormal, (cov_vec,), norm_val_vec),
         DistSpec(:TuringMvNormal, (Diagonal(cov_vec),), norm_val_vec),
         DistSpec(:(cov_num -> TuringMvNormal($ddim, cov_num)), (cov_num,), norm_val_vec),
@@ -443,6 +441,8 @@
         # Test failure
         DistSpec(:MvNormal, (dmean, cov_mat), norm_val_mat),
         DistSpec(:MvNormal, (cov_mat,), norm_val_mat),
+        DistSpec(:TuringMvNormal, (dmean, cov_mat), norm_val_vec),
+        DistSpec(:TuringMvNormal, (cov_mat,), norm_val_vec),
         DistSpec(:MvLogNormal, (dmean, cov_mat), norm_val_mat),
         DistSpec(:MvLogNormal, (cov_mat,), norm_val_mat),
     ]
