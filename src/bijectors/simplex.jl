@@ -2,11 +2,8 @@
 # Simplex bijector #
 ####################
 struct SimplexBijector{T} <: Bijector{1} where {T} end
-SimplexBijector(proj::Bool) = SimplexBijector{Val{proj}}()
-SimplexBijector() = SimplexBijector(true)
+SimplexBijector() = SimplexBijector{true}()
 
-# The following implementations are basically just copy-paste from `invlink` and
-# `link` for `SimplexDistributions` but dropping the dependence on the `Distribution`.
 function _clamp(x::T, b::Union{SimplexBijector, Inversed{<:SimplexBijector}}) where {T}
     bounds = (zero(T), one(T))
     clamped_x = clamp(x, bounds...)
@@ -14,7 +11,7 @@ function _clamp(x::T, b::Union{SimplexBijector, Inversed{<:SimplexBijector}}) wh
     return clamped_x
 end
 
-function (b::SimplexBijector{Val{proj}})(x::AbstractVector{T}) where {T, proj}
+function (b::SimplexBijector{proj})(x::AbstractVector{T}) where {T, proj}
     y, K = similar(x), length(x)
     @assert K > 1 "x needs to be of length greater than 1"
 
@@ -40,7 +37,7 @@ function (b::SimplexBijector{Val{proj}})(x::AbstractVector{T}) where {T, proj}
 end
 
 # Vectorised implementation of the above.
-function (b::SimplexBijector{Val{proj}})(X::AbstractMatrix{T}) where {T<:Real, proj}
+function (b::SimplexBijector{proj})(X::AbstractMatrix{T}) where {T<:Real, proj}
     Y, K, N = similar(X), size(X, 1), size(X, 2)
     @assert K > 1 "x needs to be of length greater than 1"
 
@@ -65,7 +62,7 @@ function (b::SimplexBijector{Val{proj}})(X::AbstractMatrix{T}) where {T<:Real, p
     return Y
 end
 
-function (ib::Inversed{<:SimplexBijector{Val{proj}}})(y::AbstractVector{T}) where {T, proj}
+function (ib::Inversed{<:SimplexBijector{proj}})(y::AbstractVector{T}) where {T, proj}
     x, K = similar(y), length(y)
     @assert K > 1 "x needs to be of length greater than 1"
 
@@ -89,7 +86,7 @@ function (ib::Inversed{<:SimplexBijector{Val{proj}}})(y::AbstractVector{T}) wher
 end
 
 # Vectorised implementation of the above.
-function (ib::Inversed{<:SimplexBijector{Val{proj}}})(
+function (ib::Inversed{<:SimplexBijector{proj}})(
     Y::AbstractMatrix{T}
 ) where {T<:Real, proj}
     X, K, N = similar(Y), size(Y, 1), size(Y, 2)
@@ -101,7 +98,7 @@ function (ib::Inversed{<:SimplexBijector{Val{proj}}})(
         X[1, n] = _clamp((z - ϵ) / (one(T) - 2ϵ), ib.orig)
         for k in 2:(K - 1)
             z = StatsFuns.logistic(Y[k, n] - log(T(K - k)))
-            sum_tmp += X[k - 1]
+            sum_tmp += X[k - 1, n]
             X[k, n] = _clamp(((one(T) + ϵ) - sum_tmp) / (one(T) - 2ϵ) * z - ϵ, ib.orig)
         end
         sum_tmp += X[K - 1, n]

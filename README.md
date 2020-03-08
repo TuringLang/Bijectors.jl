@@ -335,13 +335,13 @@ dim: 4
 
 julia> # Construct the transform
        bs = bijector.(dists)     # constrained-to-unconstrained bijectors for dists
-(Logit{Float64}(0.0, 1.0), Log{0}(), SimplexBijector{Val{true}}())
+(Logit{Float64}(0.0, 1.0), Log{0}(), SimplexBijector{true}())
 
 julia> ibs = inv.(bs)            # invert, so we get unconstrained-to-constrained
-(Inversed{Logit{Float64},0}(Logit{Float64}(0.0, 1.0)), Exp{0}(), Inversed{SimplexBijector{Val{true}},1}(SimplexBijector{Val{true}}()))
+(Inversed{Logit{Float64},0}(Logit{Float64}(0.0, 1.0)), Exp{0}(), Inversed{SimplexBijector{true},1}(SimplexBijector{true}()))
 
 julia> sb = Stacked(ibs, ranges) # => Stacked <: Bijector
-Stacked{Tuple{Inversed{Logit{Float64},0},Exp{0},Inversed{SimplexBijector{Val{true}},1}},3}((Inversed{Logit{Float64},0}(Logit{Float64}(0.0, 1.0)), Exp{0}(), Inversed{SimplexBijector{Val{true}},1}(SimplexBijector{Val{true}}())), (1:1, 2:2, 3:4))
+Stacked{Tuple{Inversed{Logit{Float64},0},Exp{0},Inversed{SimplexBijector{true},1}},3}((Inversed{Logit{Float64},0}(Logit{Float64}(0.0, 1.0)), Exp{0}(), Inversed{SimplexBijector{true},1}(SimplexBijector{true}())), (1:1, 2:2, 3:4))
 
 julia> # Mean-field normal with unconstrained-to-constrained stacked bijector
        td = transformed(d, sb);
@@ -707,6 +707,7 @@ The following are the bijectors available:
   - `Log`
   - `Scale`: scaling by scalar value, though at the moment only well-defined `logabsdetjac` for univariate. 
   - `Shift`: shifts by a scalar value.
+  - `Permute`: permutes the input array using matrix multiplication
   - `SimplexBijector`: mostly used as the constrained-to-unconstrained bijector for `SimplexDistribution`, e.g. `Dirichlet`.
   - `PlanarLayer`: §4.1 Eq. (10) in [1]
   - `RadialLayer`: §4.1 Eq. (14) in [1]

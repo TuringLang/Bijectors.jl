@@ -1,8 +1,3 @@
-using Distributions, Bijectors
-using ForwardDiff
-using Tracker
-using Tracker: TrackedReal, TrackedArray, track, @grad, data
-
 import Base: inv, ∘
 
 import Random: AbstractRNG
@@ -154,6 +149,7 @@ include("bijectors/exp_log.jl")
 include("bijectors/logit.jl")
 include("bijectors/scale.jl")
 include("bijectors/shift.jl")
+include("bijectors/permute.jl")
 include("bijectors/simplex.jl")
 include("bijectors/truncated.jl")
 include("bijectors/distribution_bijector.jl")
@@ -161,6 +157,7 @@ include("bijectors/distribution_bijector.jl")
 # Normalizing flow related
 include("bijectors/planar_layer.jl")
 include("bijectors/radial_layer.jl")
+include("bijectors/normalise.jl")
 
 ##################
 # Other includes #
