@@ -9,9 +9,7 @@ function Shift(a::Union{Real,AbstractArray}; dim::Val{D} = Val(ndims(a))) where 
     return Shift{typeof(a), D}(a)
 end
 
-(b::Shift)(x) = b.a + x
-(b::Shift{<:Real})(x::AbstractArray) = b.a .+ x
-(b::Shift{<:AbstractVector})(x::AbstractMatrix) = b.a .+ x
+(b::Shift)(x) = b.a .+ x
 
 inv(b::Shift{T, N}) where {T, N} = Shift{T, N}(-b.a)
 

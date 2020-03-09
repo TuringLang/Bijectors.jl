@@ -23,4 +23,4 @@ end
 
 # Simply uses `link` and `invlink` as transforms with AD to get jacobian
 (b::DistributionBijector)(x) = link(b.dist, x)
-(ib::Inversed{<:DistributionBijector})(y) = invlink(ib.orig.dist, y)
+(ib::Inverse{<:DistributionBijector})(y) = invlink(ib.orig.dist, y)
