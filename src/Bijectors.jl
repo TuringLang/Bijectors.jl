@@ -371,9 +371,7 @@ function _logpdf_with_trans_pd(
     lp = getlogp(d, Xcf, X)
     if transform && isfinite(lp)
         U = Xcf.U
-        @inbounds @simd for i in 1:dim(d)
-            lp += (dim(d) - i + 2) * log(U[i, i])
-        end
+        lp += sum((dim(d) .- (1:dim(d)) .+ 2) .* log.(diag(U)))
         lp += dim(d) * log(T(2))
     end
     return lp

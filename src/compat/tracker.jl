@@ -199,6 +199,16 @@ end
     end
 end
 
+(b::PDBijector)(X::TrackedMatrix) = track(b, X)
+@grad function (b::PDBijector)(X::AbstractMatrix{<:Real})
+    return pullback(b, data(X))
+end
+
+(ib::Inverse{PDBijector})(X::TrackedMatrix) = track(ib, X)
+@grad function (ib::Inverse{PDBijector})(Y::AbstractMatrix{<:Real})
+    return pullback(ib, data(Y))
+end
+
 logabsdetjac(b::SimplexBijector, x::TrackedVecOrMat) = track(logabsdetjac, b, x)
 @grad function logabsdetjac(b::SimplexBijector, x::AbstractVector)
     xd = data(x)

@@ -74,29 +74,12 @@ end
     return _logabsdetjac_scale(a, x, Val(1)), Δ -> (Jᵀ * Δ, nothing, nothing)
 end
 
-@adjoint function (b::PDBijector)(X::AbstractMatrix{<:Real})
-    function f(X::AbstractMatrix{<:Real})
-        Y = Zygote.Buffer(X)
-        Y .= cholesky(X).L
-        @inbounds for i in diagind(X)
-            Y[i] = log(Y[i])
-        end
-        return copy(Y)
-    end
-    return pullback(f, X)
-end
+## Positive definite matrices
 
-@adjoint function (ib::Inverse{PDBijector})(Y::AbstractMatrix{<:Real})
-    function f(Y::AbstractMatrix{<:Real})
-        X = Zygote.Buffer(Y)
-        X .= Y
-        @inbounds for i in diagind(Y)
-            X[i] = exp(X[i])
-        end
-        _X = copy(X)
-        return LowerTriangular(_X) * LowerTriangular(_X)'
-    end
-    return pullback(f, Y)
+@adjoint function replace_diag(X, y)
+    f(i, j) = ifelse(i == j, y[i], X[i, j])
+    out = f.(1:size(X, 1), (1:size(X, 2))')
+    out, ∇ -> (replace_diag(∇, zeros(length(y))), diag(∇))
 end
 
 @adjoint function _logpdf_with_trans_pd(
