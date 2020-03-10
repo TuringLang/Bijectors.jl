@@ -26,9 +26,9 @@ function (b::TruncatedBijector)(x::AbstractVector{<:Real})
     if lowerbounded && upperbounded
         return @. StatsFuns.logit((x - a) / (b - a))
     elseif lowerbounded
-        return log.(x - a)
+        return @. log(x - a)
     elseif upperbounded
-        return log.(b - x)
+        return @. log(b - x)
     else
         return x
     end
