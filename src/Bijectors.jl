@@ -6,6 +6,7 @@ using StatsFuns
 using LinearAlgebra
 using MappedArrays
 using Roots
+using Base.Iterators: drop
 
 export  TransformDistribution,
         PositiveDistribution,
@@ -16,15 +17,13 @@ export  TransformDistribution,
         invlink,
         logpdf_with_trans,
         isclosedform,
-        link_jacobian,
-        invlink_jacobian,
         transform,
         forward,
         logabsdetjac,
         logabsdetjacinv,
         Bijector,
         ADBijector,
-        Inversed,
+        Inverse,
         Composed,
         compose,
         Stacked,
@@ -42,11 +41,78 @@ export  TransformDistribution,
         RadialLayer,
         InvertibleBatchNorm
 
+if VERSION < v"1.1"
+    using Compat: eachcol
+end
+
 const DEBUG = Bool(parse(Int, get(ENV, "DEBUG_BIJECTORS", "0")))
 _debug(str) = @debug str
 
 _eps(::Type{T}) where {T} = T(eps(T))
 _eps(::Type{Real}) = eps(Float64)
+_eps(::Type{<:Integer}) = eps(Float64)
+_istracked(::Any) = false
+
+function mapvcat(f, args...)
+    out = map(f, args...)
+    if _istracked(out)
+        init = vcat(out[1])
+        return reshape(reduce(vcat, drop(out, 1); init = init), size(out))
+    else
+        return out
+    end
+end
+function mapvcat2(f, args...)
+    out = map(f, args...)
+    init = vcat(out[1])
+    return reshape(reduce(vcat, drop(out, 1); init = init), size(out))
+end
+
+function maphcat(f, args...)
+    out = map(f, args...)
+    init = reshape(out[1], :, 1)
+    return reduce(hcat, drop(out, 1); init = init)
+end
+function eachcolmaphcat(f, x1, x2)
+    out = [f(x1[:,i], x2[i]) for i in 1:size(x1, 2)]
+    init = reshape(out[1], :, 1)
+    return reduce(hcat, drop(out, 1); init = init)
+end
+function eachcolmaphcat(f, x)
+    out = map(f, eachcol(x))
+    init = reshape(out[1], :, 1)
+    return reduce(hcat, drop(out, 1); init = init)
+end
+function _sum(f, args...)
+    init = f(first.(args)...)
+    return mapreduce(f, +, drop.(args, 1)...; init = init)
+end
+function _sumeachcol(f, x1, x2)
+    # Using a view below for x1 breaks Tracker
+    return sum(f(x1[:,i], x2[i]) for i in 1:size(x1, 2))
+end
+
+# Discrete distributions
+
+function logpdf_with_trans(d::DiscreteUnivariateDistribution, x::Integer, transform::Bool)
+    return logpdf(d, x)
+end
+function logpdf_with_trans(
+    d::DiscreteUnivariateDistribution,
+    x::AbstractArray{<:Real},
+    transform::Bool,
+)
+    return mapvcat(x) do x
+        logpdf(d, x)
+    end
+end
+function logpdf_with_trans(
+    d::DiscreteMultivariateDistribution,
+    x::AbstractVecOrMat{<:Real},
+    transform::Bool,
+)
+    return logpdf(d, x)
+end
 
 #=
   NOTE: Codes below are adapted from
@@ -119,13 +185,24 @@ function _invlink(d::TransformDistribution, y::Real)
     end
 end
 
-function logpdf_with_trans(d::TransformDistribution, x::Real, transform::Bool)
-    x = transform ? _clamp(x, d) : x
+function logpdf_with_trans(
+    d::TransformDistribution,
+    x::Real,
+    transform::Bool,
+)
     return _logpdf_with_trans(d, x, transform)
+end
+function logpdf_with_trans(
+    d::TransformDistribution,
+    x::AbstractArray{<:Real},
+    transform::Bool,
+)
+    return mapvcat(x -> _logpdf_with_trans(d, x, transform), x)
 end
 function _logpdf_with_trans(d::TransformDistribution, x::Real, transform::Bool)
     lp = logpdf(d, x)
     if transform
+        x = _clamp(x, d)
         a, b = minimum(d), maximum(d)
         lowerbounded, upperbounded = isfinite(a), isfinite(b)
         if lowerbounded && upperbounded
@@ -179,42 +256,42 @@ _clamp(x, ::SimplexDistribution) = _clamp(x, SimplexBijector())
 function link(
     d::SimplexDistribution,
     x::AbstractVecOrMat{<:Real},
-    ::Type{Val{proj}} = Val{true}
-) where {proj}
+    proj::Bool = true,
+)
     return SimplexBijector{proj}()(x)
 end
 
 function link_jacobian(
     d::SimplexDistribution,
     x::AbstractVector{T},
-    ::Type{Val{proj}} = Val{true}
-) where {T<:Real, proj}
+    proj::Bool = true,
+) where {T<:Real}
     return jacobian(SimplexBijector{proj}(), x)
 end
 
 function invlink(
     d::SimplexDistribution,
     y::AbstractVecOrMat{<:Real},
-    ::Type{Val{proj}} = Val{true}
-) where {proj}
+    proj::Bool = true
+)
     return inv(SimplexBijector{proj}())(y)
 end
 
 function invlink_jacobian(
     d::SimplexDistribution,
     y::AbstractVector{T},
-    ::Type{Val{proj}} = Val{true}
-) where {T<:Real, proj}
+    proj::Bool = true
+) where {T<:Real}
     return jacobian(inv(SimplexBijector{proj}()), y)
 end
 
 function logpdf_with_trans(
     d::SimplexDistribution,
-    x::AbstractVector{<:Real},
+    x::AbstractVecOrMat{<:Real},
     transform::Bool,
 )
     ϵ = _eps(eltype(x))
-    lp = logpdf(d, mappedarray(x -> x + ϵ, x))
+    lp = logpdf(d, x .+ ϵ)
     if transform
         lp -= logabsdetjac(bijector(d), x)
     end
@@ -233,14 +310,29 @@ end
 
 using Distributions: AbstractMvLogNormal
 
-link(d::AbstractMvLogNormal, x::AbstractVector{<:Real}) = log.(x)
-invlink(d::AbstractMvLogNormal, y::AbstractVector{<:Real}) = exp.(y)
+link(d::AbstractMvLogNormal, x::AbstractVecOrMat{<:Real}) = log.(x)
+invlink(d::AbstractMvLogNormal, y::AbstractVecOrMat{<:Real}) = exp.(y)
 function logpdf_with_trans(
     d::AbstractMvLogNormal,
     x::AbstractVector{<:Real},
     transform::Bool,
 )
-    return logpdf(d, x) + transform * sum(log, x)
+    if transform
+        return logpdf(d, x) - logabsdetjac(Log{1}(), x)
+    else
+        return logpdf(d, x)
+    end
+end
+function logpdf_with_trans(
+    d::AbstractMvLogNormal,
+    x::AbstractMatrix{<:Real},
+    transform::Bool,
+)
+    if transform
+        return logpdf(d, x) .- logabsdetjac(Log{1}(), x)
+    else
+        return logpdf(d, x)
+    end
 end
 
 #####################
@@ -249,34 +341,37 @@ end
 
 const PDMatDistribution = Union{InverseWishart, Wishart}
 
-function link(d::PDMatDistribution, X::AbstractMatrix{<:Real})
-    Y = Matrix(cholesky(X).L)
-    Y[diagind(Y)] .= log.(view(Y, diagind(Y)))
-    return Y
-end
-
-function invlink(d::PDMatDistribution, Y::AbstractMatrix{<:Real})
-    X = copy(Y)
-    X[diagind(X)] .= exp.(view(X, diagind(X)))
-    return LowerTriangular(X) * LowerTriangular(X)'
-end
+link(d::PDMatDistribution, X::AbstractMatrix{<:Real}) = PDBijector()(X)
+invlink(d::PDMatDistribution, Y::AbstractMatrix{<:Real}) = inv(PDBijector())(Y)
 
 function logpdf_with_trans(
     d::PDMatDistribution,
     X::AbstractMatrix{<:Real},
     transform::Bool
 )
+    _logpdf_with_trans_pd(d, X, transform)
+end
+function logpdf_with_trans(
+    d::PDMatDistribution,
+    X::AbstractArray{<:AbstractMatrix{<:Real}},
+    transform::Bool
+)
+    mapvcat(x -> _logpdf_with_trans_pd(d, x, transform), X)
+end
+function _logpdf_with_trans_pd(
+    d,
+    X::AbstractMatrix{<:Real},
+    transform::Bool,
+)
     T = eltype(X)
-    Xcf = cholesky(X, check=false)
+    Xcf = cholesky(X, check = false)
     if !issuccess(Xcf)
         Xcf = cholesky(X + (eps(T) * norm(X)) * I)
     end
     lp = getlogp(d, Xcf, X)
     if transform && isfinite(lp)
         U = Xcf.U
-        @inbounds @simd for i in 1:dim(d)
-            lp += (dim(d) - i + 2) * log(U[i, i])
-        end
+        lp += sum((dim(d) .- (1:dim(d)) .+ 2) .* log.(diag(U)))
         lp += dim(d) * log(T(2))
     end
     return lp
@@ -297,18 +392,30 @@ end
 using Distributions: UnivariateDistribution
 
 link(d::UnivariateDistribution, x::Real) = x
-link(d::UnivariateDistribution, x::AbstractVector{<:Real}) = map(x -> link(d, x), x)
+link(d::UnivariateDistribution, x::AbstractArray{<:Real}) = mapvcat(x) do x
+    link(d, x)
+end
 
 invlink(d::UnivariateDistribution, y::Real) = y
-invlink(d::UnivariateDistribution, y::AbstractVector{<:Real}) = map(y -> invlink(d, y), y)
+invlink(d::UnivariateDistribution, y::AbstractArray{<:Real}) = mapvcat(y) do y
+    invlink(d, y)
+end
 
-logpdf_with_trans(d::UnivariateDistribution, x::Real, ::Bool) = logpdf(d, x)
 function logpdf_with_trans(
     d::UnivariateDistribution,
-    x::AbstractVector{<:Real},
+    x::Real,
     transform::Bool,
 )
-    return map(x -> logpdf_with_trans(d, x, transform), x)
+    return _logpdf_with_trans(d, x, transform)
+end
+function logpdf_with_trans(
+    d::UnivariateDistribution,
+    x::AbstractArray{<:Real},
+    transform::Bool,
+)
+    return mapvcat(x) do x
+        logpdf_with_trans(d, x, transform)
+    end
 end
 
 # MultivariateDistributions
@@ -318,35 +425,31 @@ link(d::MultivariateDistribution, x::AbstractVecOrMat{<:Real}) = copy(x)
 
 invlink(d::MultivariateDistribution, y::AbstractVecOrMat{<:Real}) = copy(y)
 
-function logpdf_with_trans(d::MultivariateDistribution, x::AbstractVector{<:Real}, ::Bool)
+function logpdf_with_trans(d::MultivariateDistribution, x::AbstractVecOrMat{<:Real}, ::Bool)
     return logpdf(d, x)
-end
-function logpdf_with_trans(
-    d::MultivariateDistribution,
-    X::AbstractMatrix{<:Real},
-    transform::Bool,
-)
-    return [logpdf_with_trans(d, view(X, :, n), transform) for n in 1:size(X, 2)]
 end
 
 # MatrixDistributions
 using Distributions: MatrixDistribution
 
 link(d::MatrixDistribution, X::AbstractMatrix{<:Real}) = copy(X)
-link(d::MatrixDistribution, X::AbstractVector{<:AbstractMatrix{<:Real}}) = map(x -> link(d, x), X)
-
-invlink(d::MatrixDistribution, Y::AbstractMatrix{<:Real}) = copy(Y)
-function invlink(d::MatrixDistribution, Y::AbstractVector{<:AbstractMatrix{<:Real}})
-    return map(y -> invlink(d, y), Y)
+link(d::MatrixDistribution, X::AbstractArray{<:AbstractMatrix{<:Real}}) = mapvcat(X) do x
+    link(d, x)
 end
 
-logpdf_with_trans(d::MatrixDistribution, X::AbstractMatrix{<:Real}, ::Bool) = logpdf(d, X)
+invlink(d::MatrixDistribution, Y::AbstractMatrix{<:Real}) = copy(Y)
+function invlink(d::MatrixDistribution, Y::AbstractArray{<:AbstractMatrix{<:Real}})
+    return mapvcat(Y) do y
+        invlink(d, y)
+    end
+end
+
 function logpdf_with_trans(
     d::MatrixDistribution,
-    X::AbstractVector{<:AbstractMatrix{<:Real}},
-    transform::Bool,
+    X::Union{AbstractMatrix{<:Real}, AbstractArray{<:AbstractMatrix{<:Real}}},
+    ::Bool,
 )
-    return map(x -> logpdf_with_trans(d, x, transform), X)
+    return logpdf(d, X)
 end
 
 include("interface.jl")
@@ -354,9 +457,10 @@ include("interface.jl")
 # optional dependencies
 function __init__()
     @require ForwardDiff="f6369f11-7733-5829-9624-2563aa707210" include("compat/forwarddiff.jl")
-    @require Tracker="9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c"     include("compat/tracker.jl")
-    @require Zygote="e88e6eb3-aa80-5325-afca-941959d7151f"      include("compat/zygote.jl")
-    @require Flux="587475ba-b771-5e3f-ad9e-33799f191a9c"        include("compat/flux.jl")
+    @require Tracker="9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c" include("compat/tracker.jl")
+    @require Zygote="e88e6eb3-aa80-5325-afca-941959d7151f" include("compat/zygote.jl")
+    @require DistributionsAD="ced4e74d-a319-5a8a-b0ac-84af2272839c" include("compat/distributionsad.jl")
+    @require Flux="587475ba-b771-5e3f-ad9e-33799f191a9c" include("compat/flux.jl")
 end
 
 end # module

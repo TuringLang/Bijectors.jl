@@ -26,15 +26,15 @@ function (b::TruncatedBijector)(x::AbstractVector{<:Real})
     if lowerbounded && upperbounded
         return @. StatsFuns.logit((x - a) / (b - a))
     elseif lowerbounded
-        return log.(x - a)
+        return @. log(x - a)
     elseif upperbounded
-        return log.(b - x)
+        return @. log(b - x)
     else
         return x
     end
 end
 
-function (ib::Inversed{<:TruncatedBijector})(y::Real)
+function (ib::Inverse{<:TruncatedBijector})(y::Real)
     a, b = ib.orig.lb, ib.orig.ub
     lowerbounded, upperbounded = isfinite(a), isfinite(b)
     if lowerbounded && upperbounded
@@ -48,7 +48,7 @@ function (ib::Inversed{<:TruncatedBijector})(y::Real)
     end
 end
 
-function (ib::Inversed{<:TruncatedBijector})(y::AbstractVector{<:Real})
+function (ib::Inverse{<:TruncatedBijector})(y::AbstractVector{<:Real})
     a, b = ib.orig.lb, ib.orig.ub
     lowerbounded, upperbounded = isfinite(a), isfinite(b)
     if lowerbounded && upperbounded

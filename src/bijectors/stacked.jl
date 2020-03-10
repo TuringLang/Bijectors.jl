@@ -37,19 +37,21 @@ struct Stacked{Bs, N} <: Bijector{1} where N
         ranges::NTuple{N, UnitRange{Int}}
     ) where {N, A<:AbstractArray{<:Bijector}}
         @assert length(bs) == N "number of bijectors is not same as number of ranges"
-        @assert all(isa.(bs, ZeroOrOneDimBijector))
+        @assert all(b -> isa(b, ZeroOrOneDimBijector), bs)
         return new{A, N}(bs, ranges)
     end
 end
 Stacked(bs, ranges::AbstractArray) = Stacked(bs, tuple(ranges...))
 Stacked(bs) = Stacked(bs, tuple([i:i for i = 1:length(bs)]...))
 
-isclosedform(b::Stacked) = all(isclosedform.(b.bs))
+isclosedform(b::Stacked) = all(isclosedform, b.bs)
 
 stack(bs::Bijector{0}...) = Stacked(bs)
 
 # For some reason `inv.(sb.bs)` was unstable... This works though.
 inv(sb::Stacked) = Stacked(map(inv, sb.bs), sb.ranges)
+# map is not type stable for many stacked bijectors as a large tuple
+# hence the generated function
 @generated function inv(sb::Stacked{A}) where {A <: Tuple}
     exprs = []
     for i = 1:length(A.parameters)
@@ -58,53 +60,46 @@ inv(sb::Stacked) = Stacked(map(inv, sb.bs), sb.ranges)
     :(Stacked(($(exprs...), ), sb.ranges))
 end
 
-# TODO: Is there a better approach to this?
 @generated function _transform(x, rs::NTuple{N, UnitRange{Int}}, bs::Bijector...) where N
     exprs = []
     for i = 1:N
         push!(exprs, :(bs[$i](x[rs[$i]])))
     end
-
     return :(vcat($(exprs...)))
 end
-_transform(x, rs::NTuple{1, UnitRange{Int}}, b::Bijector) = b(x)
-
+function _transform(x, rs::NTuple{1, UnitRange{Int}}, b::Bijector)
+    @assert rs[1] == 1:length(x)
+    return b(x)
+end
 function (sb::Stacked{<:Tuple})(x::AbstractVector{<:Real})
     y = _transform(x, sb.ranges, sb.bs...)
     @assert size(y) == size(x) "x is size $(size(x)) but y is $(size(y))"
     return y
 end
+# The Stacked{<:AbstractArray} version is not TrackedArray friendly
 function (sb::Stacked{<:AbstractArray, N})(x::AbstractVector{<:Real}) where {N}
-    y = vcat([sb.bs[i](x[sb.ranges[i]]) for i = 1:N]...)
+    y = mapvcat2(1:N) do i
+        sb.bs[i](x[sb.ranges[i]])
+    end
     @assert size(y) == size(x) "x is size $(size(x)) but y is $(size(y))"
     return y
 end
 
-@views function (sb::Stacked)(x::AbstractMatrix{<:Real})
-    init = reshape(sb(x[:, 1]), :, 1)
-    return mapreduce(i -> sb(x[:, i]), hcat, 2:size(x, 2); init = init)
-end
-
-@generated function logabsdetjac(
-    b::Stacked{<:Tuple, N},
-    x::AbstractVector{<:Real}
-) where {N}
-    exprs = []
-    for i = 1:N
-        push!(exprs, :(sum(logabsdetjac(b.bs[$i], x[b.ranges[$i]]))))
-    end
-
-    return :(sum([$(exprs...), ]))
-end
+(sb::Stacked)(x::AbstractMatrix{<:Real}) = eachcolmaphcat(sb, x)
 function logabsdetjac(
-    b::Stacked{<:AbstractArray, N},
+    b::Stacked{<:Any, N},
     x::AbstractVector{<:Real}
 ) where {N}
-    # TODO: drop the `sum` when we have dimensionality
-    return sum([sum(logabsdetjac(b.bs[i], x[b.ranges[i]])) for i = 1:N])
+    init = sum(logabsdetjac(b.bs[1], x[b.ranges[1]]))
+    init + sum(2:N) do i
+        sum(logabsdetjac(b.bs[i], x[b.ranges[i]]))
+    end
 end
+
 function logabsdetjac(b::Stacked, x::AbstractMatrix{<:Real})
-    return [logabsdetjac(b, x[:, i]) for i = 1:size(x, 2)]
+    return mapvcat(eachcol(x)) do c
+        logabsdetjac(b, c)
+    end
 end
 
 # Generates something similar to:
@@ -139,14 +134,12 @@ end
 end
 
 function forward(sb::Stacked{<:AbstractArray, N}, x::AbstractVector) where {N}
-    ys = []
-    logjacs = []
-    for i = 1:N
-        y, logjac = forward(sb.bs[i], x[sb.ranges[i]])
-        push!(ys, y)
-        # TODO: drop the `sum` when we have dimensionality
-        push!(logjacs, sum(logjac))
+    yinit, linit = forward(sb.bs[1], x[sb.ranges[1]])
+    logjac = sum(linit)
+    ys = mapvcat2(drop(sb.bs, 1), drop(sb.ranges, 1)) do b, r
+        y, l = forward(b, x[r])
+        logjac += sum(l)
+        y
     end
-
-    return (rv = vcat(ys...), logabsdetjac = sum(logjacs))
+    return (rv = vcat(yinit, ys), logabsdetjac = logjac)
 end
