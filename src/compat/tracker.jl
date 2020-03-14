@@ -41,15 +41,22 @@ end
     vcat(data(x1), data(x2)), (Δ) -> (Δ[1:length(x1)], Δ[length(x1)+1])
 end
 
-LinearAlgebra.LowerTriangular(A::TrackedMatrix) = track(LowerTriangular, A)
-@grad LinearAlgebra.LowerTriangular(A::TrackedMatrix) = LowerTriangular(data(A)), Δ->(LowerTriangular(Δ),)
-
-function Base.:*(
-    A::Adjoint{<:Any, <:LinearAlgebra.AbstractTriangular{<:Any, <:AbstractMatrix}},
-    B::TrackedVector,
-)
-    return track(*, A, B)
+function Base.copy(
+    A::TrackedArray{T, 2, <:Adjoint{T, <:AbstractTriangular{T, <:AbstractMatrix{T}}}},
+) where {T <: Real}
+    return track(copy, A)
 end
+@grad function Base.copy(
+    A::TrackedArray{T, 2, <:Adjoint{T, <:AbstractTriangular{T, <:AbstractMatrix{T}}}},
+) where {T <: Real}
+    return copy(data(A)), ∇ -> (copy(∇),)
+end
+
+Base.:*(A::TrackedMatrix, B::AbstractTriangular) = track(*, A, B)
+Base.:*(A::AbstractTriangular{T}, B::TrackedVector) where {T} = track(*, A, B)
+Base.:*(A::AbstractTriangular{T}, B::TrackedMatrix) where {T} = track(*, A, B)
+Base.:*(A::Adjoint{T, <:AbstractTriangular{T}}, B::TrackedMatrix) where {T} = track(*, A, B)
+Base.:*(A::Adjoint{T, <:AbstractTriangular{T}}, B::TrackedVector) where {T} = track(*, A, B)
 
 _eps(::Type{<:TrackedReal{T}}) where {T} = eps(T)
 
@@ -199,14 +206,26 @@ end
     end
 end
 
-(b::PDBijector)(X::TrackedMatrix) = track(b, X)
-@grad function (b::PDBijector)(X::AbstractMatrix{<:Real})
-    return pullback(b, data(X))
+replace_diag(::typeof(log), X::TrackedMatrix) = track(replace_diag, log, X)
+@grad function replace_diag(::typeof(log), X)
+    Xd = data(X)
+    f(i, j) = i == j ? log(Xd[i, j]) : Xd[i, j]
+    out = f.(1:size(Xd, 1), (1:size(Xd, 2))')
+    out, ∇ -> begin
+        g(i, j) = i == j ? ∇[i, j]/Xd[i, j] : ∇[i, j]
+        return (nothing, g.(1:size(Xd, 1), (1:size(Xd, 2))'))
+    end
 end
 
-(ib::Inverse{PDBijector})(X::TrackedMatrix) = track(ib, X)
-@grad function (ib::Inverse{PDBijector})(Y::AbstractMatrix{<:Real})
-    return pullback(ib, data(Y))
+replace_diag(::typeof(exp), X::TrackedMatrix) = track(replace_diag, exp, X)
+@grad function replace_diag(::typeof(exp), X)
+    Xd = data(X)
+    f(i, j) = ifelse(i == j, exp(Xd[i, j]), Xd[i, j])
+    out = f.(1:size(Xd, 1), (1:size(Xd, 2))')
+    out, ∇ -> begin
+        g(i, j) = ifelse(i == j, ∇[i, j]*exp(Xd[i, j]), ∇[i, j])
+        return (nothing, g.(1:size(Xd, 1), (1:size(Xd, 2))'))
+    end
 end
 
 logabsdetjac(b::SimplexBijector, x::TrackedVecOrMat) = track(logabsdetjac, b, x)

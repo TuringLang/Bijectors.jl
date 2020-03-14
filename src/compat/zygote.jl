@@ -76,10 +76,21 @@ end
 
 ## Positive definite matrices
 
-@adjoint function replace_diag(X, y)
-    f(i, j) = ifelse(i == j, y[i], X[i, j])
+@adjoint function replace_diag(::typeof(log), X)
+    f(i, j) = i == j ? log(X[i, j]) : X[i, j]
     out = f.(1:size(X, 1), (1:size(X, 2))')
-    out, ∇ -> (replace_diag(∇, zeros(length(y))), diag(∇))
+    out, ∇ -> begin
+        g(i, j) = i == j ? ∇[i, j] / X[i, j] : ∇[i, j]
+        (nothing, g.(1:size(X, 1), (1:size(X, 2))'))
+    end
+end
+@adjoint function replace_diag(::typeof(exp), X)
+    f(i, j) = ifelse(i == j, exp(X[i, j]), X[i, j])
+    out = f.(1:size(X, 1), (1:size(X, 2))')
+    out, ∇ -> begin
+        g(i, j) = ifelse(i == j, ∇[i, j] * exp(X[i, j]), ∇[i, j])
+        (nothing, g.(1:size(X, 1), (1:size(X, 2))'))
+    end
 end
 
 @adjoint function _logpdf_with_trans_pd(
@@ -95,9 +106,9 @@ function _logpdf_with_trans_pd_zygote(
     transform::Bool,
 )
     T = eltype(X)
-    Xcf = unsafe_cholesky(X, false)
+    Xcf = cholesky(X, check = false)
     if !issuccess(Xcf)
-        Xcf = unsafe_cholesky(X + (eps(T) * norm(X)) * I, true)
+        Xcf = cholesky(X + (eps(T) * norm(X)) * I, check = true)
     end
     lp = getlogp(d, Xcf, X)
     if transform && isfinite(lp)
@@ -108,39 +119,6 @@ function _logpdf_with_trans_pd_zygote(
         lp += dim(d) * log(T(2))
     end
     return lp
-end
-
-# Zygote doesn't support kwargs, e.g. cholesky(A, check = false), hence this workaround
-# Copied from DistributionsAD
-unsafe_cholesky(x, check) = cholesky(x, check=check)
-@adjoint function unsafe_cholesky(Σ::Real, check)
-    C = cholesky(Σ; check=check)
-    return C, function(Δ::NamedTuple)
-        issuccess(C) || return (zero(Σ), nothing)
-        (Δ.factors[1, 1] / (2 * C.U[1, 1]), nothing)
-    end
-end
-@adjoint function unsafe_cholesky(Σ::Diagonal, check)
-    C = cholesky(Σ; check=check)
-    return C, function(Δ::NamedTuple)
-        issuccess(C) || (Diagonal(zero(diag(Δ.factors))), nothing)
-        (Diagonal(diag(Δ.factors) .* inv.(2 .* C.factors.diag)), nothing)
-    end
-end
-@adjoint function unsafe_cholesky(Σ::Union{StridedMatrix, Symmetric{<:Real, <:StridedMatrix}}, check)
-    C = cholesky(Σ; check=check)
-    return C, function(Δ::NamedTuple)
-        issuccess(C) || return (zero(Δ.factors), nothing)
-        U, Ū = C.U, Δ.factors
-        Σ̄ = Ū * U'
-        Σ̄ = LinearAlgebra.copytri!(Σ̄, 'U')
-        Σ̄ = ldiv!(U, Σ̄)
-        BLAS.trsm!('R', 'U', 'T', 'N', one(eltype(Σ)), U.data, Σ̄)
-        @inbounds for n in diagind(Σ̄)
-            Σ̄[n] /= 2
-        end
-        return (UpperTriangular(Σ̄), nothing)
-    end
 end
 
 # Simplex adjoints
