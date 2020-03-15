@@ -7,6 +7,7 @@ using LinearAlgebra
 using MappedArrays
 using Roots
 using Base.Iterators: drop
+using LinearAlgebra: AbstractTriangular
 
 export  TransformDistribution,
         PositiveDistribution,
@@ -366,7 +367,7 @@ function _logpdf_with_trans_pd(
     T = eltype(X)
     Xcf = cholesky(X, check = false)
     if !issuccess(Xcf)
-        Xcf = cholesky(X + (eps(T) * norm(X)) * I)
+        Xcf = cholesky(X + max(eps(T), eps(T) * norm(X)) * I)
     end
     lp = getlogp(d, Xcf, X)
     if transform && isfinite(lp)
