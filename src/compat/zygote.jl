@@ -108,7 +108,7 @@ function _logpdf_with_trans_pd_zygote(
     T = eltype(X)
     Xcf = cholesky(X, check = false)
     if !issuccess(Xcf)
-        Xcf = cholesky(X + (eps(T) * norm(X)) * I, check = true)
+        Xcf = cholesky(X + max(eps(T), eps(T) * norm(X)) * I, check = true)
     end
     lp = getlogp(d, Xcf, X)
     if transform && isfinite(lp)
