@@ -146,7 +146,7 @@ function test_ad(f, at = 0.5; rtol = 1e-8, atol = 1e-8)
         @test isapprox(reverse_tracker, forward, rtol=rtol, atol=atol)
     elseif stg == "Zygote"
         zygote_counter[] += 1
-        if mod(zygote_counter[], 40) == 0
+        if mod(zygote_counter[], 30) == 0
             Zygote.refresh()
         end
         reverse_zygote = Zygote.gradient(f, at)[1]
