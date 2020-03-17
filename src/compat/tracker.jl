@@ -58,7 +58,7 @@ Base.:*(A::AbstractTriangular{T}, B::TrackedMatrix) where {T} = track(*, A, B)
 Base.:*(A::Adjoint{T, <:AbstractTriangular{T}}, B::TrackedMatrix) where {T} = track(*, A, B)
 Base.:*(A::Adjoint{T, <:AbstractTriangular{T}}, B::TrackedVector) where {T} = track(*, A, B)
 
-_eps(::Type{<:TrackedReal{T}}) where {T} = eps(T)
+_eps(::Type{<:TrackedReal{T}}) where {T} = _eps(T)
 
 # AD implementations
 function jacobian(

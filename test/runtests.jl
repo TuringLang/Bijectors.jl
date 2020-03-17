@@ -1,4 +1,4 @@
-using Tracker, ForwardDiff, Zygote, DistributionsAD, Bijectors
+using Tracker, ForwardDiff, Zygote, DistributionsAD, Bijectors, ReverseDiff
 using Random, LinearAlgebra, Combinatorics, Test
 using DistributionsAD: TuringUniform, TuringMvNormal, TuringMvLogNormal, 
                         TuringPoissonBinomial
