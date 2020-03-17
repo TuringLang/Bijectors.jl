@@ -245,7 +245,17 @@ forward(d::Distribution) = forward(GLOBAL_RNG, d)
 forward(d::Distribution, num_samples::Int) = forward(GLOBAL_RNG, d, num_samples)
 
 # utility stuff
-params(td::Transformed) = params(td.dist)
+Distributions.params(td::Transformed) = Distributions.params(td.dist)
+function Base.maximum(td::UnivariateTransformed)
+    # ordering might have changed, i.e. ub has been mapped to lb
+    min, max = td.transform.((Base.minimum(td.dist), Base.maximum(td.dist)))
+    return max > min ? max : min
+end
+function Base.minimum(td::UnivariateTransformed)
+    # ordering might have changed, i.e. ub has been mapped to lb
+    min, max = td.transform.((Base.minimum(td.dist), Base.maximum(td.dist)))
+    return max < min ? max : min
+end
 
 # logabsdetjac for distributions
 logabsdetjacinv(d::UnivariateDistribution, x::T) where T <: Real = zero(T)

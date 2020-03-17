@@ -1,7 +1,7 @@
 import Base: inv, ∘
 
 import Random: AbstractRNG
-import Distributions: logpdf, rand, rand!, _rand!, _logpdf, params
+import Distributions: logpdf, rand, rand!, _rand!, _logpdf
 
 #######################################
 # AD stuff "extracted" from Turing.jl #
