@@ -133,47 +133,29 @@ const zygote_counter = Ref(0)
 function test_ad(f, at = 0.5; rtol = 1e-8, atol = 1e-8)
     stg = get_stage()
     if stg == "all"
-        isarr = isa(at, AbstractArray)
         reverse_tracker = Tracker.data(Tracker.gradient(f, at)[1])
         reverse_zygote = Zygote.gradient(f, at)[1]
-        if isarr
-            forward = ForwardDiff.gradient(f, at)
-            @test isapprox(reverse_tracker, forward, rtol=rtol, atol=atol)
-            @test isapprox(reverse_zygote, forward, rtol=rtol, atol=atol)
-        else
-            forward = ForwardDiff.derivative(f, at)
-            finite_diff = central_fdm(5,1)(f, at)
-            @test isapprox(reverse_tracker, forward, rtol=rtol, atol=atol)
-            @test isapprox(reverse_tracker, finite_diff, rtol=rtol, atol=atol)
-            @test isapprox(reverse_zygote, finite_diff, rtol=rtol, atol=atol)
-        end
+        forward = ForwardDiff.gradient(f, at)
+        reverse_diff = ReverseDiff.gradient(f, at)
+        @test isapprox(reverse_tracker, forward, rtol=rtol, atol=atol)
+        @test isapprox(reverse_zygote, forward, rtol=rtol, atol=atol)
+        @test isapprox(reverse_diff, forward, rtol=rtol, atol=atol)
     elseif stg == "ForwardDiff_Tracker"
-        isarr = isa(at, AbstractArray)
         reverse_tracker = Tracker.data(Tracker.gradient(f, at)[1])
-        if isarr
-            forward = ForwardDiff.gradient(f, at)
-            @test isapprox(reverse_tracker, forward, rtol=rtol, atol=atol)
-        else
-            forward = ForwardDiff.derivative(f, at)
-            finite_diff = central_fdm(5,1)(f, at)
-            @test isapprox(reverse_tracker, forward, rtol=rtol, atol=atol)
-            @test isapprox(reverse_tracker, finite_diff, rtol=rtol, atol=atol)
-        end
+        forward = ForwardDiff.gradient(f, at)
+        @test isapprox(reverse_tracker, forward, rtol=rtol, atol=atol)
     elseif stg == "Zygote"
         zygote_counter[] += 1
-        isarr = isa(at, AbstractArray)
         if mod(zygote_counter[], 40) == 0
             Zygote.refresh()
         end
         reverse_zygote = Zygote.gradient(f, at)[1]
-        if isarr
-            forward = ForwardDiff.gradient(f, at)
-            @test isapprox(reverse_zygote, forward, rtol=rtol, atol=atol)
-        else
-            forward = ForwardDiff.derivative(f, at)
-            finite_diff = central_fdm(5,1)(f, at)
-            @test isapprox(reverse_zygote, finite_diff, rtol=rtol, atol=atol)
-        end
+        forward = ForwardDiff.gradient(f, at)
+        @test isapprox(reverse_zygote, forward, rtol=rtol, atol=atol)
+    elseif stg == "ReverseDiff"
+        reverse_diff = ReverseDiff.gradient(f, at)
+        forward = ForwardDiff.gradient(f, at)
+        @test isapprox(reverse_diff, forward, rtol=rtol, atol=atol)
     end
 end
 

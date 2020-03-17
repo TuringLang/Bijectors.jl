@@ -90,251 +90,251 @@
         DistSpec(:Bernoulli, (0.45,), [1, 1]),
         DistSpec(:Bernoulli, (0.45,), 0),
         DistSpec(:Bernoulli, (0.45,), [0, 0]),
-        
-        DistSpec(:((a, b) -> BetaBinomial(10, a, b)), (2, 1), 5),
-        DistSpec(:((a, b) -> BetaBinomial(10, a, b)), (2, 1), [5, 5]),
-
+    
+        DistSpec(:((a, b) -> BetaBinomial(10, a, b)), (2.0, 1.0), 5),
+        DistSpec(:((a, b) -> BetaBinomial(10, a, b)), (2.0, 1.0), [5, 5]),
+    
         DistSpec(:(p -> Binomial(10, p)), (0.5,), 5),
         DistSpec(:(p -> Binomial(10, p)), (0.5,), [5, 5]),
-
+    
         DistSpec(:(p -> Categorical(p / sum(p))), ([0.45, 0.55],), 1),
         DistSpec(:(p -> Categorical(p / sum(p))), ([0.45, 0.55],), [1, 1]),
-
+    
         DistSpec(:Geometric, (0.45,), 3),
         DistSpec(:Geometric, (0.45,), [3, 3]),
-
+    
         DistSpec(:NegativeBinomial, (3.5, 0.5), 1),
         DistSpec(:NegativeBinomial, (3.5, 0.5), [1, 1]),
-
+    
         DistSpec(:Poisson, (0.5,), 1),
         DistSpec(:Poisson, (0.5,), [1, 1]),
-
+    
         DistSpec(:Skellam, (1.0, 2.0), -2),
         DistSpec(:Skellam, (1.0, 2.0), [-2, -2]),
-
+    
         DistSpec(:PoissonBinomial, ([0.5, 0.5],), 0),
         DistSpec(:PoissonBinomial, ([0.5, 0.5],), [0, 0]),
-
+    
         DistSpec(:TuringPoissonBinomial, ([0.5, 0.5],), 0),
         DistSpec(:TuringPoissonBinomial, ([0.5, 0.5],), [0, 0]),
     ]
-
+    
     uni_cont_dists = [
         DistSpec(:Arcsine, (), 0.5),
-        DistSpec(:Arcsine, (1,), 0.5),
-        DistSpec(:Arcsine, (0, 2), 0.5),
+        DistSpec(:Arcsine, (1.0,), 0.5),
+        DistSpec(:Arcsine, (0.0, 2.0), 0.5),
         DistSpec(:Arcsine, (), [0.5]),
-        #DistSpec(:Arcsine, (1,), [0.5]),
-        #DistSpec(:Arcsine, (0, 2), [0.5]),
-        
+        #DistSpec(:Arcsine, (1.0,), [0.5]),
+        #DistSpec(:Arcsine, (0.0, 2.0), [0.5]),
+    
         DistSpec(:Beta, (), 0.5),
-        DistSpec(:Beta, (1,), 0.5),
-        DistSpec(:Beta, (1, 2), 0.5),
+        DistSpec(:Beta, (1.0,), 0.5),
+        DistSpec(:Beta, (1.0, 2.0), 0.5),
         #DistSpec(:Beta, (), [0.5]),
-        #DistSpec(:Beta, (1,), [0.5]),
-        #DistSpec(:Beta, (1, 2), [0.5]),
-
+        #DistSpec(:Beta, (1.0,), [0.5]),
+        #DistSpec(:Beta, (1.0, 2.0), [0.5]),
+    
         DistSpec(:BetaPrime, (), 0.5),
-        DistSpec(:BetaPrime, (1,), 0.5),
-        DistSpec(:BetaPrime, (1, 2), 0.5),
+        DistSpec(:BetaPrime, (1.0,), 0.5),
+        DistSpec(:BetaPrime, (1.0, 2.0), 0.5),
         #DistSpec(:BetaPrime, (), [0.5]),
-        #DistSpec(:BetaPrime, (1,), [0.5]),
-        #DistSpec(:BetaPrime, (1, 2), [0.5]),
-
+        #DistSpec(:BetaPrime, (1.0,), [0.5]),
+        #DistSpec(:BetaPrime, (1.0, 2.0), [0.5]),
+    
         DistSpec(:Biweight, (), 0.5),
-        DistSpec(:Biweight, (1,), 0.5),
-        DistSpec(:Biweight, (1, 2), 0.5),
+        DistSpec(:Biweight, (1.0,), 0.5),
+        DistSpec(:Biweight, (1.0, 2.0), 0.5),
         #DistSpec(:Biweight, (), [0.5]),
-        #DistSpec(:Biweight, (1,), [0.5]),
-        #DistSpec(:Biweight, (1, 2), [0.5]),
-
+        #DistSpec(:Biweight, (1.0,), [0.5]),
+        #DistSpec(:Biweight, (1.0, 2.0), [0.5]),
+    
         DistSpec(:Cauchy, (), 0.5),
-        DistSpec(:Cauchy, (1,), 0.5),
-        DistSpec(:Cauchy, (1, 2), 0.5),
+        DistSpec(:Cauchy, (1.0,), 0.5),
+        DistSpec(:Cauchy, (1.0, 2.0), 0.5),
         #DistSpec(:Cauchy, (), [0.5]),
-        #DistSpec(:Cauchy, (1,), [0.5]),
-        #DistSpec(:Cauchy, (1, 2), [0.5]),
-
-        DistSpec(:Chi, (1,), 0.5),
-        #DistSpec(:Chi, (1,), [0.5]),
-
-        DistSpec(:Chisq, (1,), 0.5),
-        #DistSpec(:Chisq, (1,), [0.5]),
-
-        DistSpec(:Cosine, (1, 1), 0.5),
-        #DistSpec(:Cosine, (1, 1), [0.5]),
-
-        DistSpec(:Epanechnikov, (1, 1), 0.5),
-        #DistSpec(:Epanechnikov, (1, 1), [0.5]),
-
-        DistSpec(:((s)->Erlang(1, s)), (1,), 0.5), # First arg is integer
-        #DistSpec(:((s)->Erlang(1, s)), (1,), [0.5]),
-
-        DistSpec(:Exponential, (1,), 0.5),
-        #DistSpec(:Exponential, (1,), [0.5]),
-
-        DistSpec(:FDist, (1, 1), 0.5),
-        #DistSpec(:FDist, (1, 1), [0.5]),
-
+        #DistSpec(:Cauchy, (1.0,), [0.5]),
+        #DistSpec(:Cauchy, (1.0, 2.0), [0.5]),
+    
+        DistSpec(:Chi, (1.0,), 0.5),
+        #DistSpec(:Chi, (1.0,), [0.5]),
+    
+        DistSpec(:Chisq, (1.0,), 0.5),
+        #DistSpec(:Chisq, (1.0,), [0.5]),
+    
+        DistSpec(:Cosine, (1.0, 1.0), 0.5),
+        #DistSpec(:Cosine, (1.0, 1.0), [0.5]),
+    
+        DistSpec(:Epanechnikov, (1.0, 1.0), 0.5),
+        #DistSpec(:Epanechnikov, (1.0, 1.0), [0.5]),
+    
+        DistSpec(:((s)->Erlang(1, s)), (1.0,), 0.5), # First arg is integer
+        #DistSpec(:((s)->Erlang(1, s)), (1.0,), [0.5]),
+    
+        DistSpec(:Exponential, (1.0,), 0.5),
+        #DistSpec(:Exponential, (1.0,), [0.5]),
+    
+        DistSpec(:FDist, (1.0, 1.0), 0.5),
+        #DistSpec(:FDist, (1.0, 1.0), [0.5]),
+    
         DistSpec(:Frechet, (), 0.5),
-        DistSpec(:Frechet, (1,), 0.5),
-        DistSpec(:Frechet, (1, 2), 0.5),
+        DistSpec(:Frechet, (1.0,), 0.5),
+        DistSpec(:Frechet, (1.0, 2.0), 0.5),
         #DistSpec(:Frechet, (), [0.5]),
-        #DistSpec(:Frechet, (1,), [0.5]),
-        #DistSpec(:Frechet, (1, 2), [0.5]),
-
+        #DistSpec(:Frechet, (1.0,), [0.5]),
+        #DistSpec(:Frechet, (1.0, 2.0), [0.5]),
+    
         DistSpec(:Gamma, (), 0.5),
-        DistSpec(:Gamma, (1,), 0.5),
-        DistSpec(:Gamma, (1, 2), 0.5),
+        DistSpec(:Gamma, (1.0,), 0.5),
+        DistSpec(:Gamma, (1.0, 2.0), 0.5),
         #DistSpec(:Gamma, (), [0.5]),
-        #DistSpec(:Gamma, (1,), [0.5]),
-        #DistSpec(:Gamma, (1, 2), [0.5]),
-
+        #DistSpec(:Gamma, (1.0,), [0.5]),
+        #DistSpec(:Gamma, (1.0, 2.0), [0.5]),
+    
         DistSpec(:GeneralizedExtremeValue, (1.0, 1.0, 1.0), 0.5),
         #DistSpec(:GeneralizedExtremeValue, (1.0, 1.0, 1.0), [0.5]),
-
+    
         DistSpec(:GeneralizedPareto, (), 0.5),
         DistSpec(:GeneralizedPareto, (1.0, 2.0), 0.5),
         DistSpec(:GeneralizedPareto, (0.0, 2.0, 3.0), 0.5),
         #DistSpec(:GeneralizedPareto, (), [0.5]),
         #DistSpec(:GeneralizedPareto, (1.0, 2.0), [0.5]),
         #DistSpec(:GeneralizedPareto, (0.0, 2.0, 3.0), [0.5]),
-
+    
         DistSpec(:Gumbel, (), 0.5),
-        DistSpec(:Gumbel, (1,), 0.5),
-        DistSpec(:Gumbel, (1, 2), 0.5),
+        DistSpec(:Gumbel, (1.0,), 0.5),
+        DistSpec(:Gumbel, (1.0, 2.0), 0.5),
         #DistSpec(:Gumbel, (), [0.5]),
-        #DistSpec(:Gumbel, (1,), [0.5]),
-        #DistSpec(:Gumbel, (1, 2), [0.5]),
-
+        #DistSpec(:Gumbel, (1.0,), [0.5]),
+        #DistSpec(:Gumbel, (1.0, 2.0), [0.5]),
+    
         DistSpec(:InverseGamma, (), 0.5),
         DistSpec(:InverseGamma, (1.0,), 0.5),
         DistSpec(:InverseGamma, (1.0, 2.0), 0.5),
         #DistSpec(:InverseGamma, (), [0.5]),
         #DistSpec(:InverseGamma, (1.0,), [0.5]),
         #DistSpec(:InverseGamma, (1.0, 2.0), [0.5]),
-
+    
         DistSpec(:InverseGaussian, (), 0.5),
-        DistSpec(:InverseGaussian, (1,), 0.5),
-        DistSpec(:InverseGaussian, (1, 2), 0.5),
+        DistSpec(:InverseGaussian, (1.0,), 0.5),
+        DistSpec(:InverseGaussian, (1.0, 2.0), 0.5),
         #DistSpec(:InverseGaussian, (), [0.5]),
-        #DistSpec(:InverseGaussian, (1,), [0.5]),
-        #DistSpec(:InverseGaussian, (1, 2), [0.5]),
-
+        #DistSpec(:InverseGaussian, (1.0,), [0.5]),
+        #DistSpec(:InverseGaussian, (1.0, 2.0), [0.5]),
+    
         DistSpec(:Kolmogorov, (), 0.5),
         #DistSpec(:Kolmogorov, (), [0.5]),
-
+    
         DistSpec(:Laplace, (), 0.5),
-        DistSpec(:Laplace, (1,), 0.5),
-        DistSpec(:Laplace, (1, 2), 0.5),
+        DistSpec(:Laplace, (1.0,), 0.5),
+        DistSpec(:Laplace, (1.0, 2.0), 0.5),
         #DistSpec(:Laplace, (), [0.5]),
-        #DistSpec(:Laplace, (1,), [0.5]),
-        #DistSpec(:Laplace, (1, 2), [0.5]),
-
+        #DistSpec(:Laplace, (1.0,), [0.5]),
+        #DistSpec(:Laplace, (1.0, 2.0), [0.5]),
+    
         DistSpec(:Levy, (), 0.5),
         DistSpec(:Levy, (0.0,), 0.5),
         DistSpec(:Levy, (0.0, 2.0), 0.5),
         #DistSpec(:Levy, (), [0.5]),
         #DistSpec(:Levy, (0.0,), [0.5]),
         #DistSpec(:Levy, (0.0, 2.0), [0.5]),
-        
+    
         DistSpec(:((a, b) -> LocationScale(a, b, Normal())), (1.0, 2.0), 0.5),
         #DistSpec(:((a, b) -> LocationScale(a, b, Normal())), (1.0, 2.0), [0.5]),
-        
+    
         DistSpec(:Logistic, (), 0.5),
-        DistSpec(:Logistic, (1,), 0.5),
-        DistSpec(:Logistic, (1, 2), 0.5),
+        DistSpec(:Logistic, (1.0,), 0.5),
+        DistSpec(:Logistic, (1.0, 2.0), 0.5),
         #DistSpec(:Logistic, (), [0.5]),
-        #DistSpec(:Logistic, (1,), [0.5]),
-        #DistSpec(:Logistic, (1, 2), [0.5]),
-
+        #DistSpec(:Logistic, (1.0,), [0.5]),
+        #DistSpec(:Logistic, (1.0, 2.0), [0.5]),
+    
         DistSpec(:LogitNormal, (), 0.5),
-        DistSpec(:LogitNormal, (1,), 0.5),
-        DistSpec(:LogitNormal, (1, 2), 0.5),
+        DistSpec(:LogitNormal, (1.0,), 0.5),
+        DistSpec(:LogitNormal, (1.0, 2.0), 0.5),
         #DistSpec(:LogitNormal, (), [0.5]),
-        #DistSpec(:LogitNormal, (1,), [0.5]),
-        #DistSpec(:LogitNormal, (1, 2), [0.5]),
-
+        #DistSpec(:LogitNormal, (1.0,), [0.5]),
+        #DistSpec(:LogitNormal, (1.0, 2.0), [0.5]),
+    
         DistSpec(:LogNormal, (), 0.5),
-        DistSpec(:LogNormal, (1,), 0.5),
-        DistSpec(:LogNormal, (1, 2), 0.5),
+        DistSpec(:LogNormal, (1.0,), 0.5),
+        DistSpec(:LogNormal, (1.0, 2.0), 0.5),
         #DistSpec(:LogNormal, (), [0.5]),
-        #DistSpec(:LogNormal, (1,), [0.5]),
-        #DistSpec(:LogNormal, (1, 2), [0.5]),
-
+        #DistSpec(:LogNormal, (1.0,), [0.5]),
+        #DistSpec(:LogNormal, (1.0, 2.0), [0.5]),
+    
         DistSpec(:Normal, (), 0.5),
         DistSpec(:Normal, (1.0,), 0.5),
         DistSpec(:Normal, (1.0, 2.0), 0.5),
         #DistSpec(:Normal, (), [0.5]),
         #DistSpec(:Normal, (1.0,), [0.5]),
         #DistSpec(:Normal, (1.0, 2.0), [0.5]),
-
+    
         DistSpec(:NormalCanon, (1.0, 2.0), 0.5),
         #DistSpec(:NormalCanon, (1.0, 2.0), [0.5]),
-
+    
         DistSpec(:NormalInverseGaussian, (1.0, 2.0, 1.0, 1.0), 0.5),
         #DistSpec(:NormalInverseGaussian, (1.0, 2.0, 1.0, 1.0), [0.5]),
         
         DistSpec(:Pareto, (), 1.5),
-        DistSpec(:Pareto, (1,), 1.5),
-        DistSpec(:Pareto, (1, 1), 1.5),
+        DistSpec(:Pareto, (1.0,), 1.5),
+        DistSpec(:Pareto, (1.0, 1.0), 1.5),
         #DistSpec(:Pareto, (), [1.5]),
-        #DistSpec(:Pareto, (1,), [1.5]),
-        #DistSpec(:Pareto, (1, 1), [1.5]),
-
+        #DistSpec(:Pareto, (1.0,), [1.5]),
+        #DistSpec(:Pareto, (1.0, 1.0), [1.5]),
+    
         DistSpec(:PGeneralizedGaussian, (), 0.5),
-        DistSpec(:PGeneralizedGaussian, (1, 1, 1), 0.5),
+        DistSpec(:PGeneralizedGaussian, (1.0, 1.0, 1.0), 0.5),
         #DistSpec(:PGeneralizedGaussian, (), [0.5]),
-        #DistSpec(:PGeneralizedGaussian, (1, 1, 1), [0.5]),
-
+        #DistSpec(:PGeneralizedGaussian, (1.0, 1.0, 1.0), [0.5]),
+    
         DistSpec(:Rayleigh, (), 0.5),
-        DistSpec(:Rayleigh, (1,), 0.5),
+        DistSpec(:Rayleigh, (1.0,), 0.5),
         #DistSpec(:Rayleigh, (), [0.5]),
-        #DistSpec(:Rayleigh, (1,), [0.5]),
-
+        #DistSpec(:Rayleigh, (1.0,), [0.5]),
+    
         DistSpec(:Semicircle, (1.0,), 0.5),
         #DistSpec(:Semicircle, (1.0,), [0.5]),
-
+    
         DistSpec(:SymTriangularDist, (), 0.5),
-        DistSpec(:SymTriangularDist, (1,), 0.5),
-        DistSpec(:SymTriangularDist, (1, 2), 0.5),
+        DistSpec(:SymTriangularDist, (1.0,), 0.5),
+        DistSpec(:SymTriangularDist, (1.0, 2.0), 0.5),
         #DistSpec(:SymTriangularDist, (), [0.5]),
-        #DistSpec(:SymTriangularDist, (1,), [0.5]),
-        #DistSpec(:SymTriangularDist, (1, 2), [0.5]),
-
-        DistSpec(:TDist, (1,), 0.5),
-        #DistSpec(:TDist, (1,), [0.5]),
-
-        DistSpec(:TriangularDist, (1, 2), 1.5),
-        DistSpec(:TriangularDist, (1, 3, 2), 1.5),
-        #DistSpec(:TriangularDist, (1, 2), [1.5]),
-        #DistSpec(:TriangularDist, (1, 3, 2), [1.5]),
-
-        DistSpec(:Triweight, (1, 1), 1),
-        #DistSpec(:Triweight, (1, 1), [1]),
-
+        #DistSpec(:SymTriangularDist, (1.0,), [0.5]),
+        #DistSpec(:SymTriangularDist, (1.0, 2.0), [0.5]),
+    
+        DistSpec(:TDist, (1.0,), 0.5),
+        #DistSpec(:TDist, (1.0,), [0.5]),
+    
+        DistSpec(:TriangularDist, (1.0, 2.0), 1.5),
+        DistSpec(:TriangularDist, (1.0, 3.0, 2.0), 1.5),
+        #DistSpec(:TriangularDist, (1.0, 2.0), [1.5]),
+        #DistSpec(:TriangularDist, (1.0, 3.0, 2.0), [1.5]),
+    
+        DistSpec(:Triweight, (1.0, 1.0), 1.0),
+        #DistSpec(:Triweight, (1.0, 1.0), [1.0]),
+    
         DistSpec(:((mu, sigma, l, u) -> truncated(Normal(mu, sigma), l, u)), (0.0, 1.0, 1.0, 2.0), 1.5),
         #DistSpec(:((mu, sigma, l, u) -> truncated(Normal(mu, sigma), l, u)), (0.0, 1.0, 1.0, 2.0), [1.5]),
-
+    
         DistSpec(:Uniform, (), 0.5),
         DistSpec(:Uniform, (0.0, 1.0), 0.5),
         #DistSpec(:Uniform, (), [0.5]),
         #DistSpec(:Uniform, (0.0, 1.0), [0.5]),
-
+    
         DistSpec(:TuringUniform, (), 0.5),
-        DistSpec(:TuringUniform, (0, 1), 0.5),
+        DistSpec(:TuringUniform, (0.0, 1.0), 0.5),
         #DistSpec(:TuringUniform, (), [0.5]),
-        #DistSpec(:TuringUniform, (0, 1), [0.5]),
+        #DistSpec(:TuringUniform, (0.0, 1.0), [0.5]),
+    
+        DistSpec(:VonMises, (), 1.0),
+        #DistSpec(:VonMises, (), [1.0]),
 
-        DistSpec(:VonMises, (), 1),
-        #DistSpec(:VonMises, (), [1]),
-
-        DistSpec(:Weibull, (), 1),
-        DistSpec(:Weibull, (1,), 1),
-        DistSpec(:Weibull, (1, 1), 1),
-        #DistSpec(:Weibull, (), [1]),
-        #DistSpec(:Weibull, (1,), [1]),
-        #DistSpec(:Weibull, (1, 1), [1]),
+        DistSpec(:Weibull, (), 1.0),
+        DistSpec(:Weibull, (1.0,), 1.0),
+        DistSpec(:Weibull, (1.0, 1.0), 1.0),
+        #DistSpec(:Weibull, (), [1.0]),
+        #DistSpec(:Weibull, (1.0,), [1.0]),
+        #DistSpec(:Weibull, (1.0, 1.0), [1.0]),
     ]
     broken_uni_cont_dists = [
         # Zygote
@@ -352,7 +352,7 @@
         DistSpec(:VonMises, (1.0,), 1.0),
         DistSpec(:VonMises, (1, 1), 1),
     ]
-
+    
     multi_disc_dists = [
         # Vector x
         DistSpec(:((p) -> Multinomial(2, p / sum(p))), (fill(0.5, 2),), [2, 0]),
@@ -368,27 +368,32 @@
         filter(!isnothing, filldist_spec.(uni_disc_dists; n = 2, d = 2));
         filter(!isnothing, arraydist_spec.(uni_disc_dists; n = 2, d = 2));
     ]
-
+    
     multi_cont_dists = [
         # Vector x
+        DistSpec(:MvNormal, (dmean, cov_mat), norm_val_vec),
         DistSpec(:MvNormal, (dmean, cov_vec), norm_val_vec),
         DistSpec(:MvNormal, (dmean, Diagonal(cov_vec)), norm_val_vec),
         DistSpec(:MvNormal, (dmean, cov_num), norm_val_vec),
         DistSpec(:((m, v) -> MvNormal(m, v*I)), (dmean, cov_num), norm_val_vec),
+        DistSpec(:MvNormal, (cov_mat,), norm_val_vec),
         DistSpec(:MvNormal, (cov_vec,), norm_val_vec),
         DistSpec(:MvNormal, (Diagonal(cov_vec),), norm_val_vec),
         DistSpec(:(cov_num -> MvNormal($ddim, cov_num)), (cov_num,), norm_val_vec),
+        DistSpec(:TuringMvNormal, (dmean, cov_mat), norm_val_vec),
         DistSpec(:TuringMvNormal, (dmean, cov_vec), norm_val_vec),
         DistSpec(:TuringMvNormal, (dmean, Diagonal(cov_vec)), norm_val_vec),
         DistSpec(:TuringMvNormal, (dmean, cov_num), norm_val_vec),
         DistSpec(:((m, v) -> TuringMvNormal(m, v*I)), (dmean, cov_num), norm_val_vec),
+        DistSpec(:TuringMvNormal, (cov_mat,), norm_val_vec),
         DistSpec(:TuringMvNormal, (cov_vec,), norm_val_vec),
         DistSpec(:TuringMvNormal, (Diagonal(cov_vec),), norm_val_vec),
         DistSpec(:(cov_num -> TuringMvNormal($ddim, cov_num)), (cov_num,), norm_val_vec),
-
+        DistSpec(:MvLogNormal, (dmean, cov_mat), norm_val_vec),
         DistSpec(:MvLogNormal, (dmean, cov_vec), norm_val_vec),
         DistSpec(:MvLogNormal, (dmean, Diagonal(cov_vec)), norm_val_vec),
         DistSpec(:MvLogNormal, (dmean, cov_num), norm_val_vec),
+        DistSpec(:MvLogNormal, (cov_mat,), norm_val_vec),
         DistSpec(:MvLogNormal, (cov_vec,), norm_val_vec),
         DistSpec(:MvLogNormal, (Diagonal(cov_vec),), norm_val_vec),
         DistSpec(:(cov_num -> MvLogNormal($ddim, cov_num)), (cov_num,), norm_val_vec),
@@ -441,25 +446,23 @@
         # Test failure
         DistSpec(:MvNormal, (dmean, cov_mat), norm_val_mat),
         DistSpec(:MvNormal, (cov_mat,), norm_val_mat),
-        DistSpec(:TuringMvNormal, (dmean, cov_mat), norm_val_vec),
-        DistSpec(:TuringMvNormal, (cov_mat,), norm_val_vec),
         DistSpec(:MvLogNormal, (dmean, cov_mat), norm_val_mat),
         DistSpec(:MvLogNormal, (cov_mat,), norm_val_mat),
     ]
-
+    
     matrix_cont_dists = [
         # Matrix x
-        DistSpec(:((n1, n2)->MatrixBeta($ddim, n1, n2)), (ddim, ddim), beta_mat),
-        DistSpec(:Wishart, (ddim, cov_mat), cov_mat),
-        DistSpec(:InverseWishart, (ddim, cov_mat), cov_mat),
-        #DistSpec(:TuringWishart, (ddim, cov_mat), cov_mat),
-        #DistSpec(:TuringInverseWishart, (ddim, cov_mat), cov_mat),
+        DistSpec(:((n1, n2)->MatrixBeta($ddim, n1, n2)), (3.0, 3.0), beta_mat),
+        DistSpec(:Wishart, (3.0, cov_mat), cov_mat),
+        DistSpec(:InverseWishart, (3.0, cov_mat), cov_mat),
+        DistSpec(:TuringWishart, (3.0, cov_mat), cov_mat),
+        DistSpec(:TuringInverseWishart, (3.0, cov_mat), cov_mat),
         # Vector of matrices x
-        DistSpec(:((n1, n2)->MatrixBeta($ddim, n1, n2)), (ddim, ddim), fill(beta_mat, 2)),
-        DistSpec(:Wishart, (ddim, cov_mat), fill(cov_mat, 2)),
-        DistSpec(:InverseWishart, (ddim, cov_mat), fill(cov_mat, 2)),
-        #DistSpec(:TuringWishart, (ddim, cov_mat), fill(cov_mat, 2)),
-        #DistSpec(:TuringInverseWishart, (ddim, cov_mat), fill(cov_mat, 2)),
+        DistSpec(:((n1, n2)->MatrixBeta($ddim, n1, n2)), (3.0, 3.0), fill(beta_mat, 2)),
+        DistSpec(:Wishart, (3.0, cov_mat), fill(cov_mat, 2)),
+        DistSpec(:InverseWishart, (3.0, cov_mat), fill(cov_mat, 2)),
+        DistSpec(:TuringWishart, (3.0, cov_mat), fill(cov_mat, 2)),
+        DistSpec(:TuringInverseWishart, (3.0, cov_mat), fill(cov_mat, 2)),
     ]
     xmatrix_cont_dists = [
         # Matrix x
@@ -481,7 +484,7 @@
         DistSpec(:MatrixNormal, (cov_mat, cov_mat, cov_mat), cov_mat),
         DistSpec(:(()->MatrixNormal($ddim, $ddim)), (), cov_mat),
         DistSpec(:MatrixTDist, (1.0, cov_mat, cov_mat, cov_mat), cov_mat),
-        DistSpec(:MatrixFDist, (ddim, ddim, cov_mat), cov_mat),
+        DistSpec(:MatrixFDist, (3.0, 3.0, cov_mat), cov_mat),
     ]
 
     test_head(s) = println("\n"*s*"\n")
