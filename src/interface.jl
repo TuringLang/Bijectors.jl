@@ -145,6 +145,7 @@ include("bijectors/simplex.jl")
 include("bijectors/pd.jl")
 include("bijectors/truncated.jl")
 include("bijectors/distribution_bijector.jl")
+include("bijectors/named_bijector.jl")
 
 # Normalizing flow related
 include("bijectors/planar_layer.jl")
