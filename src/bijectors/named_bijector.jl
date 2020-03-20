@@ -18,6 +18,8 @@ end
     return :(sum([$([:(logabsdetjac(b.bs.$n, x.$n)) for n in names]...), ]))
 end
 
+# FIXME: figure out how to do compositions between, e.g. `NamedBijector` and `NamedCoupling`
+# Coouuld just do the same as we've done for `Bijector`, but it's a bit annoying and seems like a bit too much?
 @generated function ∘(
         b1::NamedBijector{names}, 
         b2::NamedBijector{names}
@@ -45,7 +47,6 @@ Base.inv(nb::AbstractNamedBijector) = NamedInverse(nb)
 Base.inv(ni::NamedInverse) = ni.orig
 
 logabsdetjac(ni::NamedInverse, y::NamedTuple) = -logabsdetjac(inv(ni), ni(y))
-
 
 ############################
 ### `NamedCouplingLayer` ###
