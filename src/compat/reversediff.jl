@@ -1,8 +1,8 @@
 const RTR = ReverseDiff.TrackedReal
 const RTV = ReverseDiff.TrackedVector
 const RTM = ReverseDiff.TrackedMatrix
-using ReverseDiff: record_mul
-using ReverseDiff: SpecialInstruction
+using .ReverseDiff: record_mul
+using .ReverseDiff: SpecialInstruction
 
 _eps(::Type{<:RTR{T}}) where {T} = _eps(T)
 
