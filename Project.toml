@@ -1,6 +1,6 @@
 name = "Bijectors"
 uuid = "76274a88-744f-5084-9051-94815aaf08c4"
-version = "0.6.3"
+version = "0.6.6"
 
 [deps]
 ArgCheck = "dce04be8-c92d-5529-be00-80e4d2c0e197"
@@ -21,7 +21,7 @@ StatsFuns = "4c63d2b9-4356-54db-8cca-17b64c39e42c"
 ArgCheck = "1, 2.0"
 Combinatorics = "0.7"
 Compat = "3.0"
-Distributions = "0.21.11, 0.22"
+Distributions = "0.21.11, 0.22, 0.23"
 DistributionsAD = "0.4.6"
 ForwardDiff = "0.10.3"
 MappedArrays = "0.2.2"
