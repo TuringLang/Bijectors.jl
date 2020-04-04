@@ -105,7 +105,7 @@ logabsdetjacinv(b::Bijector, y) = logabsdetjac(inv(b), y)
 ##############################
 
 struct Identity{N} <: Bijector{N} end
-(::Identity)(x) = x
+(::Identity)(x) = copy(x)
 inv(b::Identity) = b
 
 logabsdetjac(::Identity, x::Real) = zero(eltype(x))

@@ -388,27 +388,27 @@ end
 ############################################
 # Defaults (assume identity link function) #
 ############################################
+link(d::Distribution, x) = bijector(d)(x)
+invlink(d::Distribution, y) = inv(bijector(d))(y)
+function logpdf_with_trans(d::Distribution, x, transform::Bool)
+    if transform
+        return logpdf(d, x) - logabsdetjac(bijector(d), x)
+    else
+        return logpdf(d, x)
+    end
+end
 
 # UnivariateDistributions
 using Distributions: UnivariateDistribution
 
-link(d::UnivariateDistribution, x::Real) = x
 link(d::UnivariateDistribution, x::AbstractArray{<:Real}) = mapvcat(x) do x
     link(d, x)
 end
 
-invlink(d::UnivariateDistribution, y::Real) = y
 invlink(d::UnivariateDistribution, y::AbstractArray{<:Real}) = mapvcat(y) do y
     invlink(d, y)
 end
 
-function logpdf_with_trans(
-    d::UnivariateDistribution,
-    x::Real,
-    transform::Bool,
-)
-    return _logpdf_with_trans(d, x, transform)
-end
 function logpdf_with_trans(
     d::UnivariateDistribution,
     x::AbstractArray{<:Real},
@@ -419,38 +419,17 @@ function logpdf_with_trans(
     end
 end
 
-# MultivariateDistributions
-using Distributions: MultivariateDistribution
-
-link(d::MultivariateDistribution, x::AbstractVecOrMat{<:Real}) = copy(x)
-
-invlink(d::MultivariateDistribution, y::AbstractVecOrMat{<:Real}) = copy(y)
-
-function logpdf_with_trans(d::MultivariateDistribution, x::AbstractVecOrMat{<:Real}, ::Bool)
-    return logpdf(d, x)
-end
-
 # MatrixDistributions
 using Distributions: MatrixDistribution
 
-link(d::MatrixDistribution, X::AbstractMatrix{<:Real}) = copy(X)
 link(d::MatrixDistribution, X::AbstractArray{<:AbstractMatrix{<:Real}}) = mapvcat(X) do x
     link(d, x)
 end
 
-invlink(d::MatrixDistribution, Y::AbstractMatrix{<:Real}) = copy(Y)
 function invlink(d::MatrixDistribution, Y::AbstractArray{<:AbstractMatrix{<:Real}})
     return mapvcat(Y) do y
         invlink(d, y)
     end
-end
-
-function logpdf_with_trans(
-    d::MatrixDistribution,
-    X::Union{AbstractMatrix{<:Real}, AbstractArray{<:AbstractMatrix{<:Real}}},
-    ::Bool,
-)
-    return logpdf(d, X)
 end
 
 include("interface.jl")
