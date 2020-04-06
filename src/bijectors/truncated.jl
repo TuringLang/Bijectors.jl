@@ -1,9 +1,9 @@
 #######################################################
 # Constrained to unconstrained distribution bijectors #
 #######################################################
-struct TruncatedBijector{T} <: Bijector{0}
-    lb::T
-    ub::T
+struct TruncatedBijector{T1, T2} <: Bijector{0}
+    lb::T1
+    ub::T2
 end
 
 function (b::TruncatedBijector)(x::Real)
