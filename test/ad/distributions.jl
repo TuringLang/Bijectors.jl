@@ -498,6 +498,11 @@
             for testf in get_all_functions(d, false)
                 test_ad(testf.f, testf.x)
             end
+
+            dist = @eval :($(d.name)(d.θ...))
+            x = d.x
+            y = link(dist, x)
+            @test invlink(dist, y) ≈ x
         end
     end
     separator()
@@ -514,6 +519,16 @@
             for testf in get_all_functions(d, true)
                 test_ad(testf.f, testf.x)
             end
+
+            dist = eval(:($(d.name)($(d.θ)...)))
+            x = d.x
+            y = link(dist, x)
+            @test invlink(dist, y) ≈ x
+
+            # if the transform is non-identity => verify that forward map is different
+            if !(bijector(dist) isa Identity)
+                @test x ≠ y
+            end
         end
     end
     separator()
@@ -524,6 +539,16 @@
             test_info(d.name)
             for testf in get_all_functions(d, false)
                 test_ad(testf.f, testf.x)
+            end
+
+            dist = eval(:($(d.name)($(d.θ)...)))
+            x = d.x
+            y = link(dist, x)
+            @test all(invlink(dist, y) .≈ x)
+
+            # if the transform is non-identity => verify that forward map is different
+            if !(bijector(dist) isa Identity)
+                @test all(x .≠ y)
             end
         end
     end
@@ -536,6 +561,16 @@
             for testf in get_all_functions(d, true)
                 test_ad(testf.f, testf.x)
             end
+
+            dist = eval(:($(d.name)($(d.θ)...)))
+            x = d.x
+            y = link(dist, x)
+            @test all(invlink(dist, y) .≈ x)
+
+            # if the transform is non-identity => verify that forward map is different
+            if !(bijector(dist) isa Identity)
+                @test all(x .≠ y)
+            end
         end
     end
     separator()
@@ -546,6 +581,16 @@
             test_info(d.name)
             for testf in get_all_functions(d, true)
                 test_ad(testf.f, testf.x)
+            end
+
+            dist = eval(:($(d.name)($(d.θ)...)))
+            x = d.x
+            y = link(dist, x)
+            @test all(invlink(dist, y) .≈ x)
+
+            # if the transform is non-identity => verify that forward map is different
+            if !(bijector(dist) isa Identity)
+                @test all(x .≠ y)
             end
         end
     end
