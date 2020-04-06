@@ -259,6 +259,24 @@ function link(
     end
 end
 
+function invlink(
+    dist::VectorOfUnivariate,
+    x::AbstractVector{<:Real},
+)
+    return mapvcat(dist.v, x) do dist, x
+        invlink(dist, x)
+    end
+end
+function invlink(
+    dist::VectorOfUnivariate,
+    x::AbstractMatrix{<:Real},
+)
+    return mapvcat(eachcol(x)) do x
+        invlink(dist, x)
+    end
+end
+
+
 function logpdf_with_trans(
     dist::MatrixOfUnivariate,
     x::AbstractMatrix{<:Real},
