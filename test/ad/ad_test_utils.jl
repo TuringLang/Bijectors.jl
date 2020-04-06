@@ -76,8 +76,8 @@ function get_function(dist::DistSpec, inds, val)
                 temp_args = ($(args...),)
                 temp_dist = $(dist.name)(temp_args...)
                 temp_x = $(sym)
-                link(temp_dist, temp_x)
-                temp = logpdf_with_trans(temp_dist, invlink(temp_dist, temp_x), true)
+                temp_y = link(temp_dist, temp_x)
+                temp = logpdf_with_trans(temp_dist, invlink(temp_dist, temp_y), true)
                 if temp isa AbstractVector
                     return sum(temp)
                 else
@@ -99,8 +99,8 @@ function get_function(dist::DistSpec, inds, val)
                 temp_args = ($(args...),)
                 temp_dist = $(dist.name)(temp_args...)
                 temp_x = $(dist.x)
-                link(temp_dist, temp_x)
-                temp = logpdf_with_trans(temp_dist, invlink(temp_dist, temp_x), true)
+                temp_y = link(temp_dist, temp_x)
+                temp = logpdf_with_trans(temp_dist, invlink(temp_dist, temp_y), true)
                 if temp isa AbstractVector
                     return sum(temp)
                 else
