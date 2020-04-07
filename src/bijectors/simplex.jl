@@ -195,90 +195,54 @@ function simplex_logabsdetjac_gradient(x::AbstractVector)
     end
     return g
 end
-function logabsdetjac(b::SimplexBijector, x::AbstractMatrix{<:Real})
-    mapvcat(eachcol(x)) do c
-        logabsdetjac(b, c)
-    end
-end
-
-#=
-function simplex_link_val_adjoint(
-    x::AbstractVector{T},
-    Δ::AbstractVector,
-    proj::Bool = true,
-) where {T <: Real}
-    K = length(x)
-    @assert K > 1 "x needs to be of length greater than 1"
-    y = similar(x)
+function logabsdetjac(b::SimplexBijector, x::AbstractMatrix{T}) where {T}
     ϵ = _eps(T)
-    sum_tmp = zero(T)
-    nΔ = zeros(T, length(Δ))
-    @inbounds z = x[1] * (one(T) - 2ϵ) + ϵ # z ∈ [ϵ, 1-ϵ]
-    @inbounds y[1] = StatsFuns.logit(z) + log(T(K - 1))
-    @inbounds nΔ[1] = Δ[1] * (1/z + 1/(1-z)) * (one(T) - 2ϵ)
-    @inbounds @simd for k in 2:(K - 1)
-        sum_tmp += x[k - 1]
-        # z ∈ [ϵ, 1-ϵ]
-        # x[k] = 0 && sum_tmp = 1 -> z ≈ 1
-        z = (x[k] + ϵ)*(one(T) - 2ϵ)/((one(T) + ϵ) - sum_tmp)
-        y[k] = StatsFuns.logit(z) + log(T(K - k))
-        nΔ[k] += Δ[k] * (1/z + 1/(1-z)) * (one(T) - 2ϵ) / ((one(T) + ϵ) - sum_tmp)
-        for i in 1:k-1
-            nΔ[i] += Δ[k] * (1/z + 1/(1-z)) * (x[k] + ϵ) * (one(T) - 2ϵ) / ((one(T) + ϵ) - sum_tmp)^2
-        end
-    end
-    @inbounds sum_tmp += x[K - 1]
-    @inbounds if proj
-        y[K] = zero(T)
-    else
-        y[K] = one(T) - sum_tmp - x[K]
-        @simd for i in 1:K
-            nΔ[i] += -Δ[K]
-        end
-    end
+    nlp = similar(x, T, size(x, 2))
+    nlp .= zero(T)
 
-    return y, nΔ
+    K = size(x, 1)
+    for col in 1:size(x, 2)
+        sum_tmp = zero(eltype(x))
+        @inbounds z = x[1,col]
+        nlp[col] -= log(z + ϵ) + log((one(T) + ϵ) - z)
+        @inbounds @simd for k in 2:(K - 1)
+            sum_tmp += x[k-1,col]
+            z = x[k,col] / ((one(T) + ϵ) - sum_tmp)
+            nlp[col] -= log(z + ϵ) + log((one(T) + ϵ) - z) + log((one(T) + ϵ) - sum_tmp)
+        end
+    end
+    return nlp
 end
-
-function simplex_link_val_jacobian(
-    x::AbstractVector{T},
-    proj::Bool = true,
-) where {T <: Real}
-    K = length(x)
-    @assert K > 1 "x needs to be of length greater than 1"
-    y = similar(x)
-    dydxt = similar(x, length(x), length(x))
-    @inbounds dydxt .= 0
+function simplex_logabsdetjac_gradient(x::AbstractMatrix)
+    T = eltype(x)
     ϵ = _eps(T)
-    sum_tmp = zero(T)
-
-    @inbounds z = x[1] * (one(T) - 2ϵ) + ϵ # z ∈ [ϵ, 1-ϵ]
-    @inbounds y[1] = StatsFuns.logit(z) + log(T(K - 1))
-    @inbounds dydxt[1,1] = (1/z + 1/(1-z)) * (one(T) - 2ϵ)
-    @inbounds @simd for k in 2:(K - 1)
-        sum_tmp += x[k - 1]
-        # z ∈ [ϵ, 1-ϵ]
-        # x[k] = 0 && sum_tmp = 1 -> z ≈ 1
-        z = (x[k] + ϵ)*(one(T) - 2ϵ)/((one(T) + ϵ) - sum_tmp)
-        y[k] = StatsFuns.logit(z) + log(T(K - k))
-        dydxt[k,k] = (1/z + 1/(1-z)) * (one(T) - 2ϵ)/((one(T) + ϵ) - sum_tmp)
-        for i in 1:k-1
-            dydxt[i,k] = (1/z + 1/(1-z)) * (x[k] + ϵ)*(one(T) - 2ϵ)/((one(T) + ϵ) - sum_tmp)^2
+    K = size(x, 1)
+    g = similar(x)
+    g .= 0
+    @inbounds @simd for col in 1:size(x, 2)
+        sum_tmp = zero(eltype(x))
+        z = x[1,col]
+        #lp += log(z + ϵ) + log((one(T) + ϵ) - z)
+        g[1,col] = -1/(z + ϵ) + 1/((one(T) + ϵ) - z)
+        for k in 2:(K - 1)
+            sum_tmp += x[k-1,col]
+            temp = ((one(T) + ϵ) - sum_tmp)
+            z = x[k,col] / temp
+            #lp += log(z + ϵ) + log((one(T) + ϵ) - z) + log(temp)
+            dzdx = 1 / temp
+            dldz = (1/(z + ϵ) - 1/((one(T) + ϵ) - z))
+            dldx = dldz * dzdx
+            g[k,col] -= (1/(z + ϵ) - 1/((one(T) + ϵ) - z)) * 1 / ((one(T) + ϵ) - sum_tmp)
+            for i in 1:k-1
+                dzdxp = x[k,col] * dzdx^2
+                dldxp = dldz * dzdxp - 1 / temp
+                g[i,col] -= dldxp
+            end
         end
     end
-    @inbounds sum_tmp += x[K - 1]
-    @inbounds if proj
-        y[K] = zero(T)
-    else
-        y[K] = one(T) - sum_tmp - x[K]
-        @simd for i in 1:K
-            dydxt[i,K] = -1
-        end
-    end
-
-    return y, UpperTriangular(dydxt)'
+    return g
 end
-=#
+
 function simplex_link_jacobian(
     x::AbstractVector{T},
     proj::Bool = true,
@@ -308,130 +272,78 @@ function simplex_link_jacobian(
             dydxt[i,K] = -1
         end
     end
-
     return UpperTriangular(dydxt)'
+end
+function jacobian(b::SimplexBijector{proj}, x::AbstractVector{T}) where {proj, T}
+    return simplex_link_jacobian(x, proj)
 end
 
 #=
-function simplex_invlink_val_adjoint(
-    y::AbstractVector{T},
-    Δ::AbstractVector,
+# This approach is faster for small random variables
+# For larger ones, building the Jacobian and multiplying is faster because of BLAS.
+
+function add_simplex_link_adjoint!(
+    inΔ::AbstractVector,
+    x::AbstractVector{T},
+    outΔ::AbstractVector,
     proj::Bool = true,
 ) where {T <: Real}
-    K = length(y)
+    K = length(x)
     @assert K > 1 "x needs to be of length greater than 1"
-    x = similar(y)
-    nΔ = similar(Δ)
-    @inbounds nΔ .= 0
-    dxdy = similar(y, length(y), length(y))
-    @inbounds dxdy .= 0
-
     ϵ = _eps(T)
-    @inbounds z = StatsFuns.logistic(y[1] - log(T(K - 1)))
-    unclamped_x = (z - ϵ) / (one(T) - 2ϵ)
-    clamped_x = _clamp(unclamped_x, SimplexBijector())
-    @inbounds x[1] = clamped_x
-    @inbounds if unclamped_x == clamped_x
-        dxdy[1,1] = z * (1 - z) / (one(T) - 2ϵ)
-        nΔ[1] = Δ[1] * dxdy[1,1]
-    end
     sum_tmp = zero(T)
-    @inbounds for k = 2:(K - 1)
-        z = StatsFuns.logistic(y[k] - log(T(K - k)))
-        sum_tmp += clamped_x
-        unclamped_x = ((one(T) + ϵ) - sum_tmp) / (one(T) - 2ϵ) * z - ϵ
-        clamped_x = _clamp(unclamped_x, SimplexBijector())
-        x[k] = clamped_x
-        if unclamped_x == clamped_x
-            dxdy[k,k] = z * (1 - z) * ((one(T) + ϵ) - sum_tmp) / (one(T) - 2ϵ)
-            nΔ[k] = Δ[k] * dxdy[k,k]
-            for i in 1:k-1
-                for j in i:k-1
-                    temp = -dxdy[j,i] * z / (one(T) - 2ϵ)
-                    dxdy[k,i] += temp
-                    nΔ[i] += Δ[k] * temp
-                end
-            end
+    @inbounds z = x[1] * (one(T) - 2ϵ) + ϵ # z ∈ [ϵ, 1-ϵ]
+    @inbounds inΔ[1] += outΔ[1] * (1/z + 1/(1-z)) * (one(T) - 2ϵ)
+    @inbounds @simd for k in 2:(K - 1)
+        sum_tmp += x[k - 1]
+        # z ∈ [ϵ, 1-ϵ]
+        # x[k] = 0 && sum_tmp = 1 -> z ≈ 1
+        z = (x[k] + ϵ)*(one(T) - 2ϵ)/((one(T) + ϵ) - sum_tmp)
+        inΔ[k] += outΔ[k] * (1/z + 1/(1-z)) * (one(T) - 2ϵ) / ((one(T) + ϵ) - sum_tmp)
+        for i in 1:k-1
+            inΔ[i] += outΔ[k] * (1/z + 1/(1-z)) * (x[k] + ϵ) * (one(T) - 2ϵ) / ((one(T) + ϵ) - sum_tmp)^2
         end
     end
-    @inbounds sum_tmp += clamped_x
-    @inbounds if proj
-    	unclamped_x = one(T) - sum_tmp
-        clamped_x = _clamp(unclamped_x, SimplexBijector())
-    else
-    	unclamped_x = one(T) - sum_tmp - y[K]
-        clamped_x = _clamp(unclamped_x, SimplexBijector())
-        if unclamped_x == clamped_x
-            nΔ[K] = -Δ[K]
+    if !proj
+        for i in 1:K
+            inΔ[i] += -outΔ[K]
         end
     end
-    x[K] = clamped_x
-    @inbounds if unclamped_x == clamped_x
-        for i in 1:K-1
-            @simd for j in i:K-1
-                nΔ[i] += -Δ[K] * dxdy[j,i]
-            end
-        end
-    end
-    return x, nΔ
+    return inΔ
 end
-
-function simplex_invlink_val_jacobian(
-    y::AbstractVector{T},
+function add_simplex_link_adjoint!(
+    inΔ::AbstractMatrix,
+    x::AbstractMatrix{T},
+    outΔ::AbstractMatrix,
     proj::Bool = true,
 ) where {T <: Real}
-    K = length(y)
+    K = size(x, 1)
     @assert K > 1 "x needs to be of length greater than 1"
-    x = similar(y)
-    dxdy = similar(y, length(y), length(y))
-    @inbounds dxdy .= 0
-
     ϵ = _eps(T)
-    @inbounds z = StatsFuns.logistic(y[1] - log(T(K - 1)))
-    unclamped_x = (z - ϵ) / (one(T) - 2ϵ)
-    clamped_x = _clamp(unclamped_x, SimplexBijector())
-    @inbounds x[1] = clamped_x
-    @inbounds if unclamped_x == clamped_x
-        dxdy[1,1] = z * (1 - z) / (one(T) - 2ϵ)
-    end
-    sum_tmp = zero(T)
-    @inbounds for k = 2:(K - 1)
-        z = StatsFuns.logistic(y[k] - log(T(K - k)))
-        sum_tmp += clamped_x
-        unclamped_x = ((one(T) + ϵ) - sum_tmp) / (one(T) - 2ϵ) * z - ϵ
-        clamped_x = _clamp(unclamped_x, SimplexBijector())
-        x[k] = clamped_x
-        if unclamped_x == clamped_x
-            dxdy[k,k] = z * (1 - z) * ((one(T) + ϵ) - sum_tmp) / (one(T) - 2ϵ)
+    @inbounds for col in 1:size(x, 2)
+        sum_tmp = zero(T)
+        z = x[1,col] * (one(T) - 2ϵ) + ϵ # z ∈ [ϵ, 1-ϵ]
+        inΔ[1,col] += outΔ[1,col] * (1/z + 1/(1-z)) * (one(T) - 2ϵ)
+        @simd for k in 2:(K - 1)
+            sum_tmp += x[k-1, col]
+            # z ∈ [ϵ, 1-ϵ]
+            # x[k] = 0 && sum_tmp = 1 -> z ≈ 1
+            z = (x[k,col] + ϵ)*(one(T) - 2ϵ)/((one(T) + ϵ) - sum_tmp)
+            inΔ[k,col] += outΔ[k,col] * (1/z + 1/(1-z)) * (one(T) - 2ϵ) / ((one(T) + ϵ) - sum_tmp)
             for i in 1:k-1
-                for j in i:k-1
-                    dxdy[k,i] += -dxdy[j,i] * z / (one(T) - 2ϵ)
-                end
+                inΔ[i,col] += outΔ[k,col] * (1/z + 1/(1-z)) * (x[k,col] + ϵ) * (one(T) - 2ϵ) / ((one(T) + ϵ) - sum_tmp)^2
+            end
+        end
+        if !proj
+            @simd for i in 1:K
+                inΔ[i,col] += -outΔ[K,col]
             end
         end
     end
-    @inbounds sum_tmp += clamped_x
-    @inbounds if proj
-    	unclamped_x = one(T) - sum_tmp
-        clamped_x = _clamp(unclamped_x, SimplexBijector())
-    else
-    	unclamped_x = one(T) - sum_tmp - y[K]
-        clamped_x = _clamp(unclamped_x, SimplexBijector())
-        if unclamped_x == clamped_x
-            dxdy[K,K] = -1
-        end
-    end
-    x[K] = clamped_x
-    @inbounds if unclamped_x == clamped_x
-        for i in 1:K-1
-            @simd for j in i:K-1
-                dxdy[K,i] += -dxdy[j,i]
-            end
-        end
-    end
-    return x, LowerTriangular(dxdy)
+    return inΔ
 end
 =#
+
 function simplex_invlink_jacobian(
     y::AbstractVector{T},
     proj::Bool = true,
@@ -483,62 +395,48 @@ function simplex_invlink_jacobian(
     end
     return LowerTriangular(dxdy)
 end
-
 # jacobian
-function jacobian(b::SimplexBijector{proj}, x::AbstractVector{T}) where {proj, T}
-    K = length(x)
-    dydxt = similar(x, length(x), length(x))
-    @inbounds dydxt .= 0
-    ϵ = _eps(T)
-    sum_tmp = zero(T)
-
-    @inbounds z = x[1] * (one(T) - 2ϵ) + ϵ # z ∈ [ϵ, 1-ϵ]
-    @inbounds dydxt[1,1] = (1/z + 1/(1-z)) * (one(T) - 2ϵ)
-    @inbounds @simd for k in 2:(K - 1)
-        sum_tmp += x[k - 1]
-        # z ∈ [ϵ, 1-ϵ]
-        # x[k] = 0 && sum_tmp = 1 -> z ≈ 1
-        z = (x[k] + ϵ)*(one(T) - 2ϵ)/((one(T) + ϵ) - sum_tmp)
-        dydxt[k,k] = (1/z + 1/(1-z)) * (one(T) - 2ϵ)/((one(T) + ϵ) - sum_tmp)
-        for i in 1:k-1
-            dydxt[i,k] = (1/z + 1/(1-z)) * (x[k] + ϵ)*(one(T) - 2ϵ)/((one(T) + ϵ) - sum_tmp)^2
-        end
-    end
-    @inbounds sum_tmp += x[K - 1]
-    @inbounds if !proj
-        @simd for i in 1:K
-            dydxt[i,K] = -1
-        end
-    end
-
-    return UpperTriangular(dydxt)'
+function jacobian(ib::Inverse{<:SimplexBijector{proj}}, y::AbstractVector{T}) where {proj, T}
+    return simplex_invlink_jacobian(ib.orig, proj)
 end
 
-function jacobian(ib::Inverse{<:SimplexBijector{proj}}, y::AbstractVector{T}) where {proj, T}
-    b = ib.orig
-    
-    K = length(y)
-    dxdy = similar(y, length(y), length(y))
-    @inbounds dxdy .= 0
+#=
+# This approach is faster for small random variables
+# For larger ones, building the Jacobian and multiplying is faster because of BLAS.
 
+function add_simplex_invlink_adjoint!(
+    inΔ::AbstractVector,
+    y::AbstractVector{T},
+    outΔ::AbstractVector,
+    proj::Bool = true,
+) where {T <: Real}
+    K = length(y)
+    @assert K > 1 "x needs to be of length greater than 1"
+    dxdy = similar(y, length(y), length(y))
+
+    @inbounds dxdy .= 0
     ϵ = _eps(T)
     @inbounds z = StatsFuns.logistic(y[1] - log(T(K - 1)))
     unclamped_x = (z - ϵ) / (one(T) - 2ϵ)
-    clamped_x = _clamp(unclamped_x, b)
+    clamped_x = _clamp(unclamped_x, SimplexBijector())
     @inbounds if unclamped_x == clamped_x
         dxdy[1,1] = z * (1 - z) / (one(T) - 2ϵ)
+        inΔ[1] += outΔ[1] * dxdy[1,1]
     end
     sum_tmp = zero(T)
     @inbounds for k = 2:(K - 1)
         z = StatsFuns.logistic(y[k] - log(T(K - k)))
         sum_tmp += clamped_x
         unclamped_x = ((one(T) + ϵ) - sum_tmp) / (one(T) - 2ϵ) * z - ϵ
-        clamped_x = _clamp(unclamped_x, b)
+        clamped_x = _clamp(unclamped_x, SimplexBijector())
         if unclamped_x == clamped_x
             dxdy[k,k] = z * (1 - z) * ((one(T) + ϵ) - sum_tmp) / (one(T) - 2ϵ)
+            inΔ[k] += outΔ[k] * dxdy[k,k]
             for i in 1:k-1
                 for j in i:k-1
-                    dxdy[k,i] += -dxdy[j,i] * z / (one(T) - 2ϵ)
+                    temp = -dxdy[j,i] * z / (one(T) - 2ϵ)
+                    dxdy[k,i] += temp
+                    inΔ[i] += outΔ[k] * temp
                 end
             end
         end
@@ -546,20 +444,80 @@ function jacobian(ib::Inverse{<:SimplexBijector{proj}}, y::AbstractVector{T}) wh
     @inbounds sum_tmp += clamped_x
     @inbounds if proj
     	unclamped_x = one(T) - sum_tmp
-        clamped_x = _clamp(unclamped_x, b)
+        clamped_x = _clamp(unclamped_x, SimplexBijector())
     else
     	unclamped_x = one(T) - sum_tmp - y[K]
-        clamped_x = _clamp(unclamped_x, b)
+        clamped_x = _clamp(unclamped_x, SimplexBijector())
         if unclamped_x == clamped_x
-            dxdy[K,K] = -1
+            inΔ[K] += -outΔ[K]
         end
     end
     @inbounds if unclamped_x == clamped_x
         for i in 1:K-1
             @simd for j in i:K-1
-                dxdy[K,i] += -dxdy[j,i]
+                inΔ[i] += -outΔ[K] * dxdy[j,i]
             end
         end
     end
-    return LowerTriangular(dxdy)
+    return inΔ
 end
+function add_simplex_invlink_adjoint!(
+    inΔ::AbstractMatrix,
+    y::AbstractMatrix{T},
+    outΔ::AbstractMatrix,
+    proj::Bool = true,
+) where {T <: Real}
+    K = size(y,1)
+    @assert K > 1 "x needs to be of length greater than 1"
+    dxdy = similar(y, size(y,1), size(y,1))
+
+    @inbounds for col in 1:size(y,2)
+        dxdy .= 0
+        ϵ = _eps(T)
+        z = StatsFuns.logistic(y[1,col] - log(T(K - 1)))
+        unclamped_x = (z - ϵ) / (one(T) - 2ϵ)
+        clamped_x = _clamp(unclamped_x, SimplexBijector())
+        if unclamped_x == clamped_x
+            dxdy[1,1] = z * (1 - z) / (one(T) - 2ϵ)
+            inΔ[1,col] += outΔ[1,col] * dxdy[1,1]
+        end
+        sum_tmp = zero(T)
+        for k = 2:(K - 1)
+            z = StatsFuns.logistic(y[k,col] - log(T(K - k)))
+            sum_tmp += clamped_x
+            unclamped_x = ((one(T) + ϵ) - sum_tmp) / (one(T) - 2ϵ) * z - ϵ
+            clamped_x = _clamp(unclamped_x, SimplexBijector())
+            if unclamped_x == clamped_x
+                dxdy[k,k] = z * (1 - z) * ((one(T) + ϵ) - sum_tmp) / (one(T) - 2ϵ)
+                inΔ[k,col] += outΔ[k,col] * dxdy[k,k]
+                for i in 1:k-1
+                    @simd for j in i:k-1
+                        temp = -dxdy[j,i] * z / (one(T) - 2ϵ)
+                        dxdy[k,i] += temp
+                        inΔ[i,col] += outΔ[k,col] * temp
+                    end
+                end
+            end
+        end
+        @inbounds sum_tmp += clamped_x
+        @inbounds if proj
+            unclamped_x = one(T) - sum_tmp
+            clamped_x = _clamp(unclamped_x, SimplexBijector())
+        else
+            unclamped_x = one(T) - sum_tmp - y[K]
+            clamped_x = _clamp(unclamped_x, SimplexBijector())
+            if unclamped_x == clamped_x
+                inΔ[K,col] += -outΔ[K,col]
+            end
+        end
+        @inbounds if unclamped_x == clamped_x
+            for i in 1:K-1
+                @simd for j in i:K-1
+                    inΔ[i,col] += -outΔ[K,col] * dxdy[j,i]
+                end
+            end
+        end
+    end
+    return inΔ
+end
+=#
