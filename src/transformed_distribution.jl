@@ -34,11 +34,14 @@ transformed(d) = transformed(d, bijector(d))
 Returns the constrained-to-unconstrained bijector for distribution `d`.
 """
 bijector(d::DiscreteUnivariateDistribution) = Identity{0}()
+bijector(d::DiscreteMultivariateDistribution) = Identity{1}()
 bijector(d::ContinuousUnivariateDistribution) = TruncatedBijector(minimum(d), maximum(d))
 bijector(d::Distributions.Product) = stack(bijector.(d.v)...)
 
 bijector(d::Normal) = Identity{0}()
 bijector(d::MvNormal) = Identity{1}()
+bijector(d::MvNormalCanon) = Identity{1}()
+bijector(d::Distributions.AbstractMvLogNormal) = Log{1}()
 bijector(d::PositiveDistribution) = Log{0}()
 bijector(d::MvLogNormal) = Log{1}()
 bijector(d::SimplexDistribution) = SimplexBijector()
@@ -55,6 +58,8 @@ bijector(d::BoundedDistribution) = bijector_bounded(d)
 
 const LowerboundedDistribution = Union{Pareto, Levy}
 bijector(d::LowerboundedDistribution) = bijector_lowerbounded(d)
+
+bijector(d::PDMatDistribution) = PDBijector()
 
 
 ##############################

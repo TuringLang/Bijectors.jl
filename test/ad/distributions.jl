@@ -499,7 +499,7 @@
                 test_ad(testf.f, testf.x)
             end
 
-            dist = @eval :($(d.name)(d.θ...))
+            dist = eval(:($(d.name)($(d.θ)...)))
             x = d.x
             y = link(dist, x)
             @test invlink(dist, y) ≈ x
@@ -524,11 +524,6 @@
             x = d.x
             y = link(dist, x)
             @test invlink(dist, y) ≈ x
-
-            # if the transform is non-identity => verify that forward map is different
-            if !(bijector(dist) isa Identity)
-                @test x ≠ y
-            end
         end
     end
     separator()
@@ -545,11 +540,6 @@
             x = d.x
             y = link(dist, x)
             @test all(invlink(dist, y) .≈ x)
-
-            # if the transform is non-identity => verify that forward map is different
-            if !(bijector(dist) isa Identity)
-                @test all(x .≠ y)
-            end
         end
     end
 
@@ -566,11 +556,6 @@
             x = d.x
             y = link(dist, x)
             @test all(invlink(dist, y) .≈ x)
-
-            # if the transform is non-identity => verify that forward map is different
-            if !(bijector(dist) isa Identity)
-                @test all(x .≠ y)
-            end
         end
     end
     separator()
@@ -587,11 +572,6 @@
             x = d.x
             y = link(dist, x)
             @test all(invlink(dist, y) .≈ x)
-
-            # if the transform is non-identity => verify that forward map is different
-            if !(bijector(dist) isa Identity)
-                @test all(x .≠ y)
-            end
         end
     end
     separator()

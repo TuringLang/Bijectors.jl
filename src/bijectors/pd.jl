@@ -11,7 +11,10 @@ function (b::PDBijector)(X::AbstractMatrix{<:Real})
     Y = cholesky(X; check = true).L
     return replace_diag(log, Y)
 end
+(b::PDBijector)(X::AbstractArray{<:AbstractMatrix{<:Real}}) = map(b, X)
+
 function (ib::Inverse{<:PDBijector})(Y::AbstractMatrix{<:Real})
     X = replace_diag(exp, Y)
     return LowerTriangular(X) * LowerTriangular(X)'
 end
+(ib::Inverse{<:PDBijector})(X::AbstractArray{<:AbstractMatrix{<:Real}}) = map(ib, X)

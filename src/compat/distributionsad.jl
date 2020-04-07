@@ -1,6 +1,15 @@
-using .DistributionsAD: TuringDirichlet, TuringWishart, TuringInverseWishart,
-                        FillVectorOfUnivariate, FillMatrixOfUnivariate, VectorOfUnivariate,
-                        MatrixOfUnivariate, FillVectorOfMultivariate, VectorOfMultivariate
+using .DistributionsAD:
+    TuringDirichlet, TuringWishart, TuringInverseWishart, TuringScalMvNormal,
+    TuringDenseMvNormal, TuringDiagMvNormal,
+    FillVectorOfUnivariate, FillMatrixOfUnivariate, VectorOfUnivariate,
+    MatrixOfUnivariate, FillVectorOfMultivariate, VectorOfMultivariate
+
+bijector(::TuringDirichlet) = SimplexBijector()
+bijector(::TuringWishart) = PDBijector()
+bijector(::TuringInverseWishart) = PDBijector()
+bijector(::TuringScalMvNormal) = Identity{1}()
+bijector(::TuringDiagMvNormal) = Identity{1}()
+bijector(::TuringDenseMvNormal) = Identity{1}()
 
 # TuringDirichlet
 

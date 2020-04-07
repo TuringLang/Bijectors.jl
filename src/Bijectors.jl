@@ -157,34 +157,10 @@ const TransformDistribution{T<:ContinuousUnivariateDistribution} = Union{T, Trun
 end
 
 link(d::TransformDistribution, x::Real) = _link(d, _clamp(x, d))
-function _link(d::TransformDistribution, x::Real)
-    a, b = minimum(d), maximum(d)
-    lowerbounded, upperbounded = isfinite(a), isfinite(b)
-    if lowerbounded && upperbounded
-        return StatsFuns.logit((x - a) / (b - a))
-    elseif lowerbounded
-        return log(x - a)
-    elseif upperbounded
-        return log(b - x)
-    else
-        return x
-    end
-end
+_link(d::TransformDistribution, x::Real) = bijector(d)(x)
 
 invlink(d::TransformDistribution, y::Real) = _clamp(_invlink(d, y), d)
-function _invlink(d::TransformDistribution, y::Real)
-    a, b = minimum(d), maximum(d)
-    lowerbounded, upperbounded = isfinite(a), isfinite(b)
-    if lowerbounded && upperbounded
-        return (b - a) * StatsFuns.logistic(y) + a
-    elseif lowerbounded
-        return exp(y) + a
-    elseif upperbounded
-        return b - exp(y)
-    else
-        return y
-    end
-end
+_invlink(d::TransformDistribution, y::Real) = inv(bijector(d))(y)
 
 function logpdf_with_trans(
     d::TransformDistribution,
@@ -201,20 +177,7 @@ function logpdf_with_trans(
     return mapvcat(x -> _logpdf_with_trans(d, x, transform), x)
 end
 function _logpdf_with_trans(d::TransformDistribution, x::Real, transform::Bool)
-    lp = logpdf(d, x)
-    if transform
-        x = _clamp(x, d)
-        a, b = minimum(d), maximum(d)
-        lowerbounded, upperbounded = isfinite(a), isfinite(b)
-        if lowerbounded && upperbounded
-            lp += log((x - a) * (b - x) / (b - a))
-        elseif lowerbounded
-            lp += log(x - a)
-        elseif upperbounded
-            lp += log(b - x)
-        end
-    end
-    return lp
+    return logpdf(d, x) - transform * logabsdetjac(bijector(d), x)
 end
 
 #########
@@ -226,25 +189,11 @@ const PositiveDistribution = Union{
     InverseGaussian, Kolmogorov, LogNormal, NoncentralChisq, NoncentralF, Rayleigh, Weibull,
 }
 
-_link(d::PositiveDistribution, x::Real) = log(x)
-_invlink(d::PositiveDistribution, y::Real) = exp(y)
-function _logpdf_with_trans(d::PositiveDistribution, x::Real, transform::Bool)
-    return logpdf(d, x) + transform * log(x)
-end
-
-
 #############
 # 0 < x < 1 #
 #############
 
 const UnitDistribution = Union{Beta, KSOneSided, NoncentralBeta}
-
-_link(d::UnitDistribution, x::Real) = StatsFuns.logit(x)
-_invlink(d::UnitDistribution, y::Real) = StatsFuns.logistic(y)
-function _logpdf_with_trans(d::UnitDistribution, x::Real, transform::Bool)
-    return logpdf(d, x) + transform * log(x * (one(x) - x))
-end
-
 
 ###########
 # ∑xᵢ = 1 #
@@ -304,46 +253,14 @@ function logpdf_with_trans(d::Categorical, x::Int)
     return d.p[x] > 0.0 && insupport(d, x) ? log(d.p[x]) : eltype(d.p)(-Inf)
 end
 
-
-###############
-# MvLogNormal #
-###############
-
-using Distributions: AbstractMvLogNormal
-
-link(d::AbstractMvLogNormal, x::AbstractVecOrMat{<:Real}) = log.(x)
-invlink(d::AbstractMvLogNormal, y::AbstractVecOrMat{<:Real}) = exp.(y)
-function logpdf_with_trans(
-    d::AbstractMvLogNormal,
-    x::AbstractVector{<:Real},
-    transform::Bool,
-)
-    if transform
-        return logpdf(d, x) - logabsdetjac(Log{1}(), x)
-    else
-        return logpdf(d, x)
-    end
-end
-function logpdf_with_trans(
-    d::AbstractMvLogNormal,
-    x::AbstractMatrix{<:Real},
-    transform::Bool,
-)
-    if transform
-        return logpdf(d, x) .- logabsdetjac(Log{1}(), x)
-    else
-        return logpdf(d, x)
-    end
-end
-
 #####################
 # Positive definite #
 #####################
 
 const PDMatDistribution = Union{InverseWishart, Wishart}
 
-link(d::PDMatDistribution, X::AbstractMatrix{<:Real}) = PDBijector()(X)
-invlink(d::PDMatDistribution, Y::AbstractMatrix{<:Real}) = inv(PDBijector())(Y)
+# link(d::PDMatDistribution, X::AbstractMatrix{<:Real}) = PDBijector()(X)
+# invlink(d::PDMatDistribution, Y::AbstractMatrix{<:Real}) = inv(PDBijector())(Y)
 
 function logpdf_with_trans(
     d::PDMatDistribution,
