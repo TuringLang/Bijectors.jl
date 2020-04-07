@@ -254,7 +254,7 @@ function link(
     dist::VectorOfUnivariate,
     x::AbstractMatrix{<:Real},
 )
-    return mapvcat(eachcol(x)) do x
+    return eachcolmaphcat(x) do x
         link(dist, x)
     end
 end
@@ -271,7 +271,7 @@ function invlink(
     dist::VectorOfUnivariate,
     x::AbstractMatrix{<:Real},
 )
-    return mapvcat(eachcol(x)) do x
+    return eachcolmaphcat(x) do x
         invlink(dist, x)
     end
 end
