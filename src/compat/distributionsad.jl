@@ -254,7 +254,7 @@ function link(
     dist::VectorOfUnivariate,
     x::AbstractMatrix{<:Real},
 )
-    return mapvcat(eachcol(x)) do x
+    return eachcolmaphcat(x) do x
         link(dist, x)
     end
 end
@@ -271,12 +271,19 @@ function invlink(
     dist::VectorOfUnivariate,
     x::AbstractMatrix{<:Real},
 )
+<<<<<<< HEAD
     return mapvcat(eachcol(x)) do x
+=======
+    return eachcolmaphcat(x) do x
+>>>>>>> master
         invlink(dist, x)
     end
 end
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> master
 function logpdf_with_trans(
     dist::MatrixOfUnivariate,
     x::AbstractMatrix{<:Real},
