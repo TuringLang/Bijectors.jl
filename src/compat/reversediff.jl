@@ -32,8 +32,7 @@ for c in combs, f = [:hcat, :vcat]
     cnames = map(_ -> gensym(), c)
     push!(expr.args, :(Base.$f($([:($x::$c) for (x, c) in zip(cnames, c)]...), x::Union{RTA, RTR}, xs::Union{AbstractArray, Number}...) = track($f, $(cnames...), x, xs...)))
 end
-using DistributionsAD
-#=@init @require DistributionsAD = "ced4e74d-a319-5a8a-b0ac-84af2272839c"=# @eval begin
+@init @require DistributionsAD = "ced4e74d-a319-5a8a-b0ac-84af2272839c" @eval begin
     $expr
     DistributionsAD.ReverseDiffX.@grad function vcat(x::Real)
         vcat(value(x)), (Δ) -> (Δ[1],)
