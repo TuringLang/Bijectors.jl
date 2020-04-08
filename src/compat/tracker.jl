@@ -431,3 +431,11 @@ logabsdetjac(b::Log{1}, x::TrackedMatrix) = - vec(sum(log.(x); dims = 1))
 _logabsdetjac_shift(a::Real, x::TrackedVector{T}, ::Val{0}) where {T<:Real} = zeros(T, length(x))
 _logabsdetjac_shift(a::T1, x::TrackedVector{T2}, ::Val{1}) where {T1<:Union{Real, TrackedVector}, T2<:Real} = zero(T2)
 _logabsdetjac_shift(a::T1, x::TrackedMatrix{T2}, ::Val{1}) where {T1<:Union{Real, TrackedVector}, T2<:Real} = zeros(T2, size(x, 2))
+
+# `logabsdetjac` of `Identity` is just `zero(eltype)` with correct dimensionality.
+# But `eltype(::TrackedARray)` will result in a `Array{<:Tracker}`. So we just don't
+# propagate the gradient through it.
+function logabsdetjac(b::Identity{N}, x::TrackedArray) where {N}
+    # Un-track aan track so as to stay consistent with return-type
+    return Tracker.param(logabsdetjac(b, Tracker.data(x)))
+end
