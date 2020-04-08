@@ -36,7 +36,7 @@ Returns the constrained-to-unconstrained bijector for distribution `d`.
 bijector(d::DiscreteUnivariateDistribution) = Identity{0}()
 bijector(d::DiscreteMultivariateDistribution) = Identity{1}()
 bijector(d::ContinuousUnivariateDistribution) = TruncatedBijector(minimum(d), maximum(d))
-bijector(d::Distributions.Product) = stack(bijector.(d.v)...)
+bijector(d::Distributions.Product) = Stacked(bijector.(d.v))
 
 bijector(d::Normal) = Identity{0}()
 bijector(d::MvNormal) = Identity{1}()
