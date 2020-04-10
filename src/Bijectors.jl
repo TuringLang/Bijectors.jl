@@ -257,10 +257,8 @@ end
 # Positive definite #
 #####################
 
-const PDMatDistribution = Union{InverseWishart, Wishart, MatrixBeta}
+const PDMatDistribution = Union{InverseWishart, Wishart}
 
-# link(d::PDMatDistribution, X::AbstractMatrix{<:Real}) = PDBijector()(X)
-# invlink(d::PDMatDistribution, Y::AbstractMatrix{<:Real}) = inv(PDBijector())(Y)
 
 function logpdf_with_trans(
     d::PDMatDistribution,

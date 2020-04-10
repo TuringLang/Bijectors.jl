@@ -18,3 +18,20 @@ function (ib::Inverse{<:PDBijector})(Y::AbstractMatrix{<:Real})
     return LowerTriangular(X) * LowerTriangular(X)'
 end
 (ib::Inverse{<:PDBijector})(X::AbstractArray{<:AbstractMatrix{<:Real}}) = map(ib, X)
+
+function logabsdetjac(b::PDBijector, X::AbstractMatrix{<:Real})
+    T = eltype(X)
+    Xcf = cholesky(X, check = false)
+    if !issuccess(Xcf)
+        Xcf = cholesky(X + max(eps(T), eps(T) * norm(X)) * I)
+    end
+
+    return logabsdetjac(b, Xcf)
+end
+
+function Bijectors.logabsdetjac(b::Bijectors.PDBijector, Xcf::Cholesky)
+    U = Xcf.U
+    T = eltype(U)
+    d = size(U, 1)
+    return - sum((d .- (1:d) .+ 2) .* log.(diag(U))) + d * log(T(2))
+end

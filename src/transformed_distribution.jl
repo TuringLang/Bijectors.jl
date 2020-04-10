@@ -60,6 +60,7 @@ const LowerboundedDistribution = Union{Pareto, Levy}
 bijector(d::LowerboundedDistribution) = bijector_lowerbounded(d)
 
 bijector(d::PDMatDistribution) = PDBijector()
+bijector(d::MatrixBeta) = PDBijector()
 
 
 ##############################
