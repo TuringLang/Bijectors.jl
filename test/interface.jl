@@ -163,11 +163,11 @@ end
             y = @inferred b(x)
 
             ys = @inferred b(xs)
-            @test @inferred(b(param(xs))) isa TrackedArray
+            @inferred(b(param(xs)))
 
             x_ = @inferred ib(y)
             xs_ = @inferred ib(ys)
-            @test @inferred(ib(param(ys))) isa TrackedArray
+            @inferred(ib(param(ys)))
 
             result = @inferred forward(b, x)
             results = @inferred forward(b, xs)
@@ -505,8 +505,8 @@ end
     b1 = DistributionBijector(d)
     b2 = DistributionBijector(Gamma())
 
-    cb = b1 ∘ b2
-    @test cb(x) ≈ b1(b2(x))
+    cb = inv(b1) ∘ b2
+    @test cb(x) ≈ inv(b1)(b2(x))
 
     # contrived example
     b = bijector(d)

@@ -15,50 +15,23 @@ using LinearAlgebra
 _istracked(x::AbstractArray{<:TrackedReal}) = true
 _istracked(::TrackedArray) = false
 
-Tracker.dual(x::Bool, p) = x
-Base.prevfloat(r::TrackedReal) = track(prevfloat, r)
-@grad function prevfloat(r::Real)
-    prevfloat(data(r)), Δ -> Δ
-end
-Base.nextfloat(r::TrackedReal) = track(nextfloat, r)
-@grad function nextfloat(r::Real)
-    nextfloat(data(r)), Δ -> Δ
-end
-for i = 0:2, c = Tracker.combinations([:AbstractArray, :TrackedArray, :TrackedReal, :Number], i), f = [:hcat, :vcat]
-    if :TrackedReal in c
-        cnames = map(_ -> gensym(), c)
-        @eval Base.$f($([:($x::$c) for (x, c) in zip(cnames, c)]...), x::Union{TrackedArray,TrackedReal}, xs::Union{AbstractArray,Number}...) =
-            track($f, $(cnames...), x, xs...)
+_eps(::Type{<:TrackedReal{T}}) where {T} = _eps(T)
+function Base.minimum(d::LocationScale{<:TrackedReal})
+    m = minimum(d.ρ)
+    if isfinite(m)
+        return d.μ + d.σ * m
+    else
+        return m
     end
 end
-@grad function vcat(x::Real)
-    vcat(data(x)), (Δ) -> (Δ[1],)
+function Base.maximum(d::LocationScale{<:TrackedReal})
+    m = maximum(d.ρ)
+    if isfinite(m)
+        return d.μ + d.σ * m
+    else
+        return m
+    end
 end
-@grad function vcat(x1::Real, x2::Real)
-    vcat(data(x1), data(x2)), (Δ) -> (Δ[1], Δ[2])
-end
-@grad function vcat(x1::AbstractVector, x2::Real)
-    vcat(data(x1), data(x2)), (Δ) -> (Δ[1:length(x1)], Δ[length(x1)+1])
-end
-
-function Base.copy(
-    A::TrackedArray{T, 2, <:Adjoint{T, <:AbstractTriangular{T, <:AbstractMatrix{T}}}},
-) where {T <: Real}
-    return track(copy, A)
-end
-@grad function Base.copy(
-    A::TrackedArray{T, 2, <:Adjoint{T, <:AbstractTriangular{T, <:AbstractMatrix{T}}}},
-) where {T <: Real}
-    return copy(data(A)), ∇ -> (copy(∇),)
-end
-
-Base.:*(A::TrackedMatrix, B::AbstractTriangular) = track(*, A, B)
-Base.:*(A::AbstractTriangular{T}, B::TrackedVector) where {T} = track(*, A, B)
-Base.:*(A::AbstractTriangular{T}, B::TrackedMatrix) where {T} = track(*, A, B)
-Base.:*(A::Adjoint{T, <:AbstractTriangular{T}}, B::TrackedMatrix) where {T} = track(*, A, B)
-Base.:*(A::Adjoint{T, <:AbstractTriangular{T}}, B::TrackedVector) where {T} = track(*, A, B)
-
-_eps(::Type{<:TrackedReal{T}}) where {T} = _eps(T)
 
 # AD implementations
 function jacobian(
@@ -162,7 +135,7 @@ end
 
 # implementations for Stacked bijector
 function logabsdetjac(b::Stacked, x::TrackedMatrix{<:Real})
-    return mapvcat(eachcol(x)) do c
+    return map(eachcol(x)) do c
         logabsdetjac(b, c)
     end
 end

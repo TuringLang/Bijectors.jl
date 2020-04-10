@@ -2,9 +2,10 @@ using .DistributionsAD: TuringDirichlet, TuringWishart, TuringInverseWishart,
                         FillVectorOfUnivariate, FillMatrixOfUnivariate, VectorOfUnivariate,
                         MatrixOfUnivariate, FillVectorOfMultivariate, VectorOfMultivariate
 
+@register DistributionsAD.TuringUniform
+
 # TuringDirichlet
 
-_clamp(x, ::TuringDirichlet) = _clamp(x, SimplexBijector())
 bijector(d::TuringDirichlet) = SimplexBijector()
 
 function link(
@@ -50,7 +51,7 @@ function logpdf_with_trans(
     X::AbstractArray{<:AbstractMatrix{<:Real}},
     transform::Bool
 )
-    return mapvcat(X) do x
+    return map(X) do x
         _logpdf_with_trans_pd(d, x, transform)
     end
 end
@@ -74,7 +75,7 @@ function logpdf_with_trans(
     X::AbstractArray{<:AbstractMatrix{<:Real}},
     transform::Bool
 )
-    return mapvcat(X) do x
+    return map(X) do x
         _logpdf_with_trans_pd(d, x, transform)
     end
 end
@@ -92,16 +93,9 @@ function logpdf_with_trans(
     x::AbstractVector{<:Real},
     istrans::Bool,
 )
-    return _sum(x) do x
+    return map(x) do x
         logpdf_with_trans(dist.v.value, x, istrans)
-    end
-end
-function logpdf_with_trans(
-    dist::FillVectorOfUnivariate,
-    x::AbstractMatrix{<:Real},
-    istrans::Bool,
-)
-    return vec(sum(logpdf_with_trans(dist.v.value, x, istrans), dims = 1))
+    end |> sum
 end
 function link(
     dist::FillVectorOfUnivariate,
@@ -109,21 +103,9 @@ function link(
 )
     return link(dist.v.value, x)
 end
-function link(
-    dist::FillVectorOfUnivariate,
-    x::AbstractMatrix{<:Real},
-)
-    return link(dist.v.value, x)
-end
 function invlink(
     dist::FillVectorOfUnivariate,
     x::AbstractVector{<:Real},
-)
-    return invlink(dist.v.value, x)
-end
-function invlink(
-    dist::FillVectorOfUnivariate,
-    x::AbstractMatrix{<:Real},
 )
     return invlink(dist.v.value, x)
 end
@@ -133,18 +115,9 @@ function logpdf_with_trans(
     x::AbstractMatrix{<:Real},
     istrans::Bool,
 )
-    return _sum(x) do x
+    return map(x) do x
         logpdf_with_trans(dist.dists.value, x, istrans)
-    end
-end
-function logpdf_with_trans(
-    dist::FillMatrixOfUnivariate,
-    x::AbstractArray{<:AbstractMatrix{<:Real}},
-    istrans::Bool,
-)
-    return mapvcat(x) do x
-        logpdf_with_trans(dist, x, istrans)
-    end
+    end |> sum
 end
 function link(
     dist::FillMatrixOfUnivariate,
@@ -166,15 +139,6 @@ function logpdf_with_trans(
 )
     return sum(logpdf_with_trans(dist.dists.value, x, istrans))
 end
-function logpdf_with_trans(
-    dist::FillVectorOfMultivariate,
-    x::AbstractArray{<:AbstractMatrix{<:Real}},
-    istrans::Bool,
-)
-    return mapvcat(x) do x
-        logpdf_with_trans(dist, x, istrans)
-    end
-end
 function link(
     dist::FillVectorOfMultivariate,
     x::AbstractMatrix{<:Real},
@@ -193,17 +157,8 @@ function logpdf_with_trans(
     x::AbstractMatrix{<:Real},
     istrans::Bool,
 )
-    return _sumeachcol(x, dist.dists) do c, dist
+    return sumeachcol(x, dist.dists) do c, dist
         logpdf_with_trans(dist, c, istrans)
-    end
-end
-function logpdf_with_trans(
-    dist::VectorOfMultivariate,
-    x::AbstractArray{<:AbstractMatrix{<:Real}},
-    istrans::Bool,
-)
-    return mapvcat(x) do x
-        logpdf_with_trans(dist, x, istrans)
     end
 end
 function link(
@@ -228,34 +183,24 @@ function logpdf_with_trans(
     x::AbstractVector{<:Real},
     istrans::Bool,
 )
-    return _sum(dist.v, x) do dist, x
+    return map(dist.v, x) do dist, x
         logpdf_with_trans(dist, x, istrans)
-    end
-end
-function logpdf_with_trans(
-    dist::VectorOfUnivariate,
-    x::AbstractMatrix{<:Real},
-    istrans::Bool,
-)
-    return mapvcat(1:size(x,2)) do i
-        c = view(x, :, i)
-        sum(logpdf_with_trans.(dist.v, c, istrans))
-    end
+    end |> sum
 end
 function link(
     dist::VectorOfUnivariate,
     x::AbstractVector{<:Real},
 )
-    return mapvcat(dist.v, x) do dist, x
+    return map(dist.v, x) do dist, x
         link(dist, x)
     end
 end
-function link(
+function invlink(
     dist::VectorOfUnivariate,
-    x::AbstractMatrix{<:Real},
+    x::AbstractVector{<:Real},
 )
-    return eachcolmaphcat(x) do x
-        link(dist, x)
+    return map(dist.v, x) do dist, x
+        invlink(dist, x)
     end
 end
 
@@ -281,24 +226,15 @@ function logpdf_with_trans(
     x::AbstractMatrix{<:Real},
     istrans::Bool,
 )
-    return _sum(dist.dists, x) do dist, x
+    return map(dist.dists, x) do dist, x
         logpdf_with_trans(dist, x, istrans)
-    end
-end
-function logpdf_with_trans(
-    dist::MatrixOfUnivariate,
-    x::AbstractArray{<:AbstractMatrix{<:Real}},
-    istrans::Bool,
-)
-    return mapvcat(x) do x
-        logpdf_with_trans(dist, x, istrans)
-    end
+    end |> sum
 end
 function link(
     dist::MatrixOfUnivariate,
     x::AbstractMatrix{<:Real},
 )
-    return mapvcat(dist.dists, x) do dist, x
+    return map(dist.dists, x) do dist, x
         link(dist, x)
     end
 end
@@ -306,7 +242,7 @@ function invlink(
     dist::MatrixOfUnivariate,
     x::AbstractMatrix{<:Real},
 )
-    return mapvcat(dist.dists, x) do dist, x
+    return map(dist.dists, x) do dist, x
         invlink(dist, x)
     end
 end

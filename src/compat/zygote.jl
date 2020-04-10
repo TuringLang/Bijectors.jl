@@ -21,11 +21,7 @@ end
     end
     return pullback(g, f, x)
 end
-@adjoint function _sum(f, args...)
-    g(f, args...) = sum(map(f, args...))
-    return pullback(g, f, args...)
-end
-@adjoint function _sumeachcol(f, x1, x2)
+@adjoint function sumeachcol(f, x1, x2)
     g(f, x1, x2) = sum([f(view(x1, :, i), x2[i]) for i in 1:size(x1, 2)])
     return pullback(g, f, x1, x2)
 end
@@ -160,19 +156,25 @@ end
 
 # LocationScale fix
 
-@adjoint function _clamp(x::T, dist::LocationScale) where {T <: Real}
-    function f(x, dist)
-        ϵ = _eps(T)
-        bounds = (minimum(dist) + ϵ, maximum(dist) - ϵ)
-        if x < bounds[1]
-            clamped_x = bounds[1]
-        elseif x > bounds[2]
-            clamped_x = bounds[2]
+@adjoint function minimum(d::LocationScale)
+    function _minimum(d)
+        m = minimum(d.ρ)
+        if isfinite(m)
+            return d.μ + d.σ * m
         else
-            clamped_x = x
+            return m
         end
-        DEBUG && _debug("x = $x, bounds = $bounds, clamped_x = $clamped_x")
-        return clamped_x
     end
-    return pullback(f, x, dist)
+    return pullback(_minimum, d)
+end
+@adjoint function maximum(d::LocationScale)
+    function _maximum(d)
+        m = maximum(d.ρ)
+        if isfinite(m)
+            return d.μ + d.σ * m
+        else
+            return m
+        end
+    end
+    return pullback(_maximum, d)
 end
