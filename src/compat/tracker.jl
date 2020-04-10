@@ -11,10 +11,6 @@ using .Tracker: Tracker,
                 param
 using LinearAlgebra
 
-# Different from Tracker.istracked
-_istracked(x::AbstractArray{<:TrackedReal}) = true
-_istracked(::TrackedArray) = false
-
 _eps(::Type{<:TrackedReal{T}}) where {T} = _eps(T)
 function Base.minimum(d::LocationScale{<:TrackedReal})
     m = minimum(d.ρ)
