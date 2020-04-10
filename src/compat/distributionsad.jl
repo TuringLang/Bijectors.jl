@@ -178,47 +178,28 @@ function invlink(
     end
 end
 
+using .DistributionsAD: maporbroadcast
+
 function logpdf_with_trans(
     dist::VectorOfUnivariate,
     x::AbstractVector{<:Real},
     istrans::Bool,
 )
-    return map(dist.v, x) do dist, x
-        logpdf_with_trans(dist, x, istrans)
-    end |> sum
+    return maporbroadcast(dist.v, x) do d, x
+        logpdf_with_trans(d, x, istrans)
+    end
 end
 function link(
     dist::VectorOfUnivariate,
     x::AbstractVector{<:Real},
 )
-    return map(dist.v, x) do dist, x
-        link(dist, x)
-    end
+    return maporbroadcast(link, dist.v, x)
 end
 function invlink(
     dist::VectorOfUnivariate,
     x::AbstractVector{<:Real},
 )
-    return map(dist.v, x) do dist, x
-        invlink(dist, x)
-    end
-end
-
-function invlink(
-    dist::VectorOfUnivariate,
-    x::AbstractVector{<:Real},
-)
-    return mapvcat(dist.v, x) do dist, x
-        invlink(dist, x)
-    end
-end
-function invlink(
-    dist::VectorOfUnivariate,
-    x::AbstractMatrix{<:Real},
-)
-    return eachcolmaphcat(x) do x
-        invlink(dist, x)
-    end
+    return maporbroadcast(invlink, dist.v, x)
 end
 
 function logpdf_with_trans(
@@ -226,7 +207,7 @@ function logpdf_with_trans(
     x::AbstractMatrix{<:Real},
     istrans::Bool,
 )
-    return map(dist.dists, x) do dist, x
+    return maporbroadcast(dist.dists, x) do dist, x
         logpdf_with_trans(dist, x, istrans)
     end |> sum
 end
@@ -234,15 +215,11 @@ function link(
     dist::MatrixOfUnivariate,
     x::AbstractMatrix{<:Real},
 )
-    return map(dist.dists, x) do dist, x
-        link(dist, x)
-    end
+    return maporbroadcast(link, dist.dists, x)
 end
 function invlink(
     dist::MatrixOfUnivariate,
     x::AbstractMatrix{<:Real},
 )
-    return map(dist.dists, x) do dist, x
-        invlink(dist, x)
-    end
+    return maporbroadcast(invlink, dist.dists, x)
 end
