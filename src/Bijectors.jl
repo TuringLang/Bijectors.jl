@@ -257,7 +257,7 @@ end
 # Positive definite #
 #####################
 
-const PDMatDistribution = Union{InverseWishart, Wishart}
+const PDMatDistribution = Union{InverseWishart, Wishart, MatrixBeta}
 
 # link(d::PDMatDistribution, X::AbstractMatrix{<:Real}) = PDBijector()(X)
 # invlink(d::PDMatDistribution, Y::AbstractMatrix{<:Real}) = inv(PDBijector())(Y)
