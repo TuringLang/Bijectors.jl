@@ -12,9 +12,13 @@ function get_stage()
         else
             return "nonAD"
         end
+    else
+        if "STAGE" in keys(ENV)
+            return ENV["STAGE"]
+        else
+            return "all"
+        end
     end
-
-    return "all"
 end
 
 stg = get_stage()
