@@ -36,6 +36,6 @@ function Bijectors.logabsdetjac(b::Bijectors.PDBijector, Xcf::Cholesky)
     return - sum((d .- (1:d) .+ 2) .* log.(diag(U))) + d * log(T(2))
 end
 
-logabsdetjac(b::PDBijector, X::AbstractArray{<:AbstractMatrix{<:Real}}) = map(X) do x
+logabsdetjac(b::PDBijector, X::AbstractArray{<:AbstractMatrix{<:Real}}) = mapvcat(X) do x
     logabsdetjac(b, x)
 end
