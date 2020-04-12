@@ -152,11 +152,11 @@ function logabsdetjac(b::SimplexBijector, x::AbstractVector{T}) where {T}
 
     sum_tmp = zero(eltype(x))
     @inbounds z = x[1]
-    lp += log(z + ϵ) + log((one(T) + ϵ) - z)
+    lp += log(max(z, ϵ)) + log(max(one(T) - z, ϵ))
     @inbounds @simd for k in 2:(K - 1)
         sum_tmp += x[k-1]
-        z = x[k] / ((one(T) + ϵ) - sum_tmp)
-        lp += log(z + ϵ) + log((one(T) + ϵ) - z) + log((one(T) + ϵ) - sum_tmp)
+        z = x[k] / max(one(T) - sum_tmp, ϵ)
+        lp += log(max(z, ϵ)) + log(max(one(T) - z, ϵ)) + log(max(one(T) - sum_tmp, ϵ))
     end
 
     return -lp
@@ -170,19 +170,26 @@ function simplex_logabsdetjac_gradient(x::AbstractVector)
     sum_tmp = zero(eltype(x))
     @inbounds z = x[1]
     #lp += log(z + ϵ) + log((one(T) + ϵ) - z)
-    g[1] = -1/(z + ϵ) + 1/((one(T) + ϵ) - z)
+    c1 = z >= ϵ
+    zc = one(T) - z
+    c2 = zc >= ϵ
+    g[1] = ifelse(c1 & c2, -1/z + 1/zc, ifelse(c1, -1/z, 1/zc))
     @inbounds @simd for k in 2:(K - 1)
         sum_tmp += x[k-1]
-        temp = ((one(T) + ϵ) - sum_tmp)
-        z = x[k] / temp
+        temp = 1 / (1 - sum_tmp)
+        c0 = temp >= ϵ
+        z = ifelse(c0, x[k] * temp, x[k] / ϵ)
         #lp += log(z + ϵ) + log((one(T) + ϵ) - z) + log(temp)
-        dzdx = 1 / temp
-        dldz = (1/(z + ϵ) - 1/((one(T) + ϵ) - z))
+        dzdx = ifelse(c0, temp, one(T))
+        c1 = z >= ϵ
+        zc = one(T) - z
+        c2 = zc >= ϵ
+        dldz = ifelse(c1 & c2, 1/z - 1/zc, ifelse(c1, 1/z, -1/zc))
         dldx = dldz * dzdx
-	    g[k] -= (1/(z + ϵ) - 1/((one(T) + ϵ) - z)) * 1 / ((one(T) + ϵ) - sum_tmp)
+	    g[k] -= dldx
         for i in 1:k-1
-	        dzdxp = x[k] * dzdx^2
-	        dldxp = dldz * dzdxp - 1 / temp
+	        dzdxp = ifelse(c0, x[k] * dzdx^2, zero(T))
+	        dldxp = dldz * dzdxp - ifelse(c0, temp, zero(T))
 	        g[i] -= dldxp
 	    end
     end
@@ -196,12 +203,12 @@ function logabsdetjac(b::SimplexBijector, x::AbstractMatrix{T}) where {T}
     K = size(x, 1)
     for col in 1:size(x, 2)
         sum_tmp = zero(eltype(x))
-        @inbounds z = x[1,col]
-        nlp[col] -= log(z + ϵ) + log((one(T) + ϵ) - z)
-        @inbounds @simd for k in 2:(K - 1)
+        z = x[1,col]
+        nlp[col] -= log(max(z, ϵ)) + log(max(one(T) - z, ϵ))
+        for k in 2:(K - 1)
             sum_tmp += x[k-1,col]
-            z = x[k,col] / ((one(T) + ϵ) - sum_tmp)
-            nlp[col] -= log(z + ϵ) + log((one(T) + ϵ) - z) + log((one(T) + ϵ) - sum_tmp)
+            z = x[k,col] / max(one(T) - sum_tmp, ϵ)
+            nlp[col] -= log(max(z, ϵ)) + log(max(one(T) - z, ϵ)) + log(max(one(T) - sum_tmp, ϵ))
         end
     end
     return nlp
@@ -216,19 +223,26 @@ function simplex_logabsdetjac_gradient(x::AbstractMatrix)
         sum_tmp = zero(eltype(x))
         z = x[1,col]
         #lp += log(z + ϵ) + log((one(T) + ϵ) - z)
-        g[1,col] = -1/(z + ϵ) + 1/((one(T) + ϵ) - z)
+        c1 = z >= ϵ
+        zc = one(T) - z
+        c2 = zc >= ϵ
+        g[1,col] = ifelse(c1 & c2, -1/z + 1/zc, ifelse(c1, -1/z, 1/zc))
         for k in 2:(K - 1)
             sum_tmp += x[k-1,col]
-            temp = ((one(T) + ϵ) - sum_tmp)
-            z = x[k,col] / temp
+            temp = 1 / (1 - sum_tmp)
+            c0 = temp >= ϵ
+            z = ifelse(c0, x[k,col] * temp, x[k,col] / ϵ)
             #lp += log(z + ϵ) + log((one(T) + ϵ) - z) + log(temp)
-            dzdx = 1 / temp
-            dldz = (1/(z + ϵ) - 1/((one(T) + ϵ) - z))
+            dzdx = ifelse(c0, temp, one(T))
+            c1 = z >= ϵ
+            zc = one(T) - z
+            c2 = zc >= ϵ
+            dldz = ifelse(c1 & c2, 1/z - 1/zc, ifelse(c1, 1/z, -1/zc))
             dldx = dldz * dzdx
-            g[k,col] -= (1/(z + ϵ) - 1/((one(T) + ϵ) - z)) * 1 / ((one(T) + ϵ) - sum_tmp)
+            g[k,col] -= dldx
             for i in 1:k-1
-                dzdxp = x[k,col] * dzdx^2
-                dldxp = dldz * dzdxp - 1 / temp
+                dzdxp = ifelse(c0, x[k,col] * dzdx^2, zero(T))
+                dldxp = dldz * dzdxp - ifelse(c0, temp, zero(T))
                 g[i,col] -= dldxp
             end
         end
