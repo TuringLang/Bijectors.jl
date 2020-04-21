@@ -29,7 +29,7 @@ function logabsdetjac(b::PDBijector, X::AbstractMatrix{<:Real})
     return logabsdetjac(b, Xcf)
 end
 
-function Bijectors.logabsdetjac(b::Bijectors.PDBijector, Xcf::Cholesky)
+function logabsdetjac(b::PDBijector, Xcf::Cholesky)
     U = Xcf.U
     T = eltype(U)
     d = size(U, 1)
