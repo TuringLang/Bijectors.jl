@@ -7,16 +7,6 @@ const RTM = ReverseDiff.TrackedMatrix
 
 _eps(::Type{<:RTR{T}}) where {T} = _eps(T)
 
-Base.:*(A::RTM{<:Any, D}, B::AbstractTriangular) where {D} = record_mul(A, B, D)
-Base.:*(A::AbstractTriangular, B::RTV{<:Any, D}) where {D} = record_mul(A, B, D)
-Base.:*(A::AbstractTriangular, B::RTM{<:Any, D}) where {D} = record_mul(A, B, D)
-function Base.:*(A::Adjoint{T, <:AbstractTriangular{T}}, B::RTM{<:Any, D}) where {T, D}
-    return record_mul(A, B, D)
-end
-function Base.:*(A::Adjoint{T, <:AbstractTriangular{T}}, B::RTV{<:Any, D}) where {T, D}
-    return record_mul(A, B, D)
-end
-
 function replace_diag(::typeof(log), X::RTM{<:Any, D}) where {D}
     tp = ReverseDiff.tape(X)
     X_value = ReverseDiff.value(X)
@@ -55,7 +45,7 @@ end
     return nothing
 end
 
-@noinline function special_forward_exec!(instruction::SpecialInstruction{typeof(replace_diag)})
+@noinline function ReverseDiff.special_forward_exec!(instruction::SpecialInstruction{typeof(replace_diag)})
     output, input = instruction.output, instruction.input
     out_value = replace_diag(ReverseDiff.value(input[1]), ReverseDiff.value(input[2]))
     ReverseDiff.value!(output, out_value)

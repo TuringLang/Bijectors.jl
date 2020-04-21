@@ -54,6 +54,8 @@ bijector(d::BoundedDistribution) = bijector_bounded(d)
 const LowerboundedDistribution = Union{Pareto, Levy}
 bijector(d::LowerboundedDistribution) = bijector_lowerbounded(d)
 
+bijector(d::Distributions.Product) = Stacked(bijector.(d.v))
+
 
 ##############################
 # Distributions.jl interface #
