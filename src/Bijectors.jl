@@ -174,33 +174,39 @@ function logpdf_with_trans(
     end
 end
 
+link(dist::Distributions.Product{Discrete}, x::AbstractVector{<:Real}) = copy(x)
 function link(
-    dist::Distributions.Product,
+    dist::Distributions.Product{Continuous},
     x::AbstractVector{<:Real},
 )
     return maporbroadcast(link, dist.v, x)
 end
+
+link(dist::Distributions.Product{Discrete}, x::AbstractMatrix{<:Real}) = copy(x)
 function link(
-    dist::Distributions.Product,
+    dist::Distributions.Product{Continuous},
     x::AbstractMatrix{<:Real},
 )
-    return map(eachcol(x)) do x
-        link(dist, x)
+    return eachcolmaphcat(x) do c
+        link(dist, c)
     end
 end
 
+invlink(dist::Distributions.Product{Discrete}, x::AbstractVector{<:Real}) = copy(x)
 function invlink(
-    dist::Distributions.Product,
+    dist::Distributions.Product{Continuous},
     x::AbstractVector{<:Real},
 )
     return maporbroadcast(invlink, dist.v, x)
 end
+
+invlink(dist::Distributions.Product{Discrete}, x::AbstractMatrix{<:Real}) = copy(x)
 function invlink(
-    dist::Distributions.Product,
+    dist::Distributions.Product{Continuous},
     x::AbstractMatrix{<:Real},
 )
-    return map(eachcol(x)) do x
-        invlink(dist, x)
+    return eachcolmaphcat(x) do c
+        invlink(dist, c)
     end
 end
 
