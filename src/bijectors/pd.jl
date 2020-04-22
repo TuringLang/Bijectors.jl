@@ -7,17 +7,20 @@ function replace_diag(f, X)
     g(i, j) = ifelse(i == j, f(X[i, i]), X[i, j])
     return g.(1:size(X, 1), (1:size(X, 2))')
 end
-function (b::PDBijector)(X::AbstractMatrix{<:Real})
-    Y = cholesky(X; check = true).L
+(b::PDBijector)(X::AbstractMatrix{<:Real}) = pd_link(X)
+function pd_link(X)
+    Y = lower(parent(cholesky(X; check = true).L))
     return replace_diag(log, Y)
 end
 (b::PDBijector)(X::AbstractArray{<:AbstractMatrix{<:Real}}) = map(b, X)
+lower(A::AbstractMatrix) = convert(typeof(A), LowerTriangular(A))
 
 function (ib::Inverse{<:PDBijector})(Y::AbstractMatrix{<:Real})
     X = replace_diag(exp, Y)
-    return LowerTriangular(X) * LowerTriangular(X)'
+    return getpd(X)
 end
 (ib::Inverse{<:PDBijector})(X::AbstractArray{<:AbstractMatrix{<:Real}}) = map(ib, X)
+getpd(X) = LowerTriangular(X) * LowerTriangular(X)'
 
 function logabsdetjac(b::PDBijector, X::AbstractMatrix{<:Real})
     T = eltype(X)
