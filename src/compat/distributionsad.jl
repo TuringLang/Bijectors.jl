@@ -126,34 +126,51 @@ end
 # filldist and arraydist
 
 function logpdf_with_trans(
-    dist::FillVectorOfUnivariate,
+    dist::FillVectorOfUnivariate{Discrete},
+    x::AbstractVecOrMat{<:Real},
+    istrans::Bool,
+)
+    return logpdf(dist, x)
+end
+function logpdf_with_trans(
+    dist::FillVectorOfUnivariate{Continuous},
     x::AbstractVector{<:Real},
     istrans::Bool,
 )
     return sum(logpdf_with_trans(dist.v.value, x, istrans))
 end
 function logpdf_with_trans(
-    dist::FillVectorOfUnivariate,
+    dist::FillVectorOfUnivariate{Continuous},
     x::AbstractMatrix{<:Real},
     istrans::Bool,
 )
     return vec(sum(logpdf_with_trans(dist.v.value, x, istrans), dims = 1))
 end
 
-link(dist::FillVectorOfUnivariate{Discrete}, x::AbstractVector{<:Real}) = copy(x)
-link(dist::FillVectorOfUnivariate{Discrete}, x::AbstractMatrix{<:Real}) = copy(x)
+link(dist::FillVectorOfUnivariate{Discrete}, x::AbstractVecOrMat{<:Real}) = copy(x)
 function link(
     dist::FillVectorOfUnivariate{Continuous},
     x::AbstractVector{<:Real},
 )
     return link(dist.v.value, x)
 end
+function link(
+    dist::FillVectorOfUnivariate{Continuous},
+    x::AbstractMatrix{<:Real},
+)
+    return link(dist.v.value, x)
+end
 
-invlink(dist::FillVectorOfUnivariate{Discrete}, x::AbstractVector{<:Real}) = copy(x)
-invlink(dist::FillVectorOfUnivariate{Discrete}, x::AbstractMatrix{<:Real}) = copy(x)
+invlink(dist::FillVectorOfUnivariate{Discrete}, x::AbstractVecOrMat{<:Real}) = copy(x)
 function invlink(
     dist::FillVectorOfUnivariate{Continuous},
     x::AbstractVector{<:Real},
+)
+    return invlink(dist.v.value, x)
+end
+function invlink(
+    dist::FillVectorOfUnivariate{Continuous},
+    x::AbstractMatrix{<:Real},
 )
     return invlink(dist.v.value, x)
 end
@@ -166,13 +183,13 @@ function logpdf_with_trans(
     return sum(logpdf_with_trans(dist.dists.value, x, istrans))
 end
 function link(
-    dist::FillMatrixOfUnivariate{Continuous},
+    dist::FillMatrixOfUnivariate,
     x::AbstractMatrix{<:Real},
 )
     return link(dist.dists.value, x)
 end
 function invlink(
-    dist::FillMatrixOfUnivariate{Continuous},
+    dist::FillMatrixOfUnivariate,
     x::AbstractMatrix{<:Real},
 )
     return invlink(dist.dists.value, x)
@@ -186,13 +203,13 @@ function logpdf_with_trans(
     return sum(logpdf_with_trans(dist.dists.value, x, istrans))
 end
 function link(
-    dist::FillVectorOfMultivariate{Continuous},
+    dist::FillVectorOfMultivariate,
     x::AbstractMatrix{<:Real},
 )
     return link(dist.dists.value, x)
 end
 function invlink(
-    dist::FillVectorOfMultivariate{Continuous},
+    dist::FillVectorOfMultivariate,
     x::AbstractMatrix{<:Real},
 )
     return invlink(dist.dists.value, x)
@@ -219,7 +236,7 @@ end
 
 link(dist::VectorOfMultivariate{Discrete}, x::AbstractMatrix{<:Real}) = copy(x)
 function link(
-    dist::VectorOfMultivariate,
+    dist::VectorOfMultivariate{Continuous},
     x::AbstractMatrix{<:Real},
 )
     return eachcolmaphcat(x, dist.dists) do c, dist
@@ -228,7 +245,7 @@ function link(
 end
 invlink(dist::VectorOfMultivariate{Discrete}, x::AbstractMatrix{<:Real}) = copy(x)
 function invlink(
-    dist::VectorOfMultivariate,
+    dist::VectorOfMultivariate{Continuous},
     x::AbstractMatrix{<:Real},
 )
     return eachcolmaphcat(x, dist.dists) do c, dist
@@ -247,14 +264,14 @@ function logpdf_with_trans(
 end
 link(dist::MatrixOfUnivariate{Discrete}, x::AbstractMatrix{<:Real}) = copy(x)
 function link(
-    dist::MatrixOfUnivariate,
+    dist::MatrixOfUnivariate{Continuous},
     x::AbstractMatrix{<:Real},
 )
     return maporbroadcast(link, dist.dists, x)
 end
 invlink(dist::MatrixOfUnivariate{Discrete}, x::AbstractMatrix{<:Real}) = copy(x)
 function invlink(
-    dist::MatrixOfUnivariate,
+    dist::MatrixOfUnivariate{Continuous},
     x::AbstractMatrix{<:Real},
 )
     return maporbroadcast(invlink, dist.dists, x)
@@ -270,24 +287,12 @@ function logpdf_with_trans(
     end
 end
 function link(
-    dist::Union{MatrixOfUnivariate{Discrete}, VectorOfMultivariate{Discrete}},
-    x::AbstractArray{<:AbstractMatrix{<:Real}},
-)
-    return map(copy, x)
-end
-function link(
     dist::Union{MatrixOfUnivariate, VectorOfMultivariate},
     x::AbstractArray{<:AbstractMatrix{<:Real}},
 )
     map(x) do x
         link(dist, x)
     end
-end
-function invlink(
-    dist::Union{MatrixOfUnivariate{Discrete}, VectorOfMultivariate{Discrete}},
-    x::AbstractArray{<:AbstractMatrix{<:Real}},
-)
-    return map(copy, x)
 end
 function invlink(
     dist::Union{MatrixOfUnivariate, VectorOfMultivariate},

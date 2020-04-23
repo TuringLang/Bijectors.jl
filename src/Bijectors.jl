@@ -156,7 +156,14 @@ end
 ## Multivariate
 
 function logpdf_with_trans(
-    dist::Distributions.Product,
+    dist::Distributions.Product{Discrete},
+    x::AbstractVecOrMat{<:Real},
+    istrans::Bool,
+)
+    return logpdf(dist, x)
+end
+function logpdf_with_trans(
+    dist::Distributions.Product{Continuous},
     x::AbstractVector{<:Real},
     istrans::Bool,
 )
@@ -165,24 +172,25 @@ function logpdf_with_trans(
     end)
 end
 function logpdf_with_trans(
-    dist::Distributions.Product,
+    dist::Distributions.Product{Continuous},
     x::AbstractMatrix{<:Real},
     istrans::Bool,
 )
-    return map(eachcol(x)) do x
-        logpdf_with_trans(dist, x, istrans)
+    return map(1:size(x,2)) do i
+        c = x[:,i]
+        sum(maporbroadcast(dist.v, c) do d, x
+            logpdf_with_trans(d, x, istrans)
+        end)
     end
 end
 
-link(dist::Distributions.Product{Discrete}, x::AbstractVector{<:Real}) = copy(x)
+link(dist::Distributions.Product{Discrete}, x::AbstractVecOrMat{<:Real}) = copy(x)
 function link(
     dist::Distributions.Product{Continuous},
     x::AbstractVector{<:Real},
 )
     return maporbroadcast(link, dist.v, x)
 end
-
-link(dist::Distributions.Product{Discrete}, x::AbstractMatrix{<:Real}) = copy(x)
 function link(
     dist::Distributions.Product{Continuous},
     x::AbstractMatrix{<:Real},
@@ -192,15 +200,13 @@ function link(
     end
 end
 
-invlink(dist::Distributions.Product{Discrete}, x::AbstractVector{<:Real}) = copy(x)
+invlink(dist::Distributions.Product{Discrete}, x::AbstractVecOrMat{<:Real}) = copy(x)
 function invlink(
     dist::Distributions.Product{Continuous},
     x::AbstractVector{<:Real},
 )
     return maporbroadcast(invlink, dist.v, x)
 end
-
-invlink(dist::Distributions.Product{Discrete}, x::AbstractMatrix{<:Real}) = copy(x)
 function invlink(
     dist::Distributions.Product{Continuous},
     x::AbstractMatrix{<:Real},
@@ -213,9 +219,6 @@ end
 function maporbroadcast(f, dists::AbstractArray, x::AbstractArray)
     # Broadcasting here breaks Tracker for some reason
     return map(f, dists, x)
-end
-function maporbroadcast(f, dists::AbstractVector, x::AbstractMatrix)
-    return map(x -> sum(maporbroadcast(f, dists, x)), eachcol(x))
 end
 
 const SimplexDistribution = Union{Dirichlet}
