@@ -32,6 +32,7 @@ end
 @adjoint function logabsdetjac(b::Log{1}, x::AbstractMatrix)
     return -vec(sum(log, x; dims = 1)), Δ -> (nothing, .- Δ' ./ x)
 end
+
 # AD implementations
 function jacobian(
     b::Union{<:ADBijector{<:ZygoteAD}, Inverse{<:ADBijector{<:ZygoteAD}}},
