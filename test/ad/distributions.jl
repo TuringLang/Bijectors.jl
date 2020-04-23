@@ -1,3 +1,5 @@
+short_tests = false
+
 @testset "AD tests" begin
     ddim = 3
     dmean = zeros(ddim)
@@ -336,6 +338,9 @@
         #DistSpec(:Weibull, (1.0,), [1.0]),
         #DistSpec(:Weibull, (1.0, 1.0), [1.0]),
     ]
+    if short_tests
+        uni_cont_dists = uni_cont_dists[1:10]
+    end
     broken_uni_cont_dists = [
         # Zygote
         DistSpec(:Chernoff, (), 0.5),
@@ -417,6 +422,9 @@
 
         DistSpec(:Dirichlet, (alpha,), dir_val_mat),
     ]
+    if short_tests
+        multi_cont_dists = multi_cont_dists[1:10]
+    end
     xmulti_cont_dists = [
         # Vector x
         filter(!isnothing, filldist_spec.(uni_cont_dists; n = 2, d = 1));
