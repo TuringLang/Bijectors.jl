@@ -132,8 +132,16 @@ function logpdf_with_trans(
 )
     return sum(logpdf_with_trans(dist.v.value, x, istrans))
 end
+function logpdf_with_trans(
+    dist::FillVectorOfUnivariate,
+    x::AbstractMatrix{<:Real},
+    istrans::Bool,
+)
+    return vec(sum(logpdf_with_trans(dist.v.value, x, istrans), dims = 1))
+end
 
 link(dist::FillVectorOfUnivariate{Discrete}, x::AbstractVector{<:Real}) = copy(x)
+link(dist::FillVectorOfUnivariate{Discrete}, x::AbstractMatrix{<:Real}) = copy(x)
 function link(
     dist::FillVectorOfUnivariate{Continuous},
     x::AbstractVector{<:Real},
@@ -142,6 +150,7 @@ function link(
 end
 
 invlink(dist::FillVectorOfUnivariate{Discrete}, x::AbstractVector{<:Real}) = copy(x)
+invlink(dist::FillVectorOfUnivariate{Discrete}, x::AbstractMatrix{<:Real}) = copy(x)
 function invlink(
     dist::FillVectorOfUnivariate{Continuous},
     x::AbstractVector{<:Real},
