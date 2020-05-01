@@ -101,7 +101,7 @@ end
 
         @testset "$dist: ForwardDiff AD" begin
             x = rand(dist)
-            b = DistributionBijector{Bijectors.ADBackend(:forwarddiff), typeof(dist), length(size(dist))}(dist)
+            b = ADBijector{Bijectors.ADBackend(:forwarddiff), typeof(dist), length(size(dist))}(dist)
             
             @test abs(det(Bijectors.jacobian(b, x))) > 0
             @test logabsdetjac(b, x) ≠ Inf
@@ -114,7 +114,7 @@ end
 
         @testset "$dist: Tracker AD" begin
             x = rand(dist)
-            b = DistributionBijector{Bijectors.ADBackend(:reversediff), typeof(dist), length(size(dist))}(dist)
+            b = ADBijector{Bijectors.ADBackend(:reversediff), typeof(dist), length(size(dist))}(dist)
             
             @test abs(det(Bijectors.jacobian(b, x))) > 0
             @test logabsdetjac(b, x) ≠ Inf
@@ -419,7 +419,7 @@ end
             # verify against AD
             # similar to what we do in test/transform.jl for Dirichlet
             if dist isa Dirichlet
-                b = Bijectors.SimplexBijector{false}()
+                b = Bijectors.SimplexBijector{1, false}()
                 x = rand(dist)
                 y = b(x)
                 @test b(param(x)) isa TrackedArray
@@ -502,8 +502,8 @@ end
     @test logabsdetjac(b ∘ b, x) ≈ logabsdetjac(b, b(x)) + logabsdetjac(b, x)
 
     # order of composed evaluation
-    b1 = DistributionBijector(d)
-    b2 = DistributionBijector(Gamma())
+    b1 = ADBijector(d)
+    b2 = ADBijector(Gamma())
 
     cb = inv(b1) ∘ b2
     @test cb(x) ≈ inv(b1)(b2(x))
@@ -562,7 +562,7 @@ end
     @test res2.logabsdetjac ≈ 0.0
 
     # `logabsdetjac` with AD
-    b = DistributionBijector(d)
+    b = ADBijector(d)
     y = b(x)
     
     sb1 = stack(b, b, inv(b), inv(b))             # <= Tuple
@@ -682,7 +682,7 @@ end
 @testset "Example: ADVI single" begin
     # Usage in ADVI
     d = Beta()
-    b = DistributionBijector(d)    # [0, 1] → ℝ
+    b = ADBijector(d)              # [0, 1] → ℝ
     ib = inv(b)                    # ℝ → [0, 1]
     td = transformed(Normal(), ib) # x ∼ 𝓝(0, 1) then f(x) ∈ [0, 1]
     x = rand(td)                   # ∈ [0, 1]

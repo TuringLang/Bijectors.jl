@@ -10,6 +10,15 @@ using .Tracker: Tracker,
                 param
 using LinearAlgebra
 
+maporbroadcast(f, x::TrackedArray...) = f.(x...)
+function maporbroadcast(
+    f,
+    x1::TrackedArray{T, N},
+    x::AbstractArray{<:TrackedReal}...,
+) where {T, N}
+    return f.(convert(Array{TrackedReal{T}, N}, x1), x...)
+end
+
 _eps(::Type{<:TrackedReal{T}}) where {T} = _eps(T)
 function Base.minimum(d::LocationScale{<:TrackedReal})
     m = minimum(d.ρ)
@@ -73,6 +82,10 @@ end
 @grad function logabsdetjac(b::Log{1}, x::AbstractMatrix)
     return -vec(sum(log, data(x); dims = 1)), Δ -> (nothing, .- Δ' ./ data(x))
 end
+@grad function logabsdetjac(b::Log{2}, x::AbstractMatrix)
+    return -sum(log, data(x)), Δ -> (nothing, -Δ ./ data(x))
+end
+
 # implementations for Scale bijector
 # Adjoints for 0-dim and 1-dim `Scale` using `Real`
 function _logabsdetjac_scale(a::TrackedReal, x::Real, ::Val{0})
@@ -137,22 +150,22 @@ function (sb::Stacked)(x::TrackedMatrix{<:Real})
     return eachcolmaphcat(sb, x)
 end
 # Simplex adjoints
-function _simplex_bijector(X::TrackedVecOrMat, b::SimplexBijector)
+function _simplex_bijector(X::TrackedVecOrMat, b::SimplexBijector{1})
     return track(_simplex_bijector, X, b)
 end
-function _simplex_inv_bijector(Y::TrackedVecOrMat, b::SimplexBijector)
+function _simplex_inv_bijector(Y::TrackedVecOrMat, b::SimplexBijector{1})
     return track(_simplex_inv_bijector, Y, b)
 end
-@grad function _simplex_bijector(X::AbstractVector, b::SimplexBijector)
+@grad function _simplex_bijector(X::AbstractVector, b::SimplexBijector{1})
     Xd = data(X)
     return _simplex_bijector(Xd, b), Δ -> (simplex_link_jacobian(Xd)' * Δ, nothing)
 end
-@grad function _simplex_inv_bijector(Y::AbstractVector, b::SimplexBijector)
+@grad function _simplex_inv_bijector(Y::AbstractVector, b::SimplexBijector{1})
     Yd = data(Y)
     return _simplex_inv_bijector(Yd, b), Δ -> (simplex_invlink_jacobian(Yd)' * Δ, nothing)
 end
 
-@grad function _simplex_bijector(X::AbstractMatrix, b::SimplexBijector)
+@grad function _simplex_bijector(X::AbstractMatrix, b::SimplexBijector{1})
     Xd = data(X)
     return _simplex_bijector(Xd, b), Δ -> begin
         maphcat(eachcol(Xd), eachcol(Δ)) do c1, c2
@@ -160,7 +173,7 @@ end
         end, nothing
     end
 end
-@grad function _simplex_inv_bijector(Y::AbstractMatrix, b::SimplexBijector)
+@grad function _simplex_inv_bijector(Y::AbstractMatrix, b::SimplexBijector{1})
     Yd = data(Y)
     return _simplex_inv_bijector(Yd, b), Δ -> begin
         maphcat(eachcol(Yd), eachcol(Δ)) do c1, c2
@@ -191,14 +204,14 @@ replace_diag(::typeof(exp), X::TrackedMatrix) = track(replace_diag, exp, X)
     end
 end
 
-logabsdetjac(b::SimplexBijector, x::TrackedVecOrMat) = track(logabsdetjac, b, x)
-@grad function logabsdetjac(b::SimplexBijector, x::AbstractVector)
+logabsdetjac(b::SimplexBijector{1}, x::TrackedVecOrMat) = track(logabsdetjac, b, x)
+@grad function logabsdetjac(b::SimplexBijector{1}, x::AbstractVector)
     xd = data(x)
     return logabsdetjac(b, xd), Δ -> begin
         (nothing, simplex_logabsdetjac_gradient(xd) * Δ)
     end
 end
-@grad function logabsdetjac(b::SimplexBijector, x::AbstractMatrix)
+@grad function logabsdetjac(b::SimplexBijector{1}, x::AbstractMatrix)
     xd = data(x)
     return logabsdetjac(b, xd), Δ -> begin
         (nothing, maphcat(eachcol(xd), Δ) do c, g
@@ -366,10 +379,19 @@ for header in [
                 T = typeof(z)
                 TV = vectorof(T)
             end
-            r::TV = mapvcat(norm, eachcol(z .- z_0))
+            r::TV = eachcolnorm(z .- z_0)
             transformed::T = z .+ β_hat ./ (α .+ r') .* (z .- z_0)   # from eq(14)
             return (transformed = transformed, α = α, β_hat = β_hat, r = r)
         end
+    end
+end
+eachcolnorm(X) = map(norm, eachcol(X))
+eachcolnorm(X::TrackedMatrix) = track(eachcolnorm, X)
+@grad function eachcolnorm(X)
+    Xd = data(X)
+    y = map(norm, eachcol(Xd))
+    y, Δ -> begin
+        (Xd .* (Δ ./ y)',)
     end
 end
 
@@ -386,8 +408,16 @@ function vectorof(::Type{TrackedReal{T}}) where {T <: Real}
     return TrackedArray{T, 1, Vector{T}}
 end
 
-(b::Exp)(x::TrackedVector) = exp.(x)::vectorof(float(eltype(x)))
-(b::Log)(x::TrackedVector) = log.(x)::vectorof(float(eltype(x)))
+(b::Exp{0})(x::TrackedVector) = exp.(x)::vectorof(float(eltype(x)))
+(b::Exp{1})(x::TrackedVector) = exp.(x)::vectorof(float(eltype(x)))
+(b::Exp{1})(x::TrackedMatrix) = exp.(x)::matrixof(float(eltype(x)))
+(b::Exp{2})(x::TrackedMatrix) = exp.(x)::matrixof(float(eltype(x)))
+
+(b::Log{0})(x::TrackedVector) = log.(x)::vectorof(float(eltype(x)))
+(b::Log{1})(x::TrackedVector) = log.(x)::vectorof(float(eltype(x)))
+(b::Log{1})(x::TrackedMatrix) = log.(x)::matrixof(float(eltype(x)))
+(b::Log{2})(x::TrackedMatrix) = log.(x)::matrixof(float(eltype(x)))
+
 logabsdetjac(b::Log{0}, x::TrackedVector) = .-log.(x)::vectorof(float(eltype(x)))
 logabsdetjac(b::Log{1}, x::TrackedMatrix) = - vec(sum(log.(x); dims = 1))
 

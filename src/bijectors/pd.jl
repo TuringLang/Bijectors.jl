@@ -28,7 +28,6 @@ function logabsdetjac(b::PDBijector, X::AbstractMatrix{<:Real})
     if !issuccess(Xcf)
         Xcf = cholesky(X + max(eps(T), eps(T) * norm(X)) * I)
     end
-
     return logabsdetjac(b, Xcf)
 end
 
@@ -36,7 +35,7 @@ function logabsdetjac(b::PDBijector, Xcf::Cholesky)
     U = Xcf.U
     T = eltype(U)
     d = size(U, 1)
-    return - sum((d .- (1:d) .+ 2) .* log.(diag(U))) + d * log(T(2))
+    return - sum((d .- (1:d) .+ 2) .* log.(diag(U))) - d * log(T(2))
 end
 
 logabsdetjac(b::PDBijector, X::AbstractArray{<:AbstractMatrix{<:Real}}) = mapvcat(X) do x

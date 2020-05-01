@@ -66,7 +66,7 @@ struct Inverse{B <: Bijector, N} <: Bijector{N}
 
     Inverse(b::B) where {N, B<:Bijector{N}} = new{B, N}(b)
 end
-
+up1(b::Inverse) = Inverse(up1(b.orig))
 
 inv(b::Bijector) = Inverse(b)
 inv(ib::Inverse{<:Bijector}) = ib.orig
@@ -110,8 +110,9 @@ logabsdetjacinv(b::Bijector, y) = logabsdetjac(inv(b), y)
 struct Identity{N} <: Bijector{N} end
 (::Identity)(x) = copy(x)
 inv(b::Identity) = b
+up1(::Identity{N}) where {N} = Identity{N + 1}()
 
-logabsdetjac(::Identity, x::Real) = zero(eltype(x))
+logabsdetjac(::Identity{0}, x::Real) = zero(eltype(x))
 @generated function logabsdetjac(
     b::Identity{N1},
     x::AbstractArray{T2, N2}
@@ -124,6 +125,7 @@ logabsdetjac(::Identity, x::Real) = zero(eltype(x))
         return :(throw(MethodError(logabsdetjac, (b, x))))
     end
 end
+logabsdetjac(::Identity{2}, x::AbstractArray{<:AbstractMatrix}) = zeros(eltype(x[1]), size(x))
 
 ########################
 # Convenient constants #
@@ -147,7 +149,6 @@ include("bijectors/permute.jl")
 include("bijectors/simplex.jl")
 include("bijectors/pd.jl")
 include("bijectors/truncated.jl")
-include("bijectors/distribution_bijector.jl")
 
 # Normalizing flow related
 include("bijectors/planar_layer.jl")

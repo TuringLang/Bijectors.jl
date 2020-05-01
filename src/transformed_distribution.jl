@@ -36,15 +36,25 @@ Returns the constrained-to-unconstrained bijector for distribution `d`.
 bijector(d::DiscreteUnivariateDistribution) = Identity{0}()
 bijector(d::DiscreteMultivariateDistribution) = Identity{1}()
 bijector(d::ContinuousUnivariateDistribution) = TruncatedBijector(minimum(d), maximum(d))
-bijector(d::Distributions.Product{Discrete}) = Identity{1}()
-bijector(d::Distributions.Product{Continuous}) = DistributionBijector(d) # Use (inv)link
+bijector(d::Product{Discrete}) = Identity{1}()
+function bijector(d::Product{Continuous})
+    return TruncatedBijector{1}(_minmax(d.v)...)
+end
+@generated function _minmax(d::AbstractArray{T}) where {T}
+    try
+        min, max = minimum(T), maximum(T)
+        return :($min, $max)
+    catch
+        return :(minimum.(d), maximum.(d))
+    end
+end
 
 bijector(d::Normal) = Identity{0}()
 bijector(d::MvNormal) = Identity{1}()
 bijector(d::MvNormalCanon) = Identity{1}()
 bijector(d::Distributions.AbstractMvLogNormal) = Log{1}()
 bijector(d::PositiveDistribution) = Log{0}()
-bijector(d::SimplexDistribution) = SimplexBijector()
+bijector(d::SimplexDistribution) = SimplexBijector{1}()
 bijector(d::KSOneSided) = Logit(zero(eltype(d)), one(eltype(d)))
 
 bijector_bounded(d, a=minimum(d), b=maximum(d)) = Logit(a, b)
