@@ -32,6 +32,8 @@ for T in (:VectorOfMultivariate, :FillVectorOfMultivariate)
 end
 bijector(d::FillVectorOfMultivariate{Continuous}) = up1(bijector(d.dists.value))
 
+isdirichlet(::VectorOfMultivariate{Continuous, <:Dirichlet}) = true
+isdirichlet(::VectorOfMultivariate{Continuous, <:TuringDirichlet}) = true
 isdirichlet(::TuringDirichlet) = true
 
 function link(

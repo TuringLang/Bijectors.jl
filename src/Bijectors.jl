@@ -150,6 +150,7 @@ end
 const SimplexDistribution = Union{Dirichlet}
 isdirichlet(::SimplexDistribution) = true
 isdirichlet(::MultivariateDistribution) = false
+isdirichlet(::MatrixDistribution) = false
 
 function logpdf_with_trans(d::MultivariateDistribution, x, transform::Bool)
     if isdirichlet(d)
