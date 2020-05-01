@@ -9,14 +9,14 @@ using Bijectors: Log, Exp, Shift, Scale, Logit, SimplexBijector
 
 Random.seed!(123)
 
-struct NonInvertibleBijector{AD} <: ADBijector{AD, 1} end
+struct NonInvertibleBijector{AD} <: AbstractADBijector{AD, 1} end
 
 contains(predicate::Function, b::Bijector) = predicate(b)
 contains(predicate::Function, b::Composed) = any(contains.(predicate, b.ts))
 contains(predicate::Function, b::Stacked) = any(contains.(predicate, b.bs))
 
 # Scalar tests
-@testset "<: ADBijector{AD}" begin
+@testset "<: AbstractADBijector{AD}" begin
     (b::NonInvertibleBijector)(x) = clamp.(x, 0, 1)
 
     b = NonInvertibleBijector{Bijectors.ADBackend()}()

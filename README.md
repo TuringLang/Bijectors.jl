@@ -597,13 +597,13 @@ As you can see it's a very contrived example, but you get the idea.
 
 ### `<:ADBijector`
 
-We could also have implemented `Logit` as an `ADBijector`:
+We could also have implemented `Logit` as an `AbstractADBijector`:
 
 ```julia
 using StatsFuns: logit, logistic
 using Bijectors: ADBackend
 
-struct ADLogit{T, AD} <: ADBijector{AD, 0}
+struct ADLogit{T, AD} <: AbstractADBijector{AD, 0}
     a::T
     b::T
 end

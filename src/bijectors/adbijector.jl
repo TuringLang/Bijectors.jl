@@ -1,11 +1,17 @@
 """
+Abstract type for a `Bijector{N}` making use of auto-differentation (AD) to
+implement `jacobian` and, by impliciation, `logabsdetjac`.
+"""
+abstract type AbstractADBijector{AD, N} <: Bijector{N} end
+
+"""
     ADBijector(d::Distribution)
     ADBijector{<:ADBackend, D, N}(d::Distribution)
 
 This a subtype of `Bijector{N}` that uses `link` and `invlink` to compute the 
 transformations, and `AD` to compute the `jacobian` and `logabsdetjac`.
 """
-struct ADBijector{AD, D, N} <: Bijector{N} where {D<:Distribution}
+struct ADBijector{AD, D <: Distribution, N} <: AbstractADBijector{AD, N}
     dist::D
 end
 function ADBijector(dist::D) where {D<:UnivariateDistribution}
