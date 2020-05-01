@@ -1,4 +1,3 @@
-# TODO: Deprecate?
 """
     DistributionBijector(d::Distribution)
     DistributionBijector{<:ADBackend, D}(d::Distribution)
@@ -24,3 +23,10 @@ end
 # Simply uses `link` and `invlink` as transforms with AD to get jacobian
 (b::DistributionBijector)(x) = link(b.dist, x)
 (ib::Inverse{<:DistributionBijector})(y) = invlink(ib.orig.dist, y)
+
+function logabsdetjac(
+    b::DistributionBijector{<:Any, <:Product},
+    x::AbstractVector{<:Real},
+)
+    return sum(logabsdetjac.(bijector.(b.dist.v), x))
+end

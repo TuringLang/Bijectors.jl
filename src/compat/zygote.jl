@@ -21,11 +21,7 @@ end
     end
     return pullback(g, f, x)
 end
-@adjoint function _sum(f, args...)
-    g(f, args...) = sum(map(f, args...))
-    return pullback(g, f, args...)
-end
-@adjoint function _sumeachcol(f, x1, x2)
+@adjoint function sumeachcol(f, x1, x2)
     g(f, x1, x2) = sum([f(view(x1, :, i), x2[i]) for i in 1:size(x1, 2)])
     return pullback(g, f, x1, x2)
 end
@@ -73,9 +69,7 @@ end
     Jᵀ = repeat(inv.(a), 1, size(x, 2))
     return _logabsdetjac_scale(a, x, Val(1)), Δ -> (Jᵀ * Δ, nothing, nothing)
 end
-
 ## Positive definite matrices
-
 @adjoint function replace_diag(::typeof(log), X)
     f(i, j) = i == j ? log(X[i, j]) : X[i, j]
     out = f.(1:size(X, 1), (1:size(X, 2))')
@@ -93,14 +87,14 @@ end
     end
 end
 
-@adjoint function _logpdf_with_trans_pd(
+@adjoint function pd_logpdf_with_trans(
     d,
     X::AbstractMatrix{<:Real},
     transform::Bool,
 )
-    return pullback(_logpdf_with_trans_pd_zygote, d, X, transform)
+    return pullback(pd_logpdf_with_trans_zygote, d, X, transform)
 end
-function _logpdf_with_trans_pd_zygote(
+function pd_logpdf_with_trans_zygote(
     d,
     X::AbstractMatrix{<:Real},
     transform::Bool,
@@ -160,19 +154,40 @@ end
 
 # LocationScale fix
 
-@adjoint function _clamp(x::T, dist::LocationScale) where {T <: Real}
-    function f(x, dist)
-        ϵ = _eps(T)
-        bounds = (minimum(dist) + ϵ, maximum(dist) - ϵ)
-        if x < bounds[1]
-            clamped_x = bounds[1]
-        elseif x > bounds[2]
-            clamped_x = bounds[2]
+@adjoint function minimum(d::LocationScale)
+    function _minimum(d)
+        m = minimum(d.ρ)
+        if isfinite(m)
+            return d.μ + d.σ * m
         else
-            clamped_x = x
+            return m
         end
-        DEBUG && _debug("x = $x, bounds = $bounds, clamped_x = $clamped_x")
-        return clamped_x
     end
-    return pullback(f, x, dist)
+    return pullback(_minimum, d)
+end
+@adjoint function maximum(d::LocationScale)
+    function _maximum(d)
+        m = maximum(d.ρ)
+        if isfinite(m)
+            return d.μ + d.σ * m
+        else
+            return m
+        end
+    end
+    return pullback(_maximum, d)
+end
+@adjoint function lower(A::AbstractMatrix)
+    return lower(A), Δ -> (lower(Δ),)
+end
+@adjoint function getpd(X::AbstractMatrix)
+    return LowerTriangular(X) * LowerTriangular(X)', Δ -> begin
+        Xl = LowerTriangular(X)
+        return (LowerTriangular(Δ' * Xl + Δ * Xl),)
+    end
+end
+@adjoint function pd_link(X::AbstractMatrix{<:Real})
+    return pullback(X) do X
+        Y = cholesky(X; check = true).L
+        return replace_diag(log, Y)
+    end
 end

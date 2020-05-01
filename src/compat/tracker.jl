@@ -1,4 +1,3 @@
-import .Tracker
 using .Tracker: Tracker,
                 TrackedReal,
                 TrackedVector,
@@ -11,54 +10,23 @@ using .Tracker: Tracker,
                 param
 using LinearAlgebra
 
-# Different from Tracker.istracked
-_istracked(x::AbstractArray{<:TrackedReal}) = true
-_istracked(::TrackedArray) = false
-
-Tracker.dual(x::Bool, p) = x
-Base.prevfloat(r::TrackedReal) = track(prevfloat, r)
-@grad function prevfloat(r::Real)
-    prevfloat(data(r)), Δ -> Δ
-end
-Base.nextfloat(r::TrackedReal) = track(nextfloat, r)
-@grad function nextfloat(r::Real)
-    nextfloat(data(r)), Δ -> Δ
-end
-for i = 0:2, c = Tracker.combinations([:AbstractArray, :TrackedArray, :TrackedReal, :Number], i), f = [:hcat, :vcat]
-    if :TrackedReal in c
-        cnames = map(_ -> gensym(), c)
-        @eval Base.$f($([:($x::$c) for (x, c) in zip(cnames, c)]...), x::Union{TrackedArray,TrackedReal}, xs::Union{AbstractArray,Number}...) =
-            track($f, $(cnames...), x, xs...)
+_eps(::Type{<:TrackedReal{T}}) where {T} = _eps(T)
+function Base.minimum(d::LocationScale{<:TrackedReal})
+    m = minimum(d.ρ)
+    if isfinite(m)
+        return d.μ + d.σ * m
+    else
+        return m
     end
 end
-@grad function vcat(x::Real)
-    vcat(data(x)), (Δ) -> (Δ[1],)
+function Base.maximum(d::LocationScale{<:TrackedReal})
+    m = maximum(d.ρ)
+    if isfinite(m)
+        return d.μ + d.σ * m
+    else
+        return m
+    end
 end
-@grad function vcat(x1::Real, x2::Real)
-    vcat(data(x1), data(x2)), (Δ) -> (Δ[1], Δ[2])
-end
-@grad function vcat(x1::AbstractVector, x2::Real)
-    vcat(data(x1), data(x2)), (Δ) -> (Δ[1:length(x1)], Δ[length(x1)+1])
-end
-
-function Base.copy(
-    A::TrackedArray{T, 2, <:Adjoint{T, <:AbstractTriangular{T, <:AbstractMatrix{T}}}},
-) where {T <: Real}
-    return track(copy, A)
-end
-@grad function Base.copy(
-    A::TrackedArray{T, 2, <:Adjoint{T, <:AbstractTriangular{T, <:AbstractMatrix{T}}}},
-) where {T <: Real}
-    return copy(data(A)), ∇ -> (copy(∇),)
-end
-
-Base.:*(A::TrackedMatrix, B::AbstractTriangular) = track(*, A, B)
-Base.:*(A::AbstractTriangular{T}, B::TrackedVector) where {T} = track(*, A, B)
-Base.:*(A::AbstractTriangular{T}, B::TrackedMatrix) where {T} = track(*, A, B)
-Base.:*(A::Adjoint{T, <:AbstractTriangular{T}}, B::TrackedMatrix) where {T} = track(*, A, B)
-Base.:*(A::Adjoint{T, <:AbstractTriangular{T}}, B::TrackedVector) where {T} = track(*, A, B)
-
-_eps(::Type{<:TrackedReal{T}}) where {T} = _eps(T)
 
 # AD implementations
 function jacobian(
@@ -105,7 +73,6 @@ end
 @grad function logabsdetjac(b::Log{1}, x::AbstractMatrix)
     return -vec(sum(log, data(x); dims = 1)), Δ -> (nothing, .- Δ' ./ data(x))
 end
-
 # implementations for Scale bijector
 # Adjoints for 0-dim and 1-dim `Scale` using `Real`
 function _logabsdetjac_scale(a::TrackedReal, x::Real, ::Val{0})
@@ -159,10 +126,9 @@ end
 # @grad function _logabsdetjac_scale(a::TrackedMatrix, x::AbstractVector, ::Val{1})
 #     throw
 # end
-
 # implementations for Stacked bijector
 function logabsdetjac(b::Stacked, x::TrackedMatrix{<:Real})
-    return mapvcat(eachcol(x)) do c
+    return map(eachcol(x)) do c
         logabsdetjac(b, c)
     end
 end
@@ -170,16 +136,13 @@ end
 function (sb::Stacked)(x::TrackedMatrix{<:Real})
     return eachcolmaphcat(sb, x)
 end
-
 # Simplex adjoints
-
 function _simplex_bijector(X::TrackedVecOrMat, b::SimplexBijector)
     return track(_simplex_bijector, X, b)
 end
 function _simplex_inv_bijector(Y::TrackedVecOrMat, b::SimplexBijector)
     return track(_simplex_inv_bijector, Y, b)
 end
-
 @grad function _simplex_bijector(X::AbstractVector, b::SimplexBijector)
     Xd = data(X)
     return _simplex_bijector(Xd, b), Δ -> (simplex_link_jacobian(Xd)' * Δ, nothing)
@@ -431,3 +394,18 @@ logabsdetjac(b::Log{1}, x::TrackedMatrix) = - vec(sum(log.(x); dims = 1))
 _logabsdetjac_shift(a::Real, x::TrackedVector{T}, ::Val{0}) where {T<:Real} = zeros(T, length(x))
 _logabsdetjac_shift(a::T1, x::TrackedVector{T2}, ::Val{1}) where {T1<:Union{Real, TrackedVector}, T2<:Real} = zero(T2)
 _logabsdetjac_shift(a::T1, x::TrackedMatrix{T2}, ::Val{1}) where {T1<:Union{Real, TrackedVector}, T2<:Real} = zeros(T2, size(x, 2))
+
+getpd(X::TrackedMatrix) = track(getpd, X)
+@grad function getpd(X::AbstractMatrix)
+    Xd = data(X)
+    return LowerTriangular(Xd) * LowerTriangular(Xd)', Δ -> begin
+        Xl = LowerTriangular(Xd)
+        return (LowerTriangular(Δ' * Xl + Δ * Xl),)
+    end
+end
+
+lower(A::TrackedMatrix) = track(lower, A)
+@grad function lower(A::AbstractMatrix)
+    Ad = data(A)
+    return lower(Ad), Δ -> (lower(Δ),)
+end

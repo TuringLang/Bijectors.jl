@@ -9,19 +9,22 @@ import Distributions: logpdf, rand, rand!, _rand!, _logpdf
 
 abstract type ADBackend end
 struct ForwardDiffAD <: ADBackend end
+struct ReverseDiffAD <: ADBackend end
 struct TrackerAD <: ADBackend end
 struct ZygoteAD <: ADBackend end
 
-const ADBACKEND = Ref(:forward_diff)
+const ADBACKEND = Ref(:forwarddiff)
 setadbackend(backend_sym::Symbol) = setadbackend(Val(backend_sym))
-setadbackend(::Val{:forward_diff}) = ADBACKEND[] = :forward_diff
-setadbackend(::Val{:reverse_diff}) = ADBACKEND[] = :reverse_diff
+setadbackend(::Val{:forwarddiff}) = ADBACKEND[] = :forwarddiff
+setadbackend(::Val{:reversediff}) = ADBACKEND[] = :reversediff
+setadbackend(::Val{:tracker}) = ADBACKEND[] = :tracker
 setadbackend(::Val{:zygote}) = ADBACKEND[] = :zygote
 
 ADBackend() = ADBackend(ADBACKEND[])
 ADBackend(T::Symbol) = ADBackend(Val(T))
-ADBackend(::Val{:forward_diff}) = ForwardDiffAD
-ADBackend(::Val{:reverse_diff}) = TrackerAD
+ADBackend(::Val{:forwarddiff}) = ForwardDiffAD
+ADBackend(::Val{:reversediff}) = ReverseDiffAD
+ADBackend(::Val{:tracker}) = TrackerAD
 ADBackend(::Val{:zygote}) = ZygoteAD
 ADBackend(::Val) = error("The requested AD backend is not available. Make sure to load all required packages.")
 
@@ -105,7 +108,7 @@ logabsdetjacinv(b::Bijector, y) = logabsdetjac(inv(b), y)
 ##############################
 
 struct Identity{N} <: Bijector{N} end
-(::Identity)(x) = x
+(::Identity)(x) = copy(x)
 inv(b::Identity) = b
 
 logabsdetjac(::Identity, x::Real) = zero(eltype(x))
