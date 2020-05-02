@@ -203,13 +203,13 @@ const PDMatDistribution = Union{MatrixBeta, InverseWishart, Wishart}
 ispd(::Distribution) = false
 ispd(::PDMatDistribution) = true
 
-function pd_logpdf_with_trans(
-    d,
+function logpdf_with_trans(
+    d::MatrixDistribution,
     X::AbstractArray{<:AbstractMatrix{<:Real}},
     transform::Bool,
 )
     return map(X) do x
-        pd_logpdf_with_trans(d, x, transform)
+        logpdf_with_trans(d, x, transform)
     end
 end
 function pd_logpdf_with_trans(d, X::AbstractMatrix{<:Real}, transform::Bool)
