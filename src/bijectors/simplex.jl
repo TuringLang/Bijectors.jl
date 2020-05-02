@@ -232,7 +232,7 @@ function logabsdetjac(b::SimplexBijector{1}, x::AbstractMatrix{T}) where {T}
     return nlp
 end
 function logabsdetjac(b::SimplexBijector{2, proj}, x::AbstractMatrix) where {proj}
-    return sum(SimplexBijector{1, proj}()(x))
+    return sum(logabsdetjac(SimplexBijector{1, proj}(), x))
 end
 function logabsdetjac(b::SimplexBijector{2}, x::AbstractArray{<:AbstractMatrix})
     return map(x -> logabsdetjac(b, x), x)
