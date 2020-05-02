@@ -5,18 +5,27 @@ using ForwardDiff
 using Tracker
 
 using Bijectors
-using Bijectors: Log, Exp, Shift, Scale, Logit, SimplexBijector
+using Bijectors: Log, Exp, Shift, Scale, Logit, SimplexBijector, ADBijector
 
 Random.seed!(123)
 
-struct NonInvertibleBijector{AD} <: AbstractADBijector{AD, 1} end
+struct MyADBijector{AD, N, B <: Bijector{N}} <: ADBijector{AD, N}
+    b::B
+end
+MyADBijector(d::Distribution) = MyADBijector{Bijectors.ADBackend()}(d)
+MyADBijector{AD}(d::Distribution) where {AD} = MyADBijector{AD}(bijector(d))
+MyADBijector{AD}(b::B) where {AD, N, B <: Bijector{N}} = MyADBijector{AD, N, B}(b)
+(b::MyADBijector)(x) = b.b(x)
+(b::Inverse{<:MyADBijector})(x) = inv(b.orig.b)(x)
+
+struct NonInvertibleBijector{AD} <: ADBijector{AD, 1} end
 
 contains(predicate::Function, b::Bijector) = predicate(b)
 contains(predicate::Function, b::Composed) = any(contains.(predicate, b.ts))
 contains(predicate::Function, b::Stacked) = any(contains.(predicate, b.bs))
 
 # Scalar tests
-@testset "<: AbstractADBijector{AD}" begin
+@testset "<: ADBijector{AD}" begin
     (b::NonInvertibleBijector)(x) = clamp.(x, 0, 1)
 
     b = NonInvertibleBijector{Bijectors.ADBackend()}()
@@ -101,7 +110,7 @@ end
 
         @testset "$dist: ForwardDiff AD" begin
             x = rand(dist)
-            b = ADBijector{Bijectors.ADBackend(:forwarddiff), typeof(dist), length(size(dist))}(dist)
+            b = MyADBijector{Bijectors.ADBackend(:forwarddiff)}(dist)
             
             @test abs(det(Bijectors.jacobian(b, x))) > 0
             @test logabsdetjac(b, x) ≠ Inf
@@ -114,7 +123,7 @@ end
 
         @testset "$dist: Tracker AD" begin
             x = rand(dist)
-            b = ADBijector{Bijectors.ADBackend(:reversediff), typeof(dist), length(size(dist))}(dist)
+            b = MyADBijector{Bijectors.ADBackend(:reversediff)}(dist)
             
             @test abs(det(Bijectors.jacobian(b, x))) > 0
             @test logabsdetjac(b, x) ≠ Inf
@@ -502,8 +511,8 @@ end
     @test logabsdetjac(b ∘ b, x) ≈ logabsdetjac(b, b(x)) + logabsdetjac(b, x)
 
     # order of composed evaluation
-    b1 = ADBijector(d)
-    b2 = ADBijector(Gamma())
+    b1 = MyADBijector(d)
+    b2 = MyADBijector(Gamma())
 
     cb = inv(b1) ∘ b2
     @test cb(x) ≈ inv(b1)(b2(x))
@@ -562,7 +571,7 @@ end
     @test res2.logabsdetjac ≈ 0.0
 
     # `logabsdetjac` with AD
-    b = ADBijector(d)
+    b = MyADBijector(d)
     y = b(x)
     
     sb1 = stack(b, b, inv(b), inv(b))             # <= Tuple
@@ -682,7 +691,7 @@ end
 @testset "Example: ADVI single" begin
     # Usage in ADVI
     d = Beta()
-    b = ADBijector(d)              # [0, 1] → ℝ
+    b = bijector(d)                # [0, 1] → ℝ
     ib = inv(b)                    # ℝ → [0, 1]
     td = transformed(Normal(), ib) # x ∼ 𝓝(0, 1) then f(x) ∈ [0, 1]
     x = rand(td)                   # ∈ [0, 1]
