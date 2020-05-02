@@ -118,6 +118,11 @@ end
 link(d::Distribution, x) = bijector(d)(x)
 invlink(d::Distribution, y) = inv(bijector(d))(y)
 function logpdf_with_trans(d::Distribution, x, transform::Bool)
+    if ispd(d)
+        return pd_logpdf_with_trans(d, X, transform)
+    elseif isdirichlet(d)
+        return logpdf(d, x .+ _eps(eltype(x))) - logabsdetjac(bijector(d), x)
+    end
     if transform
         return logpdf(d, x) - logabsdetjac(bijector(d), x)
     else
@@ -151,17 +156,6 @@ const SimplexDistribution = Union{Dirichlet}
 isdirichlet(::SimplexDistribution) = true
 isdirichlet(::MultivariateDistribution) = false
 isdirichlet(::MatrixDistribution) = false
-
-function logpdf_with_trans(d::MultivariateDistribution, x, transform::Bool)
-    if isdirichlet(d)
-        x = x .+ eps(eltype(x))
-    end
-    if transform
-        return logpdf(d, x) - logabsdetjac(bijector(d), x)
-    else
-        return logpdf(d, x)
-    end
-end
 
 ###########
 # ∑xᵢ = 1 #
@@ -208,28 +202,13 @@ const PDMatDistribution = Union{MatrixBeta, InverseWishart, Wishart}
 ispd(::PDMatDistribution) = true
 ispd(::MatrixDistribution) = false
 
-function logpdf_with_trans(
-    d::MatrixDistribution,
+function pd_logpdf_with_trans(
+    d,
     X::AbstractArray{<:AbstractMatrix{<:Real}},
     transform::Bool,
 )
     return map(X) do x
-        logpdf_with_trans(d, x, transform)
-    end
-end
-function logpdf_with_trans(
-    d::MatrixDistribution,
-    X::AbstractMatrix{<:Real},
-    transform::Bool,
-)
-    if ispd(d)
-        return pd_logpdf_with_trans(d, X, transform)
-    else
-        if transform
-            return logpdf(d, X) - logabsdetjac(bijector(d), X)
-        else
-            return logpdf(d, X)
-        end
+        pd_logpdf_with_trans(d, x, transform)
     end
 end
 function pd_logpdf_with_trans(d, X::AbstractMatrix{<:Real}, transform::Bool)
