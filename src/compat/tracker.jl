@@ -54,24 +54,27 @@ end
 
 # implementations for Shift bijector
 function _logabsdetjac_shift(a::TrackedReal, x::Real, ::Val{0})
-    return param(_logabsdetjac_shift(data(a), data(x), Val(0)))
+    return tracker_shift_logabsdetjac(a, x, Val(0))
 end
 function _logabsdetjac_shift(a::TrackedReal, x::AbstractVector{<:Real}, ::Val{0})
-    return param(_logabsdetjac_shift(data(a), data(x), Val(0)))
+    return tracker_shift_logabsdetjac(a, x, Val(0))
 end
 function _logabsdetjac_shift(
     a::Union{TrackedReal, TrackedVector{<:Real}},
     x::AbstractVector{<:Real},
     ::Val{1}
 )
-    return param(_logabsdetjac_shift(data(a), data(x), Val(1)))
+    return tracker_shift_logabsdetjac(a, x, Val(1))
 end
 function _logabsdetjac_shift(
     a::Union{TrackedReal, TrackedVector{<:Real}},
     x::AbstractMatrix{<:Real},
     ::Val{1}
 )
-    return param(_logabsdetjac_shift(data(a), data(x), Val(1)))
+    return tracker_shift_logabsdetjac(a, x, Val(1))
+end
+function tracker_shift_logabsdetjac(a, x, ::Val{N}) where {N}
+    return param(_logabsdetjac_shift(data(a), data(x), Val(N)))
 end
 
 # Log bijector
@@ -420,10 +423,6 @@ end
 
 logabsdetjac(b::Log{0}, x::TrackedVector) = .-log.(x)::vectorof(float(eltype(x)))
 logabsdetjac(b::Log{1}, x::TrackedMatrix) = - vec(sum(log.(x); dims = 1))
-
-_logabsdetjac_shift(a::Real, x::TrackedVector{T}, ::Val{0}) where {T<:Real} = zeros(T, length(x))
-_logabsdetjac_shift(a::T1, x::TrackedVector{T2}, ::Val{1}) where {T1<:Union{Real, TrackedVector}, T2<:Real} = zero(T2)
-_logabsdetjac_shift(a::T1, x::TrackedMatrix{T2}, ::Val{1}) where {T1<:Union{Real, TrackedVector}, T2<:Real} = zeros(T2, size(x, 2))
 
 getpd(X::TrackedMatrix) = track(getpd, X)
 @grad function getpd(X::AbstractMatrix)
