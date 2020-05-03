@@ -58,7 +58,6 @@ export  TransformDistribution,
         Stacked,
         stack,
         Identity,
-        DistributionBijector,
         bijector,
         transformed,
         UnivariateTransformed,
@@ -119,10 +118,17 @@ end
 link(d::Distribution, x) = bijector(d)(x)
 invlink(d::Distribution, y) = inv(bijector(d))(y)
 function logpdf_with_trans(d::Distribution, x, transform::Bool)
-    if transform
-        return logpdf(d, x) - logabsdetjac(bijector(d), x)
+    if ispd(d)
+        return pd_logpdf_with_trans(d, x, transform)
+    elseif isdirichlet(d)
+        l = logpdf(d, x .+ eps(eltype(x)))
     else
-        return logpdf(d, x)
+        l = logpdf(d, x)
+    end
+    if transform
+        return l - logabsdetjac(bijector(d), x)
+    else
+        return l
     end
 end
 
@@ -138,98 +144,19 @@ const PositiveDistribution = Union{
 }
 const UnitDistribution = Union{Beta, KSOneSided, NoncentralBeta}
 
-function logpdf_with_trans(d::UnivariateDistribution, x::AbstractArray{<:Real}, trans::Bool)
-    if toflatten(d)
-        f, args = flatten(d, trans)
-        return f.(args..., x)
+function logpdf_with_trans(d::UnivariateDistribution, x, transform::Bool)
+    if transform
+        return map(x -> logpdf(d, x), x) - logabsdetjac(bijector(d), x)
     else
-        return map(x) do x
-            logpdf_with_trans(d, x, trans)
-        end
+        return map(x -> logpdf(d, x), x)
     end
-end
-
-function logpdf_with_trans(d::DiscreteUnivariateDistribution, x::Integer, transform::Bool)
-    return logpdf(d, x)
 end
 
 ## Multivariate
 
-function logpdf_with_trans(
-    dist::Distributions.Product{Discrete},
-    x::AbstractVecOrMat{<:Real},
-    istrans::Bool,
-)
-    return logpdf(dist, x)
-end
-function logpdf_with_trans(
-    dist::Distributions.Product{Continuous},
-    x::AbstractVector{<:Real},
-    istrans::Bool,
-)
-    return sum(maporbroadcast(dist.v, x) do d, x
-        logpdf_with_trans(d, x, istrans)
-    end)
-end
-function logpdf_with_trans(
-    dist::Distributions.Product{Continuous},
-    x::AbstractMatrix{<:Real},
-    istrans::Bool,
-)
-    return map(1:size(x,2)) do i
-        c = x[:,i]
-        sum(maporbroadcast(dist.v, c) do d, x
-            logpdf_with_trans(d, x, istrans)
-        end)
-    end
-end
-
-link(dist::Distributions.Product{Discrete}, x::AbstractVecOrMat{<:Real}) = copy(x)
-function link(
-    dist::Distributions.Product{Continuous},
-    x::AbstractVector{<:Real},
-)
-    return maporbroadcast(link, dist.v, x)
-end
-function link(
-    dist::Distributions.Product{Continuous},
-    x::AbstractMatrix{<:Real},
-)
-    return eachcolmaphcat(x) do c
-        link(dist, c)
-    end
-end
-
-invlink(dist::Distributions.Product{Discrete}, x::AbstractVecOrMat{<:Real}) = copy(x)
-function invlink(
-    dist::Distributions.Product{Continuous},
-    x::AbstractVector{<:Real},
-)
-    return maporbroadcast(invlink, dist.v, x)
-end
-function invlink(
-    dist::Distributions.Product{Continuous},
-    x::AbstractMatrix{<:Real},
-)
-    return eachcolmaphcat(x) do c
-        invlink(dist, c)
-    end
-end
-
-function maporbroadcast(f, dists::AbstractArray, x::AbstractArray)
-    # Broadcasting here breaks Tracker for some reason
-    return map(f, dists, x)
-end
-
 const SimplexDistribution = Union{Dirichlet}
-
-function logpdf_with_trans(
-    d::DiscreteMultivariateDistribution,
-    x::AbstractVecOrMat{<:Real},
-    ::Bool,
-)
-    return logpdf(d, x)
-end
+isdirichlet(::SimplexDistribution) = true
+isdirichlet(::Distribution) = false
 
 ###########
 # ∑xᵢ = 1 #
@@ -258,7 +185,6 @@ function invlink(
 )
     return inv(SimplexBijector{proj}())(y)
 end
-
 function invlink_jacobian(
     d::Dirichlet,
     y::AbstractVector{T},
@@ -267,32 +193,18 @@ function invlink_jacobian(
     return jacobian(inv(SimplexBijector{proj}()), y)
 end
 
-function logpdf_with_trans(
-    d::Dirichlet,
-    x::AbstractVecOrMat{<:Real},
-    transform::Bool,
-)
-    return dirichlet_logpdf_with_trans(d, x, transform)
-end
-function dirichlet_logpdf_with_trans(d, x, transform)
-    ϵ = _eps(eltype(x))
-    lp = logpdf(d, x .+ ϵ)
-    if transform
-        lp -= logabsdetjac(bijector(d), x)
-    end
-    return lp
-end
-
 ## Matrix
 
 #####################
 # Positive definite #
 #####################
 
-const PDMatDistribution = Union{InverseWishart, Wishart}
+const PDMatDistribution = Union{MatrixBeta, InverseWishart, Wishart}
+ispd(::Distribution) = false
+ispd(::PDMatDistribution) = true
 
 function logpdf_with_trans(
-    d::PDMatDistribution,
+    d::MatrixDistribution,
     X::AbstractArray{<:AbstractMatrix{<:Real}},
     transform::Bool,
 )
@@ -300,18 +212,7 @@ function logpdf_with_trans(
         logpdf_with_trans(d, x, transform)
     end
 end
-function logpdf_with_trans(
-    d::PDMatDistribution,
-    X::AbstractMatrix{<:Real},
-    transform::Bool,
-)
-    pd_logpdf_with_trans(d, X, transform)
-end
-function pd_logpdf_with_trans(
-    d,
-    X::AbstractMatrix{<:Real},
-    transform::Bool,
-)
+function pd_logpdf_with_trans(d, X::AbstractMatrix{<:Real}, transform::Bool)
     T = eltype(X)
     Xcf = cholesky(X, check = false)
     if !issuccess(Xcf)
@@ -320,10 +221,16 @@ function pd_logpdf_with_trans(
     lp = getlogp(d, Xcf, X)
     if transform && isfinite(lp)
         U = Xcf.U
-        lp += sum((dim(d) .- (1:dim(d)) .+ 2) .* log.(diag(U)))
-        lp += dim(d) * log(T(2))
+        d = dim(d)
+        lp += sum((d .- (1:d) .+ 2) .* log.(diag(U)))
+        lp += d * log(T(2))
     end
     return lp
+end
+function getlogp(d::MatrixBeta, Xcf, X)
+    n1, n2 = params(d)
+    p = dim(d)
+    return ((n1 - p - 1) / 2) * logdet(Xcf) + ((n2 - p - 1) / 2) * logdet(I - X) + d.logc0
 end
 function getlogp(d::Wishart, Xcf, X)
     return 0.5 * ((d.df - (dim(d) + 1)) * logdet(Xcf) - tr(d.S \ X)) - d.c0
@@ -333,17 +240,23 @@ function getlogp(d::InverseWishart, Xcf, X)
     return -0.5 * ((d.df + dim(d) + 1) * logdet(Xcf) + tr(Xcf \ Ψ)) - d.c0
 end
 
-include("flatten.jl")
 include("interface.jl")
+
+# Broadcasting here breaks Tracker for some reason
+maporbroadcast(f, x::AbstractArray{<:Any, N}...) where {N} = map(f, x...)
+maporbroadcast(f, x::AbstractArray...) = f.(x...)
 
 # optional dependencies
 function __init__()
     @require LazyArrays = "5078a376-72f3-5289-bfd5-ec5146d43c02" begin
-        function maporbroadcast(f, dists::LazyArrays.BroadcastArray, x::AbstractArray)
-            return copy(f.(dists, x))
+        function maporbroadcast(f, x1::LazyArrays.BroadcastArray, x...)
+            return copy(f.(x1, x...))
         end
-        function maporbroadcast(f, dists::LazyArrays.BroadcastVector, x::AbstractMatrix)
-            return vec(sum(copy(f.(dists, x)), dims = 1))
+        function maporbroadcast(f, x1, x2::LazyArrays.BroadcastArray, x...)
+            return copy(f.(x1, x2, x...))
+        end
+        function maporbroadcast(f, x1, x2, x3::LazyArrays.BroadcastArray, x...)
+            return copy(f.(x1, x2, x3, x...))
         end
     end
     @require ForwardDiff="f6369f11-7733-5829-9624-2563aa707210" include("compat/forwarddiff.jl")

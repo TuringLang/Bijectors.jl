@@ -93,7 +93,7 @@ struct Composed{A, N} <: Bijector{N}
 end
 
 isclosedform(b::Composed) = all(isclosedform, b.ts)
-
+up1(b::Composed) = Composed(up1.(b.ts))
 
 """
     composel(ts::Bijector...)::Composed{<:Tuple}

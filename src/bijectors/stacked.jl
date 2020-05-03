@@ -21,7 +21,7 @@ b = stack(b1, b2)
 b([0.0, 1.0]) == [b1(0.0), 1.0]  # => true
 ```
 """
-struct Stacked{Bs, N} <: Bijector{1} where N
+struct Stacked{Bs, N} <: Bijector{1}
     bs::Bs
     ranges::NTuple{N, UnitRange{Int}}
 

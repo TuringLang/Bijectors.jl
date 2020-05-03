@@ -117,21 +117,21 @@ end
 
 # Simplex adjoints
 
-@adjoint function _simplex_bijector(X::AbstractVector, b::SimplexBijector)
+@adjoint function _simplex_bijector(X::AbstractVector, b::SimplexBijector{1})
     return _simplex_bijector(X, b), Δ -> (simplex_link_jacobian(X)' * Δ, nothing)
 end
-@adjoint function _simplex_inv_bijector(Y::AbstractVector, b::SimplexBijector)
+@adjoint function _simplex_inv_bijector(Y::AbstractVector, b::SimplexBijector{1})
     return _simplex_inv_bijector(Y, b), Δ -> (simplex_invlink_jacobian(Y)' * Δ, nothing)
 end
 
-@adjoint function _simplex_bijector(X::AbstractMatrix, b::SimplexBijector)
+@adjoint function _simplex_bijector(X::AbstractMatrix, b::SimplexBijector{1})
     return _simplex_bijector(X, b), Δ -> begin
         maphcat(eachcol(X), eachcol(Δ)) do c1, c2
             simplex_link_jacobian(c1)' * c2
         end, nothing
     end
 end
-@adjoint function _simplex_inv_bijector(Y::AbstractMatrix, b::SimplexBijector)
+@adjoint function _simplex_inv_bijector(Y::AbstractMatrix, b::SimplexBijector{1})
     return _simplex_inv_bijector(Y, b), Δ -> begin
         maphcat(eachcol(Y), eachcol(Δ)) do c1, c2
             simplex_invlink_jacobian(c1)' * c2
@@ -139,12 +139,12 @@ end
     end
 end
 
-@adjoint function logabsdetjac(b::SimplexBijector, x::AbstractVector)
+@adjoint function logabsdetjac(b::SimplexBijector{1}, x::AbstractVector)
     return logabsdetjac(b, x), Δ -> begin
         (nothing, simplex_logabsdetjac_gradient(x) * Δ)
     end
 end
-@adjoint function logabsdetjac(b::SimplexBijector, x::AbstractMatrix)
+@adjoint function logabsdetjac(b::SimplexBijector{1}, x::AbstractMatrix)
     return logabsdetjac(b, x), Δ -> begin
         (nothing, maphcat(eachcol(x), Δ) do c, g
             simplex_logabsdetjac_gradient(c) * g
