@@ -12,6 +12,8 @@ function Logit(a, b)
     Logit{0, T}(a, b)
 end
 up1(b::Logit{N, T}) where {N, T} = Logit{N + 1, T}(b.a, b.b)
+# For equality of Logit with Float64 fields to one with Duals
+Base.(==)(b1::Logit, b2::Logit) = b1.a == b2.a && b1.b == b2.b
 
 (b::Logit{0})(x::Real) = _logit(x, b.a, b.b)
 (b::Logit{0})(x) = _logit.(x, b.a, b.b)
