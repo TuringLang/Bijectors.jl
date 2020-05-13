@@ -70,6 +70,7 @@ up1(b::Inverse) = Inverse(up1(b.orig))
 
 inv(b::Bijector) = Inverse(b)
 inv(ib::Inverse{<:Bijector}) = ib.orig
+Base.:(==)(b1::Inverse{<:Bijector}, b2::Inverse{<:Bijector}) = b1.orig == b2.orig
 
 """
     logabsdetjac(b::Bijector, x)

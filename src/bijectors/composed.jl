@@ -94,6 +94,13 @@ end
 
 isclosedform(b::Composed) = all(isclosedform, b.ts)
 up1(b::Composed) = Composed(up1.(b.ts))
+function Base.:(==)(b1::Composed{<:Any, N}, b2::Composed{<:Any, N}) where {N}
+    ts1, ts2 = b1.ts, b2.ts
+    if !(ts1 isa Tuple && ts2 isa Tuple || ts1 isa Vector && ts2 isa Vector)
+        return false
+    end
+    return all(ts1 .== ts2)
+end
 
 """
     composel(ts::Bijector...)::Composed{<:Tuple}

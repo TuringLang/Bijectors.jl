@@ -20,6 +20,9 @@ mutable struct PlanarLayer{T1<:AbstractVector{<:Real}, T2<:Real} <: Bijector{1}
     u::T1
     b::T2
 end
+function Base.:(==)(b1::PlanarLayer, b2::PlanarLayer)
+    return b1.w == b2.w && b1.u == b2.u && b1.b == b2.b
+end
 
 function get_u_hat(u, w)
     # To preserve invertibility

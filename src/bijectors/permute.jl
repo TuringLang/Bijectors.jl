@@ -85,6 +85,8 @@ struct Permute{A} <: Bijector{1}
     A::A
 end
 
+Base.:(==)(b1::Permute, b2::Permute) = b1.A == b2.A
+
 function Permute(indices::AbstractVector{Int})
     # construct a sparse-matrix for use in the multiplication
     n = length(indices)
