@@ -44,6 +44,14 @@ end
 Stacked(bs, ranges::AbstractArray) = Stacked(bs, tuple(ranges...))
 Stacked(bs) = Stacked(bs, tuple([i:i for i = 1:length(bs)]...))
 
+function Base.:(==)(b1::Stacked, b2::Stacked)
+    bs1, bs2 = b1.bs, b2.bs
+    if !(bs1 isa Tuple && bs2 isa Tuple || bs1 isa Vector && bs2 isa Vector)
+        return false
+    end
+    return all(bs1 .== bs2) && all(b1.ranges .== b2.ranges)
+end
+
 isclosedform(b::Stacked) = all(isclosedform, b.bs)
 
 stack(bs::Bijector{0}...) = Stacked(bs)

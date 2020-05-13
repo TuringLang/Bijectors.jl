@@ -11,6 +11,10 @@ function TruncatedBijector{N}(lb::T1, ub::T2) where {N, T1, T2}
 end
 up1(b::TruncatedBijector{N}) where {N} = TruncatedBijector{N + 1}(b.lb, b.ub)
 
+function Base.:(==)(b1::TruncatedBijector, b2::TruncatedBijector)
+    return b1.lb == b2.lb && b1.ub == b2.ub
+end
+
 function (b::TruncatedBijector{0})(x::Real)
     a, b = b.lb, b.ub
     truncated_link(_clamp(x, a, b), a, b)

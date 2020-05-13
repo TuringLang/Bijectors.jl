@@ -5,7 +5,7 @@ using ForwardDiff
 using Tracker
 
 using Bijectors
-using Bijectors: Log, Exp, Shift, Scale, Logit, SimplexBijector, ADBijector
+using Bijectors: Log, Exp, Shift, Scale, Logit, SimplexBijector, PDBijector, Permute, PlanarLayer, RadialLayer, Stacked, TruncatedBijector, ADBijector
 
 Random.seed!(123)
 
@@ -599,7 +599,7 @@ end
     @test res.rv == [exp(x[1]), log(x[2]), x[3] + 5.0]
     @test logabsdetjac(sb, x) == sum([sum(logabsdetjac(sb.bs[i], x[sb.ranges[i]])) for i = 1:3])
     @test res.logabsdetjac == logabsdetjac(sb, x)
-    
+
 
     # TODO: change when we have dimensionality in the type
     sb = @inferred Stacked((Bijectors.Exp(), Bijectors.SimplexBijector()), [1:1, 2:3])
@@ -733,6 +733,61 @@ end
     Δ_forwarddiff = ForwardDiff.gradient(z -> sum(weights .* ib(z)), y)
 
     @test Δ_forwarddiff ≈ Δ_tracker
+end
+
+@testset "Equality" begin
+    bs = [
+        Identity{0}(),
+        Identity{1}(),
+        Identity{2}(),
+        Exp{0}(),
+        Exp{1}(),
+        Exp{2}(),
+        Log{0}(),
+        Log{1}(),
+        Log{2}(),
+        Scale(2.0),
+        Scale(3.0),
+        Scale(rand(2,2)),
+        Scale(rand(2,2)),
+        Shift(2.0),
+        Shift(3.0),
+        Shift(rand(2)),
+        Shift(rand(2)),
+        Logit(1.0, 2.0),
+        Logit(1.0, 3.0),
+        Logit(2.0, 3.0),
+        Logit(0.0, 2.0),
+        InvertibleBatchNorm(2),
+        InvertibleBatchNorm(3),
+        PDBijector(),
+        Permute([1.0, 2.0, 3.0]),
+        Permute([2.0, 3.0, 4.0]),
+        PlanarLayer(2),
+        PlanarLayer(3),
+        RadialLayer(2),
+        RadialLayer(3),
+        SimplexBijector(),
+        Stacked((Exp{0}(), Log{0}())),
+        Stacked((Log{0}(), Exp{0}())),
+        Stacked([Exp{0}(), Log{0}()]),
+        Stacked([Log{0}(), Exp{0}()]),
+        Composed((Exp{0}(), Log{0}())),
+        Composed((Log{0}(), Exp{0}())),
+        Composed([Exp{0}(), Log{0}()]),
+        Composed([Log{0}(), Exp{0}()]),
+        TruncatedBijector(1.0, 2.0),
+        TruncatedBijector(1.0, 3.0),
+        TruncatedBijector(0.0, 2.0),
+    ]
+    for i in 1:length(bs), j in 1:length(bs)
+        if i == j
+            @test bs[i] == deepcopy(bs[j])
+            @test inv(bs[i]) == inv(deepcopy(bs[j]))
+        else
+            @test bs[i] != bs[j]
+        end
+    end
 end
 
 include("norm_flows.jl")

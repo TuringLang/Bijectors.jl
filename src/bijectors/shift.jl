@@ -5,6 +5,8 @@ struct Shift{T, N} <: Bijector{N}
     a::T
 end
 
+Base.:(==)(b1::Shift{<:Any, N}, b2::Shift{<:Any, N}) where {N} = b1.a == b2.a
+
 function Shift(a::Union{Real,AbstractArray}; dim::Val{D} = Val(ndims(a))) where D
     return Shift{typeof(a), D}(a)
 end
