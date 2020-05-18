@@ -1,7 +1,12 @@
 # Bijectors.jl
 
 [![Build Status](https://travis-ci.org/TuringLang/Bijectors.jl.svg?branch=master)](https://travis-ci.org/TuringLang/Bijectors.jl)
-[![Build status](https://ci.appveyor.com/api/projects/status/mvfs8eio2cscwk1m?svg=true)](https://ci.appveyor.com/project/TuringLang/bijectors-jl)
+
+[![ForwardDiff and Tracker tests](https://github.com/TuringLang/Bijectors.jl/workflows/ForwardDiff%20and%20Tracker%20tests/badge.svg?branch=master)](https://github.com/TuringLang/Bijectors.jl/actions?query=workflow%3A%22ForwardDiff+and+Tracker+tests%22)
+
+[![Zygote tests](https://github.com/TuringLang/Bijectors.jl/workflows/Zygote%20tests/badge.svg?branch=master)](https://github.com/TuringLang/Bijectors.jl/actions?query=workflow%3A%22Zygote+tests%22)
+
+[![ReverseDiff tests](https://github.com/TuringLang/Bijectors.jl/workflows/ReverseDiff%20tests/badge.svg)](https://github.com/TuringLang/Bijectors.jl/actions?query=workflow%3A%22ReverseDiff+tests%22)
 
 
 This package implements a set of functions for transforming constrained random variables (e.g. simplexes, intervals) to Euclidean space. The 3 main functions implemented in this package are the `link`, `invlink` and `logpdf_with_trans` for a number of distributions. The distributions supported are:
@@ -126,7 +131,7 @@ What about `invlink`?
 
 ```julia
 julia> b⁻¹ = inv(b)
-Inversed{Logit{Float64},0}(Logit{Float64}(0.0, 1.0))
+Inverse{Logit{Float64},0}(Logit{Float64}(0.0, 1.0))
 
 julia> b⁻¹(y)
 0.3688868996596376
@@ -135,10 +140,10 @@ julia> b⁻¹(y) == invlink(dist, y)
 true
 ```
 
-Pretty neat, huh? `Inversed{Logit}` is also a `Bijector` where we've defined `(ib::Inversed{<:Logit})(y)` as the inverse transformation of `(b::Logit)(x)`. Note that it's not always the case that `inv(b) isa Inversed`, e.g. the inverse of `Exp` is simply `Log` so `inv(Exp()) isa Log` is true.
+Pretty neat, huh? `Inverse{Logit}` is also a `Bijector` where we've defined `(ib::Inverse{<:Logit})(y)` as the inverse transformation of `(b::Logit)(x)`. Note that it's not always the case that `inv(b) isa Inverse`, e.g. the inverse of `Exp` is simply `Log` so `inv(Exp()) isa Log` is true.
 
 #### Dimensionality
-One more thing. See the `0` in `Inversed{Logit{Float64}, 0}`? It represents the *dimensionality* of the bijector, in the same sense as for an `AbstractArray` with the exception of `0` which means it expects 0-dim input and output, i.e. `<:Real`. This can also be accessed through `dimension(b)`:
+One more thing. See the `0` in `Inverse{Logit{Float64}, 0}`? It represents the *dimensionality* of the bijector, in the same sense as for an `AbstractArray` with the exception of `0` which means it expects 0-dim input and output, i.e. `<:Real`. This can also be accessed through `dimension(b)`:
 
 ```julia
 julia> Bijectors.dimension(b)
@@ -155,7 +160,7 @@ Also, we can _compose_ bijectors:
 
 ```julia
 julia> id_y = (b ∘ b⁻¹)
-Composed{Tuple{Inversed{Logit{Float64},0},Logit{Float64}},0}((Inversed{Logit{Float64},0}(Logit{Float64}(0.0, 1.0)), Logit{Float64}(0.0, 1.0)))
+Composed{Tuple{Inverse{Logit{Float64},0},Logit{Float64}},0}((Inverse{Logit{Float64},0}(Logit{Float64}(0.0, 1.0)), Logit{Float64}(0.0, 1.0)))
 
 julia> id_y(y) ≈ y
 true
@@ -165,7 +170,7 @@ And since `Composed isa Bijector`:
 
 ```julia
 julia> id_x = inv(id_y)
-Composed{Tuple{Inversed{Logit{Float64},0},Logit{Float64}},0}((Inversed{Logit{Float64},0}(Logit{Float64}(0.0, 1.0)), Logit{Float64}(0.0, 1.0)))
+Composed{Tuple{Inverse{Logit{Float64},0},Logit{Float64}},0}((Inverse{Logit{Float64},0}(Logit{Float64}(0.0, 1.0)), Logit{Float64}(0.0, 1.0)))
 
 julia> id_x(x) ≈ x
 true
@@ -264,12 +269,12 @@ julia> b = bijector(dist)              # (0, 1) → ℝ
 Logit{Float64}(0.0, 1.0)
 
 julia> b⁻¹ = inv(b)                    # ℝ → (0, 1)
-Inversed{Logit{Float64},0}(Logit{Float64}(0.0, 1.0))
+Inverse{Logit{Float64},0}(Logit{Float64}(0.0, 1.0))
 
 julia> td = transformed(Normal(), b⁻¹) # x ∼ 𝓝(0, 1) then b(x) ∈ (0, 1)
-TransformedDistribution{Normal{Float64},Inversed{Logit{Float64},0},Univariate}(
+TransformedDistribution{Normal{Float64},Inverse{Logit{Float64},0},Univariate}(
 dist: Normal{Float64}(μ=0.0, σ=1.0)
-transform: Inversed{Logit{Float64},0}(Logit{Float64}(0.0, 1.0))
+transform: Inverse{Logit{Float64},0}(Logit{Float64}(0.0, 1.0))
 )
 
 
@@ -338,10 +343,10 @@ julia> # Construct the transform
 (Logit{Float64}(0.0, 1.0), Log{0}(), SimplexBijector{true}())
 
 julia> ibs = inv.(bs)            # invert, so we get unconstrained-to-constrained
-(Inversed{Logit{Float64},0}(Logit{Float64}(0.0, 1.0)), Exp{0}(), Inversed{SimplexBijector{true},1}(SimplexBijector{true}()))
+(Inverse{Logit{Float64},0}(Logit{Float64}(0.0, 1.0)), Exp{0}(), Inverse{SimplexBijector{true},1}(SimplexBijector{true}()))
 
 julia> sb = Stacked(ibs, ranges) # => Stacked <: Bijector
-Stacked{Tuple{Inversed{Logit{Float64},0},Exp{0},Inversed{SimplexBijector{true},1}},3}((Inversed{Logit{Float64},0}(Logit{Float64}(0.0, 1.0)), Exp{0}(), Inversed{SimplexBijector{true},1}(SimplexBijector{true}())), (1:1, 2:2, 3:4))
+Stacked{Tuple{Inverse{Logit{Float64},0},Exp{0},Inverse{SimplexBijector{true},1}},3}((Inverse{Logit{Float64},0}(Logit{Float64}(0.0, 1.0)), Exp{0}(), Inverse{SimplexBijector{true},1}(SimplexBijector{true}())), (1:1, 2:2, 3:4))
 
 julia> # Mean-field normal with unconstrained-to-constrained stacked bijector
        td = transformed(d, sb);
@@ -416,10 +421,10 @@ julia> d = MvNormal(zeros(2), ones(2));
 julia> ibs = inv.(bijector.((InverseGamma(2, 3), Beta())));
 
 julia> sb = stack(ibs...) # == Stacked(ibs) == Stacked(ibs, [i:i for i = 1:length(ibs)]
-Stacked{Tuple{Exp{0},Inversed{Logit{Float64},0}},2}((Exp{0}(), Inversed{Logit{Float64},0}(Logit{Float64}(0.0, 1.0))), (1:1, 2:2))
+Stacked{Tuple{Exp{0},Inverse{Logit{Float64},0}},2}((Exp{0}(), Inverse{Logit{Float64},0}(Logit{Float64}(0.0, 1.0))), (1:1, 2:2))
 
 julia> b = sb ∘ PlanarLayer(2)
-Composed{Tuple{PlanarLayer{Array{Float64,2},Array{Float64,1}},Stacked{Tuple{Exp{0},Inversed{Logit{Float64},0}},2}},1}((PlanarLayer{Array{Float64,2},Array{Float64,1}}([1.49138; 0.367563], [-0.886205; 0.684565], [-1.59058]), Stacked{Tuple{Exp{0},Inversed{Logit{Float64},0}},2}((Exp{0}(), Inversed{Logit{Float64},0}(Logit{Float64}(0.0, 1.0))), (1:1, 2:2))))
+Composed{Tuple{PlanarLayer{Array{Float64,2},Array{Float64,1}},Stacked{Tuple{Exp{0},Inverse{Logit{Float64},0}},2}},1}((PlanarLayer{Array{Float64,2},Array{Float64,1}}([1.49138; 0.367563], [-0.886205; 0.684565], [-1.59058]), Stacked{Tuple{Exp{0},Inverse{Logit{Float64},0}},2}((Exp{0}(), Inverse{Logit{Float64},0}(Logit{Float64}(0.0, 1.0))), (1:1, 2:2))))
 
 julia> td = transformed(d, b);
 
@@ -514,7 +519,7 @@ import Bijectors: logabsdetjac
 
 struct Identity{N} <: Bijector{N} end
 (::Identity)(x) = x                           # transform itself, "forward"
-(::Inversed{<: Identity})(y) = y              # inverse tramsform, "backward"
+(::Inverse{<: Identity})(y) = y              # inverse tramsform, "backward"
 
 # see the proper implementation for `logabsdetjac` in general
 logabsdetjac(::Identity{0}, y::Real) = zero(eltype(y)) # ∂ₓid(x) = ∂ₓ x = 1 → log(abs(1)) = log(1) = 0
@@ -530,10 +535,14 @@ struct Logit{T<:Real} <: Bijector{0}
     b::T
 end
 
-(b::Logit)(x) = @. logit((x - b.a) / (b.b - b.a))
-(ib::Inversed{<:Logit})(y) = @. (ib.orig.b - ib.orig.a) * logistic(y) + ib.orig.a  # `orig` contains the `Bijector` which was inverted
+(b::Logit)(x::Real) = logit((x - b.a) / (b.b - b.a))
+(b::Logit)(x) = map(b, x)
+# `orig` contains the `Bijector` which was inverted
+(ib::Inverse{<:Logit})(y::Real) = (ib.orig.b - ib.orig.a) * logistic(y) + ib.orig.a
+(ib::Inverse{<:Logit})(y) = map(ib, y)
 
-logabsdetjac(b::Logit, x) = @. - log((x - b.a) * (b.b - x) / (b.b - b.a))
+logabsdetjac(b::Logit, x::Real) = - log((x - b.a) * (b.b - x) / (b.b - b.a))
+logabsdetjac(b::Logit, x) = map(logabsdetjac, x)
 ```
 
 (Batch computation is not fully supported by all bijectors yet (see issue #35), but is actively worked on. In the particular case of `Logit` there's only one thing that makes sense, which is elementwise application. Therefore we've added `@.` to the implementation above, thus this works for any `AbstractArray{<:Real}`.)
@@ -603,7 +612,7 @@ end
 ADLogit(a::T, b::T) where {T<:Real} = ADLogit{T, ADBackend()}(a, b)
 
 (b::ADLogit)(x) = @. logit((x - b.a) / (b.b - b.a))
-(ib::Inversed{<:ADLogit{<:Real}})(y) = @. (ib.orig.b - ib.orig.a) * logistic(y) + ib.orig.a
+(ib::Inverse{<:ADLogit{<:Real}})(y) = @. (ib.orig.b - ib.orig.a) * logistic(y) + ib.orig.a
 ```
 
 No implementation of `logabsdetjac`, but:
@@ -641,8 +650,8 @@ true
 We can also use Tracker.jl for the AD, rather than ForwardDiff.jl:
 
 ```julia
-julia> Bijectors.setadbackend(:reverse_diff)
-:reverse_diff
+julia> Bijectors.setadbackend(:reversediff)
+:reversediff
 
 julia> b_ad = ADLogit(0.0, 1.0)
 ADLogit{Float64,Bijectors.TrackerAD}(0.0, 1.0)
@@ -697,7 +706,7 @@ If anything is lacking or not clear in docstrings, feel free to open an issue or
 The following are the bijectors available:
 - Abstract:
   - `Bijector`: super-type of all bijectors. 
-  - `ADBijector{AD} <: Bijector`: subtypes of this only require the user to implement `(b::UserBijector)(x)` and `(ib::Inversed{<:UserBijector})(y)`. Automatic differentation will be used to compute the `jacobian(b, x)` and thus `logabsdetjac(b, x).
+  - `ADBijector{AD} <: Bijector`: subtypes of this only require the user to implement `(b::UserBijector)(x)` and `(ib::Inverse{<:UserBijector})(y)`. Automatic differentation will be used to compute the `jacobian(b, x)` and thus `logabsdetjac(b, x).
 - Concrete:
   - `Composed`: represents a composition of bijectors.
   - `Stacked`: stacks univariate and multivariate bijectors
@@ -718,7 +727,7 @@ The distribution interface consists of:
 #### Methods
 The following methods are implemented by all subtypes of `Bijector`, this also includes bijectors such as `Composed`.
 - `(b::Bijector)(x)`: implements the transform of the `Bijector`
-- `inv(b::Bijector)`: returns the inverse of `b`, i.e. `ib::Bijector` s.t. `(ib ∘ b)(x) ≈ x`. In most cases this is `Inversed{<:Bijector}`.
+- `inv(b::Bijector)`: returns the inverse of `b`, i.e. `ib::Bijector` s.t. `(ib ∘ b)(x) ≈ x`. In most cases this is `Inverse{<:Bijector}`.
 - `logabsdetjac(b::Bijector, x)`: computes log(abs(det(jacobian(b, x)))).
 - `forward(b::Bijector, x)`: returns named tuple `(rv=b(x), logabsdetjac=logabsdetjac(b, x))` in the most efficient manner.
 - `∘`, `composel`, `composer`: convenient and type-safe constructors for `Composed`. `composel(bs...)` composes s.t. the resulting composition is evaluated left-to-right, while `composer(bs...)` is evaluated right-to-left. `∘` is right-to-left, as excepted from standard mathematical notation.

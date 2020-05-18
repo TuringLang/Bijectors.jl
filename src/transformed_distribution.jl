@@ -33,13 +33,28 @@ transformed(d) = transformed(d, bijector(d))
 
 Returns the constrained-to-unconstrained bijector for distribution `d`.
 """
-bijector(d::Distribution) = DistributionBijector(d)
-bijector(d::UnivariateDistribution) = TruncatedBijector(minimum(d), maximum(d))
+bijector(d::DiscreteUnivariateDistribution) = Identity{0}()
+bijector(d::DiscreteMultivariateDistribution) = Identity{1}()
+bijector(d::ContinuousUnivariateDistribution) = TruncatedBijector(minimum(d), maximum(d))
+bijector(d::Product{Discrete}) = Identity{1}()
+function bijector(d::Product{Continuous})
+    return TruncatedBijector{1}(_minmax(d.v)...)
+end
+@generated function _minmax(d::AbstractArray{T}) where {T}
+    try
+        min, max = minimum(T), maximum(T)
+        return :($min, $max)
+    catch
+        return :(minimum.(d), maximum.(d))
+    end
+end
+
 bijector(d::Normal) = Identity{0}()
 bijector(d::MvNormal) = Identity{1}()
+bijector(d::MvNormalCanon) = Identity{1}()
+bijector(d::Distributions.AbstractMvLogNormal) = Log{1}()
 bijector(d::PositiveDistribution) = Log{0}()
-bijector(d::MvLogNormal) = Log{1}()
-bijector(d::SimplexDistribution) = SimplexBijector()
+bijector(d::SimplexDistribution) = SimplexBijector{1}()
 bijector(d::KSOneSided) = Logit(zero(eltype(d)), one(eltype(d)))
 
 bijector_bounded(d, a=minimum(d), b=maximum(d)) = Logit(a, b)
@@ -53,6 +68,9 @@ bijector(d::BoundedDistribution) = bijector_bounded(d)
 
 const LowerboundedDistribution = Union{Pareto, Levy}
 bijector(d::LowerboundedDistribution) = bijector_lowerbounded(d)
+
+bijector(d::PDMatDistribution) = PDBijector()
+bijector(d::MatrixBeta) = PDBijector()
 
 
 ##############################
@@ -245,7 +263,17 @@ forward(d::Distribution) = forward(GLOBAL_RNG, d)
 forward(d::Distribution, num_samples::Int) = forward(GLOBAL_RNG, d, num_samples)
 
 # utility stuff
-params(td::Transformed) = params(td.dist)
+Distributions.params(td::Transformed) = Distributions.params(td.dist)
+function Base.maximum(td::UnivariateTransformed)
+    # ordering might have changed, i.e. ub has been mapped to lb
+    min, max = td.transform.((Base.minimum(td.dist), Base.maximum(td.dist)))
+    return max > min ? max : min
+end
+function Base.minimum(td::UnivariateTransformed)
+    # ordering might have changed, i.e. ub has been mapped to lb
+    min, max = td.transform.((Base.minimum(td.dist), Base.maximum(td.dist)))
+    return max < min ? max : min
+end
 
 # logabsdetjac for distributions
 logabsdetjacinv(d::UnivariateDistribution, x::T) where T <: Real = zero(T)

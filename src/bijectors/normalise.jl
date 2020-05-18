@@ -14,6 +14,14 @@ mutable struct InvertibleBatchNorm{T1,T2,T3} <: Bijector{1}
     eps     ::  T3
     mtm     ::  T3  # momentum
 end
+function Base.:(==)(b1::InvertibleBatchNorm, b2::InvertibleBatchNorm)
+    return  b1.b == b2.b && 
+            b1.logs == b2.logs &&
+            b1.m == b2.m &&
+            b1.v == b2.v &&
+            b1.eps == b2.eps &&
+            b1.mtm == b2.mtm
+end
 
 function InvertibleBatchNorm(
     chs::Int;
@@ -65,8 +73,8 @@ logabsdetjac(bn::InvertibleBatchNorm, x) = forward(bn, x).logabsdetjac
 
 (bn::InvertibleBatchNorm)(x) = forward(bn, x).rv
 
-function forward(invbn::Inversed{<:InvertibleBatchNorm}, y)
-    @assert !istraining() "`forward(::Inversed{InvertibleBatchNorm})` is only available in test mode."
+function forward(invbn::Inverse{<:InvertibleBatchNorm}, y)
+    @assert !istraining() "`forward(::Inverse{InvertibleBatchNorm})` is only available in test mode."
     dims = ndims(y)
     as = ntuple(i -> i == ndims(y) - 1 ? size(y, i) : 1, dims)
     bn = inv(invbn)
@@ -79,7 +87,7 @@ function forward(invbn::Inversed{<:InvertibleBatchNorm}, y)
     return (rv=x, logabsdetjac=-logabsdetjac(bn, x))
 end
 
-(bn::Inversed{<:InvertibleBatchNorm})(y) = forward(bn, y).rv
+(bn::Inverse{<:InvertibleBatchNorm})(y) = forward(bn, y).rv
 
 function Base.show(io::IO, l::InvertibleBatchNorm)
     print(io, "InvertibleBatchNorm($(join(size(l.b), ", ")))")

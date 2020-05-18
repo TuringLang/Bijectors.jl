@@ -31,9 +31,9 @@ end
         @test (inv(flow) ∘ flow)(z) ≈ z rtol=0.2
     end
 
-    w = ones(10, 1)
-    u = zeros(10, 1)
-    b = ones(1)
+    w = ones(10)
+    u = zeros(10)
+    b = 1.0
     flow = PlanarLayer(w, u, b)
     z = ones(10, 100)
     @test inv(flow)(flow(z)) ≈ z
@@ -51,9 +51,9 @@ end
         @test (inv(flow) ∘ flow)(z) ≈ z rtol=0.2
     end
 
-    α_ = ones(1)
-    β = ones(1)
-    z_0 = zeros(10, 1)
+    α_ = 1.0
+    β = 1.0
+    z_0 = zeros(10)
     z = ones(10, 100)
     flow = RadialLayer(α_, β, z_0)
     @test inv(flow)(flow(z)) ≈ z

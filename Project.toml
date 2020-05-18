@@ -1,9 +1,10 @@
 name = "Bijectors"
 uuid = "76274a88-744f-5084-9051-94815aaf08c4"
-version = "0.5.3"
+version = "0.7.2"
 
 [deps]
 ArgCheck = "dce04be8-c92d-5529-be00-80e4d2c0e197"
+Compat = "34da2185-b29b-5c13-b0c7-acf172513d20"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 MappedArrays = "dbb5928d-eab1-5f90-85c2-b9b0edb7c900"
@@ -17,23 +18,30 @@ Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 StatsFuns = "4c63d2b9-4356-54db-8cca-17b64c39e42c"
 
 [compat]
-ArgCheck = "1"
-Distributions = "0.21.11, 0.22"
+ArgCheck = "1, 2.0"
+Combinatorics = "1.0"
+Compat = "3.0"
+Distributions = "0.21.11, 0.22, 0.23"
+DistributionsAD = "0.5.0"
 ForwardDiff = "0.10.3"
 MappedArrays = "0.2.2"
 NNlib = "0.6"
 Reexport = "0.2"
-Requires = "1"
-Roots = "0.8.4"
+Requires = "0.5, 1"
+Roots = "0.8.4, 1.0"
 StatsFuns = "0.8, 0.9.3"
 Tracker = "0.2.3"
+Zygote = "0.4.10"
 julia = "1"
 
 [extras]
-Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
+Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
+DistributionsAD = "ced4e74d-a319-5a8a-b0ac-84af2272839c"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Tracker = "9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c"
+Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [targets]
-test = ["ForwardDiff", "Test", "Tracker", "Flux"]
+test = ["ForwardDiff", "Test", "Tracker", "DistributionsAD", "Zygote", "Combinatorics", "ReverseDiff"]
