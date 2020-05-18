@@ -159,6 +159,18 @@ julia> cl(x)
  3.0
  2.0
  3.0
+
+julia> inv(cl)(cl(x))
+3-element Array{Float64,1}:
+ 1.0
+ 2.0
+ 3.0
+
+julia> coupling(cl) # get the `Bijector` map `θ -> b(⋅, θ)`
+Shift
+
+julia> couple(cl, x) # get the `Bijector` resulting from `x`
+Shift{Array{Float64,1},1}([2.0])
 ```
 
 # References
