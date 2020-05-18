@@ -169,6 +169,7 @@ struct CouplingLayer{B, M, F} <: Bijector{1} where {B, M <: PartitionMask, F}
     θ::F
 end
 
+CouplingLayer(B, mask::M) where {M} = CouplingLayer{B, M, typeof(identity)}(mask, identity)
 CouplingLayer(B, mask::M, θ::F) where {M, F} = CouplingLayer{B, M, F}(mask, θ)
 function CouplingLayer(B, θ, n::Int)
     idx = Int(floor(n / 2))
@@ -208,7 +209,7 @@ function (cl::CouplingLayer{B})(x::AbstractMatrix) where {B}
 end
 
 
-function (icl::Inversed{<:CouplingLayer{B}})(y::AbstractVector) where {B}
+function (icl::Inverse{<:CouplingLayer{B}})(y::AbstractVector) where {B}
     cl = icl.orig
     
     y_1, y_2, y_3 = partition(cl.mask, y)
@@ -218,7 +219,7 @@ function (icl::Inversed{<:CouplingLayer{B}})(y::AbstractVector) where {B}
 
     return combine(cl.mask, ib(y_1), y_2, y_3)
 end
-function (icl::Inversed{<:CouplingLayer{B}})(y::AbstractMatrix) where {B}
+function (icl::Inverse{<:CouplingLayer{B}})(y::AbstractMatrix) where {B}
     return hcat([icl(y[:, i]) for i = 1:size(y, 2)]...)
 end
 
