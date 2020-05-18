@@ -275,6 +275,9 @@ end
         @test cb2 isa Composed{<:Tuple}
         cb3 = cb1 ∘ cb2
         @test cb3 isa Composed{<:Tuple}
+        
+        @test logabsdetjac(cb1, 1.) isa Real
+        @test logabsdetjac(cb1, 1.) == 1.
 
         @test inv(cb1) isa Composed{<:Tuple}
         @test inv(cb2) isa Composed{<:Tuple}
@@ -287,6 +290,9 @@ end
         @test cb2 isa Composed{<:AbstractArray}
         cb3 = cb1 ∘ cb2
         @test cb3 isa Composed{<:AbstractArray}
+        
+        @test logabsdetjac(cb1, 1.) isa Real
+        @test logabsdetjac(cb1, 1.) == 1.
 
         @test inv(cb1) isa Composed{<:AbstractArray}
         @test inv(cb2) isa Composed{<:AbstractArray}
