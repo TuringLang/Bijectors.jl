@@ -87,19 +87,16 @@ true
 """
 struct Composed{A, N} <: Bijector{N}
     ts::A
-
-    Composed(bs::C) where {N, C<:Tuple{Vararg{<:Bijector{N}}}} = new{C, N}(bs)
-    Composed(bs::A) where {N, A<:AbstractArray{<:Bijector{N}}} = new{A, N}(bs)
 end
+
+Composed(bs::Tuple{Vararg{<:Bijector{N}}}) where N = Composed{typeof(bs),N}(bs)
+Composed(bs::AbstractArray{<:Bijector{N}}) where N = Composed{typeof(bs),N}(bs)
 
 isclosedform(b::Composed) = all(isclosedform, b.ts)
 up1(b::Composed) = Composed(up1.(b.ts))
 function Base.:(==)(b1::Composed{<:Any, N}, b2::Composed{<:Any, N}) where {N}
     ts1, ts2 = b1.ts, b2.ts
-    if !(ts1 isa Tuple && ts2 isa Tuple || ts1 isa Vector && ts2 isa Vector)
-        return false
-    end
-    return all(ts1 .== ts2)
+    return length(ts1) == length(ts2) && all(x == y for (x, y) in zip(ts1, ts2))
 end
 
 """
