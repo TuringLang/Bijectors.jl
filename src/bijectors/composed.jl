@@ -180,7 +180,7 @@ function logabsdetjac(cb::Composed, x)
         logjac += res.logabsdetjac
     end
 
-    return (rv = y, logabsdetjac = logjac)
+    return logjac
 end
 
 @generated function logabsdetjac(cb::Composed{T}, x) where {T<:Tuple}
