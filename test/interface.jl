@@ -581,16 +581,16 @@ end
     @test sb1(param([x, x, y, y])) isa TrackedArray
 
     @test sb1([x, x, y, y]) ≈ res1.rv
-    @test isapprox(logabsdetjac(sb1, [x, x, y, y]), 0, atol = 1e-6)
-    @test isapprox(res1.logabsdetjac, 0, atol = 1e-6)
+    @test logabsdetjac(sb1, [x, x, y, y]) ≈ 0 atol=1e-6
+    @test res1.logabsdetjac ≈ 0 atol=1e-6
 
     sb2 = Stacked([b, b, inv(b), inv(b)])        # <= Array
     res2 = forward(sb2, [x, x, y, y])
     @test sb2(param([x, x, y, y])) isa TrackedArray
 
     @test sb2([x, x, y, y]) ≈ res2.rv
-    @test isapprox(logabsdetjac(sb2, [x, x, y, y]), 0.0, atol = 1e-12)
-    @test isapprox(res2.logabsdetjac, 0.0, atol = 1e-12)
+    @test logabsdetjac(sb2, [x, x, y, y]) ≈ 0.0 atol=1e-12
+    @test res2.logabsdetjac ≈ 0.0 atol=1e-12
 
     # `logabsdetjac` with AD
     b = MyADBijector(d)
@@ -601,16 +601,16 @@ end
     @test sb1(param([x, x, y, y])) isa TrackedArray
 
     @test sb1([x, x, y, y]) == res1.rv
-    @test isapprox(logabsdetjac(sb1, [x, x, y, y]), 0, atol = 1e-12)
-    @test isapprox(res1.logabsdetjac, 0.0, atol = 1e-12)
+    @test logabsdetjac(sb1, [x, x, y, y]) ≈ 0 atol=1e-12)
+    @test res1.logabsdetjac ≈ 0.0 atol=1e-12)
 
     sb2 = Stacked([b, b, inv(b), inv(b)])        # <= Array
     res2 = forward(sb2, [x, x, y, y])
     @test sb2(param([x, x, y, y])) isa TrackedArray
 
     @test sb2([x, x, y, y]) == res2.rv
-    @test isapprox(logabsdetjac(sb2, [x, x, y, y]), 0.0, atol = 1e-12)
-    @test isapprox(res2.logabsdetjac, 0.0, atol = 1e-12)
+    @test logabsdetjac(sb2, [x, x, y, y]) ≈ 0.0 atol=1e-12)
+    @test res2.logabsdetjac, 0.0 ≈ atol=1e-12)
 
     # value-test
     x = ones(3)
