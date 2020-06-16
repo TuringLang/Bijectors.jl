@@ -233,11 +233,11 @@ function getlogp(d::MatrixBeta, Xcf, X)
     return ((n1 - p - 1) / 2) * logdet(Xcf) + ((n2 - p - 1) / 2) * logdet(I - X) + d.logc0
 end
 function getlogp(d::Wishart, Xcf, X)
-    return 0.5 * ((d.df - (dim(d) + 1)) * logdet(Xcf) - tr(d.S \ X)) - d.c0
+    return 0.5 * ((d.df - (dim(d) + 1)) * logdet(Xcf) - tr(d.S \ X)) + d.logc0
 end
 function getlogp(d::InverseWishart, Xcf, X)
     Ψ = Matrix(d.Ψ)
-    return -0.5 * ((d.df + dim(d) + 1) * logdet(Xcf) + tr(Xcf \ Ψ)) - d.c0
+    return -0.5 * ((d.df + dim(d) + 1) * logdet(Xcf) + tr(Xcf \ Ψ)) + d.logc0
 end
 
 include("interface.jl")
