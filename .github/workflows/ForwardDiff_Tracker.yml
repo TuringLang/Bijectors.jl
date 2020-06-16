@@ -1,6 +1,5 @@
 name: ForwardDiff and Tracker tests
 
-
 on:
   push:
     branches:
