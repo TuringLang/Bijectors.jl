@@ -1,5 +1,7 @@
 using .Zygote: Zygote, @adjoint, @nograd, pullback
 
+using Compat: eachcol
+
 @adjoint istraining() = true, _ -> nothing
 @nograd Bijectors._debug
 
