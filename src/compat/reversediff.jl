@@ -9,6 +9,8 @@ using ..Bijectors: Log, SimplexBijector, maphcat, simplex_link_jacobian,
     ReverseDiffAD, Inverse
 import ..Bijectors: _eps, logabsdetjac, _logabsdetjac_scale, _simplex_bijector, 
     _simplex_inv_bijector, replace_diag, jacobian, getpd, lower
+
+using Compat: eachcol
 using Distributions: LocationScale
 
 # AD implementations

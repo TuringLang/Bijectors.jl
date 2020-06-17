@@ -8,6 +8,8 @@ using .Tracker: Tracker,
                 track,
                 data,
                 param
+
+using Compat: eachcol
 using LinearAlgebra
 
 maporbroadcast(f, x::TrackedArray...) = f.(x...)
