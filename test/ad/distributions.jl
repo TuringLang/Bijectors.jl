@@ -15,25 +15,15 @@
 
     # Create positive definite matrix
     to_posdef(A::AbstractMatrix) = A * A' + I
+    to_posdef_diagonal(a::AbstractVector) = Diagonal(a.^2 .+ 1)
 
-    # Define adjoints for Tracker and Zygote
+    # Define adjoints for Tracker
     to_posdef(A::TrackedMatrix) = Tracker.track(to_posdef, A)
     Tracker.@grad function to_posdef(A::TrackedMatrix)
         data_A = Tracker.data(A)
         S = data_A * data_A' + I
         function pullback(∇)
-            if data_A isa Diagonal
-                return (2 .* Diagonal(∇) .* data_A,)
-            else
-                return ((∇ + ∇') * data_A,)
-            end
-        end
-        return S, pullback
-    end
-    Zygote.@adjoint function to_posdef(A::Diagonal)
-        S = to_posdef(A)
-        function pullback(∇::NamedTuple{(:diag,)})
-            return (2 .* Diagonal(∇.diag) .* A,)
+            return ((∇ + ∇') * data_A,)
         end
         return S, pullback
     end
@@ -334,46 +324,46 @@
         # Vector x
         DistSpec((m, A) -> MvNormal(m, to_posdef(A)), (a, A), b),
         DistSpec(MvNormal, (a, b), c),
-        DistSpec((m, A) -> MvNormal(m, to_posdef(A)), (a, Diagonal(b)), c),
+        DistSpec((m, s) -> MvNormal(m, to_posdef_diagonal(s)), (a, b), c),
         DistSpec(MvNormal, (a, alpha), b),
         DistSpec((m, s) -> MvNormal(m, s^2 * I), (a, alpha), b),
         DistSpec(A -> MvNormal(to_posdef(A)), (A,), a),
         DistSpec(MvNormal, (a,), b),
-        DistSpec(A -> MvNormal(to_posdef(A)), (Diagonal(a),), b),
+        DistSpec(s -> MvNormal(to_posdef_diagonal(s)), (a,), b),
         DistSpec(s -> MvNormal(dim, s), (alpha,), a),
         DistSpec((m, A) -> TuringMvNormal(m, to_posdef(A)), (a, A), b),
         DistSpec(TuringMvNormal, (a, b), c),
-        DistSpec((m, A) -> TuringMvNormal(m, to_posdef(A)), (a, Diagonal(b)), c),
+        DistSpec((m, s) -> TuringMvNormal(m, to_posdef_diagonal(s)), (a, b), c),
         DistSpec(TuringMvNormal, (a, alpha), b),
         DistSpec((m, s) -> TuringMvNormal(m, s^2 * I), (a, alpha), b),
         DistSpec(A -> TuringMvNormal(to_posdef(A)), (A,), a),
         DistSpec(TuringMvNormal, (a,), b),
-        DistSpec(A -> TuringMvNormal(to_posdef(A)), (Diagonal(a),), b),
+        DistSpec(s -> TuringMvNormal(to_posdef_diagonal(s)), (a,), b),
         DistSpec(s -> TuringMvNormal(dim, s), (alpha,), a),
         DistSpec((m, A) -> MvLogNormal(m, to_posdef(A)), (a, A), b),
         DistSpec(MvLogNormal, (a, b), c),
-        DistSpec((m, A) -> MvLogNormal(m, to_posdef(A)), (a, Diagonal(b)), c),
+        DistSpec((m, s) -> MvLogNormal(m, to_posdef_diagonal(s)), (a, b), c),
         DistSpec(MvLogNormal, (a, alpha), b),
         DistSpec(A -> MvLogNormal(to_posdef(A)), (A,), a),
         DistSpec(MvLogNormal, (a,), b),
-        DistSpec(A -> MvLogNormal(to_posdef(A)), (Diagonal(a),), b),
+        DistSpec(s -> MvLogNormal(to_posdef_diagonal(s)), (a,), b),
         DistSpec(s -> MvLogNormal(dim, s), (alpha,), a),
 
         DistSpec(Dirichlet, (ones(dim),), b ./ sum(b)),
 
         # Matrix case
         DistSpec(MvNormal, (a, b), A),
-        DistSpec((m, A) -> MvNormal(m, to_posdef(A)), (a, Diagonal(b)), A),
+        DistSpec((m, s) -> MvNormal(m, to_posdef_diagonal(s)), (a, b), A),
         DistSpec(MvNormal, (a, alpha), A),
         DistSpec((m, s) -> MvNormal(m, s^2 * I), (a, alpha), A),
         DistSpec(MvNormal, (a,), A),
-        DistSpec(A -> MvNormal(to_posdef(A)), (Diagonal(a),), A),
+        DistSpec(s -> MvNormal(to_posdef_diagonal(s)), (a,), A),
         DistSpec(s -> MvNormal(dim, s), (alpha,), A),
         DistSpec(MvLogNormal, (a, b), A),
-        DistSpec((m, A) -> MvLogNormal(m, to_posdef(A)), (a, Diagonal(b)), A),
+        DistSpec((m, s) -> MvLogNormal(m, to_posdef_diagonal(s)), (a, b), A),
         DistSpec(MvLogNormal, (a, alpha), A),
         DistSpec(MvLogNormal, (a,), A),
-        DistSpec(A -> MvLogNormal(to_posdef(A)), (Diagonal(a),), A),
+        DistSpec(s -> MvLogNormal(to_posdef_diagonal(s)), (a,), A),
         DistSpec(s -> MvLogNormal(dim, s), (alpha,), A),
 
         DistSpec(Dirichlet, (ones(dim),), B ./ sum(B; dims=1)),

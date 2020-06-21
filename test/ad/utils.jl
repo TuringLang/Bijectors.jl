@@ -73,12 +73,7 @@ function unpack_offset(x, offset, original::AbstractArray)
     val = reshape(x[(offset + 1):newoffset], size(original))
     return val, newoffset
 end
-function unpack_offset(x, offset, original::Diagonal)
-    newoffset = offset + size(original, 1)
-    val = Diagonal(x[(offset + 1):newoffset])
-    return val, newoffset
-end
-function unpack_offset(x, offset, original::AbstractVector{<:AbstractMatrix})
+function unpack_offset(x, offset, original::AbstractArray{<:AbstractArray})
     newoffset = offset
     val = map(original) do orig
         out, newoffset = unpack_offset(x, newoffset, orig)
