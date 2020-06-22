@@ -29,4 +29,5 @@ jobs:
       - uses: julia-actions/julia-buildpkg@latest
       - uses: julia-actions/julia-runtest@latest
         env:
-          STAGE: ReverseDiff
+          GROUP: AD
+          AD: ReverseDiff
