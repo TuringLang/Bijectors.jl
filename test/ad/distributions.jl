@@ -75,222 +75,133 @@
         DistSpec(Arcsine, (), 0.5),
         DistSpec(Arcsine, (1.0,), 0.5),
         DistSpec(Arcsine, (0.0, 2.0), 0.5),
-        DistSpec(Arcsine, (), [0.5]),
-        #DistSpec(Arcsine, (1.0,), [0.5]),
-        #DistSpec(Arcsine, (0.0, 2.0), [0.5]),
 
         DistSpec(Beta, (), 0.5),
         DistSpec(Beta, (1.0,), 0.5),
         DistSpec(Beta, (1.0, 2.0), 0.5),
-        #DistSpec(Beta, (), [0.5]),
-        #DistSpec(Beta, (1.0,), [0.5]),
-        #DistSpec(Beta, (1.0, 2.0), [0.5]),
 
         DistSpec(BetaPrime, (), 0.5),
         DistSpec(BetaPrime, (1.0,), 0.5),
         DistSpec(BetaPrime, (1.0, 2.0), 0.5),
-        #DistSpec(BetaPrime, (), [0.5]),
-        #DistSpec(BetaPrime, (1.0,), [0.5]),
-        #DistSpec(BetaPrime, (1.0, 2.0), [0.5]),
 
         DistSpec(Biweight, (), 0.5),
         DistSpec(Biweight, (1.0,), 0.5),
         DistSpec(Biweight, (1.0, 2.0), 0.5),
-        #DistSpec(Biweight, (), [0.5]),
-        #DistSpec(Biweight, (1.0,), [0.5]),
-        #DistSpec(Biweight, (1.0, 2.0), [0.5]),
 
         DistSpec(Cauchy, (), 0.5),
         DistSpec(Cauchy, (1.0,), 0.5),
         DistSpec(Cauchy, (1.0, 2.0), 0.5),
-        #DistSpec(Cauchy, (), [0.5]),
-        #DistSpec(Cauchy, (1.0,), [0.5]),
-        #DistSpec(Cauchy, (1.0, 2.0), [0.5]),
 
         DistSpec(Chi, (1.0,), 0.5),
-        #DistSpec(Chi, (1.0,), [0.5]),
 
         DistSpec(Chisq, (1.0,), 0.5),
-        #DistSpec(Chisq, (1.0,), [0.5]),
 
         DistSpec(Cosine, (1.0, 1.0), 0.5),
-        #DistSpec(Cosine, (1.0, 1.0), [0.5]),
 
         DistSpec(Epanechnikov, (1.0, 1.0), 0.5),
-        #DistSpec(Epanechnikov, (1.0, 1.0), [0.5]),
 
         DistSpec(s -> Erlang(1, s), (1.0,), 0.5), # First arg is integer
-        #DistSpec(:((s)->Erlang(1, s)), (1.0,), [0.5]),
 
         DistSpec(Exponential, (1.0,), 0.5),
-        #DistSpec(Exponential, (1.0,), [0.5]),
 
         DistSpec(FDist, (1.0, 1.0), 0.5),
-        #DistSpec(FDist, (1.0, 1.0), [0.5]),
 
         DistSpec(Frechet, (), 0.5),
         DistSpec(Frechet, (1.0,), 0.5),
         DistSpec(Frechet, (1.0, 2.0), 0.5),
-        #DistSpec(Frechet, (), [0.5]),
-        #DistSpec(Frechet, (1.0,), [0.5]),
-        #DistSpec(Frechet, (1.0, 2.0), [0.5]),
 
         DistSpec(Gamma, (), 0.5),
         DistSpec(Gamma, (1.0,), 0.5),
         DistSpec(Gamma, (1.0, 2.0), 0.5),
-        #DistSpec(Gamma, (), [0.5]),
-        #DistSpec(Gamma, (1.0,), [0.5]),
-        #DistSpec(Gamma, (1.0, 2.0), [0.5]),
 
         DistSpec(GeneralizedExtremeValue, (1.0, 1.0, 1.0), 0.5),
-        #DistSpec(GeneralizedExtremeValue, (1.0, 1.0, 1.0), [0.5]),
 
         DistSpec(GeneralizedPareto, (), 0.5),
         DistSpec(GeneralizedPareto, (1.0, 2.0), 0.5),
         DistSpec(GeneralizedPareto, (0.0, 2.0, 3.0), 0.5),
-        #DistSpec(GeneralizedPareto, (), [0.5]),
-        #DistSpec(GeneralizedPareto, (1.0, 2.0), [0.5]),
-        #DistSpec(GeneralizedPareto, (0.0, 2.0, 3.0), [0.5]),
 
         DistSpec(Gumbel, (), 0.5),
         DistSpec(Gumbel, (1.0,), 0.5),
         DistSpec(Gumbel, (1.0, 2.0), 0.5),
-        #DistSpec(Gumbel, (), [0.5]),
-        #DistSpec(Gumbel, (1.0,), [0.5]),
-        #DistSpec(Gumbel, (1.0, 2.0), [0.5]),
 
         DistSpec(InverseGamma, (), 0.5),
         DistSpec(InverseGamma, (1.0,), 0.5),
         DistSpec(InverseGamma, (1.0, 2.0), 0.5),
-        #DistSpec(InverseGamma, (), [0.5]),
-        #DistSpec(InverseGamma, (1.0,), [0.5]),
-        #DistSpec(InverseGamma, (1.0, 2.0), [0.5]),
 
         DistSpec(InverseGaussian, (), 0.5),
         DistSpec(InverseGaussian, (1.0,), 0.5),
         DistSpec(InverseGaussian, (1.0, 2.0), 0.5),
-        #DistSpec(InverseGaussian, (), [0.5]),
-        #DistSpec(InverseGaussian, (1.0,), [0.5]),
-        #DistSpec(InverseGaussian, (1.0, 2.0), [0.5]),
 
         DistSpec(Kolmogorov, (), 0.5),
-        #DistSpec(Kolmogorov, (), [0.5]),
 
         DistSpec(Laplace, (), 0.5),
         DistSpec(Laplace, (1.0,), 0.5),
         DistSpec(Laplace, (1.0, 2.0), 0.5),
-        #DistSpec(Laplace, (), [0.5]),
-        #DistSpec(Laplace, (1.0,), [0.5]),
-        #DistSpec(Laplace, (1.0, 2.0), [0.5]),
 
         DistSpec(Levy, (), 0.5),
         DistSpec(Levy, (0.0,), 0.5),
         DistSpec(Levy, (0.0, 2.0), 0.5),
-        #DistSpec(Levy, (), [0.5]),
-        #DistSpec(Levy, (0.0,), [0.5]),
-        #DistSpec(Levy, (0.0, 2.0), [0.5]),
 
         DistSpec((a, b) -> LocationScale(a, b, Normal()), (1.0, 2.0), 0.5),
-        #DistSpec((a, b) -> LocationScale(a, b, Normal()), (1.0, 2.0), [0.5]),
 
         DistSpec(Logistic, (), 0.5),
         DistSpec(Logistic, (1.0,), 0.5),
         DistSpec(Logistic, (1.0, 2.0), 0.5),
-        #DistSpec(Logistic, (), [0.5]),
-        #DistSpec(Logistic, (1.0,), [0.5]),
-        #DistSpec(Logistic, (1.0, 2.0), [0.5]),
 
         DistSpec(LogitNormal, (), 0.5),
         DistSpec(LogitNormal, (1.0,), 0.5),
         DistSpec(LogitNormal, (1.0, 2.0), 0.5),
-        #DistSpec(LogitNormal, (), [0.5]),
-        #DistSpec(LogitNormal, (1.0,), [0.5]),
-        #DistSpec(LogitNormal, (1.0, 2.0), [0.5]),
 
         DistSpec(LogNormal, (), 0.5),
         DistSpec(LogNormal, (1.0,), 0.5),
         DistSpec(LogNormal, (1.0, 2.0), 0.5),
-        #DistSpec(LogNormal, (), [0.5]),
-        #DistSpec(LogNormal, (1.0,), [0.5]),
-        #DistSpec(LogNormal, (1.0, 2.0), [0.5]),
 
         DistSpec(Normal, (), 0.5),
         DistSpec(Normal, (1.0,), 0.5),
         DistSpec(Normal, (1.0, 2.0), 0.5),
-        #DistSpec(Normal, (), [0.5]),
-        #DistSpec(Normal, (1.0,), [0.5]),
-        #DistSpec(Normal, (1.0, 2.0), [0.5]),
 
         DistSpec(NormalCanon, (1.0, 2.0), 0.5),
-        #DistSpec(NormalCanon, (1.0, 2.0), [0.5]),
 
         DistSpec(NormalInverseGaussian, (1.0, 2.0, 1.0, 1.0), 0.5),
-        #DistSpec(NormalInverseGaussian, (1.0, 2.0, 1.0, 1.0), [0.5]),
 
         DistSpec(Pareto, (), 1.5),
         DistSpec(Pareto, (1.0,), 1.5),
         DistSpec(Pareto, (1.0, 1.0), 1.5),
-        #DistSpec(Pareto, (), [1.5]),
-        #DistSpec(Pareto, (1.0,), [1.5]),
-        #DistSpec(Pareto, (1.0, 1.0), [1.5]),
 
         DistSpec(PGeneralizedGaussian, (), 0.5),
         DistSpec(PGeneralizedGaussian, (1.0, 1.0, 1.0), 0.5),
-        #DistSpec(PGeneralizedGaussian, (), [0.5]),
-        #DistSpec(PGeneralizedGaussian, (1.0, 1.0, 1.0), [0.5]),
 
         DistSpec(Rayleigh, (), 0.5),
         DistSpec(Rayleigh, (1.0,), 0.5),
-        #DistSpec(Rayleigh, (), [0.5]),
-        #DistSpec(Rayleigh, (1.0,), [0.5]),
 
         DistSpec(Semicircle, (1.0,), 0.5),
-        #DistSpec(Semicircle, (1.0,), [0.5]),
 
         DistSpec(SymTriangularDist, (), 0.5),
         DistSpec(SymTriangularDist, (1.0,), 0.5),
         DistSpec(SymTriangularDist, (1.0, 2.0), 0.5),
-        #DistSpec(SymTriangularDist, (), [0.5]),
-        #DistSpec(SymTriangularDist, (1.0,), [0.5]),
-        #DistSpec(SymTriangularDist, (1.0, 2.0), [0.5]),
 
         DistSpec(TDist, (1.0,), 0.5),
-        #DistSpec(TDist, (1.0,), [0.5]),
 
         DistSpec(TriangularDist, (1.0, 3.0), 1.5),
         DistSpec(TriangularDist, (1.0, 3.0, 2.0), 1.5),
-        #DistSpec(TriangularDist, (1.0, 2.0), [1.5]),
-        #DistSpec(TriangularDist, (1.0, 3.0, 2.0), [1.5]),
 
         DistSpec(Triweight, (1.0, 1.0), 1.0),
-        #DistSpec(Triweight, (1.0, 1.0), [1.0]),
 
         DistSpec(
             (mu, sigma, l, u) -> truncated(Normal(mu, sigma), l, u), (0.0, 1.0, 1.0, 2.0), 1.5
         ),
-        #DistSpec(
-        #    (mu, sigma, l, u) -> truncated(Normal(mu, sigma), l, u)), (0.0, 1.0, 1.0, 2.0), [1.5]
-        #),
 
         DistSpec(Uniform, (), 0.5),
         DistSpec(Uniform, (0.0, 1.0), 0.5),
-        #DistSpec(Uniform, (), [0.5]),
-        #DistSpec(Uniform, (0.0, 1.0), [0.5]),
 
         DistSpec(TuringUniform, (), 0.5),
         DistSpec(TuringUniform, (0.0, 1.0), 0.5),
-        #DistSpec(TuringUniform, (), [0.5]),
-        #DistSpec(TuringUniform, (0.0, 1.0), [0.5]),
 
         DistSpec(VonMises, (), 1.0),
-        #DistSpec(VonMises, (), [1.0]),
 
         DistSpec(Weibull, (), 1.0),
         DistSpec(Weibull, (1.0,), 1.0),
         DistSpec(Weibull, (1.0, 1.0), 1.0),
-        #DistSpec(Weibull, (), [1.0]),
-        #DistSpec(Weibull, (1.0,), [1.0]),
-        #DistSpec(Weibull, (1.0, 1.0), [1.0]),
     ]
 
     broken_univariate_distributions = DistSpec[
@@ -318,8 +229,6 @@
 
         # Vector x
         DistSpec(p -> Multinomial(2, p ./ sum(p)), (fill(0.5, 2),), [2, 0]),
-        # Matrix x
-        #DistSpec(p -> Multinomial(2, p ./ sum(p)), (fill(0.5, 2),), [2 2; 0 0])
 
         # Vector x
         DistSpec((m, A) -> MvNormal(m, to_posdef(A)), (a, A), b),
@@ -370,6 +279,7 @@
     ]
 
     broken_multivariate_distributions = DistSpec[
+        DistSpec(p -> Multinomial(2, p ./ sum(p)), (fill(0.5, 2),), [2 1; 0 1]),
         # Dispatch error
         DistSpec((m, A) -> MvNormalCanon(m, to_posdef(A)), (a, A), b),
         DistSpec(MvNormalCanon, (a, b), c),
