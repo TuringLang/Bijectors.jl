@@ -22,10 +22,10 @@ function Base.:(==)(b1::RadialLayer, b2::RadialLayer)
     return b1.α_ == b2.α_ && b1.β == b2.β && b1.z_0 == b2.z_0
 end
 
-function RadialLayer(dims::Int, container=Array)
-    α_ = randn()
-    β = randn()
-    z_0 = container(randn(dims))
+function RadialLayer(dims::Int, wrapper=identity)
+    α_ = wrapper(randn())
+    β = wrapper(randn())
+    z_0 = wrapper(randn(dims))
     return RadialLayer(α_, β, z_0)
 end
 
