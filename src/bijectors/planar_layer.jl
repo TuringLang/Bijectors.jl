@@ -30,10 +30,10 @@ function get_u_hat(u, w)
     return u .+ (planar_flow_m(x) - x) .* w ./ sum(abs2, w)   # from A.1
 end
 
-function PlanarLayer(dims::Int, container=Array)
-    w = container(randn(dims))
-    u = container(randn(dims))
-    b = randn()
+function PlanarLayer(dims::Int, wrapper=identity)
+    w = wrapper(randn(dims))
+    u = wrapper(randn(dims))
+    b = wrapper(randn())
     return PlanarLayer(w, u, b)
 end
 
