@@ -13,7 +13,7 @@ using Roots # for inverse
 # RadialLayer #
 ###############
 
-mutable struct RadialLayer{T1 <: Real, T2 <: AbstractVector{<:Real}} <: Bijector{1}
+mutable struct RadialLayer{T1<:Union{Real, AbstractVector{<:Real}}, T2<:AbstractVector{<:Real}} <: Bijector{1}
     α_::T1
     β::T1
     z_0::T2
@@ -23,8 +23,8 @@ function Base.:(==)(b1::RadialLayer, b2::RadialLayer)
 end
 
 function RadialLayer(dims::Int, wrapper=identity)
-    α_ = wrapper(randn())
-    β = wrapper(randn())
+    α_ = wrapper(randn(1))
+    β = wrapper(randn(1))
     z_0 = wrapper(randn(dims))
     return RadialLayer(α_, β, z_0)
 end
@@ -34,7 +34,7 @@ h(α, r) = 1 ./ (α .+ r)     # for radial flow from eq(14)
 
 # An internal version of transform that returns intermediate variables
 function _transform(flow::RadialLayer, z::AbstractVecOrMat)
-    return _radial_transform(flow.α_, flow.β, flow.z_0, z)
+    return _radial_transform(first(flow.α_), first(flow.β), flow.z_0, z)
 end
 function _radial_transform(α_, β, z_0, z)
     α = softplus(α_)            # from A.2
@@ -72,8 +72,8 @@ function (ib::Inverse{<:RadialLayer})(y::AbstractVector{<:Real})
     flow = ib.orig
     T = promote_type(eltype(flow.α_), eltype(flow.β), eltype(flow.z_0), eltype(y))
     TV = vectorof(T)
-    α = softplus(flow.α_)            # from A.2
-    β_hat = - α + softplus(flow.β)   # from A.2
+    α = softplus(first(flow.α_))            # from A.2
+    β_hat = - α + softplus(first(flow.β))   # from A.2
     # Define the objective functional
     f(y) = r -> norm(y .- flow.z_0) - r * (1 + β_hat / (α + r))   # from eq(26)
     # Run solver
@@ -84,8 +84,8 @@ function (ib::Inverse{<:RadialLayer})(y::AbstractMatrix{<:Real})
     flow = ib.orig
     T = promote_type(eltype(flow.α_), eltype(flow.β), eltype(flow.z_0), eltype(y))
     TM = matrixof(T)
-    α = softplus(flow.α_)            # from A.2
-    β_hat = - α + softplus(flow.β)   # from A.2
+    α = softplus(first(flow.α_))            # from A.2
+    β_hat = - α + softplus(first(flow.β))   # from A.2
     # Define the objective functional
     f(y) = r -> norm(y .- flow.z_0) - r * (1 + β_hat / (α + r))   # from eq(26)
     # Run solver

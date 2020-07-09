@@ -15,7 +15,7 @@ using Roots # for inverse
 
 # TODO: add docstring
 
-mutable struct PlanarLayer{T1<:AbstractVector{<:Real}, T2<:Real} <: Bijector{1}
+mutable struct PlanarLayer{T1<:AbstractVector{<:Real}, T2<:Union{Real, AbstractVector{<:Real}}} <: Bijector{1}
     w::T1
     u::T1
     b::T2
@@ -33,7 +33,7 @@ end
 function PlanarLayer(dims::Int, wrapper=identity)
     w = wrapper(randn(dims))
     u = wrapper(randn(dims))
-    b = wrapper(randn())
+    b = wrapper(randn(1))
     return PlanarLayer(w, u, b)
 end
 
@@ -42,7 +42,7 @@ planar_flow_m(x) = -1 + softplus(x)   # for planar flow from A.1
 
 # An internal version of transform that returns intermediate variables
 function _transform(flow::PlanarLayer, z::AbstractVecOrMat)
-    _planar_transform(flow.u, flow.w, flow.b, z)
+    return _planar_transform(flow.u, flow.w, first(flow.b), z)
 end
 function _planar_transform(u, w, b, z)
     u_hat = get_u_hat(u, w)
@@ -55,7 +55,7 @@ end
 function forward(flow::PlanarLayer, z::AbstractVecOrMat)
     transformed, u_hat = _transform(flow, z)
     # Compute log_det_jacobian
-    psi = ψ(z, flow.w, flow.b) .+ zero(eltype(u_hat))
+    psi = ψ(z, flow.w, first(flow.b)) .+ zero(eltype(u_hat))
     if psi isa AbstractVector
         T = eltype(psi)
     else
@@ -71,11 +71,11 @@ function (ib::Inverse{<: PlanarLayer})(y::AbstractVector{<:Real})
     T = promote_type(eltype(flow.u), eltype(flow.w), eltype(flow.b), eltype(y))
     TV = vectorof(T)
     # Define the objective functional; implemented with reference from A.1
-    f(y) = alpha -> (flow.w' * y) - alpha - (flow.w' * u_hat) * tanh(alpha + flow.b)
+    f(y) = alpha -> (flow.w' * y) - alpha - (flow.w' * u_hat) * tanh(alpha + first(flow.b))
     # Run solver
     alpha::T = find_zero(f(y), zero(T), Order16())
     z_para::TV = (flow.w ./ norm(flow.w, 2)) .* alpha
-    return (y .- u_hat .* tanh.(flow.w' * z_para .+ flow.b))::TV
+    return (y .- u_hat .* tanh.(flow.w' * z_para .+ first(flow.b)))::TV
 end
 function (ib::Inverse{<: PlanarLayer})(y::AbstractMatrix{<:Real})
     flow = ib.orig
@@ -83,13 +83,13 @@ function (ib::Inverse{<: PlanarLayer})(y::AbstractMatrix{<:Real})
     T = promote_type(eltype(flow.u), eltype(flow.w), eltype(flow.b), eltype(y))
     TM = matrixof(T)
     # Define the objective functional; implemented with reference from A.1
-    f(y) = alpha -> (flow.w' * y) - alpha - (flow.w' * u_hat) * tanh(alpha + flow.b)
+    f(y) = alpha -> (flow.w' * y) - alpha - (flow.w' * u_hat) * tanh(alpha + first(flow.b))
     # Run solver
     alpha = mapvcat(eachcol(y)) do c
         find_zero(f(c), zero(T), Order16())
     end
     z_para::TM = (flow.w ./ norm(flow.w, 2)) .* alpha'
-    return (y .- u_hat .* tanh.(flow.w' * z_para .+ flow.b))::TM
+    return (y .- u_hat .* tanh.(flow.w' * z_para .+ first(flow.b)))::TM
 end
 
 function matrixof(::Type{Vector{T}}) where {T <: Real}
