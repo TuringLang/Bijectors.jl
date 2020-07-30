@@ -174,6 +174,7 @@ let
     matrix_dists = [
         Wishart(7, [1 0.5; 0.5 1]),
         InverseWishart(2, [1 0.5; 0.5 1]),
+        LKJ(2, 1)
     ]
     for dist in matrix_dists
 
