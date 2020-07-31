@@ -10,13 +10,16 @@ struct CorrBijector <: Bijector{2} end
 (ib::Inverse{<:CorrBijector})(Y::AbstractMatrix{<:Real}) = inv_link_lkj(Y)
 (ib::Inverse{<:CorrBijector})(Y::AbstractArray{<:AbstractMatrix{<:Real}}) = map(ib, Y)
 
-logabsdetjac(::CorrBijector, X::AbstractMatrix{<:Real}) = log_abs_det_jac_lkj(X)
-# logabsdetjac(b::CorrBijector, Xcf::Cholesky)
+
+logabsdetjac(::Inverse{CorrBijector}, y::AbstractMatrix{<:Real}) = log_abs_det_jac_lkj(y)
+logabsdetjac(b::CorrBijector, X::AbstractMatrix{<:Real}) = - log_abs_det_jac_lkj(b(X))
 logabsdetjac(b::CorrBijector, X::AbstractArray{<:AbstractMatrix{<:Real}}) = mapvcat(X) do x
     logabsdetjac(b, x)
 end
 
+
 function log_abs_det_jac_lkj(y)
+    # it's defined on inverse mapping
     K = size(y, 1)
     
     z = tanh.(y)
@@ -27,32 +30,34 @@ function log_abs_det_jac_lkj(y)
     
     right = 0
     for i = 1:(K-1), j = (i+1):K
-        right += 1 / cosh(y[i, j])^2
+        right += log(cosh(y[i, j])^2)
     end
     
-    return 0.5 * left + right
+    return  (0.5 * left - right)
 end
 
 function inv_link_w_lkj(y)
+    K = size(y, 1)
+
     z = tanh.(y)
     w = similar(z)
     
     w[1,1] = 1
-    for j in 1:size(w, 2)
+    for j in 1:K
         w[1, j] = 1
     end
 
-    for i in 2:size(w, 1)
+    for i in 2:K
         for j in 1:(i-1)
             w[i, j] = 0
         end
-        for j in i:size(w, 2)
+        for j in i:K
             w[i, j] = w[i-1, j] * sqrt(1 - z[i-1, j]^2)
         end
     end
 
-    for i in 1:size(w, 1)
-        for j in (i+1):size(w, 2)
+    for i in 1:K
+        for j in (i+1):K
             w[i, j] = w[i, j] * z[i, j]
         end
     end
@@ -66,13 +71,14 @@ function inv_link_lkj(y)
 end
 
 function link_w_lkj(w)
-    z = zeros(size(w)...)
+    K = size(w, 1)
+    z = zero(w)
     
-    for j=2:size(z, 2)
+    for j=2:K
         z[1, j] = w[1, j]
     end
 
-    for i=2:size(z, 2), j=(i+1):size(z, 2)
+    for i=2:K, j=(i+1):K
         z[i, j] = w[i, j] / w[i-1, j] * z[i-1, j] / sqrt(1 - z[i-1, j]^2)
     end
     
@@ -81,6 +87,6 @@ function link_w_lkj(w)
 end
 
 function link_lkj(x)
-    w = cholesky(x).U
+    w = convert(typeof(x), cholesky(x).U) # ? test requires it, such quirk
     return link_w_lkj(w)
 end
