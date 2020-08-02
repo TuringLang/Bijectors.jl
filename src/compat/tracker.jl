@@ -12,6 +12,8 @@ using .Tracker: Tracker,
 using Compat: eachcol
 using LinearAlgebra
 
+import Base.*
+
 maporbroadcast(f, x::TrackedArray...) = f.(x...)
 function maporbroadcast(
     f,
@@ -440,3 +442,96 @@ lower(A::TrackedMatrix) = track(lower, A)
     Ad = data(A)
     return lower(Ad), Δ -> (lower(Δ),)
 end
+
+inv_link_w_lkj(y::TrackedMatrix) = track(inv_link_w_lkj, y)
+@grad function inv_link_w_lkj(y_tracked)
+    y = data(y_tracked)
+
+    K = size(y, 1)
+
+    z = tanh.(y)
+    w = similar(z)
+    
+    w[1,1] = 1
+    for j in 1:K
+        w[1, j] = 1
+    end
+
+    for i in 2:K
+        for j in 1:(i-1)
+            w[i, j] = 0
+        end
+        for j in i:K
+            w[i, j] = w[i-1, j] * sqrt(1 - z[i-1, j]^2)
+        end
+    end
+
+    w1 = copy(w) # cache result
+
+    for i in 1:K
+        for j in (i+1):K
+            w[i, j] = w[i, j] * z[i, j]
+        end
+    end
+
+    return w, Δw -> begin
+        Δz = zeros(size(Δw))
+        Δw1 = zeros(size(Δw))
+        for i in 1:K, j in (i+1):K
+            Δw1[i,j] = Δw[i,j] * z[i,j]
+            Δz[i,j] = Δw[i,j] * w1[i,j]
+        end
+        for i in 1:K
+            Δw1[i,i] = Δw[i,i]
+        end
+
+        for j=2:K, i=j:-1:2
+            tz = sqrt(1 - z[i-1, j]^2)
+            Δw1[i-1, j] += Δw1[i, j] * tz
+            Δz[i-1, j] += Δw1[i, j] * w1[i-1, j] * 0.5 / tz * (-2 * z[i-1, j])
+        end
+
+        Δy = Δz .* (1 ./ cosh.(y).^2)
+        return (Δy,)
+    end
+end
+
+link_w_lkj(w::TrackedMatrix) = track(link_w_lkj, w)
+@grad function link_w_lkj(w_tracked)
+    w = data(w_tracked)
+
+    K = size(w, 1)
+    z = zero(w)
+    
+    for j=2:K
+        z[1, j] = w[1, j]
+    end
+
+    for i=2:K, j=(i+1):K
+        z[i, j] = w[i, j] / w[i-1, j] * z[i-1, j] / sqrt(1 - z[i-1, j]^2)
+    end
+    
+    y = atanh.(z)
+
+    return y, Δy -> begin
+        Δz = Δy .* (1 ./ (1. .- z.^2))
+        Δw = zeros(size(Δz))
+        for j=2:K, i=(j-1):-1:2
+            tz = sqrt(1 - z[i-1, j]^2)
+            Δw[i,j] += Δz[i,j] / w[i-1,j] * z[i-1, j] / tz
+            Δw[i-1,j] += Δz[i,j] * w[i,j] * z[i-1, j] / tz * (-1 / w[i-1, j]^2)
+            Δz[i-1,j] += Δz[i,j] * w[i,j] / w[i-1, j] * ((tz - z[i-1,j] * 0.5 / tz * (-2*z[i-1,j])) / tz^2)
+        end
+        
+        for j=2:K
+            Δw[1, j] += Δz[1, j]
+        end
+        
+        return (Δw,)
+    end
+end
+
+# Workaround for Tracker ambiguous bug. See: https://github.com/FluxML/Tracker.jl/issues/74
+# (*)(X::Diagonal, Y::TrackedArray{T,2,A} where A where T) = collect(X) * Y
+x::Diagonal * y::TrackedMatrix  = track(*, x, y)
+x::TrackedMatrix * y::Diagonal  = track(*, x, y)
