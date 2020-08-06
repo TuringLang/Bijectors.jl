@@ -563,6 +563,13 @@ link_w_lkj(w::TrackedMatrix) = track(link_w_lkj, w)
     =#
 end
 
+upper1(AT::TrackedMatrix, A::TrackedMatrix) = track(upper1, AT, A)
+@grad function upper1(AT_tracked, A_tracked)
+    AT = data(AT_tracked)
+    A = data(A_tracked)
+    return upper1(AT, A), Δ -> (nothing, upper1(AT, Δ))
+end
+
 # Workaround for Tracker ambiguous bug. See: https://github.com/FluxML/Tracker.jl/issues/74
 # (*)(X::Diagonal, Y::TrackedArray{T,2,A} where A where T) = collect(X) * Y
 x::Diagonal * y::TrackedMatrix  = track(*, x, y)

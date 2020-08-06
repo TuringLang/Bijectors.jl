@@ -2,9 +2,9 @@
 # https://mc-stan.org/docs/2_23/reference-manual/correlation-matrix-transform-section.html
 # (7/30/2020) their "manageable expression" is wrong...
 
-function upper(A)
-    AU = zero(A)
-    for i=1:size(A,1), j=i:size(A,2)
+function upper1(AT, A)
+    AU = zero(AT)
+    for i=1:size(A,1), j=(i+1):size(A,2)
         AU[i,j] = A[i,j]
     end
     AU
@@ -130,5 +130,6 @@ function link_lkj(x)
     # w = upper(parent(cholesky(x).U))
     # return link_w_lkj(w)
     r = link_w_lkj(w) 
-    return r - lower(parent(r)) # test requires it, such quirk
+    # return r - lower(parent(r)) # test requires it, such quirk
+    upper1(x, r)
 end

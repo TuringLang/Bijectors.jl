@@ -477,7 +477,8 @@ end
         Wishart(v,S),
         InverseWishart(v,S),
         TuringWishart(v,S),
-        TuringInverseWishart(v,S)
+        TuringInverseWishart(v,S),
+        LKJ(3, 1.)
     ]
 
     for dist in matrix_dists
