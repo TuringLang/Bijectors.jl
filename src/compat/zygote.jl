@@ -253,12 +253,43 @@ end
         z[1, j] = w[1, j]
     end
 
+    #=
     for i=2:K, j=(i+1):K
         z[i, j] = w[i, j] / w[i-1, j] * z[i-1, j] / sqrt(1 - z[i-1, j]^2)
+    end
+    =#
+    for i=2:K, j=(i+1):K
+        p = w[i, j]
+        for ip in 1:(i-1)
+            p *= 1 / sqrt(1-z[ip, j]^2)
+        end
+        z[i,j] = p
     end
     
     y = atanh.(z)
 
+    
+    return y, Δy -> begin
+        zt0 = 1 ./ (1 .- z.^2)
+        zt = sqrt.(zt0)
+        Δz = Δy .* zt0
+        Δw = zeros(size(Δy))
+        
+        for j=2:K, i=(j-1):-1:2
+            pd = prod(zt[1:i-1,j])
+            Δw[i,j] += Δz[i,j] * pd
+            for ip in 1:(i-1)
+                Δw[ip, j] += Δz[i,j] * w[i,j] * pd / (1-z[ip,j]^2) * z[ip,j]
+            end
+        end
+        for j=2:K
+            Δw[1, j] += Δz[1, j]
+        end
+
+        (Δw,)
+    end
+    
+    #=
     return y, Δy -> begin
         Δz = Δy .* (1 ./ (1. .- z.^2))
         Δw = zeros(size(Δz))
@@ -275,8 +306,13 @@ end
         
         return (Δw,)
     end
+    =#
 end
 
 @adjoint function upper(A)
     return upper(A), Δ -> (upper(Δ),)
+end
+
+Zygote.@adjoint function LinearAlgebra.isposdef(x)
+    LinearAlgebra.isposdef(x), _-> ()
 end

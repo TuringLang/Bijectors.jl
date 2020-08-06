@@ -20,7 +20,15 @@ struct CorrBijector <: Bijector{2} end
 
 
 logabsdetjac(::Inverse{CorrBijector}, y::AbstractMatrix{<:Real}) = log_abs_det_jac_lkj(y)
-logabsdetjac(b::CorrBijector, X::AbstractMatrix{<:Real}) = - log_abs_det_jac_lkj(b(X))
+function logabsdetjac(b::CorrBijector, X::AbstractMatrix{<:Real})
+    
+    if !LinearAlgebra.isposdef(X)
+        println("!isposdef(X)")
+        return NaN # prevent Cholesky decomposition to break inference
+    end
+    
+    -log_abs_det_jac_lkj(b(X)) # It may be more efficient if we can use un-contraint value to prevent call of b
+end
 logabsdetjac(b::CorrBijector, X::AbstractArray{<:AbstractMatrix{<:Real}}) = mapvcat(X) do x
     logabsdetjac(b, x)
 end
@@ -76,7 +84,6 @@ function inv_link_w_lkj(y)
 end
 
 function inv_link_lkj(y)
-    # println("inv_link_lkj $(typeof(y) == Matrix{Float64})")
     w = inv_link_w_lkj(y)
     return w' * w
 end
@@ -95,8 +102,20 @@ function link_w_lkj(w)
         z[1, j] = w[1, j]
     end
 
+    #=
+    # This implementation will not works when w[i-1, j] = 0.
+    # Though it is a zero measure set, unit matrix initialization will not works.
+
     for i=2:K, j=(i+1):K
         z[i, j] = w[i, j] / w[i-1, j] * z[i-1, j] / sqrt(1 - z[i-1, j]^2)
+    end
+    =#
+    for i=2:K, j=(i+1):K
+        p = w[i, j]
+        for ip in 1:(i-1)
+            p *= 1 / sqrt(1-z[ip, j]^2)
+        end
+        z[i,j] = p
     end
     
     y = atanh.(z)
@@ -109,5 +128,7 @@ function link_lkj(x)
     # w = collect(cholesky(x).U)
     # w = convert(typeof(x), cholesky(x).U) # ? test requires it, such quirk
     # w = upper(parent(cholesky(x).U))
-    return link_w_lkj(w)
+    # return link_w_lkj(w)
+    r = link_w_lkj(w) 
+    return r - lower(parent(r)) # test requires it, such quirk
 end

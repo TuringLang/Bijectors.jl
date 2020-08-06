@@ -500,6 +500,7 @@ link_w_lkj(w::TrackedMatrix) = track(link_w_lkj, w)
 @grad function link_w_lkj(w_tracked)
     w = data(w_tracked)
 
+    # println("link_w_lkj $(typeof(w) == Matrix{Float64})")
     K = size(w, 1)
     z = zero(w)
     
@@ -507,12 +508,42 @@ link_w_lkj(w::TrackedMatrix) = track(link_w_lkj, w)
         z[1, j] = w[1, j]
     end
 
+    #=
     for i=2:K, j=(i+1):K
         z[i, j] = w[i, j] / w[i-1, j] * z[i-1, j] / sqrt(1 - z[i-1, j]^2)
+    end
+    =#
+    for i=2:K, j=(i+1):K
+        p = w[i, j]
+        for ip in 1:(i-1)
+            p *= 1 / sqrt(1-z[ip, j]^2)
+        end
+        z[i,j] = p
     end
     
     y = atanh.(z)
 
+    return y, Δy -> begin
+        zt0 = 1 ./ (1 .- z.^2)
+        zt = sqrt.(zt0)
+        Δz = Δy .* zt0
+        Δw = zeros(size(Δy))
+        
+        for j=2:K, i=(j-1):-1:2
+            pd = prod(zt[1:i-1,j])
+            Δw[i,j] += Δz[i,j] * pd
+            for ip in 1:(i-1)
+                Δw[ip, j] += Δz[i,j] * w[i,j] * pd / (1-z[ip,j]^2) * z[ip,j]
+            end
+        end
+        for j=2:K
+            Δw[1, j] += Δz[1, j]
+        end
+
+        (Δw,)
+    end
+    
+    #=
     return y, Δy -> begin
         Δz = Δy .* (1 ./ (1. .- z.^2))
         Δw = zeros(size(Δz))
@@ -529,9 +560,23 @@ link_w_lkj(w::TrackedMatrix) = track(link_w_lkj, w)
         
         return (Δw,)
     end
+    =#
 end
 
 # Workaround for Tracker ambiguous bug. See: https://github.com/FluxML/Tracker.jl/issues/74
 # (*)(X::Diagonal, Y::TrackedArray{T,2,A} where A where T) = collect(X) * Y
 x::Diagonal * y::TrackedMatrix  = track(*, x, y)
 x::TrackedMatrix * y::Diagonal  = track(*, x, y)
+
+function LinearAlgebra.isposdef(w_tracked::TrackedMatrix)
+    # w = data(w_tracked)
+    w = w_tracked.data
+    LinearAlgebra.isposdef(w)
+end
+
+function LinearAlgebra.isposdef(w_tracked::Symmetric{<:Any, <:TrackedMatrix})
+    # w = data(w_tracked)
+    w = w_tracked.data
+    LinearAlgebra.isposdef(w)
+end
+
