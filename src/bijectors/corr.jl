@@ -86,7 +86,6 @@ function inv_link_lkj(y)
 end
 
 function link_w_lkj(w)
-    # println("link_w_lkj $(typeof(w) == Matrix{Float64})")
     K = size(w, 1)
 
     # z = zero(w) # `zero` isn't compatible with ReverseDiff
