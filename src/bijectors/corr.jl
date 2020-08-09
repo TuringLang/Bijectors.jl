@@ -21,7 +21,6 @@ struct CorrBijector <: Bijector{2} end
 
 logabsdetjac(::Inverse{CorrBijector}, y::AbstractMatrix{<:Real}) = log_abs_det_jac_lkj(y)
 function logabsdetjac(b::CorrBijector, X::AbstractMatrix{<:Real})
-    
     if !LinearAlgebra.isposdef(X)
         println("!isposdef(X)")
         return NaN # prevent Cholesky decomposition to break inference
