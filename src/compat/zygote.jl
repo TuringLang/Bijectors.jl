@@ -245,7 +245,6 @@ end
 end
 
 @adjoint function link_w_lkj(w)
-    # println("link_w_lkj $(typeof(w) == Matrix{Float64})")
     K = size(w, 1)
     z = zero(w)
     
