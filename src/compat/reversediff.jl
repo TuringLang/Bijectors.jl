@@ -267,6 +267,5 @@ link_w_lkj(w::TrackedMatrix) = track(link_w_lkj, w)
         return (Δw,)
     end
 end
-=#
 
 end
