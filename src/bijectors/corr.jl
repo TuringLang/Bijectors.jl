@@ -48,7 +48,7 @@ function log_abs_det_jac_lkj(y)
         right += log(cosh(y[i, j])^2)
     end
     
-    return  (0.5 * left - right)
+    return left / 2 - right
 end
 
 function inv_link_w_lkj(y)
