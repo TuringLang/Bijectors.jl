@@ -119,7 +119,6 @@ function link_w_lkj(w)
 end
 
 function link_lkj(x)
-    # println("link_lkj $(typeof(x) == Matrix{Float64})")
     w = cholesky(x).U
     # w = collect(cholesky(x).U)
     # w = convert(typeof(x), cholesky(x).U) # ? test requires it, such quirk
