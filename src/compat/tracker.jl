@@ -578,7 +578,7 @@ x::TrackedMatrix * y::Diagonal  = track(*, x, y)
 function LinearAlgebra.isposdef(w_tracked::TrackedMatrix)
     # w = data(w_tracked)
     w = w_tracked.data
-    LinearAlgebra.isposdef(w)
+    return LinearAlgebra.isposdef(w)
 end
 
 function LinearAlgebra.isposdef(w_tracked::Symmetric{<:Any, <:TrackedMatrix})
