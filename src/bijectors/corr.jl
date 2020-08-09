@@ -27,7 +27,7 @@ function logabsdetjac(b::CorrBijector, X::AbstractMatrix{<:Real})
         return NaN # prevent Cholesky decomposition to break inference
     end
     
-    -log_abs_det_jac_lkj(b(X)) # It may be more efficient if we can use un-contraint value to prevent call of b
+    return -log_abs_det_jac_lkj(b(X)) # It may be more efficient if we can use un-contraint value to prevent call of b
 end
 logabsdetjac(b::CorrBijector, X::AbstractArray{<:AbstractMatrix{<:Real}}) = mapvcat(X) do x
     logabsdetjac(b, x)
