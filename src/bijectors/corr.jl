@@ -126,5 +126,5 @@ function link_lkj(x)
     # return link_w_lkj(w)
     r = link_w_lkj(w) 
     # return r - lower(parent(r)) # test requires it, such quirk
-    upper1(x, r)
+    return upper1(x, r)
 end
