@@ -100,7 +100,7 @@ function link_w_lkj(w)
 
     #=
     # This implementation will not work when w[i-1, j] = 0.
-    # Though it is a zero measure set, unit matrix initialization will not works.
+    # Though it is a zero measure set, unit matrix initialization will not work.
 
     for i=2:K, j=(i+1):K
         z[i, j] = w[i, j] / w[i-1, j] * z[i-1, j] / sqrt(1 - z[i-1, j]^2)
