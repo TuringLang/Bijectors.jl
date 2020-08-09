@@ -7,7 +7,7 @@ function upper1(AT, A)
     for i=1:size(A,1), j=(i+1):size(A,2)
         AU[i,j] = A[i,j]
     end
-    AU
+    return AU
 end
 
 struct CorrBijector <: Bijector{2} end
