@@ -88,7 +88,7 @@ end
 function link_w_lkj(w)
     K = size(w, 1)
 
-    # z = zero(w) # `zero` isn't compatible with ReverseDiff
+    # `zero` isn't compatible with ReverseDiff, so we use `similar`
     z = similar(w)
     for i=1:K, j=1:K
         z[i,j] = 0
