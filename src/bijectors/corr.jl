@@ -99,7 +99,7 @@ function link_w_lkj(w)
     end
 
     #=
-    # This implementation will not works when w[i-1, j] = 0.
+    # This implementation will not work when w[i-1, j] = 0.
     # Though it is a zero measure set, unit matrix initialization will not works.
 
     for i=2:K, j=(i+1):K
