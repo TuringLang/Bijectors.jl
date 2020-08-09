@@ -52,7 +52,6 @@ function log_abs_det_jac_lkj(y)
 end
 
 function inv_link_w_lkj(y)
-    # println("inv_link_w_lkj $(typeof(y) == Matrix{Float64})")
     K = size(y, 1)
 
     z = tanh.(y)
