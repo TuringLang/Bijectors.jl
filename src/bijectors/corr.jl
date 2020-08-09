@@ -34,7 +34,6 @@ end
 
 
 function log_abs_det_jac_lkj(y)
-    # println("log_abs_det_jac_lkj $(typeof(y) == Matrix{Float64})")
     # it's defined on inverse mapping
     K = size(y, 1)
     
