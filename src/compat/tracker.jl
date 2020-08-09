@@ -584,6 +584,5 @@ end
 function LinearAlgebra.isposdef(w_tracked::Symmetric{<:Any, <:TrackedMatrix})
     # w = data(w_tracked)
     w = w_tracked.data
-    LinearAlgebra.isposdef(w)
+    return LinearAlgebra.isposdef(w)
 end
-
