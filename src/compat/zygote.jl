@@ -313,5 +313,5 @@ end
 end
 
 Zygote.@adjoint function LinearAlgebra.isposdef(x)
-    LinearAlgebra.isposdef(x), _-> ()
+    return LinearAlgebra.isposdef(x), _-> ()
 end
