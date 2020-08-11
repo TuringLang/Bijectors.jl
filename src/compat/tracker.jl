@@ -12,8 +12,6 @@ using .Tracker: Tracker,
 using Compat: eachcol
 using LinearAlgebra
 
-import Base.*
-
 maporbroadcast(f, x::TrackedArray...) = f.(x...)
 function maporbroadcast(
     f,
@@ -569,6 +567,7 @@ upper1(AT::TrackedMatrix, A::TrackedMatrix) = track(upper1, AT, A)
     return upper1(AT, A), Δ -> (nothing, upper1(AT, Δ))
 end
 
+#=
 # Workaround for Tracker ambiguous bug. See: https://github.com/FluxML/Tracker.jl/issues/74
 # (*)(X::Diagonal, Y::TrackedArray{T,2,A} where A where T) = collect(X) * Y
 x::Diagonal * y::TrackedMatrix  = track(*, x, y)
@@ -585,3 +584,4 @@ function LinearAlgebra.isposdef(w_tracked::Symmetric{<:Any, <:TrackedMatrix})
     w = w_tracked.data
     return LinearAlgebra.isposdef(w)
 end
+=#

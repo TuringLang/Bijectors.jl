@@ -304,11 +304,16 @@ end
 
 
 
-upper1(AT::TrackedMatrix, A::TrackedMatrix) = track(upper1, AT, A)
+upper1(AT::TrackedMatrix, A) = track(upper1, AT, A)
 @grad function upper1(AT_tracked, A_tracked)
     AT = value(AT_tracked)
     A = value(A_tracked)
-    return upper1(AT, A), Δ -> (nothing, upper1(AT, Δ))
+    return upper1(AT, A), Δ -> begin
+        r = upper1(AT, Δ)
+        @show AT_tracked AT A_tracked A r zero(AT)
+        # return nothing, r
+        return zero(AT), r
+    end
 end
 
 
