@@ -65,7 +65,7 @@ function forward(flow::PlanarLayer, z::AbstractVecOrMat)
     return (rv = transformed, logabsdetjac = log_det_jacobian)
 end
 
-function (ib::Inverse{<: PlanarLayer})(y::AbstractVector{<:Real})
+function (ib::Inverse{<:PlanarLayer})(y::AbstractVector{<:Real})
     flow = ib.orig
     w = flow.w
     b = first(flow.b)
@@ -79,7 +79,7 @@ function (ib::Inverse{<: PlanarLayer})(y::AbstractVector{<:Real})
     return y .- u_hat .* tanh(alpha * norm(w, 2) + b)
 end
 
-function (ib::Inverse{<: PlanarLayer})(y::AbstractMatrix{<:Real})
+function (ib::Inverse{<:PlanarLayer})(y::AbstractMatrix{<:Real})
     flow = ib.orig
     w = flow.w
     b = first(flow.b)
