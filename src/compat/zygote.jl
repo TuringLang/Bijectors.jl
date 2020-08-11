@@ -308,12 +308,3 @@ end
     =#
 end
 
-@adjoint function upper1(AT, A)
-    return upper1(AT, A), Δ -> (nothing, upper1(AT, Δ))
-end
-
-#=
-Zygote.@adjoint function LinearAlgebra.isposdef(x)
-    return LinearAlgebra.isposdef(x), _-> ()
-end
-=#
