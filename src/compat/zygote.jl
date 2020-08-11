@@ -223,8 +223,8 @@ end
     end
 
     return w, Δw -> begin
-        Δz = zeros(size(Δw))
-        Δw1 = zeros(size(Δw))
+        Δz = zero(Δw)
+        Δw1 = zero(Δw)
         for j=2:K, i=1:j-1
             Δw1[i,j] = Δw[i,j] * z[i,j]
             Δz[i,j] = Δw[i,j] * w1[i,j]
@@ -266,7 +266,7 @@ end
         zt0 = 1 ./ (1 .- z.^2)
         zt = sqrt.(zt0)
         Δz = Δy .* zt0
-        Δw = zeros(size(Δy))
+        Δw = zero(Δy)
         
         for j=2:K, i=(j-1):-1:2
             pd = prod(zt[1:i-1,j])

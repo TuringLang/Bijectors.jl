@@ -473,8 +473,8 @@ inv_link_w_lkj(y::TrackedMatrix) = track(inv_link_w_lkj, y)
     end
 
     return w, Δw -> begin
-        Δz = zeros(size(Δw))
-        Δw1 = zeros(size(Δw))
+        Δz = zero(Δw)
+        Δw1 = zero(Δw)
         for j=2:K, i=1:j-1
             Δw1[i,j] = Δw[i,j] * z[i,j]
             Δz[i,j] = Δw[i,j] * w1[i,j]
@@ -519,7 +519,7 @@ link_w_lkj(w::TrackedMatrix) = track(link_w_lkj, w)
         zt0 = 1 ./ (1 .- z.^2)
         zt = sqrt.(zt0)
         Δz = Δy .* zt0
-        Δw = zeros(size(Δy))
+        Δw = zero(Δy)
         
         for j=2:K, i=(j-1):-1:2
             pd = prod(zt[1:i-1,j])
@@ -535,22 +535,4 @@ link_w_lkj(w::TrackedMatrix) = track(link_w_lkj, w)
         return (Δw,)
     end
     
-    #=
-    return y, Δy -> begin
-        Δz = Δy .* (1 ./ (1. .- z.^2))
-        Δw = zeros(size(Δz))
-        for j=2:K, i=(j-1):-1:2
-            tz = sqrt(1 - z[i-1, j]^2)
-            Δw[i,j] += Δz[i,j] / w[i-1,j] * z[i-1, j] / tz
-            Δw[i-1,j] += Δz[i,j] * w[i,j] * z[i-1, j] / tz * (-1 / w[i-1, j]^2)
-            Δz[i-1,j] += Δz[i,j] * w[i,j] / w[i-1, j] * ((tz - z[i-1,j] * 0.5 / tz * (-2*z[i-1,j])) / tz^2)
-        end
-        
-        for j=2:K
-            Δw[1, j] += Δz[1, j]
-        end
-        
-        return (Δw,)
-    end
-    =#
 end
