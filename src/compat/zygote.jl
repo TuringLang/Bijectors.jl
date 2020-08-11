@@ -195,17 +195,18 @@ end
 end
 
 @adjoint function inv_link_w_lkj(y)
+    @assert size(y, 1) == size(y, 2)
     K = size(y, 1)
 
     z = tanh.(y)
     w = similar(z)
     
     w[1,1] = 1
-    for j in 1:K
+    @inbounds for j in 1:K
         w[1, j] = 1
     end
 
-    for j in 1:K
+    @inbounds for j in 1:K
         for i in j+1:K
             w[i, j] = 0
         end
@@ -216,24 +217,25 @@ end
 
     w1 = copy(w) # cache result
 
-    for j in 2:K
+    @inbounds for j in 2:K
         for i in 1:j-1
             w[i, j] = w[i, j] * z[i, j]
         end
     end
 
     return w, Δw -> begin
+        @assert size(Δw, 1) == size(Δw, 2)
         Δz = zero(Δw)
         Δw1 = zero(Δw)
-        for j=2:K, i=1:j-1
+        @inbounds for j=2:K, i=1:j-1
             Δw1[i,j] = Δw[i,j] * z[i,j]
             Δz[i,j] = Δw[i,j] * w1[i,j]
         end
-        for i in 1:K
+        @inbounds for i in 1:K
             Δw1[i,i] = Δw[i,i]
         end
 
-        for j=2:K, i=j:-1:2
+        @inbounds for j=2:K, i=j:-1:2
             tz = sqrt(1 - z[i-1, j]^2)
             Δw1[i-1, j] += Δw1[i, j] * tz
             Δz[i-1, j] += Δw1[i, j] * w1[i-1, j] * 0.5 / tz * (-2 * z[i-1, j])
@@ -245,14 +247,15 @@ end
 end
 
 @adjoint function link_w_lkj(w)
+    @assert size(w, 1) == size(w, 2)
     K = size(w, 1)
     z = zero(w)
     
-    for j=2:K
+    @inbounds for j=2:K
         z[1, j] = w[1, j]
     end
 
-    for j=3:K, i=2:j-1
+    @inbounds for j=3:K, i=2:j-1
         p = w[i, j]
         for ip in 1:(i-1)
             p *= 1 / sqrt(1-z[ip, j]^2)
@@ -263,19 +266,20 @@ end
     y = atanh.(z)
 
     return y, Δy -> begin
+        @assert size(Δy, 1) == size(Δy, 2)
         zt0 = 1 ./ (1 .- z.^2)
         zt = sqrt.(zt0)
         Δz = Δy .* zt0
         Δw = zero(Δy)
         
-        for j=2:K, i=(j-1):-1:2
+        @inbounds for j=2:K, i=(j-1):-1:2
             pd = prod(zt[1:i-1,j])
             Δw[i,j] += Δz[i,j] * pd
             for ip in 1:(i-1)
                 Δw[ip, j] += Δz[i,j] * w[i,j] * pd / (1-z[ip,j]^2) * z[ip,j]
             end
         end
-        for j=2:K
+        @inbounds for j=2:K
             Δw[1, j] += Δz[1, j]
         end
 

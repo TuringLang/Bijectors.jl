@@ -31,15 +31,16 @@ end
 
 function logabsdetjac_lkj_inv(y)
     # it's defined on inverse mapping
+    @assert size(y, 1) == size(y, 2)
     K = size(y, 1)
     
     left = zero(eltype(y))
-    for j=2:K, i=1:(j-1)
+    @inbounds for j=2:K, i=1:(j-1)
         left += (K-i-1) * log(1 - tanh(y[i, j])^2)
     end
     
     right = zero(eltype(y))
-    for j=2:K, i=1:(j-1)
+    @inbounds for j=2:K, i=1:(j-1)
         right += log(cosh(y[i, j])^2)
     end
     
@@ -47,17 +48,18 @@ function logabsdetjac_lkj_inv(y)
 end
 
 function inv_link_w_lkj(y)
+    @assert size(y, 1) == size(y, 2)
     K = size(y, 1)
 
     z = tanh.(y)
     w = similar(z)
     
     w[1,1] = 1
-    for j in 1:K
+    @inbounds for j in 1:K
         w[1, j] = 1
     end
 
-    for j in 1:K
+    @inbounds for j in 1:K
         for i in j+1:K
             w[i, j] = 0
         end
@@ -66,7 +68,7 @@ function inv_link_w_lkj(y)
         end
     end
 
-    for j in 2:K
+    @inbounds for j in 2:K
         for i in 1:j-1
             w[i, j] = w[i, j] * z[i, j]
         end
@@ -76,11 +78,12 @@ function inv_link_w_lkj(y)
 end
 
 function link_w_lkj(w)
+    @assert size(w, 1) == size(w, 2)
     K = size(w, 1)
 
     z = zero(w)
     
-    for j=2:K
+    @inbounds for j=2:K
         z[1, j] = w[1, j]
     end
 
@@ -105,7 +108,7 @@ function link_w_lkj(w)
 
     which is the above implementation.
     =#
-    for j=3:K, i=2:j-1
+    @inbounds for j=3:K, i=2:j-1
         p = w[i, j]
         for ip in 1:(i-1)
             p /= sqrt(1-z[ip, j]^2)
