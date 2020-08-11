@@ -87,7 +87,7 @@ function link_w_lkj(w)
     # Though it is a zero measure set, unit matrix initialization will not work.
 
     for i=2:K, j=(i+1):K
-        z[i, j] = w[i, j] / w[i-1, j] * z[i-1, j] / sqrt(1 - z[i-1, j]^2)
+        z[i, j] = (w[i, j] / w[i-1, j]) * (z[i-1, j] / sqrt(1 - z[i-1, j]^2))
     end
     For `(i, j)` in the loop below, we define
 
