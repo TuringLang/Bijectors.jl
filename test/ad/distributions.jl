@@ -35,6 +35,13 @@
         return invL * invL'
     end
 
+    function to_corr(x)
+        y = to_posdef(x)
+        d = 1 ./ sqrt.(diag(y))
+        y2 = d .* y .* d'
+        return (y2 + y2') / 2
+    end
+
     univariate_distributions = DistSpec[
         ## Univariate discrete distributions
 
@@ -307,6 +314,7 @@
         DistSpec((df, A) -> InverseWishart(df, to_posdef(A)), (3.0, A), B, to_posdef),
         DistSpec((df, A) -> TuringWishart(df, to_posdef(A)), (3.0, A), B, to_posdef),
         DistSpec((df, A) -> TuringInverseWishart(df, to_posdef(A)), (3.0, A), B, to_posdef),
+        DistSpec(() -> LKJ(3, 1.), (), A, to_corr), # AD for parameters of LKJ requires more DistributionsAD supports
 
         # Vector of matrices x
         DistSpec(
@@ -339,6 +347,12 @@
             [B, C],
             x -> map(to_posdef, x),
         ),
+        DistSpec(
+            () -> LKJ(3, 1.),
+            (),
+            [A, B],
+            x -> map(to_corr, x),
+        )
     ]
 
     broken_matrixvariate_distributions = DistSpec[
