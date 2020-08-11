@@ -93,7 +93,7 @@ function link_w_lkj(w)
     for i=2:K, j=(i+1):K
         p = w[i, j]
         for ip in 1:(i-1)
-            p *= 1 / sqrt(1-z[ip, j]^2)
+            p /= sqrt(1-z[ip, j]^2)
         end
         z[i,j] = p
     end
