@@ -4,10 +4,18 @@
 
 struct CorrBijector <: Bijector{2} end
 
-(b::CorrBijector)(X::AbstractMatrix{<:Real}) = link_lkj(X)
+function (b::CorrBijector)(x::AbstractMatrix{<:Real})    
+    w = cholesky(x).U + zero(x) # convert to dense matrix
+    r = link_w_lkj(w) 
+    return r
+end
+
 (b::CorrBijector)(X::AbstractArray{<:AbstractMatrix{<:Real}}) = map(b, X)
 
-(ib::Inverse{<:CorrBijector})(Y::AbstractMatrix{<:Real}) = inv_link_lkj(Y)
+function (ib::Inverse{<:CorrBijector})(y::AbstractMatrix{<:Real})
+    w = inv_link_w_lkj(y)
+    return w' * w
+end
 (ib::Inverse{<:CorrBijector})(Y::AbstractArray{<:AbstractMatrix{<:Real}}) = map(ib, Y)
 
 
@@ -26,7 +34,7 @@ function log_abs_det_jac_lkj(y)
     K = size(y, 1)
     
     z = tanh.(y)
-    left = eltype(y)(0)
+    left = zero(eltype(y))
     for i = 1:(K-1), j = (i+1):K
         left += (K-i-1) * log(1 - z[i, j]^2)
     end
@@ -66,11 +74,6 @@ function inv_link_w_lkj(y)
     end
     
     return w
-end
-
-function inv_link_lkj(y)
-    w = inv_link_w_lkj(y)
-    return w' * w
 end
 
 function link_w_lkj(w)
@@ -113,10 +116,4 @@ function link_w_lkj(w)
     
     y = atanh.(z)
     return y
-end
-
-function link_lkj(x)
-    w = cholesky(x).U + zero(x) # convert to dense matrix
-    r = link_w_lkj(w) 
-    return r
 end
