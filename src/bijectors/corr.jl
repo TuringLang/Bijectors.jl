@@ -31,7 +31,7 @@ function log_abs_det_jac_lkj(y)
         left += (K-i-1) * log(1 - z[i, j]^2)
     end
     
-    right = eltype(y)(0)
+    right = zero(eltype(y))
     for i = 1:(K-1), j = (i+1):K
         right += log(cosh(y[i, j])^2)
     end
