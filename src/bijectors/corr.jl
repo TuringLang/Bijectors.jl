@@ -26,12 +26,12 @@ function log_abs_det_jac_lkj(y)
     K = size(y, 1)
     
     z = tanh.(y)
-    left = 0
+    left = eltype(y)(0)
     for i = 1:(K-1), j = (i+1):K
         left += (K-i-1) * log(1 - z[i, j]^2)
     end
     
-    right = 0
+    right = eltype(y)(0)
     for i = 1:(K-1), j = (i+1):K
         right += log(cosh(y[i, j])^2)
     end
