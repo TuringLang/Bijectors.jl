@@ -500,7 +500,6 @@ link_w_lkj(w::TrackedMatrix) = track(link_w_lkj, w)
 @grad function link_w_lkj(w_tracked)
     w = data(w_tracked)
 
-    # println("link_w_lkj $(typeof(w) == Matrix{Float64})")
     K = size(w, 1)
     z = zero(w)
     

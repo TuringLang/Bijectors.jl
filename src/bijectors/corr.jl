@@ -3,6 +3,7 @@
 # (7/30/2020) their "manageable expression" is wrong...
 
 function upper1(AT, A)
+    @show typeof(AT) typeof(A) AT A # TODO: remove this line before committing
     AU = zero(AT)
     for i=1:size(A,1), j=(i+1):size(A,2)
         AU[i,j] = A[i,j]
@@ -89,10 +90,15 @@ function link_w_lkj(w)
     K = size(w, 1)
 
     # `zero` isn't compatible with ReverseDiff, so we use `similar`
+    #=
     z = similar(w)
     for i=1:K, j=1:K
         z[i,j] = 0
     end
+    =#
+    z = zero(w)
+    @show typeof(w) w
+    @show typeof(z) z # TODO: remove this line before committing
     
     for j=2:K
         z[1, j] = w[1, j]
@@ -124,6 +130,8 @@ function link_lkj(x)
     # w = convert(typeof(x), cholesky(x).U) # ? test requires it, such quirk
     # w = upper(parent(cholesky(x).U))
     # return link_w_lkj(w)
+    @show typeof(x) x
+    @show typeof(w) w
     r = link_w_lkj(w) 
     # return r - lower(parent(r)) # test requires it, such quirk
     return upper1(x, r)

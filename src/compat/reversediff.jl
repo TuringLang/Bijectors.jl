@@ -8,7 +8,8 @@ using ..Bijectors: Log, SimplexBijector, maphcat, simplex_link_jacobian,
     simplex_invlink_jacobian, simplex_logabsdetjac_gradient, ADBijector, 
     ReverseDiffAD, Inverse
 import ..Bijectors: _eps, logabsdetjac, _logabsdetjac_scale, _simplex_bijector, 
-    _simplex_inv_bijector, replace_diag, jacobian, getpd, lower
+    _simplex_inv_bijector, replace_diag, jacobian, getpd, lower, 
+    upper1, inv_link_w_lkj, link_w_lkj
 
 using Compat: eachcol
 using Distributions: LocationScale
@@ -180,8 +181,10 @@ lower(A::TrackedMatrix) = track(lower, A)
     return lower(Ad), Δ -> (lower(Δ),)
 end
 
+
+
 inv_link_w_lkj(y::TrackedMatrix) = track(inv_link_w_lkj, y)
-@grad function inv_link_w_lkj(y_tracked::AbstractMatrix)
+@grad function inv_link_w_lkj(y_tracked)
     y = value(y_tracked)
 
     K = size(y, 1)
@@ -234,7 +237,7 @@ inv_link_w_lkj(y::TrackedMatrix) = track(inv_link_w_lkj, y)
 end
 
 link_w_lkj(w::TrackedMatrix) = track(link_w_lkj, w)
-@grad function link_w_lkj(w_tracked::AbstractMatrix)
+@grad function link_w_lkj(w_tracked)
     w = value(w_tracked)
 
     K = size(w, 1)
@@ -244,12 +247,42 @@ link_w_lkj(w::TrackedMatrix) = track(link_w_lkj, w)
         z[1, j] = w[1, j]
     end
 
+    #=
     for i=2:K, j=(i+1):K
         z[i, j] = w[i, j] / w[i-1, j] * z[i-1, j] / sqrt(1 - z[i-1, j]^2)
+    end
+    =#
+    for i=2:K, j=(i+1):K
+        p = w[i, j]
+        for ip in 1:(i-1)
+            p *= 1 / sqrt(1-z[ip, j]^2)
+        end
+        z[i,j] = p
     end
     
     y = atanh.(z)
 
+    return y, Δy -> begin
+        zt0 = 1 ./ (1 .- z.^2)
+        zt = sqrt.(zt0)
+        Δz = Δy .* zt0
+        Δw = zeros(size(Δy))
+        
+        for j=2:K, i=(j-1):-1:2
+            pd = prod(zt[1:i-1,j])
+            Δw[i,j] += Δz[i,j] * pd
+            for ip in 1:(i-1)
+                Δw[ip, j] += Δz[i,j] * w[i,j] * pd / (1-z[ip,j]^2) * z[ip,j]
+            end
+        end
+        for j=2:K
+            Δw[1, j] += Δz[1, j]
+        end
+
+        (Δw,)
+    end
+    
+    #=
     return y, Δy -> begin
         Δz = Δy .* (1 ./ (1. .- z.^2))
         Δw = zeros(size(Δz))
@@ -266,6 +299,17 @@ link_w_lkj(w::TrackedMatrix) = track(link_w_lkj, w)
         
         return (Δw,)
     end
+    =#
 end
+
+
+
+upper1(AT::TrackedMatrix, A::TrackedMatrix) = track(upper1, AT, A)
+@grad function upper1(AT_tracked, A_tracked)
+    AT = value(AT_tracked)
+    A = value(A_tracked)
+    return upper1(AT, A), Δ -> (nothing, upper1(AT, Δ))
+end
+
 
 end
