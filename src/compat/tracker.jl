@@ -455,19 +455,19 @@ inv_link_w_lkj(y::TrackedMatrix) = track(inv_link_w_lkj, y)
         w[1, j] = 1
     end
 
-    for i in 2:K
-        for j in 1:(i-1)
+    for j in 1:K
+        for i in j+1:K
             w[i, j] = 0
         end
-        for j in i:K
+        for i in 2:j
             w[i, j] = w[i-1, j] * sqrt(1 - z[i-1, j]^2)
         end
     end
 
     w1 = copy(w) # cache result
 
-    for i in 1:K
-        for j in (i+1):K
+    for j in 2:K
+        for i in 1:j-1
             w[i, j] = w[i, j] * z[i, j]
         end
     end
@@ -475,7 +475,7 @@ inv_link_w_lkj(y::TrackedMatrix) = track(inv_link_w_lkj, y)
     return w, Δw -> begin
         Δz = zeros(size(Δw))
         Δw1 = zeros(size(Δw))
-        for i in 1:K, j in (i+1):K
+        for j=2:K, i=1:j-1
             Δw1[i,j] = Δw[i,j] * z[i,j]
             Δz[i,j] = Δw[i,j] * w1[i,j]
         end
@@ -505,12 +505,7 @@ link_w_lkj(w::TrackedMatrix) = track(link_w_lkj, w)
         z[1, j] = w[1, j]
     end
 
-    #=
-    for i=2:K, j=(i+1):K
-        z[i, j] = w[i, j] / w[i-1, j] * z[i-1, j] / sqrt(1 - z[i-1, j]^2)
-    end
-    =#
-    for i=2:K, j=(i+1):K
+    for j=3:K, i=2:j-1
         p = w[i, j]
         for ip in 1:(i-1)
             p *= 1 / sqrt(1-z[ip, j]^2)

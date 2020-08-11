@@ -35,12 +35,12 @@ function log_abs_det_jac_lkj(y)
     
     z = tanh.(y)
     left = zero(eltype(y))
-    for i = 1:(K-1), j = (i+1):K
+    for j=2:K, i=1:(j-1)
         left += (K-i-1) * log(1 - z[i, j]^2)
     end
     
     right = zero(eltype(y))
-    for i = 1:(K-1), j = (i+1):K
+    for j=2:K, i=1:(j-1)
         right += log(cosh(y[i, j])^2)
     end
     
@@ -58,17 +58,17 @@ function inv_link_w_lkj(y)
         w[1, j] = 1
     end
 
-    for i in 2:K
-        for j in 1:(i-1)
+    for j in 1:K
+        for i in j+1:K
             w[i, j] = 0
         end
-        for j in i:K
+        for i in 2:j
             w[i, j] = w[i-1, j] * sqrt(1 - z[i-1, j]^2)
         end
     end
 
-    for i in 1:K
-        for j in (i+1):K
+    for j in 2:K
+        for i in 1:j-1
             w[i, j] = w[i, j] * z[i, j]
         end
     end
@@ -106,7 +106,7 @@ function link_w_lkj(w)
 
     which is the above implementation.
     =#
-    for i=2:K, j=(i+1):K
+    for j=3:K, i=2:j-1
         p = w[i, j]
         for ip in 1:(i-1)
             p /= sqrt(1-z[ip, j]^2)
