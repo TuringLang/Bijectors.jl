@@ -19,24 +19,23 @@ end
 (ib::Inverse{<:CorrBijector})(Y::AbstractArray{<:AbstractMatrix{<:Real}}) = map(ib, Y)
 
 
-logabsdetjac(::Inverse{CorrBijector}, y::AbstractMatrix{<:Real}) = log_abs_det_jac_lkj(y)
+logabsdetjac(::Inverse{CorrBijector}, y::AbstractMatrix{<:Real}) = logabsdetjac_lkj_inv(y)
 function logabsdetjac(b::CorrBijector, X::AbstractMatrix{<:Real})
     
-    return -log_abs_det_jac_lkj(b(X)) # It may be more efficient if we can use un-contraint value to prevent call of b
+    return -logabsdetjac_lkj_inv(b(X)) # It may be more efficient if we can use un-contraint value to prevent call of b
 end
 logabsdetjac(b::CorrBijector, X::AbstractArray{<:AbstractMatrix{<:Real}}) = mapvcat(X) do x
     logabsdetjac(b, x)
 end
 
 
-function log_abs_det_jac_lkj(y)
+function logabsdetjac_lkj_inv(y)
     # it's defined on inverse mapping
     K = size(y, 1)
     
-    z = tanh.(y)
     left = zero(eltype(y))
     for j=2:K, i=1:(j-1)
-        left += (K-i-1) * log(1 - z[i, j]^2)
+        left += (K-i-1) * log(1 - tanh(y[i, j])^2)
     end
     
     right = zero(eltype(y))
