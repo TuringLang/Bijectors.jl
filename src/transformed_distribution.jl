@@ -50,8 +50,7 @@ end
 end
 
 bijector(d::Normal) = Identity{0}()
-bijector(d::MvNormal) = Identity{1}()
-bijector(d::MvNormalCanon) = Identity{1}()
+bijector(d::Distributions.AbstractMvNormal) = Identity{1}()
 bijector(d::Distributions.AbstractMvLogNormal) = Log{1}()
 bijector(d::PositiveDistribution) = Log{0}()
 bijector(d::SimplexDistribution) = SimplexBijector{1}()
