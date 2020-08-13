@@ -34,9 +34,10 @@ function logabsdetjac_lkj_inv(y)
     @assert size(y, 1) == size(y, 2)
     K = size(y, 1)
     
-    left = zero(eltype(y))
+    left = zero(eltype(y)) # Initial summand may make looping looks weird :(
     @inbounds for j=2:K, i=1:(j-1)
-        left += (K-i-1) * log(1 - tanh(y[i, j])^2)
+        # left += (K-i-1) * log(1 - tanh(y[i, j])^2) # lacks numerically stable
+        left += (K-i-1) * 2 * (log(2) - log(exp(y[i,j]) + exp(-y[i,j])))
     end
     
     right = zero(eltype(y))
