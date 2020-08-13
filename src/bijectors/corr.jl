@@ -19,18 +19,7 @@ end
 (ib::Inverse{<:CorrBijector})(Y::AbstractArray{<:AbstractMatrix{<:Real}}) = map(ib, Y)
 
 
-logabsdetjac(::Inverse{CorrBijector}, y::AbstractMatrix{<:Real}) = logabsdetjac_lkj_inv(y)
-function logabsdetjac(b::CorrBijector, X::AbstractMatrix{<:Real})
-    
-    return -logabsdetjac_lkj_inv(b(X)) # It may be more efficient if we can use un-contraint value to prevent call of b
-end
-logabsdetjac(b::CorrBijector, X::AbstractArray{<:AbstractMatrix{<:Real}}) = mapvcat(X) do x
-    logabsdetjac(b, x)
-end
-
-
-function logabsdetjac_lkj_inv(y)
-    # it's defined on inverse mapping
+function logabsdetjac(::Inverse{CorrBijector}, y::AbstractMatrix{<:Real})
     @assert size(y, 1) == size(y, 2)
     K = size(y, 1)
     
@@ -47,6 +36,14 @@ function logabsdetjac_lkj_inv(y)
     
     return left / 2 - right
 end
+function logabsdetjac(b::CorrBijector, X::AbstractMatrix{<:Real})
+    
+    return -logabsdetjac(inv(b),(b(X))) # It may be more efficient if we can use un-contraint value to prevent call of b
+end
+logabsdetjac(b::CorrBijector, X::AbstractArray{<:AbstractMatrix{<:Real}}) = mapvcat(X) do x
+    logabsdetjac(b, x)
+end
+
 
 function inv_link_w_lkj(y)
     @assert size(y, 1) == size(y, 2)
