@@ -194,7 +194,7 @@ end
     end
 end
 
-@adjoint function inv_link_w_lkj(y)
+@adjoint function _inv_link_chol_lkj(y)
     @assert size(y, 1) == size(y, 2)
     K = size(y, 1)
 
@@ -246,7 +246,7 @@ end
     end
 end
 
-@adjoint function link_w_lkj(w)
+@adjoint function _link_chol_lkj(w)
     @assert size(w, 1) == size(w, 2)
     K = size(w, 1)
     z = zero(w)

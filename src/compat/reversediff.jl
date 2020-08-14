@@ -9,7 +9,7 @@ using ..Bijectors: Log, SimplexBijector, maphcat, simplex_link_jacobian,
     ReverseDiffAD, Inverse
 import ..Bijectors: _eps, logabsdetjac, _logabsdetjac_scale, _simplex_bijector, 
     _simplex_inv_bijector, replace_diag, jacobian, getpd, lower, 
-    inv_link_w_lkj, link_w_lkj
+    _inv_link_chol_lkj, _link_chol_lkj
 
 using Compat: eachcol
 using Distributions: LocationScale
@@ -182,8 +182,8 @@ lower(A::TrackedMatrix) = track(lower, A)
 end
 
 
-inv_link_w_lkj(y::TrackedMatrix) = track(inv_link_w_lkj, y)
-@grad function inv_link_w_lkj(y_tracked)
+_inv_link_chol_lkj(y::TrackedMatrix) = track(_inv_link_chol_lkj, y)
+@grad function _inv_link_chol_lkj(y_tracked)
     y = value(y_tracked)
 
     @assert size(y, 1) == size(y, 2)
@@ -237,8 +237,8 @@ inv_link_w_lkj(y::TrackedMatrix) = track(inv_link_w_lkj, y)
     end
 end
 
-link_w_lkj(w::TrackedMatrix) = track(link_w_lkj, w)
-@grad function link_w_lkj(w_tracked)
+_link_chol_lkj(w::TrackedMatrix) = track(_link_chol_lkj, w)
+@grad function _link_chol_lkj(w_tracked)
     w = value(w_tracked)
 
     @assert size(w, 1) == size(w, 2)

@@ -6,14 +6,14 @@ struct CorrBijector <: Bijector{2} end
 
 function (b::CorrBijector)(x::AbstractMatrix{<:Real})    
     w = cholesky(x).U + zero(x) # convert to dense matrix
-    r = link_w_lkj(w) 
+    r = _link_chol_lkj(w) 
     return r
 end
 
 (b::CorrBijector)(X::AbstractArray{<:AbstractMatrix{<:Real}}) = map(b, X)
 
 function (ib::Inverse{<:CorrBijector})(y::AbstractMatrix{<:Real})
-    w = inv_link_w_lkj(y)
+    w = _inv_link_chol_lkj(y)
     return w' * w
 end
 (ib::Inverse{<:CorrBijector})(Y::AbstractArray{<:AbstractMatrix{<:Real}}) = map(ib, Y)
@@ -37,7 +37,6 @@ function logabsdetjac(::Inverse{CorrBijector}, y::AbstractMatrix{<:Real})
     return left / 2 - right
 end
 function logabsdetjac(b::CorrBijector, X::AbstractMatrix{<:Real})
-    
     return -logabsdetjac(inv(b),(b(X))) # It may be more efficient if we can use un-contraint value to prevent call of b
 end
 logabsdetjac(b::CorrBijector, X::AbstractArray{<:AbstractMatrix{<:Real}}) = mapvcat(X) do x
@@ -45,7 +44,7 @@ logabsdetjac(b::CorrBijector, X::AbstractArray{<:AbstractMatrix{<:Real}}) = mapv
 end
 
 
-function inv_link_w_lkj(y)
+function _inv_link_chol_lkj(y)
     @assert size(y, 1) == size(y, 2)
     K = size(y, 1)
 
@@ -75,7 +74,7 @@ function inv_link_w_lkj(y)
     return w
 end
 
-function link_w_lkj(w)
+function _link_chol_lkj(w)
     @assert size(w, 1) == size(w, 2)
     K = size(w, 1)
 

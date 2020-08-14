@@ -441,8 +441,8 @@ lower(A::TrackedMatrix) = track(lower, A)
     return lower(Ad), Δ -> (lower(Δ),)
 end
 
-inv_link_w_lkj(y::TrackedMatrix) = track(inv_link_w_lkj, y)
-@grad function inv_link_w_lkj(y_tracked)
+_inv_link_chol_lkj(y::TrackedMatrix) = track(_inv_link_chol_lkj, y)
+@grad function _inv_link_chol_lkj(y_tracked)
     y = data(y_tracked)
 
     @assert size(y, 1) == size(y, 2)
@@ -496,8 +496,8 @@ inv_link_w_lkj(y::TrackedMatrix) = track(inv_link_w_lkj, y)
     end
 end
 
-link_w_lkj(w::TrackedMatrix) = track(link_w_lkj, w)
-@grad function link_w_lkj(w_tracked)
+_link_chol_lkj(w::TrackedMatrix) = track(_link_chol_lkj, w)
+@grad function _link_chol_lkj(w_tracked)
     w = data(w_tracked)
 
     @assert size(w, 1) == size(w, 2)
