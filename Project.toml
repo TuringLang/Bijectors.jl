@@ -20,7 +20,7 @@ StatsFuns = "4c63d2b9-4356-54db-8cca-17b64c39e42c"
 [compat]
 ArgCheck = "1, 2"
 Compat = "3"
-Distributions = "0.23.3"
+Distributions = "=0.23.3, =0.23.4, =0.23.5, =0.23.6, =0.23.7, =0.23.8"
 MappedArrays = "0.2.2"
 NNlib = "0.6, 0.7"
 Reexport = "0.2"
