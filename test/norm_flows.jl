@@ -27,8 +27,8 @@ end
         our_method = sum(forward(flow, z).logabsdetjac)
 
         @test our_method ≈ forward_diff
-        @test inv(flow)(flow(z)) ≈ z rtol=0.2
-        @test (inv(flow) ∘ flow)(z) ≈ z rtol=0.2
+        @test inv(flow)(flow(z)) ≈ z rtol=0.25
+        @test (inv(flow) ∘ flow)(z) ≈ z rtol=0.25
     end
 
     w = ones(10)
