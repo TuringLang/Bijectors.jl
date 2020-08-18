@@ -400,17 +400,17 @@ eachcolnorm(X::TrackedMatrix) = track(eachcolnorm, X)
     end
 end
 
-function matrixof(::Type{TrackedArray{T, 1, Vector{T}}}) where {T <: Real}
-    return TrackedArray{T, 2, Matrix{T}}
+function matrixof(::Type{<:TrackedArray{T,1,Vector{T}}}) where {T<:Real}
+    return TrackedArray{T,2,Matrix{T}}
 end
-function matrixof(::Type{TrackedReal{T}}) where {T <: Real}
-    return TrackedArray{T, 2, Matrix{T}}
+function matrixof(::Type{TrackedReal{T}}) where {T<:Real}
+    return TrackedArray{T,2,Matrix{T}}
 end
-function vectorof(::Type{TrackedArray{T, 2, Matrix{T}}}) where {T <: Real}
-    return TrackedArray{T, 1, Vector{T}}
+function vectorof(::Type{<:TrackedArray{T,2,Matrix{T}}}) where {T<:Real}
+    return TrackedArray{T,1,Vector{T}}
 end
-function vectorof(::Type{TrackedReal{T}}) where {T <: Real}
-    return TrackedArray{T, 1, Vector{T}}
+function vectorof(::Type{TrackedReal{T}}) where {T<:Real}
+    return TrackedArray{T,1,Vector{T}}
 end
 
 (b::Exp{0})(x::TrackedVector) = exp.(x)::vectorof(float(eltype(x)))
