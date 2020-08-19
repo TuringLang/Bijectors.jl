@@ -51,7 +51,6 @@ julia> dist = Beta(2, 2)
 Beta{Float64}(α=2.0, β=2.0)
 
 julia> x = rand(dist)
-
 0.7472542331020509
 
 julia> y = link(dist, x)
@@ -62,7 +61,7 @@ julia> y = link(dist, x)
 
 ```julia
 julia> z = invlink(dist, y)
-0.6543406780096065
+0.7472542331020509
 
 julia> x ≈ z
 true
