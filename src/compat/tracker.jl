@@ -503,18 +503,25 @@ _link_chol_lkj(w::TrackedMatrix) = track(_link_chol_lkj, w)
     LinearAlgebra.checksquare(w)
 
     K = size(w, 1)
-    z = zero(w)
-    
-    @inbounds for j=2:K
-        z[1, j] = w[1, j]
+    z = similar(w)
+
+    # This block can't be integrated with loop below, because w[1,1] != 0.
+    @inbounds for i=1:K
+        z[i, 1] = 0
     end
 
-    @inbounds for j=3:K, i=2:j-1
-        p = w[i, j]
-        for ip in 1:(i-1)
-            p *= 1 / sqrt(1-z[ip, j]^2)
+    @inbounds for j=2:K
+        z[1, j] = w[1, j]
+        for i=j:K
+            z[i, j] = 0
         end
-        z[i,j] = p
+        for i=2:j-1
+            p = w[i, j]
+            for ip in 1:(i-1)
+                p /= sqrt(1-z[ip, j]^2)
+            end
+            z[i, j] = p
+        end
     end
     
     y = atanh.(z)
