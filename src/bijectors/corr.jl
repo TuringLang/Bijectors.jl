@@ -113,18 +113,15 @@ which is the above implementation.
 function _link_chol_lkj(w)
     K = LinearAlgebra.checksquare(w)
 
-    z = similar(w)
+    z = similar(w) # z is also UpperTriangular except ReverseDiff. 
+    # Some zero filling can be avoided. Though diagnoal is still needed to be filled with zero.
 
     # This block can't be integrated with loop below, because w[1,1] != 0.
-    @inbounds for i=1:K
-        z[i, 1] = 0
-    end
+    @inbounds z[1, 1] = 0
 
     @inbounds for j=2:K
         z[1, j] = w[1, j]
-        for i=j:K
-            z[i, j] = 0
-        end
+        z[j, j] = 0
         for i=2:j-1
             p = w[i, j]
             for ip in 1:(i-1)
