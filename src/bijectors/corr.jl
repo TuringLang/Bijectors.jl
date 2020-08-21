@@ -20,8 +20,7 @@ end
 
 
 function logabsdetjac(::Inverse{CorrBijector}, y::AbstractMatrix{<:Real})
-    @assert size(y, 1) == size(y, 2)
-    K = size(y, 1)
+    K = LinearAlgebra.checksquare(y)
     
     left = zero(eltype(y)) # Initial summand may make looping looks weird :(
     @inbounds for j=2:K, i=1:(j-1)
