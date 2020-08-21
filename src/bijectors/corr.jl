@@ -46,8 +46,7 @@ end
 
 
 function _inv_link_chol_lkj(y)
-    @assert size(y, 1) == size(y, 2)
-    K = size(y, 1)
+    K = LinearAlgebra.checksquare(y)
 
     z = tanh.(y)
     w = similar(z)
@@ -76,8 +75,7 @@ function _inv_link_chol_lkj(y)
 end
 
 function _link_chol_lkj(w)
-    @assert size(w, 1) == size(w, 2)
-    K = size(w, 1)
+    K = LinearAlgebra.checksquare(w)
 
     z = zero(w)
     
