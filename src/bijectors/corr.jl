@@ -10,9 +10,11 @@ scratch.
 struct CorrBijector <: Bijector{2} end
 
 function (b::CorrBijector)(x::AbstractMatrix{<:Real})    
-    w = cholesky(x).U + zero(x) # convert to dense matrix
+    w = cholesky(x).U #+ zero(x) # convert to dense matrix
     r = _link_chol_lkj(w) 
-    return r
+    return r + zero(x) # keep LowerTriangular until here can avoid some computation
+    # This dense format itself is required by a test, though I can't get the point.
+    # https://github.com/TuringLang/Bijectors.jl/blob/b0aaa98f90958a167a0b86c8e8eca9b95502c42d/test/transform.jl#L67
 end
 
 (b::CorrBijector)(X::AbstractArray{<:AbstractMatrix{<:Real}}) = map(b, X)
