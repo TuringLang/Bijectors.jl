@@ -10,7 +10,7 @@ scratch.
 struct CorrBijector <: Bijector{2} end
 
 function (b::CorrBijector)(x::AbstractMatrix{<:Real})    
-    w = cholesky(x).U #+ zero(x) # convert to dense matrix
+    w = cholesky(x).U
     r = _link_chol_lkj(w) 
     return r + zero(x) # keep LowerTriangular until here can avoid some computation
     # This dense format itself is required by a test, though I can't get the point.
@@ -56,8 +56,7 @@ end
 function _inv_link_chol_lkj(y)
     K = LinearAlgebra.checksquare(y)
 
-    z = tanh.(y)
-    w = similar(z)
+    w = similar(y)
     
     @inbounds for j in 1:K
         w[1, j] = 1
@@ -65,13 +64,9 @@ function _inv_link_chol_lkj(y)
             w[i, j] = 0
         end
         for i in 2:j
-            w[i, j] = w[i-1, j] * sqrt(1 - z[i-1, j]^2)
-        end
-    end
-
-    @inbounds for j in 2:K
-        for i in 1:j-1
-            w[i, j] = w[i, j] * z[i, j]
+            z = tanh(y[i-1, j])
+            w[i, j] = w[i-1, j] * sqrt(1 - z^2)
+            w[i-1, j] *= z
         end
     end
     
