@@ -22,18 +22,13 @@ end
 function logabsdetjac(::Inverse{CorrBijector}, y::AbstractMatrix{<:Real})
     K = LinearAlgebra.checksquare(y)
     
-    left = zero(eltype(y)) # Initial summand may make looping looks weird :(
-    @inbounds for j=2:K, i=1:(j-1)
-        # left += (K-i-1) * log(1 - tanh(y[i, j])^2) # lacks numerically stable
-        left += (K-i-1) * 2 * (log(2) - log(exp(y[i,j]) + exp(-y[i,j])))
+    result = float(zero(eltype(y))
+    for j in 2:K, i in 1:(j - 1)
+        @inbounds abs_y_i_j = abs(y[i, j])
+        result += (K - i + 1) * (logtwo - (abs_y_i_j + log1pexp(-2 * abs_y_i_j)))
     end
     
-    right = zero(eltype(y))
-    @inbounds for j=2:K, i=1:(j-1)
-        right += log(cosh(y[i, j])^2)
-    end
-    
-    return left / 2 - right
+    return result
 end
 function logabsdetjac(b::CorrBijector, X::AbstractMatrix{<:Real})
     return -logabsdetjac(inv(b),(b(X))) # It may be more efficient if we can use un-contraint value to prevent call of b
