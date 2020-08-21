@@ -314,7 +314,7 @@
         DistSpec((df, A) -> InverseWishart(df, to_posdef(A)), (3.0, A), B, to_posdef),
         DistSpec((df, A) -> TuringWishart(df, to_posdef(A)), (3.0, A), B, to_posdef),
         DistSpec((df, A) -> TuringInverseWishart(df, to_posdef(A)), (3.0, A), B, to_posdef),
-        DistSpec(() -> LKJ(3, 1.), (), A, to_corr), # AD for parameters of LKJ requires more DistributionsAD supports
+        DistSpec(() -> LKJ(3, 1.), (), A, to_corr),
 
         # Vector of matrices x
         DistSpec(
@@ -376,6 +376,8 @@
             B,
             to_posdef,
         ),
+        DistSpec((eta) -> LKJ(3, eta), (1.), A, to_corr) 
+        # AD for parameters of LKJ requires more DistributionsAD supports
     ]
 
     @testset "Univariate distributions" begin
