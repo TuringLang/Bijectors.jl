@@ -38,8 +38,10 @@ end
 function logabsdetjac(b::CorrBijector, X::AbstractMatrix{<:Real})
     return -logabsdetjac(inv(b),(b(X))) # It may be more efficient if we can use un-contraint value to prevent call of b
 end
-logabsdetjac(b::CorrBijector, X::AbstractArray{<:AbstractMatrix{<:Real}}) = mapvcat(X) do x
-    logabsdetjac(b, x)
+function logabsdetjac(b::CorrBijector, X::AbstractArray{<:AbstractMatrix{<:Real}})
+    return mapvcat(X) do x
+        logabsdetjac(b, x)
+    end
 end
 
 
