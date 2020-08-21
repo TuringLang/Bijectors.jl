@@ -195,18 +195,15 @@ end
 end
 
 @adjoint function _inv_link_chol_lkj(y)
-    @assert size(y, 1) == size(y, 2)
+    LinearAlgebra.checksquare(y)
+    
     K = size(y, 1)
 
     z = tanh.(y)
     w = similar(z)
-    
-    w[1,1] = 1
-    @inbounds for j in 1:K
-        w[1, j] = 1
-    end
 
     @inbounds for j in 1:K
+        w[1, j] = 1
         for i in j+1:K
             w[i, j] = 0
         end
@@ -223,8 +220,9 @@ end
         end
     end
 
-    return w, Δw -> begin
-        @assert size(Δw, 1) == size(Δw, 2)
+    function pullback_inv_link_chol_lkj(Δw)
+        LinearAlgebra.checksquare(Δw)
+        
         Δz = zero(Δw)
         Δw1 = zero(Δw)
         @inbounds for j=2:K, i=1:j-1
@@ -244,10 +242,13 @@ end
         Δy = Δz .* (1 ./ cosh.(y).^2)
         return (Δy,)
     end
+
+    return w, pullback_inv_link_chol_lkj
 end
 
 @adjoint function _link_chol_lkj(w)
-    @assert size(w, 1) == size(w, 2)
+    LinearAlgebra.checksquare(w)
+    
     K = size(w, 1)
     z = zero(w)
     
@@ -265,8 +266,9 @@ end
     
     y = atanh.(z)
 
-    return y, Δy -> begin
-        @assert size(Δy, 1) == size(Δy, 2)
+    function pullback_link_chol_lkj(Δy)
+        LinearAlgebra.checksquare(Δy)
+
         zt0 = 1 ./ (1 .- z.^2)
         zt = sqrt.(zt0)
         Δz = Δy .* zt0
@@ -285,6 +287,8 @@ end
 
         return (Δw,)
     end
+
+    return y, pullback_link_chol_lkj
     
     #=
     return y, Δy -> begin
