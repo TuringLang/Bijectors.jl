@@ -223,8 +223,8 @@ end
     function pullback_inv_link_chol_lkj(Δw)
         LinearAlgebra.checksquare(Δw)
         
-        Δz = zero(Δw)
-        Δw1 = zero(Δw)
+        Δz = zero(y)
+        Δw1 = zero(y)
         @inbounds for j=2:K, i=1:j-1
             Δw1[i,j] = Δw[i,j] * z[i,j]
             Δz[i,j] = Δw[i,j] * w1[i,j]
@@ -273,12 +273,11 @@ end
         LinearAlgebra.checksquare(Δy)
 
         zt0 = 1 ./ (1 .- z.^2)
-        zt = sqrt.(zt0)
         Δz = Δy .* zt0
-        Δw = zero(Δy)
+        Δw = zero(w) # w is UpperTriangular, so some zero filling can be avoided
         
         @inbounds for j=2:K, i=(j-1):-1:2
-            pd = prod(zt[1:i-1,j])
+            pd = sqrt(prod(zt0[1:i-1,j]))
             Δw[i,j] += Δz[i,j] * pd
             for ip in 1:(i-1)
                 Δw[ip, j] += Δz[i,j] * w[i,j] * pd / (1-z[ip,j]^2) * z[ip,j]
@@ -292,24 +291,6 @@ end
     end
 
     return y, pullback_link_chol_lkj
-    
-    #=
-    return y, Δy -> begin
-        Δz = Δy .* (1 ./ (1. .- z.^2))
-        Δw = zeros(size(Δz))
-        for j=2:K, i=(j-1):-1:2
-            tz = sqrt(1 - z[i-1, j]^2)
-            Δw[i,j] += Δz[i,j] / w[i-1,j] * z[i-1, j] / tz
-            Δw[i-1,j] += Δz[i,j] * w[i,j] * z[i-1, j] / tz * (-1 / w[i-1, j]^2)
-            Δz[i-1,j] += Δz[i,j] * w[i,j] / w[i-1, j] * ((tz - z[i-1,j] * 0.5 / tz * (-2*z[i-1,j])) / tz^2)
-        end
-        
-        for j=2:K
-            Δw[1, j] += Δz[1, j]
-        end
-        
-        return (Δw,)
-    end
-    =#
+
 end
 

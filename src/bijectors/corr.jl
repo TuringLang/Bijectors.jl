@@ -10,9 +10,9 @@ scratch.
 struct CorrBijector <: Bijector{2} end
 
 function (b::CorrBijector)(x::AbstractMatrix{<:Real})    
-    w = cholesky(x).U
+    w = cholesky(x).U  # keep LowerTriangular until here can avoid some computation
     r = _link_chol_lkj(w) 
-    return r + zero(x) # keep LowerTriangular until here can avoid some computation
+    return r + zero(x) 
     # This dense format itself is required by a test, though I can't get the point.
     # https://github.com/TuringLang/Bijectors.jl/blob/b0aaa98f90958a167a0b86c8e8eca9b95502c42d/test/transform.jl#L67
 end
@@ -109,7 +109,7 @@ which is the above implementation.
 function _link_chol_lkj(w)
     K = LinearAlgebra.checksquare(w)
 
-    z = similar(w) # z is also UpperTriangular except ReverseDiff. 
+    z = similar(w) # z is also UpperTriangular. 
     # Some zero filling can be avoided. Though diagnoal is still needed to be filled with zero.
 
     # This block can't be integrated with loop below, because w[1,1] != 0.
