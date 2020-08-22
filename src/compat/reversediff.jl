@@ -181,7 +181,7 @@ lower(A::TrackedMatrix) = track(lower, A)
     return lower(Ad), Δ -> (lower(Δ),)
 end
 
-
+#=
 _inv_link_chol_lkj(y::TrackedMatrix) = track(_inv_link_chol_lkj, y)
 @grad function _inv_link_chol_lkj(y_tracked)
     y = value(y_tracked)
@@ -237,10 +237,8 @@ _inv_link_chol_lkj(y::TrackedMatrix) = track(_inv_link_chol_lkj, y)
     return w, pullback_inv_link_chol_lkj
 end
 
-# zero(x) is used to convert w to dense matrix, because ReverseDiff doesn't support track
-# LowerTriangular matrix (concretely, Base.IndexStyle(::A) != Base.IndexLinear())
-# See: http://www.juliadiff.org/ReverseDiff.jl/limits/
-_link_chol_lkj(w::TrackedMatrix) = track(_link_chol_lkj, w + zero(x))
+
+_link_chol_lkj(w::TrackedMatrix) = track(_link_chol_lkj, w)
 @grad function _link_chol_lkj(w_tracked)
     w = value(w_tracked)
 
@@ -295,5 +293,6 @@ _link_chol_lkj(w::TrackedMatrix) = track(_link_chol_lkj, w + zero(x))
     return y, pull_link_chol_lkj
     
 end
+=#
 
 end

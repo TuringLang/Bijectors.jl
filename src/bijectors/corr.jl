@@ -126,6 +126,6 @@ function _link_chol_lkj(w)
         end
     end
     
-    y = atanh.(z)
-    return y
+    z .= atanh.(z)
+    return z
 end
