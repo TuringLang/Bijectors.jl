@@ -121,7 +121,7 @@ function _link_chol_lkj(w)
         for i in 2:(j - 1)
             p = w[i, j] / tmp
             tmp *= sqrt(1 - p^2)
-            z[i, j] = atanh(p)
+            z[i, j] = p
         end
         z[j, j] = 0
     end
