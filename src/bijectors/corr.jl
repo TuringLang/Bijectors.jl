@@ -60,13 +60,14 @@ function _inv_link_chol_lkj(y)
     
     @inbounds for j in 1:K
         w[1, j] = 1
-        for i in j+1:K
-            w[i, j] = 0
-        end
         for i in 2:j
             z = tanh(y[i-1, j])
-            w[i, j] = w[i-1, j] * sqrt(1 - z^2)
-            w[i-1, j] *= z
+            tmp = w[i-1, j]
+            w[i-1, j] = z * tmp
+            w[i, j] = tmp * sqrt(1 - z^2)
+        end
+        for i in (j+1):K
+            w[i, j] = 0
         end
     end
     
@@ -116,14 +117,13 @@ function _link_chol_lkj(w)
 
     @inbounds for j=2:K
         z[1, j] = w[1, j]
-        z[j, j] = 0
-        for i=2:j-1
-            p = w[i, j]
-            for ip in 1:(i-1)
-                p /= sqrt(1-z[ip, j]^2)
-            end
-            z[i, j] = p
+        tmp = sqrt(1 - z[1, j]^2)
+        for i in 2:(j - 1)
+            p = w[i, j] / tmp
+            tmp *= sqrt(1 - p^2)
+            z[i, j] = atanh(p)
         end
+        z[j, j] = 0
     end
     
     z .= atanh.(z)
