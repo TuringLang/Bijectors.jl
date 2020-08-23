@@ -266,9 +266,9 @@ end
 
         Δw = similar(w)
 
-        Δw[1,1] = zero(eltype(Δz))
+        @inbounds Δw[1,1] = zero(eltype(Δz))
 
-        for j=2:K
+        @inbounds for j=2:K
             Δw[j, j] = 0
             Δtmp = zero(eltype(Δz)) # Δtmp_mat[j-1,j]
             for i in (j-1):-1:2
