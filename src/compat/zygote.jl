@@ -195,51 +195,44 @@ end
 end
 
 @adjoint function _inv_link_chol_lkj(y)
-    LinearAlgebra.checksquare(y)
+    K = LinearAlgebra.checksquare(y)
 
-    K = size(y, 1)
+    w = similar(y)
 
-    z = tanh.(y)
-    w = similar(z)
-
+    z_mat = similar(y) # cache for adjoint
+    tmp_mat = similar(y)
+    
     @inbounds for j in 1:K
         w[1, j] = 1
-        for i in j+1:K
-            w[i, j] = 0
-        end
         for i in 2:j
-            w[i, j] = w[i-1, j] * sqrt(1 - z[i-1, j]^2)
+            z = tanh(y[i-1, j])
+            tmp = w[i-1, j]
+
+            z_mat[i, j] = z
+            tmp_mat[i, j] = tmp
+
+            w[i-1, j] = z * tmp
+            w[i, j] = tmp * sqrt(1 - z^2)
         end
-    end
-
-    w1 = copy(w) # cache result
-
-    @inbounds for j in 2:K
-        for i in 1:j-1
-            w[i, j] = w[i, j] * z[i, j]
+        for i in (j+1):K
+            w[i, j] = 0
         end
     end
 
     function pullback_inv_link_chol_lkj(Δw)
         LinearAlgebra.checksquare(Δw)
+
+        Δy = zero(y)
+
+        @inbounds for j in 1:K
+            Δtmp = Δw[j,j]
+            for i in j:-1:2
+                Δz = Δw[i-1, j] * tmp_mat[i, j] + Δtmp * tmp_mat[i, j] * 1 / sqrt(1 - z_mat[i, j]^2) / 2 * (-2 * z_mat[i, j])
+                Δy[i-1, j] = Δz * 1 / cosh(y[i-1, j])^2
+                Δtmp = Δw[i-1, j] * z_mat[i, j] + Δtmp * sqrt(1 - z_mat[i, j]^2)
+            end
+        end
         
-        Δz = zero(y)
-        Δw1 = zero(y)
-        @inbounds for j=2:K, i=1:j-1
-            Δw1[i,j] = Δw[i,j] * z[i,j]
-            Δz[i,j] = Δw[i,j] * w1[i,j]
-        end
-        @inbounds for i in 1:K
-            Δw1[i,i] = Δw[i,i]
-        end
-
-        @inbounds for j=2:K, i=j:-1:2
-            tz = sqrt(1 - z[i-1, j]^2)
-            Δw1[i-1, j] += Δw1[i, j] * tz
-            Δz[i-1, j] += Δw1[i, j] * w1[i-1, j] * 0.5 / tz * (-2 * z[i-1, j])
-        end
-
-        Δy = Δz .* (1 ./ cosh.(y).^2)
         return (Δy,)
     end
 
@@ -247,50 +240,55 @@ end
 end
 
 @adjoint function _link_chol_lkj(w)
-    LinearAlgebra.checksquare(w)
+    K = LinearAlgebra.checksquare(w)
     
-    K = size(w, 1)
     z = similar(w)
 
-    # This block can't be integrated with loop below, because w[1,1] != 0.
     @inbounds z[1, 1] = 0
 
+    tmp_mat = similar(w) # cache for pullback.
+
     @inbounds for j=2:K
-        z[1, j] = w[1, j]
+        z[1, j] = atanh(w[1, j])
+        tmp = sqrt(1 - w[1, j]^2)
+        tmp_mat[1, j] = tmp
+        for i in 2:(j - 1)
+            p = w[i, j] / tmp
+            tmp *= sqrt(1 - p^2)
+            tmp_mat[i, j] = tmp
+            z[i, j] = atanh(p)
+        end
         z[j, j] = 0
-        for i=2:j-1
-            p = w[i, j]
-            for ip in 1:(i-1)
-                p /= sqrt(1-z[ip, j]^2)
-            end
-            z[i, j] = p
-        end
     end
-    
-    y = atanh.(z)
 
-    function pullback_link_chol_lkj(Δy)
-        LinearAlgebra.checksquare(Δy)
+    function pullback_link_chol_lkj(Δz)
+        LinearAlgebra.checksquare(Δz)
 
-        zt0 = 1 ./ (1 .- z.^2)
-        Δz = Δy .* zt0
-        Δw = zero(w) # w is UpperTriangular, so some zero filling can be avoided
-        
-        @inbounds for j=2:K, i=(j-1):-1:2
-            pd = sqrt(prod(zt0[1:i-1,j]))
-            Δw[i,j] += Δz[i,j] * pd
-            for ip in 1:(i-1)
-                Δw[ip, j] += Δz[i,j] * w[i,j] * pd / (1-z[ip,j]^2) * z[ip,j]
+        Δw = similar(w)
+
+        Δw[1,1] = zero(eltype(Δz))
+
+        for j=2:K
+            Δw[j, j] = 0
+            Δtmp = zero(eltype(Δz)) # Δtmp_mat[j-1,j]
+            for i in (j-1):-1:2
+                p = w[i, j] / tmp_mat[i-1, j]
+                ftmp = sqrt(1 - p^2)
+                d_ftmp_p = 1 / ftmp / 2 * (-2 * p) 
+                d_p_tmp = -w[i,j] / tmp_mat[i-1, j]^2
+
+                Δp = Δz[i,j] * 1/(1-p^2) + Δtmp * tmp_mat[i-1, j] * d_ftmp_p # TODO: simplify
+                Δw[i, j] = Δp / tmp_mat[i-1, j]
+                # Δtmp = Δp * d_p_tmp + Δtmp * (ftmp + tmp_mat[i-1, j] * d_ftmp_p * d_p_tmp) # update to "previous" Δtmp
+                Δtmp = Δp * d_p_tmp + Δtmp * (ftmp) # update to "previous" Δtmp
             end
-        end
-        @inbounds for j=2:K
-            Δw[1, j] += Δz[1, j]
+            Δw[1, j] = Δz[1, j] * 1/(1-w[1,j]^2) + Δtmp / sqrt(1 - w[1,j]^2) / 2 * (-2 * w[1,j])
         end
 
         return (Δw,)
     end
 
-    return y, pullback_link_chol_lkj
+    return z, pullback_link_chol_lkj
 
 end
 

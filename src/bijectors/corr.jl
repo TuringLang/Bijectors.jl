@@ -116,16 +116,15 @@ function _link_chol_lkj(w)
     @inbounds z[1, 1] = 0
 
     @inbounds for j=2:K
-        z[1, j] = w[1, j]
-        tmp = sqrt(1 - z[1, j]^2)
+        z[1, j] = atanh(w[1, j])
+        tmp = sqrt(1 - w[1, j]^2)
         for i in 2:(j - 1)
             p = w[i, j] / tmp
             tmp *= sqrt(1 - p^2)
-            z[i, j] = p
+            z[i, j] = atanh(p)
         end
         z[j, j] = 0
     end
     
-    z .= atanh.(z)
     return z
 end
