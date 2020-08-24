@@ -277,7 +277,7 @@ end
                 d_ftmp_p = -p / ftmp
                 d_p_tmp = -w[i,j] / tmp_mat[i-1, j]^2
 
-                Δp = Δz[i,j] / (1-p^2) + Δtmp * tmp_mat[i-1, j] * d_ftmp_p # TODO: simplify
+                Δp = Δz[i,j] / (1-p^2) + Δtmp * tmp_mat[i-1, j] * d_ftmp_p
                 Δw[i, j] = Δp / tmp_mat[i-1, j]
                 Δtmp = Δp * d_p_tmp + Δtmp * ftmp # update to "previous" Δtmp
             end

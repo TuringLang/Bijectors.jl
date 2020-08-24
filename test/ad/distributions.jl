@@ -10,6 +10,12 @@
     B = rand(dim, dim)
     C = rand(dim, dim)
 
+    dim_big = 10
+
+    # Some LKJ problems may be hidden when test matrix is too small
+    A_big = rand(dim_big, dim_big) 
+    B_big = rand(dim_big, dim_big)
+
     # Create a random number
     alpha = rand()
 
@@ -314,7 +320,7 @@
         DistSpec((df, A) -> InverseWishart(df, to_posdef(A)), (3.0, A), B, to_posdef),
         DistSpec((df, A) -> TuringWishart(df, to_posdef(A)), (3.0, A), B, to_posdef),
         DistSpec((df, A) -> TuringInverseWishart(df, to_posdef(A)), (3.0, A), B, to_posdef),
-        DistSpec(() -> LKJ(3, 1.), (), A, to_corr),
+        DistSpec(() -> LKJ(10, 1.), (), A_big, to_corr),
 
         # Vector of matrices x
         DistSpec(
@@ -348,9 +354,9 @@
             x -> map(to_posdef, x),
         ),
         DistSpec(
-            () -> LKJ(3, 1.),
+            () -> LKJ(10, 1.),
             (),
-            [A, B],
+            [A_big, B_big],
             x -> map(to_corr, x),
         )
     ]
@@ -376,7 +382,7 @@
             B,
             to_posdef,
         ),
-        DistSpec((eta) -> LKJ(3, eta), (1.), A, to_corr) 
+        DistSpec((eta) -> LKJ(10, eta), (1.), A_big, to_corr) 
         # AD for parameters of LKJ requires more DistributionsAD supports
     ]
 

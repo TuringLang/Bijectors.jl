@@ -4,8 +4,62 @@
 A bijector implementation of Stan's parametrization method for Correlation matrix:
 https://mc-stan.org/docs/2_23/reference-manual/correlation-matrix-transform-section.html
 
-Note:(7/30/2020) their "manageable expression" is wrong, used expression is derived from 
-scratch.
+Basically, a unconstrained strictly upper triangular matrix `y` is transformed to 
+a correlation matrix by following readable but not that efficient form:
+
+```
+K = size(y, 1)
+z = tanh.(y)
+
+for j=1:K, i=1:K
+    if i>j
+        w[i,j] = 0
+    elseif 1==i==j
+        w[i,j] = 1
+    elseif 1<i==j
+        w[i,j] = prod(sqrt(1 .- z[1:i-1, j].^2))
+    elseif 1==i<j
+        w[i,j] = z[i,j]
+    elseif 1<i<j
+        w[i,j] = z[i,j] * prod(sqrt(1 .- z[1:i-1, j].^2))
+    end
+end
+```
+
+It is easy to see that every column is a unit vector, for example:
+
+```
+w3' w3 ==
+w[1,3]^2 + w[2,3]^2 + w[3,3]^2 ==
+z[1,3]^2 + (z[2,3] * sqrt(1 - z[1,3]^2))^2 + (sqrt(1-z[1,3]^2) * sqrt(1-z[2,3]^2))^2 ==
+z[1,3]^2 + z[2,3]^2 * (1-z[1,3]^2) + (1-z[1,3]^2) * (1-z[2,3]^2) ==
+z[1,3]^2 + z[2,3]^2 - z[2,3]^2 * z[1,3]^2 + 1 -z[1,3]^2 - z[2,3]^2 + z[1,3]^2 * z[2,3]^2 ==
+1
+```
+
+And diagonal elements are positive, so `w` is a cholesky factor for a positive matrix.
+
+```
+x = w' * w
+```
+
+Consider block matrix representation for `x`
+
+```
+x = [w1'; w2'; ... wn'] * [w1 w2 ... wn] == 
+[w1'w1 w1'w2 ... w1'wn;
+ w2'w1 w2'w2 ... w2'wn;
+ ...
+]
+```
+
+The diagonal elements are given by `wk'wk = 1`, thus `x` is a correlation matrix.
+
+Every step is invertible, so this is a bijection(bijector).
+
+Note: The implementation doesn't follow their "manageable expression" directly,
+because their equation seems wrong (7/30/2020). Insteadly it follows definition 
+above the "manageable expression" directly, which is also described in above doc.
 """
 struct CorrBijector <: Bijector{2} end
 
