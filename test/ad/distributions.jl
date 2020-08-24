@@ -10,6 +10,12 @@
     B = rand(dim, dim)
     C = rand(dim, dim)
 
+    dim_big = 10
+
+    # Some LKJ problems may be hidden when test matrix is too small
+    A_big = rand(dim_big, dim_big) 
+    B_big = rand(dim_big, dim_big)
+
     # Create a random number
     alpha = rand()
 
@@ -33,6 +39,13 @@
         S = A * A' + I
         invL = inv(cholesky(S).L)
         return invL * invL'
+    end
+
+    function to_corr(x)
+        y = to_posdef(x)
+        d = 1 ./ sqrt.(diag(y))
+        y2 = d .* y .* d'
+        return (y2 + y2') / 2
     end
 
     univariate_distributions = DistSpec[
@@ -307,6 +320,7 @@
         DistSpec((df, A) -> InverseWishart(df, to_posdef(A)), (3.0, A), B, to_posdef),
         DistSpec((df, A) -> TuringWishart(df, to_posdef(A)), (3.0, A), B, to_posdef),
         DistSpec((df, A) -> TuringInverseWishart(df, to_posdef(A)), (3.0, A), B, to_posdef),
+        DistSpec(() -> LKJ(10, 1.), (), A_big, to_corr),
 
         # Vector of matrices x
         DistSpec(
@@ -339,6 +353,12 @@
             [B, C],
             x -> map(to_posdef, x),
         ),
+        DistSpec(
+            () -> LKJ(10, 1.),
+            (),
+            [A_big, B_big],
+            x -> map(to_corr, x),
+        )
     ]
 
     broken_matrixvariate_distributions = DistSpec[
@@ -362,6 +382,8 @@
             B,
             to_posdef,
         ),
+        DistSpec((eta) -> LKJ(10, eta), (1.), A_big, to_corr) 
+        # AD for parameters of LKJ requires more DistributionsAD supports
     ]
 
     @testset "Univariate distributions" begin

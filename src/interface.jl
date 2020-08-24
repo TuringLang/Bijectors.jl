@@ -149,6 +149,7 @@ include("bijectors/shift.jl")
 include("bijectors/permute.jl")
 include("bijectors/simplex.jl")
 include("bijectors/pd.jl")
+include("bijectors/corr.jl")
 include("bijectors/truncated.jl")
 
 # Normalizing flow related
