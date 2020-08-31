@@ -131,7 +131,10 @@ rand(td::MvTransformed) = td.transform(rand(td.dist))
 rand(rng::AbstractRNG, td::MvTransformed) = td.transform(rand(rng, td.dist))
 # TODO: implement more efficiently for flows
 function rand(rng::AbstractRNG, td::MvTransformed, num_samples::Int)
-    res = hcat([td.transform(rand(rng, td.dist)) for i = 1:num_samples]...)
+    samples = rand(rng, td.dist, num_samples)
+    res = reduce(hcat, map(axes(samples, 2)) do i
+        return td.transform(view(samples, :, i))
+    end)
     return res
 end
 
