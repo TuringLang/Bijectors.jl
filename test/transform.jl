@@ -196,6 +196,31 @@ let
 end
 end
 
+@testset "correlation matrix" begin
+
+    dist = LKJ(2, 1)
+
+    single_sample_tests(dist)
+
+    x = rand(dist)
+    x = x + x' + 2I
+    d = 1 ./ sqrt.(diag(x))
+    x = d .*  x .* d'
+
+    upperinds = [LinearIndices(size(x))[I] for I in CartesianIndices(size(x)) if I[2] > I[1]]
+    J = jacobian(x->link(dist, x), x)
+    J = J[upperinds, upperinds]
+    logpdf_turing = logpdf_with_trans(dist, x, true)
+    @test logpdf(dist, x) - _logabsdet(J) ≈ logpdf_turing
+
+    # Multi-sample tests comprising vectors of matrices.
+    N = 10
+    x = rand(dist)
+    xs = [x for _ in 1:N]
+    multi_sample_tests(dist, x, xs, N)
+
+end
+
 ################################## Miscelaneous old tests ##################################
 
 # julia> logpdf_with_trans(Dirichlet([1., 1., 1.]), exp.([-1000., -1000., -1000.]), true)

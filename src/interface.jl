@@ -9,19 +9,22 @@ import Distributions: logpdf, rand, rand!, _rand!, _logpdf
 
 abstract type ADBackend end
 struct ForwardDiffAD <: ADBackend end
+struct ReverseDiffAD <: ADBackend end
 struct TrackerAD <: ADBackend end
 struct ZygoteAD <: ADBackend end
 
-const ADBACKEND = Ref(:forward_diff)
+const ADBACKEND = Ref(:forwarddiff)
 setadbackend(backend_sym::Symbol) = setadbackend(Val(backend_sym))
-setadbackend(::Val{:forward_diff}) = ADBACKEND[] = :forward_diff
-setadbackend(::Val{:reverse_diff}) = ADBACKEND[] = :reverse_diff
+setadbackend(::Val{:forwarddiff}) = ADBACKEND[] = :forwarddiff
+setadbackend(::Val{:reversediff}) = ADBACKEND[] = :reversediff
+setadbackend(::Val{:tracker}) = ADBACKEND[] = :tracker
 setadbackend(::Val{:zygote}) = ADBACKEND[] = :zygote
 
 ADBackend() = ADBackend(ADBACKEND[])
 ADBackend(T::Symbol) = ADBackend(Val(T))
-ADBackend(::Val{:forward_diff}) = ForwardDiffAD
-ADBackend(::Val{:reverse_diff}) = TrackerAD
+ADBackend(::Val{:forwarddiff}) = ForwardDiffAD
+ADBackend(::Val{:reversediff}) = ReverseDiffAD
+ADBackend(::Val{:tracker}) = TrackerAD
 ADBackend(::Val{:zygote}) = ZygoteAD
 ADBackend(::Val) = error("The requested AD backend is not available. Make sure to load all required packages.")
 
@@ -63,10 +66,11 @@ struct Inverse{B <: Bijector, N} <: Bijector{N}
 
     Inverse(b::B) where {N, B<:Bijector{N}} = new{B, N}(b)
 end
-
+up1(b::Inverse) = Inverse(up1(b.orig))
 
 inv(b::Bijector) = Inverse(b)
 inv(ib::Inverse{<:Bijector}) = ib.orig
+Base.:(==)(b1::Inverse{<:Bijector}, b2::Inverse{<:Bijector}) = b1.orig == b2.orig
 
 """
     logabsdetjac(b::Bijector, x)
@@ -105,10 +109,11 @@ logabsdetjacinv(b::Bijector, y) = logabsdetjac(inv(b), y)
 ##############################
 
 struct Identity{N} <: Bijector{N} end
-(::Identity)(x) = x
+(::Identity)(x) = copy(x)
 inv(b::Identity) = b
+up1(::Identity{N}) where {N} = Identity{N + 1}()
 
-logabsdetjac(::Identity, x::Real) = zero(eltype(x))
+logabsdetjac(::Identity{0}, x::Real) = zero(eltype(x))
 @generated function logabsdetjac(
     b::Identity{N1},
     x::AbstractArray{T2, N2}
@@ -121,6 +126,7 @@ logabsdetjac(::Identity, x::Real) = zero(eltype(x))
         return :(throw(MethodError(logabsdetjac, (b, x))))
     end
 end
+logabsdetjac(::Identity{2}, x::AbstractArray{<:AbstractMatrix}) = zeros(eltype(x[1]), size(x))
 
 ########################
 # Convenient constants #
@@ -143,8 +149,8 @@ include("bijectors/shift.jl")
 include("bijectors/permute.jl")
 include("bijectors/simplex.jl")
 include("bijectors/pd.jl")
+include("bijectors/corr.jl")
 include("bijectors/truncated.jl")
-include("bijectors/distribution_bijector.jl")
 include("bijectors/named_bijector.jl")
 
 # Normalizing flow related

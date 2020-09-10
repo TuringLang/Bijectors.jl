@@ -13,16 +13,19 @@ using Roots # for inverse
 # RadialLayer #
 ###############
 
-mutable struct RadialLayer{T1 <: Real, T2 <: AbstractVector{<:Real}} <: Bijector{1}
+mutable struct RadialLayer{T1<:Union{Real, AbstractVector{<:Real}}, T2<:AbstractVector{<:Real}} <: Bijector{1}
     α_::T1
     β::T1
     z_0::T2
 end
+function Base.:(==)(b1::RadialLayer, b2::RadialLayer)
+    return b1.α_ == b2.α_ && b1.β == b2.β && b1.z_0 == b2.z_0
+end
 
-function RadialLayer(dims::Int, container=Array)
-    α_ = randn()
-    β = randn()
-    z_0 = container(randn(dims))
+function RadialLayer(dims::Int, wrapper=identity)
+    α_ = wrapper(randn(1))
+    β = wrapper(randn(1))
+    z_0 = wrapper(randn(dims))
     return RadialLayer(α_, β, z_0)
 end
 
@@ -31,7 +34,7 @@ h(α, r) = 1 ./ (α .+ r)     # for radial flow from eq(14)
 
 # An internal version of transform that returns intermediate variables
 function _transform(flow::RadialLayer, z::AbstractVecOrMat)
-    return _radial_transform(flow.α_, flow.β, flow.z_0, z)
+    return _radial_transform(first(flow.α_), first(flow.β), flow.z_0, z)
 end
 function _radial_transform(α_, β, z_0, z)
     α = softplus(α_)            # from A.2
@@ -67,29 +70,57 @@ end
 
 function (ib::Inverse{<:RadialLayer})(y::AbstractVector{<:Real})
     flow = ib.orig
-    T = promote_type(eltype(flow.α_), eltype(flow.β), eltype(flow.z_0), eltype(y))
-    TV = vectorof(T)
-    α = softplus(flow.α_)            # from A.2
-    β_hat = - α + softplus(flow.β)   # from A.2
-    # Define the objective functional
-    f(y) = r -> norm(y .- flow.z_0) - r * (1 + β_hat / (α + r))   # from eq(26)
-    # Run solver
-    rs::T = find_zero(f(y), zero(T), Order16())
-    return (flow.z_0 .+ (y .- flow.z_0) ./ (1 .+ β_hat ./ (α .+ rs)))::TV
+    z0 = flow.z_0
+    α = softplus(first(flow.α_))            # from A.2
+    α_plus_β_hat = softplus(first(flow.β))  # from A.2
+
+    # Compute the norm ``r`` from A.2.
+    y_minus_z0 = y .- z0
+    r = compute_r(y_minus_z0, α, α_plus_β_hat)
+
+    return z0 .+ ((α + r) / (α_plus_β_hat + r)) .* y_minus_z0
 end
+
 function (ib::Inverse{<:RadialLayer})(y::AbstractMatrix{<:Real})
     flow = ib.orig
-    T = promote_type(eltype(flow.α_), eltype(flow.β), eltype(flow.z_0), eltype(y))
-    TM = matrixof(T)
-    α = softplus(flow.α_)            # from A.2
-    β_hat = - α + softplus(flow.β)   # from A.2
-    # Define the objective functional
-    f(y) = r -> norm(y .- flow.z_0) - r * (1 + β_hat / (α + r))   # from eq(26)
-    # Run solver
-    rs = mapvcat(eachcol(y)) do c
-        find_zero(f(c), zero(T), Order16())
+    z0 = flow.z_0
+    α = softplus(first(flow.α_))            # from A.2
+    α_plus_β_hat = softplus(first(flow.β))  # from A.2
+
+    # Compute the norm ``r`` from A.2 for each column.
+    y_minus_z0 = y .- z0
+    rs = mapvcat(eachcol(y_minus_z0)) do c
+        return compute_r(c, α, α_plus_β_hat)
     end
-    return (flow.z_0 .+ (y .- flow.z_0) ./ (1 .+ β_hat ./ (α .+ rs')))::TM
+
+    return z0 .+ ((α .+ rs) ./ (α_plus_β_hat .+ rs))' .* y_minus_z0
+end
+
+"""
+    compute_r(y_minus_z0::AbstractVector{<:Real}, α, α_plus_β_hat)
+
+Compute the unique solution ``r`` to the equation
+```math
+\\|y_minus_z0\\|_2 = r \\left(1 + \\frac{α_plus_β_hat - α}{α + r}\\right)
+```
+subject to ``r ≥ 0`` and ``r ≠ α``.
+
+Since ``α > 0`` and ``α_plus_β_hat > 0``, the solution is unique and given by
+```math
+r = (\\sqrt{(α_plus_β_hat - γ)^2 + 4 α γ} - (α_plus_β_hat - γ)) / 2,
+```
+where ``γ = \\|y_minus_z0\\|_2``. For details see appendix A.2 of the reference.
+
+# References
+
+D. Rezende, S. Mohamed (2015): Variational Inference with Normalizing Flows.
+arXiv:1505.05770
+"""
+function compute_r(y_minus_z0::AbstractVector{<:Real}, α, α_plus_β_hat)
+    γ = norm(y_minus_z0)
+    a = α_plus_β_hat - γ
+    r = (sqrt(a^2 + 4 * α * γ) - a) / 2
+    return r
 end
 
 logabsdetjac(flow::RadialLayer, x::AbstractVecOrMat) = forward(flow, x).logabsdetjac

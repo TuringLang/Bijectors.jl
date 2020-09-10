@@ -51,7 +51,6 @@ julia> dist = Beta(2, 2)
 Beta{Float64}(α=2.0, β=2.0)
 
 julia> x = rand(dist)
-
 0.7472542331020509
 
 julia> y = link(dist, x)
@@ -62,9 +61,9 @@ julia> y = link(dist, x)
 
 ```julia
 julia> z = invlink(dist, y)
-0.6543406780096065
+0.7472542331020509
 
-julia> x == z
+julia> x ≈ z
 true
 ```
 
@@ -118,10 +117,10 @@ julia> y = b(x)
 -0.5369949942509267
 ```
 
-In this case we see that `bijector(d::Distribution)` returns the corresponding constrained-to-unconstrained bijection for `Beta`, which indeed is a `Logit` with `a = 0.0` and `b = 1.0`. The resulting `Logit <: Bijector` has a method `(b::Logit)(x)` defined, allowing us to call it just like any other function. Comparing with the above example, `b(x) == link(dist, x)`. Just to convince ourselves:
+In this case we see that `bijector(d::Distribution)` returns the corresponding constrained-to-unconstrained bijection for `Beta`, which indeed is a `Logit` with `a = 0.0` and `b = 1.0`. The resulting `Logit <: Bijector` has a method `(b::Logit)(x)` defined, allowing us to call it just like any other function. Comparing with the above example, `b(x) ≈ link(dist, x)`. Just to convince ourselves:
 
 ```julia
-julia> b(x) == link(dist, x)
+julia> b(x) ≈ link(dist, x)
 true
 ```
 
@@ -136,7 +135,7 @@ Inverse{Logit{Float64},0}(Logit{Float64}(0.0, 1.0))
 julia> b⁻¹(y)
 0.3688868996596376
 
-julia> b⁻¹(y) == invlink(dist, y)
+julia> b⁻¹(y) ≈ invlink(dist, y)
 true
 ```
 
@@ -536,13 +535,13 @@ struct Logit{T<:Real} <: Bijector{0}
 end
 
 (b::Logit)(x::Real) = logit((x - b.a) / (b.b - b.a))
-(b::Logit)(x) = mapvcat(b, x)
+(b::Logit)(x) = map(b, x)
 # `orig` contains the `Bijector` which was inverted
 (ib::Inverse{<:Logit})(y::Real) = (ib.orig.b - ib.orig.a) * logistic(y) + ib.orig.a
-(ib::Inverse{<:Logit})(y) = mapvcat(ib, y)
+(ib::Inverse{<:Logit})(y) = map(ib, y)
 
 logabsdetjac(b::Logit, x::Real) = - log((x - b.a) * (b.b - x) / (b.b - b.a))
-logabsdetjac(b::Logit, x) = mapvcat(logabsdetjac, x)
+logabsdetjac(b::Logit, x) = map(logabsdetjac, x)
 ```
 
 (Batch computation is not fully supported by all bijectors yet (see issue #35), but is actively worked on. In the particular case of `Logit` there's only one thing that makes sense, which is elementwise application. Therefore we've added `@.` to the implementation above, thus this works for any `AbstractArray{<:Real}`.)
@@ -650,8 +649,8 @@ true
 We can also use Tracker.jl for the AD, rather than ForwardDiff.jl:
 
 ```julia
-julia> Bijectors.setadbackend(:reverse_diff)
-:reverse_diff
+julia> Bijectors.setadbackend(:reversediff)
+:reversediff
 
 julia> b_ad = ADLogit(0.0, 1.0)
 ADLogit{Float64,Bijectors.TrackerAD}(0.0, 1.0)

@@ -1,5 +1,33 @@
 module Bijectors
 
+#=
+  NOTE: Codes below are adapted from
+  https://github.com/brian-j-smith/Mamba.jl/blob/master/src/distributions/transformdistribution.jl
+  The Mamba.jl package is licensed under the MIT License:
+  > Copyright (c) 2014: Brian J Smith and other contributors:
+  >
+  > https://github.com/brian-j-smith/Mamba.jl/contributors
+  >
+  > Permission is hereby granted, free of charge, to any person obtaining
+  > a copy of this software and associated documentation files (the
+  > "Software"), to deal in the Software without restriction, including
+  > without limitation the rights to use, copy, modify, merge, publish,
+  > distribute, sublicense, and/or sell copies of the Software, and to
+  > permit persons to whom the Software is furnished to do so, subject to
+  > the following conditions:
+  >
+  > The above copyright notice and this permission notice shall be
+  > included in all copies or substantial portions of the Software.
+  >
+  > THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+  > EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+  > MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+  > IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+  > CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+  > TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+  > SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+=#
+
 using Reexport, Requires
 @reexport using Distributions
 using StatsFuns
@@ -30,10 +58,8 @@ export  TransformDistribution,
         Stacked,
         stack,
         Identity,
-        DistributionBijector,
         bijector,
         transformed,
-        TransformedDistribution,
         UnivariateTransformed,
         MultivariateTransformed,
         logpdf_with_jac,
@@ -52,18 +78,16 @@ _debug(str) = @debug str
 _eps(::Type{T}) where {T} = T(eps(T))
 _eps(::Type{Real}) = eps(Float64)
 _eps(::Type{<:Integer}) = eps(Float64)
-_istracked(::Any) = false
+
+function _clamp(x, a, b)
+    T = promote_type(typeof(x), typeof(a), typeof(b))
+    ϵ = _eps(T)
+    clamped_x = ifelse(x < a, convert(T, a), ifelse(x > b, convert(T, b), x))
+    DEBUG && _debug("x = $x, bounds = $((a, b)), clamped_x = $clamped_x")
+    return clamped_x
+end
 
 function mapvcat(f, args...)
-    out = map(f, args...)
-    if _istracked(out)
-        init = vcat(out[1])
-        return reshape(reduce(vcat, drop(out, 1); init = init), size(out))
-    else
-        return out
-    end
-end
-function mapvcat2(f, args...)
     out = map(f, args...)
     init = vcat(out[1])
     return reshape(reduce(vcat, drop(out, 1); init = init), size(out))
@@ -84,178 +108,62 @@ function eachcolmaphcat(f, x)
     init = reshape(out[1], :, 1)
     return reduce(hcat, drop(out, 1); init = init)
 end
-function _sum(f, args...)
-    init = f(first.(args)...)
-    return mapreduce(f, +, drop.(args, 1)...; init = init)
-end
-function _sumeachcol(f, x1, x2)
+function sumeachcol(f, x1, x2)
     # Using a view below for x1 breaks Tracker
     return sum(f(x1[:,i], x2[i]) for i in 1:size(x1, 2))
 end
 
-# Discrete distributions
+# Distributions
 
-function logpdf_with_trans(d::DiscreteUnivariateDistribution, x::Integer, transform::Bool)
-    return logpdf(d, x)
-end
-function logpdf_with_trans(
-    d::DiscreteUnivariateDistribution,
-    x::AbstractArray{<:Real},
-    transform::Bool,
-)
-    return mapvcat(x) do x
-        logpdf(d, x)
-    end
-end
-function logpdf_with_trans(
-    d::DiscreteMultivariateDistribution,
-    x::AbstractVecOrMat{<:Real},
-    transform::Bool,
-)
-    return logpdf(d, x)
-end
-
-#=
-  NOTE: Codes below are adapted from
-  https://github.com/brian-j-smith/Mamba.jl/blob/master/src/distributions/transformdistribution.jl
-  The Mamba.jl package is licensed under the MIT License:
-  > Copyright (c) 2014: Brian J Smith and other contributors:
-  >
-  > https://github.com/brian-j-smith/Mamba.jl/contributors
-  >
-  > Permission is hereby granted, free of charge, to any person obtaining
-  > a copy of this software and associated documentation files (the
-  > "Software"), to deal in the Software without restriction, including
-  > without limitation the rights to use, copy, modify, merge, publish,
-  > distribute, sublicense, and/or sell copies of the Software, and to
-  > permit persons to whom the Software is furnished to do so, subject to
-  > the following conditions:
-  >
-  > The above copyright notice and this permission notice shall be
-  > included in all copies or substantial portions of the Software.
-  >
-  > THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-  > EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-  > MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-  > IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-  > CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
-  > TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-  > SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-=#
-
-#############
-# a ≦ x ≦ b #
-#############
-
-const TransformDistribution{T<:ContinuousUnivariateDistribution} = Union{T, Truncated{T}}
-@inline function _clamp(x::T, dist::TransformDistribution) where {T <: Real}
-    ϵ = _eps(T)
-    bounds = (minimum(dist) + ϵ, maximum(dist) - ϵ)
-    clamped_x = ifelse(x < bounds[1], bounds[1], ifelse(x > bounds[2], bounds[2], x))
-    DEBUG && _debug("x = $x, bounds = $bounds, clamped_x = $clamped_x")
-    return clamped_x
-end
-
-link(d::TransformDistribution, x::Real) = _link(d, _clamp(x, d))
-function _link(d::TransformDistribution, x::Real)
-    a, b = minimum(d), maximum(d)
-    lowerbounded, upperbounded = isfinite(a), isfinite(b)
-    if lowerbounded && upperbounded
-        return StatsFuns.logit((x - a) / (b - a))
-    elseif lowerbounded
-        return log(x - a)
-    elseif upperbounded
-        return log(b - x)
+link(d::Distribution, x) = bijector(d)(x)
+invlink(d::Distribution, y) = inv(bijector(d))(y)
+function logpdf_with_trans(d::Distribution, x, transform::Bool)
+    if ispd(d)
+        return pd_logpdf_with_trans(d, x, transform)
+    elseif isdirichlet(d)
+        l = logpdf(d, x .+ eps(eltype(x)))
     else
-        return x
+        l = logpdf(d, x)
     end
-end
-
-invlink(d::TransformDistribution, y::Real) = _clamp(_invlink(d, y), d)
-function _invlink(d::TransformDistribution, y::Real)
-    a, b = minimum(d), maximum(d)
-    lowerbounded, upperbounded = isfinite(a), isfinite(b)
-    if lowerbounded && upperbounded
-        return (b - a) * StatsFuns.logistic(y) + a
-    elseif lowerbounded
-        return exp(y) + a
-    elseif upperbounded
-        return b - exp(y)
-    else
-        return y
-    end
-end
-
-function logpdf_with_trans(
-    d::TransformDistribution,
-    x::Real,
-    transform::Bool,
-)
-    return _logpdf_with_trans(d, x, transform)
-end
-function logpdf_with_trans(
-    d::TransformDistribution,
-    x::AbstractArray{<:Real},
-    transform::Bool,
-)
-    return mapvcat(x -> _logpdf_with_trans(d, x, transform), x)
-end
-function _logpdf_with_trans(d::TransformDistribution, x::Real, transform::Bool)
-    lp = logpdf(d, x)
     if transform
-        x = _clamp(x, d)
-        a, b = minimum(d), maximum(d)
-        lowerbounded, upperbounded = isfinite(a), isfinite(b)
-        if lowerbounded && upperbounded
-            lp += log((x - a) * (b - x) / (b - a))
-        elseif lowerbounded
-            lp += log(x - a)
-        elseif upperbounded
-            lp += log(b - x)
-        end
+        return l - logabsdetjac(bijector(d), x)
+    else
+        return l
     end
-    return lp
 end
 
-#########
-# 0 < x #
-#########
+## Univariate
 
+const TransformDistribution = Union{
+    T,
+    Truncated{T},
+} where T <: ContinuousUnivariateDistribution
 const PositiveDistribution = Union{
     BetaPrime, Chi, Chisq, Erlang, Exponential, FDist, Frechet, Gamma, InverseGamma,
     InverseGaussian, Kolmogorov, LogNormal, NoncentralChisq, NoncentralF, Rayleigh, Weibull,
 }
-
-_link(d::PositiveDistribution, x::Real) = log(x)
-_invlink(d::PositiveDistribution, y::Real) = exp(y)
-function _logpdf_with_trans(d::PositiveDistribution, x::Real, transform::Bool)
-    return logpdf(d, x) + transform * log(x)
-end
-
-
-#############
-# 0 < x < 1 #
-#############
-
 const UnitDistribution = Union{Beta, KSOneSided, NoncentralBeta}
 
-_link(d::UnitDistribution, x::Real) = StatsFuns.logit(x)
-_invlink(d::UnitDistribution, y::Real) = StatsFuns.logistic(y)
-function _logpdf_with_trans(d::UnitDistribution, x::Real, transform::Bool)
-    return logpdf(d, x) + transform * log(x * (one(x) - x))
+function logpdf_with_trans(d::UnivariateDistribution, x, transform::Bool)
+    if transform
+        return map(x -> logpdf(d, x), x) - logabsdetjac(bijector(d), x)
+    else
+        return map(x -> logpdf(d, x), x)
+    end
 end
 
+## Multivariate
+
+const SimplexDistribution = Union{Dirichlet}
+isdirichlet(::SimplexDistribution) = true
+isdirichlet(::Distribution) = false
 
 ###########
 # ∑xᵢ = 1 #
 ###########
 
-const SimplexDistribution = Union{Dirichlet}
-
-_clamp(x, ::SimplexDistribution) = _clamp(x, SimplexBijector())
-
 function link(
-    d::SimplexDistribution,
+    d::Dirichlet,
     x::AbstractVecOrMat{<:Real},
     proj::Bool = true,
 )
@@ -263,7 +171,7 @@ function link(
 end
 
 function link_jacobian(
-    d::SimplexDistribution,
+    d::Dirichlet,
     x::AbstractVector{T},
     proj::Bool = true,
 ) where {T<:Real}
@@ -271,99 +179,40 @@ function link_jacobian(
 end
 
 function invlink(
-    d::SimplexDistribution,
+    d::Dirichlet,
     y::AbstractVecOrMat{<:Real},
     proj::Bool = true
 )
     return inv(SimplexBijector{proj}())(y)
 end
-
 function invlink_jacobian(
-    d::SimplexDistribution,
+    d::Dirichlet,
     y::AbstractVector{T},
     proj::Bool = true
 ) where {T<:Real}
     return jacobian(inv(SimplexBijector{proj}()), y)
 end
 
-function logpdf_with_trans(
-    d::SimplexDistribution,
-    x::AbstractVecOrMat{<:Real},
-    transform::Bool,
-)
-    ϵ = _eps(eltype(x))
-    lp = logpdf(d, x .+ ϵ)
-    if transform
-        lp -= logabsdetjac(bijector(d), x)
-    end
-    return lp
-end
-
-# REVIEW: why do we put this piece of code here?
-function logpdf_with_trans(d::Categorical, x::Int)
-    return d.p[x] > 0.0 && insupport(d, x) ? log(d.p[x]) : eltype(d.p)(-Inf)
-end
-
-
-###############
-# MvLogNormal #
-###############
-
-using Distributions: AbstractMvLogNormal
-
-link(d::AbstractMvLogNormal, x::AbstractVecOrMat{<:Real}) = log.(x)
-invlink(d::AbstractMvLogNormal, y::AbstractVecOrMat{<:Real}) = exp.(y)
-function logpdf_with_trans(
-    d::AbstractMvLogNormal,
-    x::AbstractVector{<:Real},
-    transform::Bool,
-)
-    if transform
-        return logpdf(d, x) - logabsdetjac(Log{1}(), x)
-    else
-        return logpdf(d, x)
-    end
-end
-function logpdf_with_trans(
-    d::AbstractMvLogNormal,
-    x::AbstractMatrix{<:Real},
-    transform::Bool,
-)
-    if transform
-        return logpdf(d, x) .- logabsdetjac(Log{1}(), x)
-    else
-        return logpdf(d, x)
-    end
-end
+## Matrix
 
 #####################
 # Positive definite #
 #####################
 
-const PDMatDistribution = Union{InverseWishart, Wishart}
-
-link(d::PDMatDistribution, X::AbstractMatrix{<:Real}) = PDBijector()(X)
-invlink(d::PDMatDistribution, Y::AbstractMatrix{<:Real}) = inv(PDBijector())(Y)
+const PDMatDistribution = Union{MatrixBeta, InverseWishart, Wishart}
+ispd(::Distribution) = false
+ispd(::PDMatDistribution) = true
 
 function logpdf_with_trans(
-    d::PDMatDistribution,
-    X::AbstractMatrix{<:Real},
-    transform::Bool
-)
-    _logpdf_with_trans_pd(d, X, transform)
-end
-function logpdf_with_trans(
-    d::PDMatDistribution,
+    d::MatrixDistribution,
     X::AbstractArray{<:AbstractMatrix{<:Real}},
-    transform::Bool
-)
-    mapvcat(x -> _logpdf_with_trans_pd(d, x, transform), X)
-end
-function _logpdf_with_trans_pd(
-    d,
-    X::AbstractMatrix{<:Real},
     transform::Bool,
 )
+    return map(X) do x
+        logpdf_with_trans(d, x, transform)
+    end
+end
+function pd_logpdf_with_trans(d, X::AbstractMatrix{<:Real}, transform::Bool)
     T = eltype(X)
     Xcf = cholesky(X, check = false)
     if !issuccess(Xcf)
@@ -372,91 +221,44 @@ function _logpdf_with_trans_pd(
     lp = getlogp(d, Xcf, X)
     if transform && isfinite(lp)
         U = Xcf.U
-        lp += sum((dim(d) .- (1:dim(d)) .+ 2) .* log.(diag(U)))
-        lp += dim(d) * log(T(2))
+        d = dim(d)
+        lp += sum((d .- (1:d) .+ 2) .* log.(diag(U)))
+        lp += d * log(T(2))
     end
     return lp
 end
+function getlogp(d::MatrixBeta, Xcf, X)
+    n1, n2 = params(d)
+    p = dim(d)
+    return ((n1 - p - 1) / 2) * logdet(Xcf) + ((n2 - p - 1) / 2) * logdet(I - X) + d.logc0
+end
 function getlogp(d::Wishart, Xcf, X)
-    return 0.5 * ((d.df - (dim(d) + 1)) * logdet(Xcf) - tr(d.S \ X)) - d.c0
+    return 0.5 * ((d.df - (dim(d) + 1)) * logdet(Xcf) - tr(d.S \ X)) + d.logc0
 end
 function getlogp(d::InverseWishart, Xcf, X)
     Ψ = Matrix(d.Ψ)
-    return -0.5 * ((d.df + dim(d) + 1) * logdet(Xcf) + tr(Xcf \ Ψ)) - d.c0
-end
-
-############################################
-# Defaults (assume identity link function) #
-############################################
-
-# UnivariateDistributions
-using Distributions: UnivariateDistribution
-
-link(d::UnivariateDistribution, x::Real) = x
-link(d::UnivariateDistribution, x::AbstractArray{<:Real}) = mapvcat(x) do x
-    link(d, x)
-end
-
-invlink(d::UnivariateDistribution, y::Real) = y
-invlink(d::UnivariateDistribution, y::AbstractArray{<:Real}) = mapvcat(y) do y
-    invlink(d, y)
-end
-
-function logpdf_with_trans(
-    d::UnivariateDistribution,
-    x::Real,
-    transform::Bool,
-)
-    return _logpdf_with_trans(d, x, transform)
-end
-function logpdf_with_trans(
-    d::UnivariateDistribution,
-    x::AbstractArray{<:Real},
-    transform::Bool,
-)
-    return mapvcat(x) do x
-        logpdf_with_trans(d, x, transform)
-    end
-end
-
-# MultivariateDistributions
-using Distributions: MultivariateDistribution
-
-link(d::MultivariateDistribution, x::AbstractVecOrMat{<:Real}) = copy(x)
-
-invlink(d::MultivariateDistribution, y::AbstractVecOrMat{<:Real}) = copy(y)
-
-function logpdf_with_trans(d::MultivariateDistribution, x::AbstractVecOrMat{<:Real}, ::Bool)
-    return logpdf(d, x)
-end
-
-# MatrixDistributions
-using Distributions: MatrixDistribution
-
-link(d::MatrixDistribution, X::AbstractMatrix{<:Real}) = copy(X)
-link(d::MatrixDistribution, X::AbstractArray{<:AbstractMatrix{<:Real}}) = mapvcat(X) do x
-    link(d, x)
-end
-
-invlink(d::MatrixDistribution, Y::AbstractMatrix{<:Real}) = copy(Y)
-function invlink(d::MatrixDistribution, Y::AbstractArray{<:AbstractMatrix{<:Real}})
-    return mapvcat(Y) do y
-        invlink(d, y)
-    end
-end
-
-function logpdf_with_trans(
-    d::MatrixDistribution,
-    X::Union{AbstractMatrix{<:Real}, AbstractArray{<:AbstractMatrix{<:Real}}},
-    ::Bool,
-)
-    return logpdf(d, X)
+    return -0.5 * ((d.df + dim(d) + 1) * logdet(Xcf) + tr(Xcf \ Ψ)) + d.logc0
 end
 
 include("interface.jl")
 
+# Broadcasting here breaks Tracker for some reason
+maporbroadcast(f, x::AbstractArray{<:Any, N}...) where {N} = map(f, x...)
+maporbroadcast(f, x::AbstractArray...) = f.(x...)
+
 # optional dependencies
 function __init__()
+    @require LazyArrays = "5078a376-72f3-5289-bfd5-ec5146d43c02" begin
+        function maporbroadcast(f, x1::LazyArrays.BroadcastArray, x...)
+            return copy(f.(x1, x...))
+        end
+        function maporbroadcast(f, x1, x2::LazyArrays.BroadcastArray, x...)
+            return copy(f.(x1, x2, x...))
+        end
+        function maporbroadcast(f, x1, x2, x3::LazyArrays.BroadcastArray, x...)
+            return copy(f.(x1, x2, x3, x...))
+        end
+    end
     @require ForwardDiff="f6369f11-7733-5829-9624-2563aa707210" include("compat/forwarddiff.jl")
     @require Tracker="9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c" include("compat/tracker.jl")
     @require Zygote="e88e6eb3-aa80-5325-afca-941959d7151f" include("compat/zygote.jl")

@@ -21,7 +21,7 @@ b = stack(b1, b2)
 b([0.0, 1.0]) == [b1(0.0), 1.0]  # => true
 ```
 """
-struct Stacked{Bs, N} <: Bijector{1} where N
+struct Stacked{Bs, N} <: Bijector{1}
     bs::Bs
     ranges::NTuple{N, UnitRange{Int}}
 
@@ -43,6 +43,14 @@ struct Stacked{Bs, N} <: Bijector{1} where N
 end
 Stacked(bs, ranges::AbstractArray) = Stacked(bs, tuple(ranges...))
 Stacked(bs) = Stacked(bs, tuple([i:i for i = 1:length(bs)]...))
+
+function Base.:(==)(b1::Stacked, b2::Stacked)
+    bs1, bs2 = b1.bs, b2.bs
+    if !(bs1 isa Tuple && bs2 isa Tuple || bs1 isa Vector && bs2 isa Vector)
+        return false
+    end
+    return all(bs1 .== bs2) && all(b1.ranges .== b2.ranges)
+end
 
 isclosedform(b::Stacked) = all(isclosedform, b.bs)
 
@@ -78,7 +86,7 @@ function (sb::Stacked{<:Tuple})(x::AbstractVector{<:Real})
 end
 # The Stacked{<:AbstractArray} version is not TrackedArray friendly
 function (sb::Stacked{<:AbstractArray, N})(x::AbstractVector{<:Real}) where {N}
-    y = mapvcat2(1:N) do i
+    y = mapvcat(1:N) do i
         sb.bs[i](x[sb.ranges[i]])
     end
     @assert size(y) == size(x) "x is size $(size(x)) but y is $(size(y))"
@@ -97,7 +105,7 @@ function logabsdetjac(
 end
 
 function logabsdetjac(b::Stacked, x::AbstractMatrix{<:Real})
-    return mapvcat(eachcol(x)) do c
+    return map(eachcol(x)) do c
         logabsdetjac(b, c)
     end
 end
@@ -136,7 +144,7 @@ end
 function forward(sb::Stacked{<:AbstractArray, N}, x::AbstractVector) where {N}
     yinit, linit = forward(sb.bs[1], x[sb.ranges[1]])
     logjac = sum(linit)
-    ys = mapvcat2(drop(sb.bs, 1), drop(sb.ranges, 1)) do b, r
+    ys = mapvcat(drop(sb.bs, 1), drop(sb.ranges, 1)) do b, r
         y, l = forward(b, x[r])
         logjac += sum(l)
         y
