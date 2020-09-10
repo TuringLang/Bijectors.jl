@@ -7,7 +7,7 @@ using Tracker
 using DistributionsAD
 
 using Bijectors
-using Bijectors: Log, Exp, Shift, Scale, Logit, SimplexBijector, PDBijector, Permute, PlanarLayer, RadialLayer, Stacked, TruncatedBijector, ADBijector
+using Bijectors: Log, Exp, Shift, Scale, Logit, SimplexBijector, PDBijector, Permute, PlanarLayer, RadialLayer, Stacked, TruncatedBijector, ADBijector, LeakyReLU
 
 Random.seed!(123)
 
@@ -161,6 +161,7 @@ end
         (Stacked((Exp{1}(), SimplexBijector()), [1:1, 2:3]),
          mapslices(z -> normalize(z, 1), rand(3, 2); dims = 1)),
         (LeakyReLU(0.1), randn(3)),
+        (LeakyReLU(Float32(0.1)), randn(3)),
         (LeakyReLU(0.1; dim = Val(1)), randn(2, 3))
     ]
 
@@ -174,7 +175,6 @@ end
             x = D == 0 ? xs[1] : xs[:, 1]
 
             y = @inferred b(x)
-
             ys = @inferred b(xs)
 
             # Computations which do not have closed-form implementations are not necessarily
