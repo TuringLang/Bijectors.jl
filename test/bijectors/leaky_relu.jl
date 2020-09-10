@@ -85,45 +85,4 @@ end
     b = LeakyReLU(Float32(0.1); dim=Val(1))
     @assert eltype(b(ones(Float32, 2))) == Float32
     @assert eltype(b(ones(Float64, 2))) == Float64
-
-    # grad_test_f(α, x) = (sum ∘ LeakyReLU(α; dim=Val(1)))(x)
-    # x = ones(2)
-    # α = [0.1]
-
-    # # Tracker.jl should have a gradient-type that is the same as the INPUT
-    # using Tracker
-    # res = Tracker.data(Tracker.gradient(x -> grad_test_f(Float64(α[1]), x), Float32.(x))[1])
-    # @test eltype(res) == Float32
-    # res = Tracker.data(Tracker.gradient(x -> grad_test_f(Float32(α[1]), x), Float64.(x))[1])
-    # @test eltype(res) == Float64
-
-    # res = Tracker.data(Tracker.gradient(α -> grad_test_f(α[1], Float64.(x)), Float32.(α))[1])
-    # @test eltype(res) == Float64
-    # res = Tracker.data(Tracker.gradient(α -> grad_test_f(α[1], Float32.(x)), Float64.(α))[1])
-    # @test eltype(res) == Float64
-
-    # x = Tracker.param(ones(Float32, 2))
-    # @test b(x) isa TrackedArray
-
-    # using Zygote
-    # res = Zygote.gradient(x -> grad_test_f(Float64(α[1]), x), Float32.(x))[1]
-    # @test eltype(res) == Float32
-    # res = Zygote.gradient(x -> grad_test_f(Float32(α[1]), x), Float64.(x))[1]
-    # @test eltype(res) == Float64
-
-    # res = Zygote.gradient(α -> grad_test_f(α[1], Float64.(x)), Float32.(α))[1]
-    # @test eltype(res) == Float64
-    # res = Zygote.gradient(α -> grad_test_f(α[1], Float32.(x)), Float64.(α))[1]
-    # @test eltype(res) == Float64
-
-    # using ForwardDiff
-    # res = ForwardDiff.gradient(x -> grad_test_f(Float64(α[1]), x), Float32.(x))
-    # @test eltype(res) == Float64
-    # res = ForwardDiff.gradient(x -> grad_test_f(Float32(α[1]), x), Float64.(x))
-    # @test eltype(res) == Float64
-
-    # res = ForwardDiff.gradient(α -> grad_test_f(α[1], Float64.(x)), Float32.(α))
-    # @test eltype(res) == Float64
-    # res = ForwardDiff.gradient(α -> grad_test_f(α[1], Float32.(x)), Float64.(α))
-    # @test eltype(res) == Float64
 end
