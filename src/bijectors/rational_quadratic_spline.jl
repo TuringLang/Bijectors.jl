@@ -17,17 +17,17 @@ For the sake of efficiency, there are separate implementations for 0-dimensional
 
 # Notes
 There are two constructors for `RationalQuadraticSpline`:
-- `RationalQuadraticSpline(widths, heights, derivatives)`: it is assumed that `widths`, `heights`,
-  and `derivatives` satisfy the constraints that makes this a valid bijector, i.e.
+- `RationalQuadraticSpline(widths, heights, derivatives)`: it is assumed that `widths`, 
+`heights`, and `derivatives` satisfy the constraints that makes this a valid bijector, i.e.
   - `widths`: monotonically increasing and `length(widths) == K`,
   - `heights`: monotonically increasing and `length(heights) == K`,
   - `derivatives`: non-negative and `derivatives[1] == derivatives[end] == 1`.
-- `RationalQuadraticSpline(widths, heights, derivatives, B)`: other than than the lengths, no 
-  assumptions are made on parameters. Therefore we will transform the parameters so that:
+- `RationalQuadraticSpline(widths, heights, derivatives, B)`: other than than the lengths, 
+    no assumptions are made on parameters. Therefore we will transform the parameters s.t.:
   - `widths_new` ∈ [-B, B]ᴷ⁺¹, where `K == length(widths)`,
   - `heights_new` ∈ [-B, B]ᴷ⁺¹, where `K == length(heights)`,
-  - `derivatives_new` ∈ (0, ∞)ᴷ⁺¹ with `derivatives_new[1] == derivates_new[end] == 1`, where 
-    `(K - 1) == length(derivatives)`.
+  - `derivatives_new` ∈ (0, ∞)ᴷ⁺¹ with `derivatives_new[1] == derivates_new[end] == 1`, 
+    where `(K - 1) == length(derivatives)`.
 
 # Examples
 ## Univariate
@@ -171,12 +171,11 @@ end
 # multivariate
 function (b::RationalQuadraticSpline{<:AbstractMatrix, 1})(x::AbstractVector)
     @assert length(x) == size(b.widths, 1) == size(b.heights, 1) == size(b.derivatives, 1)
-    
-    return [rqs_univariate(b.widths[i, :], b.heights[i, :], b.derivatives[i, :], x[i])
-            for i = 1:length(x)]
+    return mapvcat(rqs_univariate,
+                   eachrow(b.widths), eachrow(b.heights), eachrow(b.derivatives), x)
 end
 function (b::RationalQuadraticSpline{<:AbstractMatrix, 1})(x::AbstractMatrix)
-    return foldl(hcat, [b(x[:, i]) for i = 1:size(x, 2)])
+    return eachcolmaphcat(b, x)
 end
 
 
@@ -219,16 +218,13 @@ end
 
 function (ib::Inverse{<:RationalQuadraticSpline, 1})(y::AbstractVector)
     b = ib.orig
-    @assert length(y) == size(b.widths, 2) == size(b.heights, 2) == size(b.derivatives, 2)
+    @assert length(y) == size(b.widths, 1) == size(b.heights, 1) == size(b.derivatives, 1)
 
-    return [
-        rqs_univariate_inverse(b.widths[i, :], b.heights[i, :], b.derivatives[i, :], y[i])
-        for i = 1:length(y)
-    ]
+    return mapvcat(rqs_univariate_inverse,
+                   eachrow(b.widths), eachrow(b.heights), eachrow(b.derivatives), y)
 end
 function (ib::Inverse{<:RationalQuadraticSpline, 1})(y::AbstractMatrix)
-    return mapreduce(ib, hcat, eachcol(y))
-    # return foldl(hcat, [ib(y[:, i]) for i = 1:size(y, 2)])
+    return eachcolmaphcat(ib, y)
 end
 
 function rqs_logabsdetjac(widths, heights, derivatives, x::Real)
@@ -271,10 +267,11 @@ function logabsdetjac(b::RationalQuadraticSpline{<:AbstractMatrix, 1}, x::Abstra
     ])
 end
 function logabsdetjac(b::RationalQuadraticSpline{<:AbstractMatrix, 1}, x::AbstractMatrix)
-    return map(x -> logabsdetjac(b, x), eachcol(x))
+    return mapvcat(x -> logabsdetjac(b, x), eachcol(x))
 end
 
-# TODO: implement this for `x::AbstractVector` and similarily for 1-dimensional `b`
+# TODO: implement this for `x::AbstractVector` and similarily for 1-dimensional `b`,
+# and possibly inverses too?
 function forward(b::RationalQuadraticSpline{<:AbstractVector, 0}, x::Real)
     K = length(b.widths) - 1
     
