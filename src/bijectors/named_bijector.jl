@@ -9,6 +9,21 @@ forward(b::AbstractBijector, x) = (rv = b(x), logabsdetjac = logabsdetjac(b, x))
     NamedBijector <: AbstractNamedBijector
 
 Wraps a `NamedTuple` of key -> `Bijector` pairs, implementing evaluation, inversion, etc.
+
+# Examples
+```julia-repl
+julia> using Bijectors: NamedBijector, Scale, Exp
+
+julia> b = NamedBijector((a = Scale(2.0), b = Exp()));
+
+julia> x = (a = 1., b = 0., c = 42.);
+
+julia> b(x)
+(a = 2.0, b = 1.0, c = 42.0)
+
+julia> (a = 2 * x.a, b = exp(x.b), c = x.c)
+(a = 2.0, b = 1.0, c = 42.0)
+```
 """
 struct NamedBijector{names, Bs<:NamedTuple{names}} <: AbstractNamedBijector
     bs::Bs
@@ -169,7 +184,10 @@ NamedCoupling{:b,(:a, :c),var"#3#4"}(var"#3#4"())
 
 julia> x = (a = 1., b = 2., c = 3.);
 
-julia> b(x) # .b == (1 + 3) * 2
+julia> b(x)
+(a = 1.0, b = 8.0, c = 3.0)
+
+julia> (a = x.a, b = (x.a + x.c) * x.b, c = x.c)
 (a = 1.0, b = 8.0, c = 3.0)
 ```
 """
