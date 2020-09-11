@@ -25,7 +25,7 @@ end
 
 function (ib::Inverse{<:LeakyReLU, 0})(y::Real)
     mask = y < zero(y)
-    return mask * (y / ib.orig.α) + (1 - mask) * y
+    return mask * (y / ib.orig.α) + !mask * y
 end
 (ib::Inverse{<:LeakyReLU{<:Any}, 0})(y::AbstractVector{<:Real}) = ib.(y)
 
