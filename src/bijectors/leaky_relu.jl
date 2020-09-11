@@ -49,7 +49,7 @@ end
 # Batched version
 function forward(b::LeakyReLU{<:Any, 0}, x::AbstractVector)
     mask = x .< zero(eltype(x))
-    J = mask .* b.α .+ (1 .- mask) .* one(eltype(x))
+    J = @. (x < zero(x)) * b.α + (x > zero(x)) * one(x)
     return (rv=J .* x, logabsdetjac=log.(abs.(J)))
 end
 
