@@ -79,8 +79,7 @@ end
 # when using `rand` on a `TransformedDistribution` making use of `LeakyReLU`.
 function forward(b::LeakyReLU{<:Any, 1}, x::AbstractVecOrMat)
     # Is really diagonal of jacobian
-    mask = x .< zero(eltype(x))
-    J = mask .* b.α .+ (1 .- mask) .* one(eltype(x))
+    J = @. (x < zero(x)) * b.α + (x > zero(x)) * one(x)
 
     if x isa AbstractVector
         logjac = sum(log.(abs.(J)))
