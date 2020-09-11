@@ -32,7 +32,7 @@ end
 function logabsdetjac(b::LeakyReLU{<:Any, 0}, x::Real)
     mask = x < zero(x)
     J = mask * b.α + (1 - mask) * one(x)
-    return log.(abs.(J))
+    return log(abs(J))
 end
 logabsdetjac(b::LeakyReLU{<:Real, 0}, x::AbstractVector{<:Real}) = logabsdetjac.(b, x)
 
