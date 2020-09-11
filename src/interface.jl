@@ -156,6 +156,7 @@ include("bijectors/truncated.jl")
 include("bijectors/planar_layer.jl")
 include("bijectors/radial_layer.jl")
 include("bijectors/normalise.jl")
+include("bijectors/rational_quadratic_spline.jl")
 
 ##################
 # Other includes #
