@@ -35,7 +35,6 @@ function RationalQuadraticSpline(
     )
 end
 
-# TODO: implement transformations for the case where `Dim == 1`
 function RationalQuadraticSpline(
     widths::A,
     heights::A,
@@ -207,41 +206,3 @@ function forward(b::RationalQuadraticSpline{<:AbstractVector, 0}, x::Real)
 
     return (rv = y, logabsdetjac = logjac)
 end
-
-# TODO: implement below
-# function forward(b::RationalQuadraticSpline{<:AbstractVector, 0}, x::AbstractVector)
-#     K = length(b.widths) - 1
-    
-#     # Find which bin `x` is in
-#     ks = searchsortedfirst.(Ref(b.widths), x) .- 1
-#     k_indicator = min.((ks .> K) + (ks .== 0), 1)
-#     @info k_indicator
-#     # if ks .> K || ks == 0
-#     #     return (rv = x, logabsdetjac = zeros(eltype(x), length(x)))
-#     # end
-
-#     # Width
-#     w = b.widths[ks .+ 1] - b.widths[ks]
-
-#     # Slope
-#     Δy = b.heights[ks .+ 1] - b.heights[ks]
-
-#     @info w
-
-#     # Recurring quantities
-#     s = Δy ./ w
-#     ξ = @. (x - b.widths[ks]) / w
-
-#     # Re-used for both `logjac` and `y`
-#     denominator = @. s + (b.derivatives[ks .+ 1] + b.derivatives[ks] - 2 * s) * ξ * (1 - ξ)
-
-#     # logjac
-#     numerator_jl = @. s^2 * (b.derivatives[ks .+ 1] * ξ^2 + 2 * s * ξ * (1 - ξ) + b.derivatives[ks] * (1 - ξ)^2)
-#     logjac = @. log(numerator_jl) - 2 * log(denominator)
-
-#     # y
-#     numerator_y = @. Δy * (s * ξ^2 + b.derivatives[ks] * ξ * (1 - ξ))
-#     y = @. b.heights[ks] + numerator_y / denominator
-
-#     return (rv = y, logabsdetjac = logjac)
-# end
