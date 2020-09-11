@@ -19,6 +19,10 @@ using DistributionsAD: TuringUniform, TuringMvNormal, TuringMvLogNormal,
 const is_TRAVIS = haskey(ENV, "TRAVIS")
 const GROUP = get(ENV, "GROUP", "All")
 
+# Always include this since it can be useful for other tests.
+include("ad/utils.jl")
+include("bijectors/utils.jl")
+
 if GROUP == "All" || GROUP == "Interface"
     include("interface.jl")
     include("transform.jl")
@@ -28,6 +32,5 @@ if GROUP == "All" || GROUP == "Interface"
 end
 
 if !is_TRAVIS && (GROUP == "All" || GROUP == "AD")
-    include("ad/utils.jl")
     include("ad/distributions.jl")
 end
