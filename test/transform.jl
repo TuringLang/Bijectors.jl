@@ -1,7 +1,7 @@
 using Test
 using Bijectors
 using ForwardDiff: derivative, jacobian
-using LinearAlgebra: logabsdet, I
+using LinearAlgebra: logabsdet, I, norm
 using Random
 
 Random.seed!(123)
@@ -24,7 +24,7 @@ function single_sample_tests(dist, jacobian)
     # Check that the implementation of the logpdf agrees with the AD version.
     x = rand(dist)
     if dist isa SimplexDistribution
-        logpdf_ad = logpdf(dist, x .+ ϵ) - _logabsdet(jacobian(x->link(dist, x, Val{false}), x))
+        logpdf_ad = logpdf(dist, x .+ ϵ) - _logabsdet(jacobian(x->link(dist, x, false), x))
     else
         logpdf_ad = logpdf(dist, x) - _logabsdet(jacobian(x->link(dist, x), x))
     end
@@ -112,7 +112,7 @@ let
         Pareto(),
         Rayleigh(1.0),
         TDist(2),
-        TruncatedNormal(0, 1, -Inf, 2),
+        truncated(Normal(0, 1), -Inf, 2),
     ]
     for dist in uni_dists
 
@@ -147,7 +147,7 @@ let ϵ = eps(Float64)
             # This should fail at the minute. Not sure what the correct way to test this is.
             x = rand(dist)
             logpdf_turing = logpdf_with_trans(dist, x, true)
-            J = jacobian(x->link(dist, x, Val{false}), x)
+            J = jacobian(x->link(dist, x, false), x)
             @test logpdf(dist, x .+ ϵ) - _logabsdet(J) ≈ logpdf_turing
 
             # Issue #12
@@ -196,6 +196,31 @@ let
 end
 end
 
+@testset "correlation matrix" begin
+
+    dist = LKJ(2, 1)
+
+    single_sample_tests(dist)
+
+    x = rand(dist)
+    x = x + x' + 2I
+    d = 1 ./ sqrt.(diag(x))
+    x = d .*  x .* d'
+
+    upperinds = [LinearIndices(size(x))[I] for I in CartesianIndices(size(x)) if I[2] > I[1]]
+    J = jacobian(x->link(dist, x), x)
+    J = J[upperinds, upperinds]
+    logpdf_turing = logpdf_with_trans(dist, x, true)
+    @test logpdf(dist, x) - _logabsdet(J) ≈ logpdf_turing
+
+    # Multi-sample tests comprising vectors of matrices.
+    N = 10
+    x = rand(dist)
+    xs = [x for _ in 1:N]
+    multi_sample_tests(dist, x, xs, N)
+
+end
+
 ################################## Miscelaneous old tests ##################################
 
 # julia> logpdf_with_trans(Dirichlet([1., 1., 1.]), exp.([-1000., -1000., -1000.]), true)
@@ -211,6 +236,11 @@ d  = Dirichlet([1., 1., 1.])
 r  = [-1000., -1000., 0.0]
 r2 = [-1., -2., 0.0]
 
+# test vector invlink
+dist = Dirichlet(ones(5))
+x = [[-2.72689, -2.92751, 1.63114, -1.62054, 0.0] [-1.24249, 2.58902, -3.73043, -3.53685, 0.0]]
+@test all(sum(Bijectors.invlink(dist, x), dims = 1) .== 1)
+
 # test link
 #link(d, r)
 
@@ -220,3 +250,34 @@ r2 = [-1., -2., 0.0]
 # test logpdf_with_trans
 #@test logpdf_with_trans(d, invlink(d, r), true) -1999.30685281944 1e-9 ≈ # atol=NaN
 @test logpdf_with_trans(d, invlink(d, r2), true) ≈ -3.760398892580863 atol=1e-9
+
+macro aeq(x, y)
+    return quote
+        x = $(esc(x))
+        y = $(esc(y))
+        norm = $(esc(:norm))
+        norm(x - y) <= 1e-10
+    end
+end
+
+@testset "Dirichlet Jacobians" begin
+    function test_link_and_invlink()
+        dist = Dirichlet(4, 4)
+        x = rand(dist)
+        y = link(dist, x)
+
+        f1 = x -> link(dist, x, true)
+        f2 = x -> link(dist, x, false)
+        g1 = y -> invlink(dist, y, true)
+        g2 = y -> invlink(dist, y, false)
+
+        @test @aeq jacobian(f1, x) Bijectors.simplex_link_jacobian(x, true)
+        @test @aeq jacobian(f2, x) Bijectors.simplex_link_jacobian(x, false)
+        @test @aeq jacobian(g1, y) Bijectors.simplex_invlink_jacobian(y, true)
+        @test @aeq jacobian(g2, y) Bijectors.simplex_invlink_jacobian(y, false)
+        @test @aeq Bijectors.simplex_link_jacobian(x, false) * Bijectors.simplex_invlink_jacobian(y, false) I
+    end
+    for i in 1:4
+        test_link_and_invlink()
+    end
+end
