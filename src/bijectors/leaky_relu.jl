@@ -42,7 +42,7 @@ logabsdetjac(b::LeakyReLU{<:Real, 0}, x::AbstractVector{<:Real}) = logabsdetjac.
 # when using `rand` on a `TransformedDistribution` making use of `LeakyReLU`.
 function forward(b::LeakyReLU{<:Any, 0}, x::Real)
     mask = x < zero(x)
-    J = mask * b.α + (1 - mask) * one(x)
+    J = mask * b.α + !mask * one(x)
     return (rv=J * x, logabsdetjac=log(abs(J)))
 end
 
