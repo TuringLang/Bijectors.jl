@@ -21,7 +21,7 @@ function (b::LeakyReLU{<:Any, 0})(x::Real)
     mask = x < zero(x)
     return mask * b.α * x + !mask * x
 end
-(b::LeakyReLU{<:Any, 0})(x::AbstractVector{<:Real}) = b.(x)
+(b::LeakyReLU{<:Any, 0})(x::AbstractVector{<:Real}) = map(b, x)
 
 function (ib::Inverse{<:LeakyReLU, 0})(y::Real)
     mask = y < zero(y)
