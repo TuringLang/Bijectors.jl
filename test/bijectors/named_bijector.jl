@@ -20,6 +20,7 @@ end
 
     inc2 = inv(nc2)
     @test (inc2 ∘ nc2)(x) == x
+    @test logabsdetjac((inc2 ∘ nc2), x) ≈ 0.0
 end
 
 @testset "NamedCoupling" begin

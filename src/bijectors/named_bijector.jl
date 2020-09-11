@@ -5,6 +5,11 @@ forward(b::AbstractBijector, x) = (rv = b(x), logabsdetjac = logabsdetjac(b, x))
 #######################
 ### `NamedBijector` ###
 #######################
+"""
+    NamedBijector <: AbstractNamedBijector
+
+Wraps a `NamedTuple` of key -> `Bijector` pairs, implementing evaluation, inversion, etc.
+"""
 struct NamedBijector{names, Bs<:NamedTuple{names}} <: AbstractNamedBijector
     bs::Bs
 end
@@ -27,6 +32,13 @@ end
 ######################
 ### `NamedInverse` ###
 ######################
+"""
+    NamedInverse <: AbstractNamedBijector
+
+Represents the inverse of a `AbstractNamedBijector`, similarily to `Inverse` for `Bijector`.
+
+See also: [`Inverse`](@ref)
+"""
 struct NamedInverse{B<:AbstractNamedBijector} <: AbstractNamedBijector
     orig::B
 end
@@ -38,6 +50,17 @@ logabsdetjac(ni::NamedInverse, y::NamedTuple) = -logabsdetjac(inv(ni), ni(y))
 ##########################
 ### `NamedComposition` ###
 ##########################
+"""
+    NamedComposition <: AbstractNamedBijector
+
+Wraps a tuple of array of `AbstractNamedBijector` and implements their composition.
+
+This is very similar to `Composed` for `Bijector`, with the exception that we do not require
+the inputs to have the same "dimension", which in this case refers to the *symbols* for the
+`NamedTuple` that this takes as input.
+
+See also: [`Composed`](@ref)
+"""
 struct NamedComposition{Bs} <: AbstractNamedBijector
     bs::Bs
 end
@@ -131,6 +154,25 @@ end
 ############################
 ### `NamedCouplingLayer` ###
 ############################
+# TODO: Add ref to `Coupling` or `CouplingLayer` once that's merged.
+"""
+    NamedCoupling{target, deps, F} <: AbstractNamedBijector
+
+Implements a coupling layer for named bijectors.
+
+# Examples
+```julia-repl
+julia> using Bijectors: NamedCoupling, Scale
+
+julia> b = NamedCoupling(:b, (:a, :c), (a, c) -> Scale(a + c))
+NamedCoupling{:b,(:a, :c),var"#3#4"}(var"#3#4"())
+
+julia> x = (a = 1., b = 2., c = 3.);
+
+julia> b(x) # .b == (1 + 3) * 2
+(a = 1.0, b = 8.0, c = 3.0)
+```
+"""
 struct NamedCoupling{target, deps, F} <: AbstractNamedBijector where {F, target}
     f::F
 end
