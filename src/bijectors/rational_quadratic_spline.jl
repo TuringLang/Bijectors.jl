@@ -1,6 +1,83 @@
 using NNlib
 using Bijectors
 
+"""
+    RationalQuadraticSpline{T, 0} <: Bijector{0}
+    RationalQuadraticSpline{T, 1} <: Bijector{1}
+
+Implementation of the Rational Quadratic Spline flow [1].
+
+- Outside of the interval `[minimum(widths), maximum(widths)]`, this mapping is given 
+  by the identity map. 
+- Inside the interval it's given by a monotonic spline (i.e. monotonic polynomials 
+  connected at intermediate points) with endpoints fixed so as to continuously transform
+  into the identity map.
+
+For the sake of efficiency, there are separate implementations for 0-dimensional and
+1-dimensional inputs.
+
+# Notes
+There are two constructors for `RationalQuadraticSpline`:
+- `RationalQuadraticSpline(widths, heights, derivatives)`: it is assumed that `widths`, `heights`,
+  and `derivatives` satisfy the constraints that makes this a valid bijector, i.e.
+  - `widths`: monotonically increasing and `length(widths) == K`,
+  - `heights`: monotonically increasing and `length(heights) == K`,
+  - `derivatives`: non-negative and `derivatives[1] == derivatives[end] == 1`.
+- `RationalQuadraticSpline(widths, heights, derivatives, B)`: other than than the lengths, no 
+  assumptions are made on parameters. Therefore we will transform the parameters so that:
+  - `widths_new` ∈ [-B, B]ᴷ⁺¹, where `K == length(widths)`,
+  - `heights_new` ∈ [-B, B]ᴷ⁺¹, where `K == length(heights)`,
+  - `derivatives_new` ∈ (0, ∞)ᴷ⁺¹ with `derivatives_new[1] == derivates_new[end] == 1`, where 
+    `(K - 1) == length(derivatives)`.
+
+# Examples
+## Univariate
+```julia-repl
+julia> using Bijectors: RationalQuadraticSpline
+
+julia> K = 3; B = 2;
+
+julia> # Monotonic spline on '[-B, B]' with `K` intermediate knots/"connection points".
+       b = RationalQuadraticSpline(randn(K), randn(K), randn(K - 1), B);
+
+julia> b(0.5) # inside of `[-B, B]` → transformed
+1.412300607463467
+
+julia> b(5.) # outside of `[-B, B]` → not transformed
+5.0
+```
+Or we can use the constructor with the parameters correctly constrained:
+```julia-repl
+julia> b = RationalQuadraticSpline(b.widths, b.heights, b.derivatives);
+
+julia> b(0.5) # inside of `[-B, B]` → transformed
+1.412300607463467
+```
+## Multivariate
+```julia-repl
+julia> d = 2; K = 3; B = 2;
+
+julia> b = RationalQuadraticSpline(randn(d, K), randn(d, K), randn(d, K - 1), B);
+
+julia> b([-1., 1.])
+2-element Array{Float64,1}:
+ -1.2568224171342797
+  0.5537259740554675
+
+julia> b([-5., 5.])
+2-element Array{Float64,1}:
+ -5.0
+  5.0
+
+julia> b([-1., 5.])
+2-element Array{Float64,1}:
+ -1.2568224171342797
+  5.0
+```
+
+# References
+[1] Durkan, C., Bekasov, A., Murray, I., & Papamakarios, G., Neural Spline Flows, CoRR, arXiv:1906.04032 [stat.ML],  (2019). 
+"""
 struct RationalQuadraticSpline{T, N} <: Bijector{N}
     widths::T      # K widths
     heights::T     # K heights
@@ -79,14 +156,17 @@ function rqs_univariate(widths, heights, derivatives, x::Real)
     return g
 end
 # univariate
-(b::RationalQuadraticSpline{<:AbstractVector, 0})(x::Real) = rqs_univariate(b.widths, b.heights, b.derivatives, x)
+function (b::RationalQuadraticSpline{<:AbstractVector, 0})(x::Real)
+    return rqs_univariate(b.widths, b.heights, b.derivatives, x)
+end
 (b::RationalQuadraticSpline{<:AbstractVector, 0})(x::AbstractVector) = b.(x)
 
 # multivariate
 function (b::RationalQuadraticSpline{<:AbstractMatrix, 1})(x::AbstractVector)
-    @assert length(x) == size(b.widths, 2) == size(b.heights, 2) == size(b.derivatives, 2)
+    @assert length(x) == size(b.widths, 1) == size(b.heights, 1) == size(b.derivatives, 1)
     
-    return [rqs_univariate(b.widths[:, i], b.heights[:, i], b.derivatives[:, i], x[i]) for i = 1:length(x)]
+    return [rqs_univariate(b.widths[i, :], b.heights[i, :], b.derivatives[i, :], x[i])
+            for i = 1:length(x)]
 end
 function (b::RationalQuadraticSpline{<:AbstractMatrix, 1})(x::AbstractMatrix)
     return foldl(hcat, [b(x[:, i]) for i = 1:size(x, 2)])
@@ -125,14 +205,19 @@ function rqs_univariate_inverse(widths, heights, derivatives, y::Real)
     
     return ξ * w + widths[k]
 end
-(ib::Inverse{<:RationalQuadraticSpline, 0})(y::Real) = rqs_univariate_inverse(ib.orig.widths, ib.orig.heights, ib.orig.derivatives, y)
+function (ib::Inverse{<:RationalQuadraticSpline, 0})(y::Real)
+    return rqs_univariate_inverse(ib.orig.widths, ib.orig.heights, ib.orig.derivatives, y)
+end
 (ib::Inverse{<:RationalQuadraticSpline, 0})(y::AbstractVector) = ib.(y)
 
 function (ib::Inverse{<:RationalQuadraticSpline, 1})(y::AbstractVector)
     b = ib.orig
     @assert length(y) == size(b.widths, 2) == size(b.heights, 2) == size(b.derivatives, 2)
 
-    return [rqs_univariate_inverse(b.widths[:, i], b.heights[:, i], b.derivatives[:, i], y[i]) for i = 1:length(y)]
+    return [
+        rqs_univariate_inverse(b.widths[i, :], b.heights[i, :], b.derivatives[i, :], y[i])
+        for i = 1:length(y)
+    ]
 end
 function (ib::Inverse{<:RationalQuadraticSpline, 1})(y::AbstractMatrix)
     return mapreduce(ib, hcat, eachcol(y))
@@ -164,10 +249,17 @@ function rqs_logabsdetjac(widths, heights, derivatives, x::Real)
 
     return log(numerator) - 2 * log(denominator)
 end
-logabsdetjac(b::RationalQuadraticSpline{<:AbstractVector, 0}, x::Real) = rqs_logabsdetjac(b.widths, b.heights, b.derivatives, x)
-logabsdetjac(b::RationalQuadraticSpline{<:AbstractVector, 0}, x::AbstractVector) = logabsdetjac.(b, x)
+function logabsdetjac(b::RationalQuadraticSpline{<:AbstractVector, 0}, x::Real)
+    return rqs_logabsdetjac(b.widths, b.heights, b.derivatives, x)
+end
+function logabsdetjac(b::RationalQuadraticSpline{<:AbstractVector, 0}, x::AbstractVector)
+    return logabsdetjac.(b, x)
+end
 function logabsdetjac(b::RationalQuadraticSpline{<:AbstractMatrix, 1}, x::AbstractVector)
-    return sum([rqs_logabsdetjac(b.widths[:, i], b.heights[:, i], b.derivatives[:, i], x[i]) for i = 1:length(x)])
+    return sum([
+        rqs_logabsdetjac(b.widths[i, :], b.heights[i, :], b.derivatives[i, :], x[i])
+        for i = 1:length(x)
+    ])
 end
 function logabsdetjac(b::RationalQuadraticSpline{<:AbstractMatrix, 1}, x::AbstractMatrix)
     return map(logabsdetjac, eachcol(x))
