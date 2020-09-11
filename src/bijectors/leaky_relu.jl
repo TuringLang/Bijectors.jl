@@ -55,8 +55,7 @@ end
 
 # (N=1) Multivariate case, with univariate parameter `α`
 function (b::LeakyReLU{<:Any, 1})(x::AbstractVecOrMat)
-    mask = x .< zero(eltype(x))
-    return mask .* b.α .* x .+ (1 .- mask) .* x
+    return @. (x < zero(x)) * b.α * x + (x > zero(x)) * x
 end
 
 function (ib::Inverse{<:LeakyReLU, 1})(y::AbstractVecOrMat)
