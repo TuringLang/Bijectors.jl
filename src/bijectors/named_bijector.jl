@@ -1,6 +1,6 @@
-abstract type AbstractNamedBijector{names} <: AbstractBijector end
+abstract type AbstractNamedBijector <: AbstractBijector end
 
-struct NamedBijector{names, Bs<:NamedTuple{names}} <: AbstractNamedBijector{names}
+struct NamedBijector{names, Bs<:NamedTuple{names}} <: AbstractNamedBijector
     bs::Bs
 end
 
@@ -40,7 +40,7 @@ end
 ####################
 ### NamedInverse ###
 ####################
-struct NamedInverse{names, B<:AbstractNamedBijector{names}} <: AbstractNamedBijector{names}
+struct NamedInverse{B<:AbstractNamedBijector} <: AbstractNamedBijector
     orig::B
 end
 Base.inv(nb::AbstractNamedBijector) = NamedInverse(nb)
@@ -51,40 +51,38 @@ logabsdetjac(ni::NamedInverse, y::NamedTuple) = -logabsdetjac(inv(ni), ni(y))
 ############################
 ### `NamedCouplingLayer` ###
 ############################
-struct NamedCoupling{names, target, deps, F} <: AbstractNamedBijector{names} where {F, target}
+struct NamedCoupling{target, deps, F} <: AbstractNamedBijector where {F, target}
     f::F
 end
 
-NamedCoupling(names, target, deps) = NamedCoupling(names, target, deps, identity)
-NamedCoupling(names, target, deps, f::F) where {F} = NamedCoupling{names, target, deps, F}(f)
-function NamedCoupling(::Val{names}, ::Val{target}, ::Val{deps}, f::F) where {names, target, deps, F}
-    return NamedCoupling{names, target, deps, F}(f)
+NamedCoupling(target, deps, f::F) where {F} = NamedCoupling{target, deps, F}(f)
+function NamedCoupling(::Val{target}, ::Val{deps}, f::F) where {target, deps, F}
+    return NamedCoupling{target, deps, F}(f)
 end
 
-Base.names(b::AbstractNamedBijector{names}) where {names} = names
 coupling(b::NamedCoupling) = b.f
 # For some reason trying to use the parameteric types doesn't always work
 # so we have to do this weird approach of extracting type and then index `parameters`.
-target(b::NamedCoupling) = typeof(b).parameters[2]
-deps(b::NamedCoupling) = typeof(b).parameters[3]
+target(b::NamedCoupling) = typeof(b).parameters[1]
+deps(b::NamedCoupling) = typeof(b).parameters[2]
 
-@generated function (nc::NamedCoupling{names, target, deps, F})(x::NamedTuple) where {names, target, deps, F}
+@generated function (nc::NamedCoupling{target, deps, F})(x::NamedTuple) where {target, deps, F}
     return quote
         b = nc.f($([:(x.$d) for d in deps]...))
         return merge(x, ($target = b(x.$target), ))
     end
 end
 
-@generated function (ni::NamedInverse{names, <:NamedCoupling{names, target, deps, F}})(
+@generated function (ni::NamedInverse{<:NamedCoupling{target, deps, F}})(
     x::NamedTuple
-) where {names, target, deps, F}
+) where {target, deps, F}
     return quote
         b = ni.orig.f($([:(x.$d) for d in deps]...))
         return merge(x, ($target = inv(b)(x.$target), ))
     end
 end
 
-@generated function logabsdetjac(nc::NamedCoupling{names, target, deps, F}, x::NamedTuple) where {names, target, deps, F}
+@generated function logabsdetjac(nc::NamedCoupling{target, deps, F}, x::NamedTuple) where {target, deps, F}
     return quote
         b = nc.f($([:(x.$d) for d in deps]...))
         return logabsdetjac(b, x.$target)
