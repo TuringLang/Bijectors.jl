@@ -271,7 +271,7 @@ function logabsdetjac(b::RationalQuadraticSpline{<:AbstractMatrix, 1}, x::Abstra
     ])
 end
 function logabsdetjac(b::RationalQuadraticSpline{<:AbstractMatrix, 1}, x::AbstractMatrix)
-    return map(logabsdetjac, eachcol(x))
+    return map(x -> logabsdetjac(b, x), eachcol(x))
 end
 
 # TODO: implement this for `x::AbstractVector` and similarily for 1-dimensional `b`
