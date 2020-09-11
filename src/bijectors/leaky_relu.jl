@@ -59,8 +59,7 @@ function (b::LeakyReLU{<:Any, 1})(x::AbstractVecOrMat)
 end
 
 function (ib::Inverse{<:LeakyReLU, 1})(y::AbstractVecOrMat)
-    mask = x .< zero(eltype(y))
-    return mask .* (y ./ ib.orig.α) .+ (1 .- mask) .* y
+    return @. (y < zero(y)) * y / ib.orig.α + (y > zero(x)) * y
 end
 
 function logabsdetjac(b::LeakyReLU{<:Any, 1}, x::AbstractVecOrMat)
