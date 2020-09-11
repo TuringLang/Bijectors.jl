@@ -19,7 +19,7 @@ up1(b::LeakyReLU{T, N}) where {T, N} = LeakyReLU{T, N + 1}(b.α)
 # (N=0) Univariate case
 function (b::LeakyReLU{<:Any, 0})(x::Real)
     mask = x < zero(x)
-    return mask * b.α * x + (1 - mask) * x
+    return mask * b.α * x + !mask * x
 end
 (b::LeakyReLU{<:Any, 0})(x::AbstractVector{<:Real}) = b.(x)
 
