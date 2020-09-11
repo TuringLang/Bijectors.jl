@@ -17,6 +17,9 @@ end
 
     nc2 = b ∘ b
     @test nc1 == nc2
+
+    inc2 = inv(nc2)
+    @test (inc2 ∘ nc2)(x) == x
 end
 
 @testset "NamedCoupling" begin
