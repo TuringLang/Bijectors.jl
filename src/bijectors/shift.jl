@@ -5,13 +5,15 @@ struct Shift{T, N} <: Bijector{N}
     a::T
 end
 
+Base.:(==)(b1::Shift{<:Any, N}, b2::Shift{<:Any, N}) where {N} = b1.a == b2.a
+
 function Shift(a::Union{Real,AbstractArray}; dim::Val{D} = Val(ndims(a))) where D
     return Shift{typeof(a), D}(a)
 end
+up1(b::Shift{T, N}) where {T, N} = Shift{T, N + 1}(b.a)
 
-(b::Shift)(x) = b.a + x
-(b::Shift{<:Real})(x::AbstractArray) = b.a .+ x
-(b::Shift{<:AbstractVector})(x::AbstractMatrix) = b.a .+ x
+(b::Shift)(x) = b.a .+ x
+(b::Shift{<:Any, 2})(x::AbstractArray{<:AbstractMatrix}) = map(b, x)
 
 inv(b::Shift{T, N}) where {T, N} = Shift{T, N}(-b.a)
 
@@ -22,3 +24,5 @@ _logabsdetjac_shift(a::Real, x::Real, ::Val{0}) = zero(eltype(x))
 _logabsdetjac_shift(a::Real, x::AbstractVector{T}, ::Val{0}) where {T<:Real} = zeros(T, length(x))
 _logabsdetjac_shift(a::T1, x::AbstractVector{T2}, ::Val{1}) where {T1<:Union{Real, AbstractVector}, T2<:Real} = zero(T2)
 _logabsdetjac_shift(a::T1, x::AbstractMatrix{T2}, ::Val{1}) where {T1<:Union{Real, AbstractVector}, T2<:Real} = zeros(T2, size(x, 2))
+_logabsdetjac_shift(a::T1, x::AbstractMatrix{T2}, ::Val{2}) where {T1<:Union{Real, AbstractVector}, T2<:Real} = zero(T2)
+_logabsdetjac_shift(a::T1, x::AbstractArray{<:AbstractMatrix{T2}}, ::Val{2}) where {T1<:Union{Real, AbstractVector}, T2<:Real} = zeros(T2, size(x))

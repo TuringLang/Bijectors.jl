@@ -1,13 +1,24 @@
 using Test
-using Bijectors
 using Random
 using LinearAlgebra
 using ForwardDiff
+using ReverseDiff
 using Tracker
+using DistributionsAD
 
-using Bijectors: Log, Exp, Shift, Scale, Logit, SimplexBijector
+using Bijectors
+using Bijectors: Log, Exp, Shift, Scale, Logit, SimplexBijector, PDBijector, Permute, PlanarLayer, RadialLayer, Stacked, TruncatedBijector, ADBijector
 
 Random.seed!(123)
+
+struct MyADBijector{AD, N, B <: Bijector{N}} <: ADBijector{AD, N}
+    b::B
+end
+MyADBijector(d::Distribution) = MyADBijector{Bijectors.ADBackend()}(d)
+MyADBijector{AD}(d::Distribution) where {AD} = MyADBijector{AD}(bijector(d))
+MyADBijector{AD}(b::B) where {AD, N, B <: Bijector{N}} = MyADBijector{AD, N, B}(b)
+(b::MyADBijector)(x) = b.b(x)
+(b::Inverse{<:MyADBijector})(x) = inv(b.orig.b)(x)
 
 struct NonInvertibleBijector{AD} <: ADBijector{AD, 1} end
 
@@ -61,8 +72,8 @@ end
             # single sample
             y = @inferred rand(td)
             x = @inferred inv(td.transform)(y)
-            @test y == @inferred td.transform(x)
-            @test @inferred logpdf(td, y) ≈ @inferred logpdf_with_trans(dist, x, true)
+            @test y ≈ @inferred td.transform(x)
+            @test @inferred(logpdf(td, y)) ≈ @inferred(logpdf_with_trans(dist, x, true))
 
             # logpdf_with_jac
             lp, logjac = logpdf_with_jac(td, y)
@@ -101,7 +112,7 @@ end
 
         @testset "$dist: ForwardDiff AD" begin
             x = rand(dist)
-            b = DistributionBijector{Bijectors.ADBackend(:forward_diff), typeof(dist), length(size(dist))}(dist)
+            b = MyADBijector{Bijectors.ADBackend(:forwarddiff)}(dist)
             
             @test abs(det(Bijectors.jacobian(b, x))) > 0
             @test logabsdetjac(b, x) ≠ Inf
@@ -114,7 +125,7 @@ end
 
         @testset "$dist: Tracker AD" begin
             x = rand(dist)
-            b = DistributionBijector{Bijectors.ADBackend(:reverse_diff), typeof(dist), length(size(dist))}(dist)
+            b = MyADBijector{Bijectors.ADBackend(:reversediff)}(dist)
             
             @test abs(det(Bijectors.jacobian(b, x))) > 0
             @test logabsdetjac(b, x) ≠ Inf
@@ -164,8 +175,24 @@ end
 
             ys = @inferred b(xs)
 
+            # Computations which do not have closed-form implementations are not necessarily
+            # differentiable, and so we skip them.
+            # HACK: In reality, this is just circumventing the fact that Tracker isn't happy with
+            # the `find_zero` function used by some bijectors.
+            if isclosedform(b)
+                @inferred(b(param(xs)))
+            end
+
             x_ = @inferred ib(y)
             xs_ = @inferred ib(ys)
+
+            # Computations which do not have closed-form implementations are not necessarily
+            # differentiable, and so we skip them.
+            # HACK: In reality, this is just circumventing the fact that Tracker isn't happy with
+            # the `find_zero` function used by some bijectors.
+            if isclosedform(ib)
+                @inferred(ib(param(ys)))
+            end
 
             result = @inferred forward(b, x)
             results = @inferred forward(b, xs)
@@ -197,6 +224,9 @@ end
                 @test length(logabsdetjac(b, xs)) == length(xs)
                 @test length(logabsdetjac(ib, ys)) == length(xs)
 
+                isclosedform(b) && @test @inferred(logabsdetjac(b, param(xs))) isa Union{Array, TrackedArray}
+                isclosedform(ib) && @test @inferred(logabsdetjac(ib, param(ys))) isa Union{Array, TrackedArray}
+
                 @test size(results.logabsdetjac) == size(xs, )
                 @test size(iresults.logabsdetjac) == size(ys, )
 
@@ -208,6 +238,9 @@ end
                 @test logabsdetjac.(ib, ys) == @inferred(logabsdetjac(ib, ys))
                 @test @inferred(logabsdetjac(ib, ys)) ≈ ib_logjac_ad atol=1e-9
 
+                isclosedform(b) && @test logabsdetjac.(b, param(xs)) == @inferred(logabsdetjac(b, param(xs)))
+                isclosedform(ib) && @test logabsdetjac.(ib, param(ys)) == @inferred(logabsdetjac(ib, param(ys)))
+
                 @test results.logabsdetjac ≈ vec(logabsdetjac.(b, xs))
                 @test iresults.logabsdetjac ≈ vec(logabsdetjac.(ib, ys))
             elseif D == 1
@@ -218,12 +251,15 @@ end
                 @test size(logabsdetjac(b, xs)) == (size(xs, 2), )
                 @test size(logabsdetjac(ib, ys)) == (size(xs, 2), )
 
+                isclosedform(b) && @test @inferred(logabsdetjac(b, param(xs))) isa Union{Array, TrackedArray}
+                isclosedform(ib) && @test @inferred(logabsdetjac(ib, param(ys))) isa Union{Array, TrackedArray}
+
                 @test size(results.logabsdetjac) == (size(xs, 2), )
                 @test size(iresults.logabsdetjac) == (size(ys, 2), )
 
                 # Test all values
-                @test @inferred(logabsdetjac(b, xs)) == vec(mapslices(z -> logabsdetjac(b, z), xs; dims = 1))
-                @test @inferred(logabsdetjac(ib, ys)) == vec(mapslices(z -> logabsdetjac(ib, z), ys; dims = 1))
+                @test @inferred(logabsdetjac(b, xs)) ≈ vec(mapslices(z -> logabsdetjac(b, z), xs; dims = 1))
+                @test @inferred(logabsdetjac(ib, ys)) ≈ vec(mapslices(z -> logabsdetjac(ib, z), ys; dims = 1))
 
                 @test results.logabsdetjac ≈ vec(mapslices(z -> logabsdetjac(b, z), xs; dims = 1))
                 @test iresults.logabsdetjac ≈ vec(mapslices(z -> logabsdetjac(ib, z), ys; dims = 1))
@@ -255,6 +291,9 @@ end
         @test cb2 isa Composed{<:Tuple}
         cb3 = cb1 ∘ cb2
         @test cb3 isa Composed{<:Tuple}
+        
+        @test logabsdetjac(cb1, 1.) isa Real
+        @test logabsdetjac(cb1, 1.) == 1.
 
         @test inv(cb1) isa Composed{<:Tuple}
         @test inv(cb2) isa Composed{<:Tuple}
@@ -267,6 +306,9 @@ end
         @test cb2 isa Composed{<:AbstractArray}
         cb3 = cb1 ∘ cb2
         @test cb3 isa Composed{<:AbstractArray}
+        
+        @test logabsdetjac(cb1, 1.) isa Real
+        @test logabsdetjac(cb1, 1.) == 1.
 
         @test inv(cb1) isa Composed{<:AbstractArray}
         @test inv(cb2) isa Composed{<:AbstractArray}
@@ -320,7 +362,7 @@ end
 
             # 0-dim with `Real` parameter for batch-computation
             lj = logabsdetjac(b, [1.0, 2.0, 3.0])
-            @test lj isa Tracker.TrackedArray
+            @test lj isa TrackedArray
             Tracker.back!(lj, [1.0, 1.0, 1.0])
             @test Tracker.extract_grad!(b.a) == 0.0
 
@@ -331,7 +373,7 @@ end
             @test Tracker.extract_grad!(b.a) == zeros(3)
 
             lj = logabsdetjac(b, [3.0 4.0 5.0; 6.0 7.0 8.0])
-            @test lj isa Tracker.TrackedArray
+            @test lj isa TrackedArray
             Tracker.back!(lj, [1.0, 1.0, 1.0])
             @test Tracker.extract_grad!(b.a) == zeros(3)
         end
@@ -382,7 +424,9 @@ end
             # single sample
             y = rand(td)
             x = inv(td.transform)(y)
-            @test y == td.transform(x)
+            @test inv(td.transform)(param(y)) isa TrackedArray
+            @test y ≈ td.transform(x)
+            @test td.transform(param(x)) isa TrackedArray
             @test logpdf(td, y) ≈ logpdf_with_trans(dist, x, true)
 
             # logpdf_with_jac
@@ -393,6 +437,7 @@ end
             # multi-sample
             y = rand(td, 10)
             x = inv(td.transform)(y)
+            @test inv(td.transform)(param(y)) isa TrackedArray
             @test logpdf(td, y) ≈ logpdf_with_trans(dist, x, true)
 
             # forward
@@ -405,15 +450,17 @@ end
             # verify against AD
             # similar to what we do in test/transform.jl for Dirichlet
             if dist isa Dirichlet
-                b = Bijectors.SimplexBijector{false}()
+                b = Bijectors.SimplexBijector{1, false}()
                 x = rand(dist)
                 y = b(x)
+                @test b(param(x)) isa TrackedArray
                 @test log(abs(det(ForwardDiff.jacobian(b, x)))) ≈ logabsdetjac(b, x)
                 @test log(abs(det(ForwardDiff.jacobian(inv(b), y)))) ≈ logabsdetjac(inv(b), y)
             else
                 b = bijector(dist)
                 x = rand(dist)
                 y = b(x)
+                @test b(param(x)) isa TrackedArray
                 @test log(abs(det(ForwardDiff.jacobian(b, x)))) ≈ logabsdetjac(b, x)
                 @test log(abs(det(ForwardDiff.jacobian(inv(b), y)))) ≈ logabsdetjac(inv(b), y)
             end
@@ -428,7 +475,10 @@ end
 
     matrix_dists = [
         Wishart(v,S),
-        InverseWishart(v,S)
+        InverseWishart(v,S),
+        TuringWishart(v,S),
+        TuringInverseWishart(v,S),
+        LKJ(3, 1.)
     ]
 
     for dist in matrix_dists
@@ -438,6 +488,7 @@ end
             # single sample
             y = rand(td)
             x = inv(td.transform)(y)
+            @test inv(td.transform)(param(y)) isa TrackedArray
             @test logpdf(td, y) ≈ logpdf_with_trans(dist, x, true)
 
             # TODO: implement `logabsdetjac` for these
@@ -449,6 +500,7 @@ end
             # multi-sample
             y = rand(td, 10)
             x = inv(td.transform)(y)
+            @test inv(td.transform)(param.(y)) isa Vector{<:TrackedArray}
             @test logpdf(td, y) ≈ logpdf_with_trans(dist, x, true)
         end
     end
@@ -482,11 +534,11 @@ end
     @test logabsdetjac(b ∘ b, x) ≈ logabsdetjac(b, b(x)) + logabsdetjac(b, x)
 
     # order of composed evaluation
-    b1 = DistributionBijector(d)
-    b2 = DistributionBijector(Gamma())
+    b1 = MyADBijector(d)
+    b2 = MyADBijector(Gamma())
 
-    cb = b1 ∘ b2
-    @test cb(x) ≈ b1(b2(x))
+    cb = inv(b1) ∘ b2
+    @test cb(x) ≈ inv(b1)(b2(x))
 
     # contrived example
     b = bijector(d)
@@ -527,50 +579,56 @@ end
 
     sb1 = @inferred stack(b, b, inv(b), inv(b))             # <= Tuple
     res1 = forward(sb1, [x, x, y, y])
+    @test sb1(param([x, x, y, y])) isa TrackedArray
 
-    @test sb1([x, x, y, y]) == res1.rv
-    @test logabsdetjac(sb1, [x, x, y, y]) ≈ 0.0
-    @test res1.logabsdetjac ≈ 0.0
+    @test sb1([x, x, y, y]) ≈ res1.rv
+    @test logabsdetjac(sb1, [x, x, y, y]) ≈ 0 atol=1e-6
+    @test res1.logabsdetjac ≈ 0 atol=1e-6
 
     sb2 = Stacked([b, b, inv(b), inv(b)])        # <= Array
     res2 = forward(sb2, [x, x, y, y])
+    @test sb2(param([x, x, y, y])) isa TrackedArray
 
-    @test sb2([x, x, y, y]) == res2.rv
-    @test logabsdetjac(sb2, [x, x, y, y]) ≈ 0.0
-    @test res2.logabsdetjac ≈ 0.0
+    @test sb2([x, x, y, y]) ≈ res2.rv
+    @test logabsdetjac(sb2, [x, x, y, y]) ≈ 0.0 atol=1e-12
+    @test res2.logabsdetjac ≈ 0.0 atol=1e-12
 
     # `logabsdetjac` with AD
-    b = DistributionBijector(d)
+    b = MyADBijector(d)
     y = b(x)
     
     sb1 = stack(b, b, inv(b), inv(b))             # <= Tuple
     res1 = forward(sb1, [x, x, y, y])
+    @test sb1(param([x, x, y, y])) isa TrackedArray
 
     @test sb1([x, x, y, y]) == res1.rv
-    @test logabsdetjac(sb1, [x, x, y, y]) ≈ 0.0
-    @test res1.logabsdetjac ≈ 0.0
+    @test logabsdetjac(sb1, [x, x, y, y]) ≈ 0 atol=1e-12
+    @test res1.logabsdetjac ≈ 0.0 atol=1e-12
 
     sb2 = Stacked([b, b, inv(b), inv(b)])        # <= Array
     res2 = forward(sb2, [x, x, y, y])
+    @test sb2(param([x, x, y, y])) isa TrackedArray
 
     @test sb2([x, x, y, y]) == res2.rv
-    @test logabsdetjac(sb2, [x, x, y, y]) ≈ 0.0
-    @test res2.logabsdetjac ≈ 0.0
+    @test logabsdetjac(sb2, [x, x, y, y]) ≈ 0.0 atol=1e-12
+    @test res2.logabsdetjac ≈ 0.0 atol=1e-12
 
     # value-test
     x = ones(3)
     sb = @inferred stack(Bijectors.Exp(), Bijectors.Log(), Bijectors.Shift(5.0))
     res = forward(sb, x)
+    @test sb(param(x)) isa TrackedArray
     @test sb(x) == [exp(x[1]), log(x[2]), x[3] + 5.0]
     @test res.rv == [exp(x[1]), log(x[2]), x[3] + 5.0]
     @test logabsdetjac(sb, x) == sum([sum(logabsdetjac(sb.bs[i], x[sb.ranges[i]])) for i = 1:3])
     @test res.logabsdetjac == logabsdetjac(sb, x)
-    
+
 
     # TODO: change when we have dimensionality in the type
     sb = @inferred Stacked((Bijectors.Exp(), Bijectors.SimplexBijector()), [1:1, 2:3])
     x = ones(3) ./ 3.0
     res = @inferred forward(sb, x)
+    @test sb(param(x)) isa TrackedArray
     @test sb(x) == [exp(x[1]), sb.bs[2](x[2:3])...]
     @test res.rv == [exp(x[1]), sb.bs[2](x[2:3])...]
     @test logabsdetjac(sb, x) == sum([sum(logabsdetjac(sb.bs[i], x[sb.ranges[i]])) for i = 1:2])
@@ -656,11 +714,102 @@ end
 @testset "Example: ADVI single" begin
     # Usage in ADVI
     d = Beta()
-    b = DistributionBijector(d)    # [0, 1] → ℝ
+    b = bijector(d)                # [0, 1] → ℝ
     ib = inv(b)                    # ℝ → [0, 1]
     td = transformed(Normal(), ib) # x ∼ 𝓝(0, 1) then f(x) ∈ [0, 1]
     x = rand(td)                   # ∈ [0, 1]
     @test 0 ≤ x ≤ 1
 end
 
-include("norm_flows.jl")
+@testset "Jacobians of SimplexBijector" begin
+    b = SimplexBijector()
+    ib = inv(b)
+
+    x = ib(randn(10))
+    y = b(x)
+
+    @test Bijectors.jacobian(b, x) ≈ ForwardDiff.jacobian(b, x)
+    @test Bijectors.jacobian(ib, y) ≈ ForwardDiff.jacobian(ib, y)
+
+    # Just some additional computation so we also ensure the pullbacks are the same
+    weights = randn(10)
+
+    # Tracker.jl
+    x_tracked = Tracker.param(x)
+    z = sum(weights .* b(x_tracked))
+    Tracker.back!(z)
+    Δ_tracker = Tracker.grad(x_tracked)
+
+    # ForwardDiff.jl
+    Δ_forwarddiff = ForwardDiff.gradient(z -> sum(weights .* b(z)), x)
+
+    # Compare
+    @test Δ_forwarddiff ≈ Δ_tracker
+
+    # Tracker.jl
+    y_tracked = Tracker.param(y)
+    z = sum(weights .* ib(y_tracked))
+    Tracker.back!(z)
+    Δ_tracker = Tracker.grad(y_tracked)
+
+    # ForwardDiff.jl
+    Δ_forwarddiff = ForwardDiff.gradient(z -> sum(weights .* ib(z)), y)
+
+    @test Δ_forwarddiff ≈ Δ_tracker
+end
+
+@testset "Equality" begin
+    bs = [
+        Identity{0}(),
+        Identity{1}(),
+        Identity{2}(),
+        Exp{0}(),
+        Exp{1}(),
+        Exp{2}(),
+        Log{0}(),
+        Log{1}(),
+        Log{2}(),
+        Scale(2.0),
+        Scale(3.0),
+        Scale(rand(2,2)),
+        Scale(rand(2,2)),
+        Shift(2.0),
+        Shift(3.0),
+        Shift(rand(2)),
+        Shift(rand(2)),
+        Logit(1.0, 2.0),
+        Logit(1.0, 3.0),
+        Logit(2.0, 3.0),
+        Logit(0.0, 2.0),
+        InvertibleBatchNorm(2),
+        InvertibleBatchNorm(3),
+        PDBijector(),
+        Permute([1.0, 2.0, 3.0]),
+        Permute([2.0, 3.0, 4.0]),
+        PlanarLayer(2),
+        PlanarLayer(3),
+        RadialLayer(2),
+        RadialLayer(3),
+        SimplexBijector(),
+        Stacked((Exp{0}(), Log{0}())),
+        Stacked((Log{0}(), Exp{0}())),
+        # Stacked([Exp{0}(), Log{0}()]),
+        # Stacked([Log{0}(), Exp{0}()]),
+        Composed((Exp{0}(), Log{0}())),
+        Composed((Log{0}(), Exp{0}())),
+        # Composed([Exp{0}(), Log{0}()]),
+        # Composed([Log{0}(), Exp{0}()]),
+        TruncatedBijector(1.0, 2.0),
+        TruncatedBijector(1.0, 3.0),
+        TruncatedBijector(0.0, 2.0),
+    ]
+    for i in 1:length(bs), j in 1:length(bs)
+        if i == j
+            @test bs[i] == deepcopy(bs[j])
+            @test inv(bs[i]) == inv(deepcopy(bs[j]))
+        else
+            @test bs[i] != bs[j]
+        end
+    end
+end
+

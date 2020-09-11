@@ -87,13 +87,17 @@ true
 """
 struct Composed{A, N} <: Bijector{N}
     ts::A
-
-    Composed(bs::C) where {N, C<:Tuple{Vararg{<:Bijector{N}}}} = new{C, N}(bs)
-    Composed(bs::A) where {N, A<:AbstractArray{<:Bijector{N}}} = new{A, N}(bs)
 end
 
-isclosedform(b::Composed) = all(isclosedform.(b.ts))
+Composed(bs::Tuple{Vararg{<:Bijector{N}}}) where N = Composed{typeof(bs),N}(bs)
+Composed(bs::AbstractArray{<:Bijector{N}}) where N = Composed{typeof(bs),N}(bs)
 
+isclosedform(b::Composed) = all(isclosedform, b.ts)
+up1(b::Composed) = Composed(up1.(b.ts))
+function Base.:(==)(b1::Composed{<:Any, N}, b2::Composed{<:Any, N}) where {N}
+    ts1, ts2 = b1.ts, b2.ts
+    return length(ts1) == length(ts2) && all(x == y for (x, y) in zip(ts1, ts2))
+end
 
 """
     composel(ts::Bijector...)::Composed{<:Tuple}
@@ -147,20 +151,12 @@ end
 ∘(b::Bijector{N}, ::Identity{N}) where {N} = b
 
 inv(ct::Composed) = Composed(reverse(map(inv, ct.ts)))
-@generated function inv(cb::Composed{A}) where {A<:Tuple}
-    exprs = []
-
-    # inversion → reversing order
-    for i = length(A.parameters):-1:1
-        push!(exprs, :(inv(cb.ts[$i])))
-    end
-    return :(Composed(($(exprs...), )))
-end
 
 # # TODO: should arrays also be using recursive implementation instead?
 function (cb::Composed{<:AbstractArray{<:Bijector}})(x)
-    res = x
-    for b ∈ cb.ts
+    @assert length(cb.ts) > 0
+    res = cb.ts[1](x)
+    for b ∈ Base.Iterators.drop(cb.ts, 1)
         res = b(res)
     end
 
@@ -168,13 +164,11 @@ function (cb::Composed{<:AbstractArray{<:Bijector}})(x)
 end
 
 @generated function (cb::Composed{T})(x) where {T<:Tuple}
-    expr = Expr(:block)
-    push!(expr.args, :(y = cb.ts[1](x)))
-    for i = 2:length(T.parameters)
-        push!(expr.args, :(y = cb.ts[$i](y)))
+    @assert length(T.parameters) > 0
+    expr = :(x)
+    for i in 1:length(T.parameters)
+        expr = :(cb.ts[$i]($expr))
     end
-    push!(expr.args, :(return y))
-
     return expr
 end
 
@@ -186,7 +180,7 @@ function logabsdetjac(cb::Composed, x)
         logjac += res.logabsdetjac
     end
 
-    return (rv = y, logabsdetjac = logjac)
+    return logjac
 end
 
 @generated function logabsdetjac(cb::Composed{T}, x) where {T<:Tuple}
@@ -196,9 +190,10 @@ end
     push!(expr.args, :((y, logjac) = forward(cb.ts[1], x)))
 
     for i = 2:N - 1
-        push!(expr.args, :(res = forward(cb.ts[$i], y)))
-        push!(expr.args, :(y = res.rv))
-        push!(expr.args, :(logjac += res.logabsdetjac))
+        temp = gensym(:res)
+        push!(expr.args, :($temp = forward(cb.ts[$i], y)))
+        push!(expr.args, :(y = $temp.rv))
+        push!(expr.args, :(logjac += $temp.logabsdetjac))
     end
     # don't need to evaluate the last bijector, only it's `logabsdetjac`
     push!(expr.args, :(logjac += logabsdetjac(cb.ts[$N], y)))
@@ -225,9 +220,10 @@ end
     expr = Expr(:block)
     push!(expr.args, :((y, logjac) = forward(cb.ts[1], x)))
     for i = 2:length(T.parameters)
-        push!(expr.args, :(res = forward(cb.ts[$i], y)))
-        push!(expr.args, :(y = res.rv))
-        push!(expr.args, :(logjac += res.logabsdetjac))
+        temp = gensym(:temp)
+        push!(expr.args, :($temp = forward(cb.ts[$i], y)))
+        push!(expr.args, :(y = $temp.rv))
+        push!(expr.args, :(logjac += $temp.logabsdetjac))
     end
     push!(expr.args, :(return (rv = y, logabsdetjac = logjac)))
 

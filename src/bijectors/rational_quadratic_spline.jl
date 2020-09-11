@@ -1,37 +1,144 @@
 using NNlib
 
-struct RationalQuadraticSpline{T, D} <: Bijector{D}
+"""
+    RationalQuadraticSpline{T, 0} <: Bijector{0}
+    RationalQuadraticSpline{T, 1} <: Bijector{1}
+
+Implementation of the Rational Quadratic Spline flow [1].
+
+- Outside of the interval `[minimum(widths), maximum(widths)]`, this mapping is given 
+  by the identity map. 
+- Inside the interval it's given by a monotonic spline (i.e. monotonic polynomials 
+  connected at intermediate points) with endpoints fixed so as to continuously transform
+  into the identity map.
+
+For the sake of efficiency, there are separate implementations for 0-dimensional and
+1-dimensional inputs.
+
+# Notes
+There are two constructors for `RationalQuadraticSpline`:
+- `RationalQuadraticSpline(widths, heights, derivatives)`: it is assumed that `widths`, 
+`heights`, and `derivatives` satisfy the constraints that makes this a valid bijector, i.e.
+  - `widths`: monotonically increasing and `length(widths) == K`,
+  - `heights`: monotonically increasing and `length(heights) == K`,
+  - `derivatives`: non-negative and `derivatives[1] == derivatives[end] == 1`.
+- `RationalQuadraticSpline(widths, heights, derivatives, B)`: other than than the lengths, 
+    no assumptions are made on parameters. Therefore we will transform the parameters s.t.:
+  - `widths_new` ∈ [-B, B]ᴷ⁺¹, where `K == length(widths)`,
+  - `heights_new` ∈ [-B, B]ᴷ⁺¹, where `K == length(heights)`,
+  - `derivatives_new` ∈ (0, ∞)ᴷ⁺¹ with `derivatives_new[1] == derivates_new[end] == 1`, 
+    where `(K - 1) == length(derivatives)`.
+
+# Examples
+## Univariate
+```julia-repl
+julia> using Bijectors: RationalQuadraticSpline
+
+julia> K = 3; B = 2;
+
+julia> # Monotonic spline on '[-B, B]' with `K` intermediate knots/"connection points".
+       b = RationalQuadraticSpline(randn(K), randn(K), randn(K - 1), B);
+
+julia> b(0.5) # inside of `[-B, B]` → transformed
+1.412300607463467
+
+julia> b(5.) # outside of `[-B, B]` → not transformed
+5.0
+```
+Or we can use the constructor with the parameters correctly constrained:
+```julia-repl
+julia> b = RationalQuadraticSpline(b.widths, b.heights, b.derivatives);
+
+julia> b(0.5) # inside of `[-B, B]` → transformed
+1.412300607463467
+```
+## Multivariate
+```julia-repl
+julia> d = 2; K = 3; B = 2;
+
+julia> b = RationalQuadraticSpline(randn(d, K), randn(d, K), randn(d, K - 1), B);
+
+julia> b([-1., 1.])
+2-element Array{Float64,1}:
+ -1.2568224171342797
+  0.5537259740554675
+
+julia> b([-5., 5.])
+2-element Array{Float64,1}:
+ -5.0
+  5.0
+
+julia> b([-1., 5.])
+2-element Array{Float64,1}:
+ -1.2568224171342797
+  5.0
+```
+
+# References
+[1] Durkan, C., Bekasov, A., Murray, I., & Papamakarios, G., Neural Spline Flows, CoRR, arXiv:1906.04032 [stat.ML],  (2019). 
+"""
+struct RationalQuadraticSpline{T, N} <: Bijector{N}
     widths::T      # K widths
     heights::T     # K heights
-    derivatives::T # (K - 1) derivatives
+    derivatives::T # K derivatives, with endpoints being ones
 
-    function RationalQuadraticSpline(widths::T, heights::T, derivatives::T) where {T<:AbstractVector}
-        # FIXME: add a `NoArgCheck` type and argument so we can circumvent if we want
-
-        @assert length(widths) == length(heights) == length(derivatives) + 1 "widths $(length(widths)) ≠ heights $(length(heights)) ≠ $(length(derivatives)) + 1"
-        # @assert all(widths .> 0) "widths need to be positive"
-        # @assert all(heights .> 0) "heights need to be positive"
-        # @assert widths[1] ≈ heights[1] "widths and heights need equal left endpoint"
-        # @assert widths[end] ≈ heights[end] "widths and heights need equal right endpoint"
-        # @assert sum(widths) ≈ sum(heights) "widths and heights should sum to 2B"  # should both sum to 2B s.t. [-B, B] × [-B, B]
+    function RationalQuadraticSpline(
+        widths::T,
+        heights::T,
+        derivatives::T
+    ) where {T<:AbstractVector}
+        # TODO: add a `NoArgCheck` type and argument so we can circumvent if we want        
+        @assert length(widths) == length(heights) == length(derivatives)
         @assert all(derivatives .> 0) "derivatives need to be positive"
-
+        
         return new{T, 0}(widths, heights, derivatives)
     end
 
-    function RationalQuadraticSpline(widths::T, heights::T, derivatives::T) where {T<:AbstractMatrix}
+    function RationalQuadraticSpline(
+        widths::T,
+        heights::T,
+        derivatives::T
+    ) where {T<:AbstractMatrix}
+        @assert size(widths, 2) == size(heights, 2) == size(derivatives, 2)
+        @assert all(derivatives .> 0) "derivatives need to be positive"
         return new{T, 1}(widths, heights, derivatives)
     end
 end
 
-function RationalQuadraticSpline(widths::A, heights::A, derivatives::A, B::Real) where {A<:AbstractVecOrMat}
+function RationalQuadraticSpline(
+    widths::A,
+    heights::A, 
+    derivatives::A,
+    B::T2
+) where {T1, T2, A <: AbstractVector{T1}}
+    # Using `NNLlinb.softax` instead of `StatsFuns.softmax` (which does inplace operations)
     return RationalQuadraticSpline(
-        2 * B * (cumsum(NNlib.softmax(values(widths)); dims=1) .- 0.5),
-        2 * B * (cumsum(NNlib.softmax(values(heights)); dims=1) .- 0.5),
-        NNlib.softplus.(values(derivatives))
+        (cumsum(vcat([zero(T1)], NNlib.softmax(widths))) .- 0.5) * 2 * B,
+        (cumsum(vcat([zero(T1)], NNlib.softmax(heights))) .- 0.5) * 2 * B,
+        vcat([one(T1)], softplus.(derivatives), [one(T1)])
     )
 end
 
+function RationalQuadraticSpline(
+    widths::A,
+    heights::A,
+    derivatives::A,
+    B::T2
+) where {T1, T2, A <: AbstractMatrix{T1}}
+    ws = hcat(zeros(T1, size(widths, 1)), NNlib.softmax(widths; dims = 2))
+    hs = hcat(zeros(T1, size(widths, 1)), NNlib.softmax(heights; dims = 2))
+    ds = hcat(ones(T1, size(widths, 1)), softplus.(derivatives), ones(T1, size(widths, 1)))
+
+    return RationalQuadraticSpline(
+        (2 * B) .* (cumsum(ws; dims = 2) .- 0.5),
+        (2 * B) .* (cumsum(hs; dims = 2) .- 0.5),
+        ds
+    )
+end
+
+##########################
+### Forward evaluation ###
+##########################
 function rqs_univariate(widths, heights, derivatives, x::Real)
     T = promote_type(eltype(widths), eltype(heights), eltype(derivatives), eltype(x))
 
@@ -47,45 +154,49 @@ function rqs_univariate(widths, heights, derivatives, x::Real)
 
     # Width
     # If k == 0 then we should put it in the bin `[-B, widths[1]]`
-    wₖ = (k == 0) ? -widths[end] : widths[k]
-    w = widths[k + 1] - wₖ
+    w_k = (k == 0) ? -widths[end] : widths[k]
+    w = widths[k + 1] - w_k
 
     # Slope
-    hₖ = (k == 0) ? -heights[end] : heights[k]
-    Δy = heights[k + 1] - hₖ
+    h_k = (k == 0) ? -heights[end] : heights[k]
+    Δy = heights[k + 1] - h_k
 
     s = Δy / w
-    ξ = (x - wₖ) / w
+    ξ = (x - w_k) / w
 
     # Derivatives at knot-points
     # Note that we have (K - 1) knot-points, not K
-    dₖ = (k == 0) ? one(T) : derivatives[k]
-    dₖ₊₁ = (k == K - 1) ? one(T) : derivatives[k + 1]
+    d_k = (k == 0) ? one(T) : derivatives[k]
+    d_kplus1 = (k == K - 1) ? one(T) : derivatives[k + 1]
 
     # Eq. (14)
-    numerator = Δy * (s * ξ^2 + dₖ * ξ * (1 - ξ))
-    denominator = s + (dₖ₊₁ + dₖ - 2s) * ξ * (1 - ξ)
-    g = hₖ + numerator / denominator
-
-    # @info k w Δy s ξ numerator denominator
+    numerator = Δy * (s * ξ^2 + d_k * ξ * (1 - ξ))
+    denominator = s + (d_kplus1 + d_k - 2s) * ξ * (1 - ξ)
+    g = h_k + numerator / denominator
 
     return g
 end
 
+
 # univariate
-(b::RationalQuadraticSpline{<:AbstractVector, 0})(x::Real) = rqs_univariate(b.widths, b.heights, b.derivatives, x)
+function (b::RationalQuadraticSpline{<:AbstractVector, 0})(x::Real)
+    return rqs_univariate(b.widths, b.heights, b.derivatives, x)
+end
 (b::RationalQuadraticSpline{<:AbstractVector, 0})(x::AbstractVector) = b.(x)
 
 # multivariate
 function (b::RationalQuadraticSpline{<:AbstractMatrix, 1})(x::AbstractVector)
-    @assert length(x) == size(b.widths, 2) == size(b.heights, 2) == size(b.derivatives, 2)
-
-    return rqs_univariate.(eachcol(b.widths), eachcol(b.heights), eachcol(b.derivatives), x)
+    @assert length(x) == size(b.widths, 1) == size(b.heights, 1) == size(b.derivatives, 1)
+    return mapvcat(rqs_univariate,
+                   eachrow(b.widths), eachrow(b.heights), eachrow(b.derivatives), x)
 end
 function (b::RationalQuadraticSpline{<:AbstractMatrix, 1})(x::AbstractMatrix)
-    return foldl(hcat, [b(x[:, i]) for i = 1:size(x, 2)])
+    return eachcolmaphcat(b, x)
 end
 
+##########################
+### Inverse evaluation ###
+##########################
 function rqs_univariate_inverse(widths, heights, derivatives, y::Real)
     T = promote_type(eltype(widths), eltype(heights), eltype(derivatives), eltype(y))
 
@@ -97,50 +208,87 @@ function rqs_univariate_inverse(widths, heights, derivatives, y::Real)
     k = searchsortedfirst(heights, y) - 1
 
     # Width
-    wₖ = (k == 0) ? -widths[end] : widths[k]
-    w = widths[k + 1] - wₖ
+    w_k = (k == 0) ? -widths[end] : widths[k]
+    w = widths[k + 1] - w_k
 
     # Slope
-    hₖ = (k == 0) ? -heights[end] : heights[k]
-    Δy = heights[k + 1] - hₖ
+    h_k = (k == 0) ? -heights[end] : heights[k]
+    Δy = heights[k + 1] - h_k
 
     # Recurring quantities
     s = Δy / w
-    dₖ = (k == 0) ? one(T) : derivatives[k]
-    dₖ₊₁ = (k == K - 1) ? one(T) : derivatives[k + 1]
-    ds = dₖ₊₁ + dₖ - 2 * s
+    d_k = (k == 0) ? one(T) : derivatives[k]
+    d_kplus1 = (k == K - 1) ? one(T) : derivatives[k + 1]
+    ds = d_kplus1 + d_k - 2 * s
 
     # Eq. (25)
-    a1 = Δy * (s - dₖ) + (y - hₖ) * ds
+    a1 = Δy * (s - d_k) + (y - h_k) * ds
     # Eq. (26)
-    a2 = Δy * dₖ - (y - hₖ) * ds
+    a2 = Δy * d_k - (y - h_k) * ds
     # Eq. (27)
-    a3 = - s * (y - hₖ)
+    a3 = - s * (y - h_k)
 
     # Eq. (24). There's a mistake in the paper; says `x` but should be `ξ`
     numerator = - 2 * a3
     denominator = (a2 + sqrt(a2^2 - 4 * a1 * a3))
     ξ = numerator / denominator
 
-    # @assert isapprox(a1 * ξ^2 + a2 * ξ + a3, 0.0, atol=1e-8)
-
-    return ξ * w + wₖ
+    return ξ * w + w_k
 end
 
-(ib::Inversed{<:RationalQuadraticSpline, 0})(y::Real) = rqs_univariate_inverse(ib.orig.widths, ib.orig.heights, ib.orig.derivatives, y)
-(ib::Inversed{<:RationalQuadraticSpline, 0})(y::AbstractVector) = ib.(y)
+function (ib::Inverse{<:RationalQuadraticSpline, 0})(y::Real)
+    return rqs_univariate_inverse(ib.orig.widths, ib.orig.heights, ib.orig.derivatives, y)
+end
+(ib::Inverse{<:RationalQuadraticSpline, 0})(y::AbstractVector) = ib.(y)
 
-function (ib::Inversed{<:RationalQuadraticSpline, 1})(y::AbstractVector)
+function (ib::Inverse{<:RationalQuadraticSpline, 1})(y::AbstractVector)
     b = ib.orig
-    @assert length(y) == size(b.widths, 2) == size(b.heights, 2) == size(b.derivatives, 2)
+    @assert length(y) == size(b.widths, 1) == size(b.heights, 1) == size(b.derivatives, 1)
 
-    return [rqs_univariate_inverse(b.widths[:, i], b.heights[:, i], b.derivatives[:, i], y[i]) for i = 1:length(y)]
+    return mapvcat(rqs_univariate_inverse,
+                   eachrow(b.widths), eachrow(b.heights), eachrow(b.derivatives), y)
 end
-function (ib::Inversed{<:RationalQuadraticSpline, 1})(y::AbstractMatrix)
-    return foldl(hcat, [ib(y[:, i]) for i = 1:size(y, 2)])
+function (ib::Inverse{<:RationalQuadraticSpline, 1})(y::AbstractMatrix)
+    return eachcolmaphcat(ib, y)
 end
 
-function rqs_logabsdetjac(widths::AbstractVector, heights::AbstractVector, derivatives::AbstractVector, x::Real)
+######################
+### `logabsdetjac` ###
+######################
+function rqs_logabsdetjac(widths, heights, derivatives, x::Real)
+    K = length(widths) - 1
+    
+    # Find which bin `x` is in
+    k = searchsortedfirst(widths, x) - 1
+
+    if k > K || k == 0
+        return zero(eltype(x))
+    end
+
+    # Width
+    w = widths[k + 1] - widths[k]
+
+    # Slope
+    Δy = heights[k + 1] - heights[k]
+
+    # Recurring quantities
+    s = Δy / w
+    ξ = (x - widths[k]) / w
+
+    numerator = s^2 * (derivatives[k + 1] * ξ^2
+                       + 2 * s * ξ * (1 - ξ)
+                       + derivatives[k] * (1 - ξ)^2)
+    denominator = s + (derivatives[k + 1] + derivatives[k] - 2 * s) * ξ * (1 - ξ)
+
+    return log(numerator) - 2 * log(denominator)
+end
+
+function rqs_logabsdetjac(
+    widths::AbstractVector,
+    heights::AbstractVector,
+    derivatives::AbstractVector,
+    x::Real
+)
     T = promote_type(eltype(widths), eltype(heights), eltype(derivatives), eltype(x))
 
     if (x ≤ -widths[end]) || (x ≥ widths[end])
@@ -151,38 +299,54 @@ function rqs_logabsdetjac(widths::AbstractVector, heights::AbstractVector, deriv
     k = searchsortedfirst(widths, x) - 1
 
     # Width
-    wₖ = (k == 0) ? -widths[end] : widths[k]
-    w = widths[k + 1] - wₖ
+    w_k = (k == 0) ? -widths[end] : widths[k]
+    w = widths[k + 1] - w_k
 
     # Slope
-    hₖ = (k == 0) ? -heights[end] : heights[k]
-    Δy = heights[k + 1] - hₖ
+    h_k = (k == 0) ? -heights[end] : heights[k]
+    Δy = heights[k + 1] - h_k
 
     # Recurring quantities
     s = Δy / w
-    ξ = (x - wₖ) / w
+    ξ = (x - w_k) / w
 
-    dₖ = (k == 0) ? one(T) : derivatives[k]
-    dₖ₊₁ = (k == K - 1) ? one(T) : derivatives[k + 1]
+    d_k = (k == 0) ? one(T) : derivatives[k]
+    d_kplus1 = (k == K - 1) ? one(T) : derivatives[k + 1]
 
-    numerator = s^2 * (dₖ₊₁ * ξ^2 + 2 * s * ξ * (1 - ξ) + dₖ * (1 - ξ)^2)
-    denominator = s + (dₖ₊₁ + dₖ - 2 * s) * ξ * (1 - ξ)
+    numerator = s^2 * (d_kplus1 * ξ^2 + 2 * s * ξ * (1 - ξ) + d_k * (1 - ξ)^2)
+    denominator = s + (d_kplus1 + d_k - 2 * s) * ξ * (1 - ξ)
 
     return log(numerator) - 2 * log(denominator)
 end
 
-logabsdetjac(b::RationalQuadraticSpline{<:AbstractVector, 0}, x::Real) = rqs_logabsdetjac(b.widths, b.heights, b.derivatives, x)
-logabsdetjac(b::RationalQuadraticSpline{<:AbstractVector, 0}, x::AbstractVector) = logabsdetjac.(b, x)
-function logabsdetjac(b::RationalQuadraticSpline{<:AbstractMatrix, 1}, x::AbstractVector)
-    return sum(rqs_logabsdetjac.(eachcol(b.widths), eachcol(b.heights), eachcol(b.derivatives), x))
+function logabsdetjac(b::RationalQuadraticSpline{<:AbstractVector, 0}, x::Real)
+    return rqs_logabsdetjac(b.widths, b.heights, b.derivatives, x)
 end
-# TODO: improve this batch-impl
+function logabsdetjac(b::RationalQuadraticSpline{<:AbstractVector, 0}, x::AbstractVector)
+    return logabsdetjac.(b, x)
+end
+function logabsdetjac(b::RationalQuadraticSpline{<:AbstractMatrix, 1}, x::AbstractVector)
+    return sum([
+        rqs_logabsdetjac(b.widths[i, :], b.heights[i, :], b.derivatives[i, :], x[i])
+        for i = 1:length(x)
+    ])
+end
 function logabsdetjac(b::RationalQuadraticSpline{<:AbstractMatrix, 1}, x::AbstractMatrix)
-    return [logabsdetjac(b, x[:, i]) for i = 1:size(x, 2)]
+    return mapvcat(x -> logabsdetjac(b, x), eachcol(x))
 end
 
-# TODO: implement this for `x::AbstractVector` and similarily for 1-dimensional `b`
-function rqs_forward(widths::AbstractVector, heights::AbstractVector, derivatives::AbstractVector, x::Real)
+#################
+### `forward` ###
+#################
+
+# TODO: implement this for `x::AbstractVector` and similarily for 1-dimensional `b`,
+# and possibly inverses too?
+function rqs_forward(
+    widths::AbstractVector,
+    heights::AbstractVector,
+    derivatives::AbstractVector,
+    x::Real
+)
     T = promote_type(eltype(widths), eltype(heights), eltype(derivatives), eltype(x))
 
     if (x ≤ -widths[end]) || (x ≥ widths[end])
@@ -194,64 +358,34 @@ function rqs_forward(widths::AbstractVector, heights::AbstractVector, derivative
     k = searchsortedfirst(widths, x) - 1
 
     # Width
-    wₖ = (k == 0) ? -widths[end] : widths[k]
-    w = widths[k + 1] - wₖ
+    w_k = (k == 0) ? -widths[end] : widths[k]
+    w = widths[k + 1] - w_k
 
     # Slope
-    hₖ = (k == 0) ? -heights[end] : heights[k]
-    Δy = heights[k + 1] - hₖ
+    h_k = (k == 0) ? -heights[end] : heights[k]
+    Δy = heights[k + 1] - h_k
 
     # Recurring quantities
     s = Δy / w
-    ξ = (x - wₖ) / w
+    ξ = (x - w_k) / w
 
-    dₖ = (k == 0) ? one(T) : derivatives[k]
-    dₖ₊₁ = (k == K - 1) ? one(T) : derivatives[k + 1]
+    d_k = (k == 0) ? one(T) : derivatives[k]
+    d_kplus1 = (k == K - 1) ? one(T) : derivatives[k + 1]
 
     # Re-used for both `logjac` and `y`
-    denominator = s + (dₖ₊₁ + dₖ - 2 * s) * ξ * (1 - ξ)
+    denominator = s + (d_kplus1 + d_k - 2 * s) * ξ * (1 - ξ)
 
     # logjac
-    numerator_jl = s^2 * (dₖ₊₁ * ξ^2 + 2 * s * ξ * (1 - ξ) + dₖ * (1 - ξ)^2)
+    numerator_jl = s^2 * (d_kplus1 * ξ^2 + 2 * s * ξ * (1 - ξ) + d_k * (1 - ξ)^2)
     logjac = log(numerator_jl) - 2 * log(denominator)
 
     # y
-    numerator_y = Δy * (s * ξ^2 + dₖ * ξ * (1 - ξ))
-    y = hₖ + numerator_y / denominator
+    numerator_y = Δy * (s * ξ^2 + d_k * ξ * (1 - ξ))
+    y = h_k + numerator_y / denominator
 
     return (rv = y, logabsdetjac = logjac)
 end
 
-function forward(b::RationalQuadraticSpline{<:AbstractVector, 0}, x::AbstractVector)
+function forward(b::RationalQuadraticSpline{<:AbstractVector, 0}, x::Real)
     return rqs_forward(b.widths, b.heights, b.derivatives, x)
-end
-
-# TODO: this is probably overkill just go get the `forward` working in a batch-setting.
-# Also probably veeeery slow for large arrays...
-@generated function merge_nt(transforms::NamedTuple{names}, as::NamedTuple{names}...) where {names}
-    exprs = []
-    for k in names
-        # push!(exprs, :($k = fs.$k((getfield.(as, $(QuoteNode(k))))...)))
-        arr = Any[ :(getfield(as[$i], $(QuoteNode(k)))) for i in 1:length(as) ]
-        push!(exprs, :($k = transforms.$k($(arr...))))
-    end
-
-    # return exprs
-    return :(($(exprs...), ))
-end
-
-function rqs_forward(widths::AbstractVector, heights::AbstractVector, derivatives::AbstractVector, x::AbstractVector)
-    return merge_nt((rv = vcat, logabsdetjac = vcat), (rqs_forward.(eachcol(widths), eachcol(heights), eachcol(derivatives), x))...)
-end
-
-function forward(b::RationalQuadraticSpline{<:AbstractVector, 0}, x::AbstractMatrix)
-    return rqs_forward(b.widths, b.heights, b.derivatives, x)
-end
-
-function rqs_forward(widths::AbstractMatrix, heights::AbstractMatrix, derivatives::AbstractMatrix, x::AbstractVector)
-    return merge_nt((rv = vcat, logabsdetjac = +), (rqs_forward.(eachcol(widths), eachcol(heights), eachcol(derivatives), x))...)
-end
-
-function forward(b::RationalQuadraticSpline{<:AbstractMatrix, 1}, x::AbstractMatrix)
-    return merge_nt((rv = hcat, logabsdetjac = vcat), (rqs_forward.(Ref(b.widths), Ref(b.heights), Ref(b.derivatives), eachcol(x)))...)
 end
