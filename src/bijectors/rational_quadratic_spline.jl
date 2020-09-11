@@ -1,5 +1,4 @@
 using NNlib
-using Bijectors
 
 """
     RationalQuadraticSpline{T, 0} <: Bijector{0}
@@ -83,7 +82,11 @@ struct RationalQuadraticSpline{T, N} <: Bijector{N}
     heights::T     # K heights
     derivatives::T # K derivatives, with endpoints being ones
 
-    function RationalQuadraticSpline(widths::T, heights::T, derivatives::T) where {T<:AbstractVector}
+    function RationalQuadraticSpline(
+        widths::T,
+        heights::T,
+        derivatives::T
+    ) where {T<:AbstractVector}
         # TODO: add a `NoArgCheck` type and argument so we can circumvent if we want        
         @assert length(widths) == length(heights) == length(derivatives)
         @assert all(derivatives .> 0) "derivatives need to be positive"
@@ -91,7 +94,11 @@ struct RationalQuadraticSpline{T, N} <: Bijector{N}
         return new{T, 0}(widths, heights, derivatives)
     end
 
-    function RationalQuadraticSpline(widths::T, heights::T, derivatives::T) where {T<:AbstractMatrix}
+    function RationalQuadraticSpline(
+        widths::T,
+        heights::T,
+        derivatives::T
+    ) where {T<:AbstractMatrix}
         @assert size(widths, 2) == size(heights, 2) == size(derivatives, 2)
         @assert all(derivatives .> 0) "derivatives need to be positive"
         return new{T, 1}(widths, heights, derivatives)
@@ -244,7 +251,9 @@ function rqs_logabsdetjac(widths, heights, derivatives, x::Real)
     s = Δy / w
     ξ = (x - widths[k]) / w
 
-    numerator = s^2 * (derivatives[k + 1] * ξ^2 + 2 * s * ξ * (1 - ξ) + derivatives[k] * (1 - ξ)^2)
+    numerator = s^2 * (derivatives[k + 1] * ξ^2
+                       + 2 * s * ξ * (1 - ξ)
+                       + derivatives[k] * (1 - ξ)^2)
     denominator = s + (derivatives[k + 1] + derivatives[k] - 2 * s) * ξ * (1 - ξ)
 
     return log(numerator) - 2 * log(denominator)
@@ -289,7 +298,9 @@ function forward(b::RationalQuadraticSpline{<:AbstractVector, 0}, x::Real)
     denominator = s + (b.derivatives[k + 1] + b.derivatives[k] - 2 * s) * ξ * (1 - ξ)
 
     # logjac
-    numerator_jl = s^2 * (b.derivatives[k + 1] * ξ^2 + 2 * s * ξ * (1 - ξ) + b.derivatives[k] * (1 - ξ)^2)
+    numerator_jl = s^2 * (b.derivatives[k + 1] * ξ^2
+                          + 2 * s * ξ * (1 - ξ)
+                          + b.derivatives[k] * (1 - ξ)^2)
     logjac = log(numerator_jl) - 2 * log(denominator)
 
     # y
