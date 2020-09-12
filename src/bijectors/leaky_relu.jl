@@ -47,7 +47,7 @@ function forward(b::LeakyReLU{<:Any, 0}, x::AbstractVector)
     return (rv=J .* x, logabsdetjac=log.(abs.(J)))
 end
 
-# (N=1) Multivariate case, with univariate parameter `α`
+# (N=1) Multivariate case
 function (b::LeakyReLU{<:Any, 1})(x::AbstractVecOrMat)
     return @. (x < zero(x)) * b.α * x + (x > zero(x)) * x
 end
