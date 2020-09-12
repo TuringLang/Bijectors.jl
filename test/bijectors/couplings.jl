@@ -7,7 +7,7 @@ using Tracker
 import Flux
 
 using Bijectors:
-    CouplingLayer,
+    Coupling,
     PartitionMask,
     coupling,
     couple,
@@ -15,7 +15,7 @@ using Bijectors:
     combine,
     Shift
 
-@testset "CouplingLayer" begin
+@testset "Coupling" begin
     @testset "PartitionMask" begin
         m1 = PartitionMask(3, [1], [2])
         m2 = PartitionMask(3, [1], [2], [3])
@@ -32,12 +32,12 @@ using Bijectors:
 
     @testset "Basics" begin
         m = PartitionMask(3, [1], [2])
-        cl1 = CouplingLayer(Shift, m, x -> x[1])
+        cl1 = Coupling(x -> Shift(x[1]), m)
 
         x = [1., 2., 3.]
         @test cl1(x) == [3., 2., 3.]
 
-        cl2 = CouplingLayer(θ -> Shift(θ[1]), m, identity)
+        cl2 = Coupling(θ -> Shift(θ[1]), m)
         @test cl2(x) == cl1(x)
 
         # inversion
@@ -63,7 +63,7 @@ using Bijectors:
         m = PartitionMask(length(x), [1], [2])
         nn = Flux.Chain(Flux.Dense(1, 2, Flux.sigmoid), Flux.Dense(2, 1))
         nn_tracked = Flux.fmap(x -> (x isa AbstractArray) ? Tracker.param(x) : x, nn)
-        cl = CouplingLayer(Shift, m, nn_tracked)
+        cl = Coupling(θ -> Shift(nn_tracked(θ)), m)
 
         # should leave two last indices unchanged
         @test cl(x)[2:3] == x[2:3]
