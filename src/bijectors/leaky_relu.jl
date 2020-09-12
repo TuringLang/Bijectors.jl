@@ -23,7 +23,7 @@ function (b::LeakyReLU{<:Any, 0})(x::Real)
 end
 (b::LeakyReLU{<:Any, 0})(x::AbstractVector{<:Real}) = map(b, x)
 
-Base.inv(b::LeakyReLU) = LeakyReLU(inv.(b.a))
+Base.inv(b::LeakyReLU) = LeakyReLU(inv.(b.α))
 function logabsdetjac(b::LeakyReLU{<:Any, 0}, x::Real)
     mask = x < zero(x)
     J = mask * b.α + (1 - mask) * one(x)
