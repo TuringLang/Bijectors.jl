@@ -8,7 +8,10 @@ using ..Bijectors: Log, SimplexBijector, maphcat, simplex_link_jacobian,
     simplex_invlink_jacobian, simplex_logabsdetjac_gradient, ADBijector, 
     ReverseDiffAD, Inverse
 import ..Bijectors: _eps, logabsdetjac, _logabsdetjac_scale, _simplex_bijector, 
-    _simplex_inv_bijector, replace_diag, jacobian, getpd, lower
+    _simplex_inv_bijector, replace_diag, jacobian, getpd, lower, 
+    _inv_link_chol_lkj, _link_chol_lkj
+
+using Compat: eachcol
 using Distributions: LocationScale
 
 # AD implementations
@@ -177,5 +180,6 @@ lower(A::TrackedMatrix) = track(lower, A)
     Ad = value(A)
     return lower(Ad), Δ -> (lower(Δ),)
 end
+
 
 end

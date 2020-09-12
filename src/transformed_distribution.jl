@@ -50,8 +50,7 @@ end
 end
 
 bijector(d::Normal) = Identity{0}()
-bijector(d::MvNormal) = Identity{1}()
-bijector(d::MvNormalCanon) = Identity{1}()
+bijector(d::Distributions.AbstractMvNormal) = Identity{1}()
 bijector(d::Distributions.AbstractMvLogNormal) = Log{1}()
 bijector(d::PositiveDistribution) = Log{0}()
 bijector(d::SimplexDistribution) = SimplexBijector{1}()
@@ -72,6 +71,7 @@ bijector(d::LowerboundedDistribution) = bijector_lowerbounded(d)
 bijector(d::PDMatDistribution) = PDBijector()
 bijector(d::MatrixBeta) = PDBijector()
 
+bijector(d::LKJ) = CorrBijector()
 
 ##############################
 # Distributions.jl interface #
@@ -131,7 +131,10 @@ rand(td::MvTransformed) = td.transform(rand(td.dist))
 rand(rng::AbstractRNG, td::MvTransformed) = td.transform(rand(rng, td.dist))
 # TODO: implement more efficiently for flows
 function rand(rng::AbstractRNG, td::MvTransformed, num_samples::Int)
-    res = hcat([td.transform(rand(td.dist)) for i = 1:num_samples]...)
+    samples = rand(rng, td.dist, num_samples)
+    res = reduce(hcat, map(axes(samples, 2)) do i
+        return td.transform(view(samples, :, i))
+    end)
     return res
 end
 

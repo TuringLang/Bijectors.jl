@@ -51,7 +51,6 @@ julia> dist = Beta(2, 2)
 Beta{Float64}(α=2.0, β=2.0)
 
 julia> x = rand(dist)
-
 0.7472542331020509
 
 julia> y = link(dist, x)
@@ -62,9 +61,9 @@ julia> y = link(dist, x)
 
 ```julia
 julia> z = invlink(dist, y)
-0.6543406780096065
+0.7472542331020509
 
-julia> x == z
+julia> x ≈ z
 true
 ```
 
@@ -118,10 +117,10 @@ julia> y = b(x)
 -0.5369949942509267
 ```
 
-In this case we see that `bijector(d::Distribution)` returns the corresponding constrained-to-unconstrained bijection for `Beta`, which indeed is a `Logit` with `a = 0.0` and `b = 1.0`. The resulting `Logit <: Bijector` has a method `(b::Logit)(x)` defined, allowing us to call it just like any other function. Comparing with the above example, `b(x) == link(dist, x)`. Just to convince ourselves:
+In this case we see that `bijector(d::Distribution)` returns the corresponding constrained-to-unconstrained bijection for `Beta`, which indeed is a `Logit` with `a = 0.0` and `b = 1.0`. The resulting `Logit <: Bijector` has a method `(b::Logit)(x)` defined, allowing us to call it just like any other function. Comparing with the above example, `b(x) ≈ link(dist, x)`. Just to convince ourselves:
 
 ```julia
-julia> b(x) == link(dist, x)
+julia> b(x) ≈ link(dist, x)
 true
 ```
 
@@ -136,7 +135,7 @@ Inverse{Logit{Float64},0}(Logit{Float64}(0.0, 1.0))
 julia> b⁻¹(y)
 0.3688868996596376
 
-julia> b⁻¹(y) == invlink(dist, y)
+julia> b⁻¹(y) ≈ invlink(dist, y)
 true
 ```
 
