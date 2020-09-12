@@ -144,7 +144,7 @@ function rqs_univariate(widths, heights, derivatives, x::Real)
 
     # We're working on [-B, B] and `widths[end]` is `B`
     if (x ≤ -widths[end]) || (x ≥ widths[end])
-        return x
+        return one(T) * x
     end
 
     K = length(widths)
@@ -186,9 +186,7 @@ end
 
 # multivariate
 function (b::RationalQuadraticSpline{<:AbstractMatrix, 1})(x::AbstractVector)
-    @assert length(x) == size(b.widths, 1) == size(b.heights, 1) == size(b.derivatives, 1)
-    return mapvcat(rqs_univariate,
-                   eachrow(b.widths), eachrow(b.heights), eachrow(b.derivatives), x)
+    return [rqs_univariate(b.widths[i, :], b.heights[i, :], b.derivatives[i, :], x[i]) for i = 1:length(x)]
 end
 function (b::RationalQuadraticSpline{<:AbstractMatrix, 1})(x::AbstractMatrix)
     return eachcolmaphcat(b, x)
@@ -201,7 +199,7 @@ function rqs_univariate_inverse(widths, heights, derivatives, y::Real)
     T = promote_type(eltype(widths), eltype(heights), eltype(derivatives), eltype(y))
 
     if (y ≤ -heights[end]) || (y ≥ heights[end])
-        return y
+        return one(T) * y
     end
 
     K = length(widths)
@@ -243,10 +241,7 @@ end
 
 function (ib::Inverse{<:RationalQuadraticSpline, 1})(y::AbstractVector)
     b = ib.orig
-    @assert length(y) == size(b.widths, 1) == size(b.heights, 1) == size(b.derivatives, 1)
-
-    return mapvcat(rqs_univariate_inverse,
-                   eachrow(b.widths), eachrow(b.heights), eachrow(b.derivatives), y)
+    return [rqs_univariate_inverse(b.widths[i, :], b.heights[i, :], b.derivatives[i, :], y[i]) for i = 1:length(y)]
 end
 function (ib::Inverse{<:RationalQuadraticSpline, 1})(y::AbstractMatrix)
     return eachcolmaphcat(ib, y)
@@ -256,13 +251,14 @@ end
 ### `logabsdetjac` ###
 ######################
 function rqs_logabsdetjac(widths, heights, derivatives, x::Real)
+    T = promote_type(eltype(widths), eltype(heights), eltype(derivatives), eltype(y))
     K = length(widths) - 1
     
     # Find which bin `x` is in
     k = searchsortedfirst(widths, x) - 1
 
     if k > K || k == 0
-        return zero(eltype(x))
+        return zero(T) * x
     end
 
     # Width
@@ -292,7 +288,7 @@ function rqs_logabsdetjac(
     T = promote_type(eltype(widths), eltype(heights), eltype(derivatives), eltype(x))
 
     if (x ≤ -widths[end]) || (x ≥ widths[end])
-        return zero(T)
+        return zero(T) * x
     end
 
     K = length(widths)
@@ -350,7 +346,7 @@ function rqs_forward(
     T = promote_type(eltype(widths), eltype(heights), eltype(derivatives), eltype(x))
 
     if (x ≤ -widths[end]) || (x ≥ widths[end])
-        return (rv = x, logabsdetjac = zero(T))
+        return (rv = one(T) * x, logabsdetjac = zero(T) * x)
     end
 
     # Find which bin `x` is in
