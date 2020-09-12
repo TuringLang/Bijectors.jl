@@ -23,12 +23,7 @@ function (b::LeakyReLU{<:Any, 0})(x::Real)
 end
 (b::LeakyReLU{<:Any, 0})(x::AbstractVector{<:Real}) = map(b, x)
 
-function (ib::Inverse{<:LeakyReLU, 0})(y::Real)
-    mask = y < zero(y)
-    return mask * (y / ib.orig.α) + !mask * y
-end
-(ib::Inverse{<:LeakyReLU{<:Any}, 0})(y::AbstractVector{<:Real}) = map(ib, y)
-
+Base.inv(b::LeakyReLU) = LeakyReLU(inv.(b.a))
 function logabsdetjac(b::LeakyReLU{<:Any, 0}, x::Real)
     mask = x < zero(x)
     J = mask * b.α + (1 - mask) * one(x)
@@ -48,7 +43,6 @@ end
 
 # Batched version
 function forward(b::LeakyReLU{<:Any, 0}, x::AbstractVector)
-    mask = x .< zero(eltype(x))
     J = @. (x < zero(x)) * b.α + (x > zero(x)) * one(x)
     return (rv=J .* x, logabsdetjac=log.(abs.(J)))
 end
@@ -56,10 +50,6 @@ end
 # (N=1) Multivariate case, with univariate parameter `α`
 function (b::LeakyReLU{<:Any, 1})(x::AbstractVecOrMat)
     return @. (x < zero(x)) * b.α * x + (x > zero(x)) * x
-end
-
-function (ib::Inverse{<:LeakyReLU, 1})(y::AbstractVecOrMat)
-    return @. (y < zero(y)) * y / ib.orig.α + (y > zero(x)) * y
 end
 
 function logabsdetjac(b::LeakyReLU{<:Any, 1}, x::AbstractVecOrMat)
