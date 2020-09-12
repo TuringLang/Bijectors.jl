@@ -47,7 +47,7 @@ end
 
 # Batched version
 function forward(b::LeakyReLU{<:Any, 0}, x::AbstractVector)
-    J = let z = zero(x), o = one(x)
+    J = let T = eltype(x), z = zero(T), o = one(T)
         @. (x < z) * b.α + (x > z) * o
     end
     return (rv=J .* x, logabsdetjac=log.(abs.(J)))
@@ -55,14 +55,14 @@ end
 
 # (N=1) Multivariate case
 function (b::LeakyReLU{<:Any, 1})(x::AbstractVecOrMat)
-    return let z = zero(x)
+    return let z = zero(eltype(x))
         @. (x < z) * b.α * x + (x > z) * x
     end
 end
 
 function logabsdetjac(b::LeakyReLU{<:Any, 1}, x::AbstractVecOrMat)
     # Is really diagonal of jacobian
-    J = let z = zero(x), o = one(x)
+    J = let T = eltype(x), z = zero(T), o = one(T)
         @. (x < z) * b.α + (x > z) * o
     end
 
@@ -78,7 +78,7 @@ end
 # when using `rand` on a `TransformedDistribution` making use of `LeakyReLU`.
 function forward(b::LeakyReLU{<:Any, 1}, x::AbstractVecOrMat)
     # Is really diagonal of jacobian
-    J = let z = zero(x), o = one(x)
+    J = let T = eltype(x), z = zero(T), o = one(T)
         @. (x < z) * b.α + (x > z) * o
     end
 
