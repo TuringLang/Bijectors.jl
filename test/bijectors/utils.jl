@@ -119,6 +119,13 @@ function test_bijector(
     kwargs...
 )
     ib = inv(b)
+
+    # Batch
+    test_bijector_arrays(b, xs_true, ys_true, logjacs_true; kwargs...)
+
+    # Test `logabsdetjac` against jacobians
+    test_logabsdetjac(b, xs_true)
+    test_logabsdetjac(b, ys_true)
     
     for (x_true, y_true, logjac_true) in zip(xs_true, ys_true, logjacs_true)
         test_bijector_reals(b, x_true, y_true, logjac_true; kwargs...)
@@ -135,9 +142,6 @@ function test_bijector(
 
         test_ad(x -> logabsdetjac(b, first(x)), [x_true, ])
     end
-
-    # Batch
-    test_bijector_arrays(b, xs_true, ys_true, logjacs_true; kwargs...)
 end
 
 
@@ -149,6 +153,13 @@ function test_bijector(
     kwargs...
 )
     ib = inv(b)
+
+    # Batch
+    test_bijector_arrays(b, xs_true, ys_true, logjacs_true; kwargs...)
+
+    # Test `logabsdetjac` against jacobians
+    test_logabsdetjac(b, xs_true)
+    test_logabsdetjac(b, ys_true)
     
     for (x_true, y_true, logjac_true) in zip(eachcol(xs_true), eachcol(ys_true), logjacs_true)
         # HACK: collect to avoid dealing with sub-arrays and thus allowing us to compare the
@@ -166,7 +177,18 @@ function test_bijector(
 
         test_ad(x -> logabsdetjac(b, x), x_true)
     end
+end
 
-    # Batch
-    test_bijector_arrays(b, xs_true, ys_true, logjacs_true; kwargs...)
+function test_logabsdetjac(b::Bijector{1}, xs::AbstractMatrix; tol=1e-6)
+    if isclosedform(b)
+        logjac_ad = [logabsdet(ForwardDiff.jacobian(b, x))[1] for x in eachcol(xs)]
+        @test mean(logabsdetjac(b, xs) - logjac_ad) ≤ tol
+    end
+end
+
+function test_logabsdetjac(b::Bijector{0}, xs::AbstractVector; tol=1e-6)
+    if isclosedform(b)
+        logjac_ad = [log(abs(ForwardDiff.derivative(b, x))) for x in xs]
+        @test mean(logabsdetjac(b, xs) - logjac_ad) ≤ tol
+    end
 end
