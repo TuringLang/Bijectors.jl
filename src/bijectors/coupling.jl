@@ -215,7 +215,7 @@ function (cl::Coupling)(x::AbstractVector)
     return combine(cl.mask, b(x_1), x_2, x_3)
 end
 function (cl::Coupling)(x::AbstractMatrix)
-    return hcat([cl(x[:, i]) for i = 1:size(x, 2)]...)
+    return eachcolmaphcat(cl, x)
 end
 
 
@@ -230,7 +230,7 @@ function (icl::Inverse{<:Coupling})(y::AbstractVector)
     return combine(cl.mask, ib(y_1), y_2, y_3)
 end
 function (icl::Inverse{<:Coupling})(y::AbstractMatrix)
-    return hcat([icl(y[:, i]) for i = 1:size(y, 2)]...)
+    return eachcolmaphcat(icl, y)
 end
 
 function logabsdetjac(cl::Coupling, x::AbstractVector)

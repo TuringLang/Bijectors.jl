@@ -140,10 +140,10 @@ function test_ad(dist::DistSpec; kwargs...)
     end
 end
 
-function test_ad(f, x; rtol = 1e-6, atol = 1e-6)
+function test_ad(f, x; rtol = 1e-6, atol = 1e-6, ad = AD)
     finitediff = FiniteDiff.finite_difference_gradient(f, x)
 
-    if AD == "All" || AD == "ForwardDiff_Tracker"
+    if ad == "All" || ad == "ForwardDiff_Tracker"
         tracker = Tracker.data(Tracker.gradient(f, x)[1])
         @test tracker ≈ finitediff rtol=rtol atol=atol
 
@@ -151,12 +151,12 @@ function test_ad(f, x; rtol = 1e-6, atol = 1e-6)
         @test forward ≈ finitediff rtol=rtol atol=atol
     end
 
-    if AD == "All" || AD == "Zygote"
+    if ad == "All" || ad == "Zygote"
         zygote = Zygote.gradient(f, x)[1]
         @test zygote ≈ finitediff rtol=rtol atol=atol
     end
 
-    if AD == "All" || AD == "ReverseDiff"
+    if ad == "All" || ad == "ReverseDiff"
         reversediff = ReverseDiff.gradient(f, x)
         @test reversediff ≈ finitediff rtol=rtol atol=atol
     end

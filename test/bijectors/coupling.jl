@@ -1,11 +1,3 @@
-using Test
-using Bijectors
-using Random
-using LinearAlgebra
-using ForwardDiff
-using Tracker
-import Flux
-
 using Bijectors:
     Coupling,
     PartitionMask,
@@ -13,7 +5,8 @@ using Bijectors:
     couple,
     partition,
     combine,
-    Shift
+    Shift,
+    Scale
 
 @testset "Coupling" begin
     @testset "PartitionMask" begin
@@ -56,19 +49,35 @@ using Bijectors:
         @test forward(icl1, cl1(x)) == (rv = x, logabsdetjac = - logabsdetjac(cl1, x))
     end
 
-    @testset "Tracker" begin
-        Random.seed!(123)
-        x = [1., 2., 3.]
+    # @testset "Tracker" begin
+    #     Random.seed!(123)
+    #     x = [1., 2., 3.]
 
-        m = PartitionMask(length(x), [1], [2])
-        nn = Flux.Chain(Flux.Dense(1, 2, Flux.sigmoid), Flux.Dense(2, 1))
-        nn_tracked = Flux.fmap(x -> (x isa AbstractArray) ? Tracker.param(x) : x, nn)
-        cl = Coupling(θ -> Shift(nn_tracked(θ)), m)
+    #     m = PartitionMask(length(x), [1], [2])
+    #     nn = Flux.Chain(Flux.Dense(1, 2, Flux.sigmoid), Flux.Dense(2, 1))
+    #     nn_tracked = Flux.fmap(x -> (x isa AbstractArray) ? Tracker.param(x) : x, nn)
+    #     cl = Coupling(θ -> Shift(nn_tracked(θ)), m)
 
-        # should leave two last indices unchanged
-        @test cl(x)[2:3] == x[2:3]
+    #     # should leave two last indices unchanged
+    #     @test cl(x)[2:3] == x[2:3]
 
-        # verify that indeed it's tracked
-        @test Tracker.istracked(cl(x))
+    #     # verify that indeed it's tracked
+    #     @test Tracker.istracked(cl(x))
+    # end
+
+    @testset "Classic" begin
+        m = PartitionMask(3, [1], [2])
+
+        # With `Scale`
+        cl = Coupling(x -> Scale(x[1]), m)
+        x = hcat([-1., -2., -3.], [1., 2., 3.])
+        y = hcat([2., -2., -3.], [2., 2., 3.])
+        test_bijector(cl, x, y, log.([2., 2.]))
+
+        # With `Shift`
+        cl = Coupling(x -> Shift(x[1]), m)
+        x = hcat([-1., -2., -3.], [1., 2., 3.])
+        y = hcat([-3., -2., -3.], [3., 2., 3.])
+        test_bijector(cl, x, y, zeros(2))
     end
 end
