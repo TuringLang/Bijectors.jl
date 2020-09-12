@@ -7,7 +7,7 @@ using Tracker
 using DistributionsAD
 
 using Bijectors
-using Bijectors: Log, Exp, Shift, Scale, Logit, SimplexBijector, PDBijector, Permute, PlanarLayer, RadialLayer, Stacked, TruncatedBijector, ADBijector
+using Bijectors: Log, Exp, Shift, Scale, Logit, SimplexBijector, PDBijector, Permute, PlanarLayer, RadialLayer, Stacked, TruncatedBijector, ADBijector, RationalQuadraticSpline
 
 Random.seed!(123)
 
@@ -159,7 +159,8 @@ end
         (SimplexBijector(), mapslices(z -> normalize(z, 1), rand(2, 3); dims = 1)),
         (stack(Exp{0}(), Scale(2.0)), randn(2, 3)),
         (Stacked((Exp{1}(), SimplexBijector()), [1:1, 2:3]),
-         mapslices(z -> normalize(z, 1), rand(3, 2); dims = 1))
+         mapslices(z -> normalize(z, 1), rand(3, 2); dims = 1)),
+        (RationalQuadraticSpline(randn(3), randn(3), randn(3 - 1), 2.), [-0.5, 0.5])
     ]
 
     for (b, xs) in bs_xs
