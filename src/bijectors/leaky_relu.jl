@@ -47,18 +47,24 @@ end
 
 # Batched version
 function forward(b::LeakyReLU{<:Any, 0}, x::AbstractVector)
-    J = @. (x < zero(x)) * b.α + (x > zero(x)) * one(x)
+    J = let z = zero(x), o = one(x)
+        @. (x < z) * b.α + (x > z) * o
+    end
     return (rv=J .* x, logabsdetjac=log.(abs.(J)))
 end
 
 # (N=1) Multivariate case
 function (b::LeakyReLU{<:Any, 1})(x::AbstractVecOrMat)
-    return @. (x < zero(x)) * b.α * x + (x > zero(x)) * x
+    return let z = zero(x)
+        @. (x < z) * b.α * x + (x > z) * x
+    end
 end
 
 function logabsdetjac(b::LeakyReLU{<:Any, 1}, x::AbstractVecOrMat)
     # Is really diagonal of jacobian
-    J = @. (x < zero(x)) * b.α + (x > zero(x)) * one(x)
+    J = let z = zero(x), o = one(x)
+        @. (x < z) * b.α + (x > z) * o
+    end
 
     if x isa AbstractVector
         return sum(log.(abs.(J)))
@@ -72,7 +78,9 @@ end
 # when using `rand` on a `TransformedDistribution` making use of `LeakyReLU`.
 function forward(b::LeakyReLU{<:Any, 1}, x::AbstractVecOrMat)
     # Is really diagonal of jacobian
-    J = @. (x < zero(x)) * b.α + (x > zero(x)) * one(x)
+    J = let z = zero(x), o = one(x)
+        @. (x < z) * b.α + (x > z) * o
+    end
 
     if x isa AbstractVector
         logjac = sum(log.(abs.(J)))
