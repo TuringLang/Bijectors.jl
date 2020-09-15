@@ -57,11 +57,5 @@ using Bijectors:
         x = hcat([-1., -2., -3.], [1., 2., 3.])
         y = hcat([2., -2., -3.], [2., 2., 3.])
         test_bijector(cl, x, y, log.([2., 2.]))
-
-        # With `Shift`
-        cl = Coupling(x -> Shift(x[1]), m)
-        x = hcat([-1., -2., -3.], [1., 2., 3.])
-        y = hcat([-3., -2., -3.], [3., 2., 3.])
-        test_bijector(cl, x, y, zeros(2))
     end
 end
