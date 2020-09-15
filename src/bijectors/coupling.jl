@@ -18,11 +18,13 @@ to the first part, and the last part of the vector is not used for anything.
 
 # Examples
 ```julia-repl
+julia> using Bijectors: PartitionMask, partition, combine
+
 julia> m = PartitionMask(3, [1], [2]) # <= assumes input-length 3
-PartitionMask{SparseArrays.SparseMatrixCSC{Float64,Int64}}(
-  [1, 1]  =  1.0,
-  [2, 1]  =  1.0,
-  [3, 1]  =  1.0)
+PartitionMask{SparseArrays.SparseMatrixCSC{Bool,Int64}}(
+  [1, 1]  =  true, 
+  [2, 1]  =  true, 
+  [3, 1]  =  true)
 
 julia> # Partition into 3 parts; the last part is inferred to be indices `[3, ]` from
        # the fact that `[1]` and `[2]` does not make up all indices in `1:3`.
@@ -36,7 +38,15 @@ julia> # Recombines the partitions into a vector
  2.0
  3.0
 ```
-
+Note that the underlying `SparseMatrix` is using `Bool` as the element type. We can also
+specify this to be some other type using the `sp_type` keyword:
+```julia-repl
+julia> m = PartitionMask(3, [1], [2]; sp_type = Float32)
+PartitionMask{SparseArrays.SparseMatrixCSC{Float32,Int64}}(
+  [1, 1]  =  1.0, 
+  [2, 1]  =  1.0, 
+  [3, 1]  =  1.0)
+```
 """
 struct PartitionMask{A}
     A_1::A
@@ -51,22 +61,23 @@ function PartitionMask(
     n::Int,
     indices_1::AbstractVector{Int},
     indices_2::AbstractVector{Int},
-    indices_3::AbstractVector{Int}
+    indices_3::AbstractVector{Int};
+    sp_type = Bool
 )
-    A_1 = spzeros(Bool, n, length(indices_1));
-    A_2 = spzeros(Bool, n, length(indices_2));
-    A_3 = spzeros(Bool, n, length(indices_3));
+    A_1 = spzeros(sp_type, n, length(indices_1));
+    A_2 = spzeros(sp_type, n, length(indices_2));
+    A_3 = spzeros(sp_type, n, length(indices_3));
 
     for (i, idx) in enumerate(indices_1)
-        A_1[idx, i] = true
+        A_1[idx, i] = one(sp_type)
     end
 
     for (i, idx) in enumerate(indices_2)
-        A_2[idx, i] = true
+        A_2[idx, i] = one(sp_type)
     end
 
     for (i, idx) in enumerate(indices_3)
-        A_3[idx, i] = true
+        A_3[idx, i] = one(sp_type)
     end
 
     return PartitionMask(A_1, A_2, A_3)
@@ -75,22 +86,31 @@ end
 PartitionMask(
     n::Int,
     indices_1::AbstractVector{Int},
-    indices_2::AbstractVector{Int}
-) = PartitionMask(n, indices_1, indices_2, nothing)
+    indices_2::AbstractVector{Int};
+    kwargs...
+) = PartitionMask(n, indices_1, indices_2, nothing; kwargs...)
 
 PartitionMask(
     n::Int,
     indices_1::AbstractVector{Int},
     indices_2::AbstractVector{Int},
-    indices_3::Nothing
-) = PartitionMask(n, indices_1, indices_2, [i for i in 1:n if i ∉ (indices_1 ∪ indices_2)])
+    indices_3::Nothing;
+    kwargs...
+) = PartitionMask(
+    n, indices_1, indices_2, [i for i in 1:n if i ∉ (indices_1 ∪ indices_2)];
+    kwargs...
+)
 
 PartitionMask(
     n::Int,
     indices_1::AbstractVector{Int},
     indices_2::Nothing,
-    indices_3::AbstractVector{Int}
-) = PartitionMask(n, indices_1, [i for i in 1:n if i ∉ (indices_1 ∪ indices_3)], indices_3)
+    indices_3::AbstractVector{Int};
+    kwargs...
+) = PartitionMask(
+    n, indices_1, [i for i in 1:n if i ∉ (indices_1 ∪ indices_3)], indices_3;
+    kwargs...
+)
 
 """
     PartitionMask(n::Int, indices)
@@ -98,27 +118,29 @@ PartitionMask(
 Assumes you want to _split_ the vector, where `indices` refer to the 
 parts of the vector you want to apply the bijector to.
 """
-function PartitionMask(n::Int, indices)
+function PartitionMask(n::Int, indices; sp_type = Bool)
     indices_2 = [i for i in 1:n if i ∉ indices]
 
     # sparse arrays <3
-    A_1 = spzeros(Bool, n, length(indices));
-    A_2 = spzeros(Bool, n, length(indices_2));
+    A_1 = spzeros(sp_type, n, length(indices));
+    A_2 = spzeros(sp_type, n, length(indices_2));
 
     # Like doing:
     #    A[1, 1] = 1.0
     #    A[3, 2] = 1.0
     for (i, idx) in enumerate(indices)
-        A_1[idx, i] = true
+        A_1[idx, i] = one(sp_type)
     end
 
     for (i, idx) in enumerate(indices_2)
-        A_2[idx, i] = true
+        A_2[idx, i] = one(sp_type)
     end
 
-    return PartitionMask(A_1, A_2, spzeros(Bool, n, 0))
+    return PartitionMask(A_1, A_2, spzeros(sp_type, n, 0))
 end
-PartitionMask(x::AbstractVector, indices) = PartitionMask(length(x), indices)
+function PartitionMask(x::AbstractVector, indices; kwargs...)
+    return PartitionMask(length(x), indices; kwargs...)
+end
 
 """
     combine(m::PartitionMask, x_1, x_2, x_3)
@@ -150,7 +172,7 @@ PartitionMask{SparseArrays.SparseMatrixCSC{Float64,Int64}}(
   [2, 1]  =  1.0, 
   [3, 1]  =  1.0)
 
-julia> cl = Coupling(Shift, m, identity) # <= will do `y[1:1] = x[1:1] + x[2:2]`;
+julia> cl = Coupling(θ -> Shift(θ[1]), m) # <= will do `y[1:1] = x[1:1] + x[2:2]`;
 
 julia> x = [1., 2., 3.];
 
@@ -214,9 +236,7 @@ function (cl::Coupling)(x::AbstractVector)
     # recombine the vector again using the `PartitionMask`
     return combine(cl.mask, b(x_1), x_2, x_3)
 end
-function (cl::Coupling)(x::AbstractMatrix)
-    return eachcolmaphcat(cl, x)
-end
+(cl::Coupling)(x::AbstractMatrix) = eachcolmaphcat(cl, x)
 
 
 function (icl::Inverse{<:Coupling})(y::AbstractVector)
@@ -229,9 +249,7 @@ function (icl::Inverse{<:Coupling})(y::AbstractVector)
 
     return combine(cl.mask, ib(y_1), y_2, y_3)
 end
-function (icl::Inverse{<:Coupling})(y::AbstractMatrix)
-    return eachcolmaphcat(icl, y)
-end
+(icl::Inverse{<:Coupling})(y::AbstractMatrix) = eachcolmaphcat(icl, y)
 
 function logabsdetjac(cl::Coupling, x::AbstractVector)
     x_1, x_2, x_3 = partition(cl.mask, x)
