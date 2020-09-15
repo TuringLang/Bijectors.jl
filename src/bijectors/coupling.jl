@@ -57,7 +57,7 @@ struct PartitionMask{T, A}
     PartitionMask(A_1::A, A_2::A, A_3::A) where {T<:Real, A <: AbstractMatrix{T}} = new{T, A}(A_1, A_2, A_3)
 end
 
-PartitionMask(args...; kwargs...) = PartitionMask{Bool}(args...; kwargs...)
+PartitionMask(args...) = PartitionMask{Bool}(args...)
 
 function PartitionMask{T}(
     n::Int,
@@ -94,16 +94,14 @@ PartitionMask{T}(
     n::Int,
     indices_1::AbstractVector{Int},
     indices_2::AbstractVector{Int},
-    indices_3::Nothing;
-    kwargs...
+    indices_3::Nothing,
 ) where {T} = PartitionMask{T}(n, indices_1, indices_2, setdiff(1:n, indices_1, indices_2))
 
 PartitionMask{T}(
     n::Int,
     indices_1::AbstractVector{Int},
     indices_2::Nothing,
-    indices_3::AbstractVector{Int};
-    kwargs...
+    indices_3::AbstractVector{Int},
 ) where {T} = PartitionMask{T}(n, indices_1, setdiff(1:n, indices_1, indices_3), indices_3)
 
 """
@@ -133,7 +131,7 @@ function PartitionMask{T}(n::Int, indices) where {T}
     return PartitionMask(A_1, A_2, spzeros(T, n, 0))
 end
 function PartitionMask{T}(x::AbstractVector, indices) where {T}
-    return PartitionMask(length(x), indices)
+    return PartitionMask{T}(length(x), indices)
 end
 
 """
@@ -198,11 +196,11 @@ struct Coupling{F, M} <: Bijector{1} where {F, M <: PartitionMask}
 end
 
 function Coupling(θ, n::Int)
-    idx = Int(floor(n / 2))
+    idx = div(n, 2)
     return Coupling(θ, PartitionMask(n, 1:idx))
 end
 
-function Coupling(cl::Coupling{B}, mask::PartitionMask) where {B}
+function Coupling(cl::Coupling, mask::PartitionMask)
     return Coupling(cl.θ, mask)
 end
 
