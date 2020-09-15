@@ -49,22 +49,6 @@ using Bijectors:
         @test forward(icl1, cl1(x)) == (rv = x, logabsdetjac = - logabsdetjac(cl1, x))
     end
 
-    # @testset "Tracker" begin
-    #     Random.seed!(123)
-    #     x = [1., 2., 3.]
-
-    #     m = PartitionMask(length(x), [1], [2])
-    #     nn = Flux.Chain(Flux.Dense(1, 2, Flux.sigmoid), Flux.Dense(2, 1))
-    #     nn_tracked = Flux.fmap(x -> (x isa AbstractArray) ? Tracker.param(x) : x, nn)
-    #     cl = Coupling(θ -> Shift(nn_tracked(θ)), m)
-
-    #     # should leave two last indices unchanged
-    #     @test cl(x)[2:3] == x[2:3]
-
-    #     # verify that indeed it's tracked
-    #     @test Tracker.istracked(cl(x))
-    # end
-
     @testset "Classic" begin
         m = PartitionMask(3, [1], [2])
 

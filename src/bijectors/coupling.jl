@@ -21,7 +21,7 @@ to the first part, and the last part of the vector is not used for anything.
 julia> using Bijectors: PartitionMask, partition, combine
 
 julia> m = PartitionMask(3, [1], [2]) # <= assumes input-length 3
-PartitionMask{SparseArrays.SparseMatrixCSC{Bool,Int64}}(
+PartitionMask{Bool,SparseArrays.SparseMatrixCSC{Bool,Int64}}(
   [1, 1]  =  true, 
   [2, 1]  =  true, 
   [3, 1]  =  true)
@@ -41,76 +41,70 @@ julia> # Recombines the partitions into a vector
 Note that the underlying `SparseMatrix` is using `Bool` as the element type. We can also
 specify this to be some other type using the `sp_type` keyword:
 ```julia-repl
-julia> m = PartitionMask(3, [1], [2]; sp_type = Float32)
-PartitionMask{SparseArrays.SparseMatrixCSC{Float32,Int64}}(
+julia> m = PartitionMask{Float32}(3, [1], [2])
+PartitionMask{Float32,SparseArrays.SparseMatrixCSC{Float32,Int64}}(
   [1, 1]  =  1.0, 
   [2, 1]  =  1.0, 
   [3, 1]  =  1.0)
 ```
 """
-struct PartitionMask{A}
+struct PartitionMask{T, A}
     A_1::A
     A_2::A
     A_3::A
 
     # Only make it possible to construct using matrices
-    PartitionMask(A_1::A, A_2::A, A_3::A) where {A <: AbstractMatrix{<:Real}} = new{A}(A_1, A_2, A_3)
+    PartitionMask(A_1::A, A_2::A, A_3::A) where {T<:Real, A <: AbstractMatrix{T}} = new{T, A}(A_1, A_2, A_3)
 end
 
-function PartitionMask(
+PartitionMask(args...; kwargs...) = PartitionMask{Bool}(args...; kwargs...)
+
+function PartitionMask{T}(
     n::Int,
     indices_1::AbstractVector{Int},
     indices_2::AbstractVector{Int},
-    indices_3::AbstractVector{Int};
-    sp_type = Bool
-)
-    A_1 = spzeros(sp_type, n, length(indices_1));
-    A_2 = spzeros(sp_type, n, length(indices_2));
-    A_3 = spzeros(sp_type, n, length(indices_3));
+    indices_3::AbstractVector{Int}
+) where {T<:Real}
+    A_1 = spzeros(T, n, length(indices_1));
+    A_2 = spzeros(T, n, length(indices_2));
+    A_3 = spzeros(T, n, length(indices_3));
 
     for (i, idx) in enumerate(indices_1)
-        A_1[idx, i] = one(sp_type)
+        A_1[idx, i] = one(T)
     end
 
     for (i, idx) in enumerate(indices_2)
-        A_2[idx, i] = one(sp_type)
+        A_2[idx, i] = one(T)
     end
 
     for (i, idx) in enumerate(indices_3)
-        A_3[idx, i] = one(sp_type)
+        A_3[idx, i] = one(T)
     end
 
     return PartitionMask(A_1, A_2, A_3)
 end
 
-PartitionMask(
+PartitionMask{T}(
     n::Int,
     indices_1::AbstractVector{Int},
     indices_2::AbstractVector{Int};
-    kwargs...
-) = PartitionMask(n, indices_1, indices_2, nothing; kwargs...)
+) where {T} = PartitionMask{T}(n, indices_1, indices_2, nothing)
 
-PartitionMask(
+PartitionMask{T}(
     n::Int,
     indices_1::AbstractVector{Int},
     indices_2::AbstractVector{Int},
     indices_3::Nothing;
     kwargs...
-) = PartitionMask(
-    n, indices_1, indices_2, setdiff(1:n, indices_1, indices_2);
-    kwargs...
-)
+) where {T} = PartitionMask{T}(n, indices_1, indices_2, setdiff(1:n, indices_1, indices_2))
 
-PartitionMask(
+PartitionMask{T}(
     n::Int,
     indices_1::AbstractVector{Int},
     indices_2::Nothing,
     indices_3::AbstractVector{Int};
     kwargs...
-) = PartitionMask(
-    n, indices_1, setdiff(1:n, indices_1, indices_3), indices_3;
-    kwargs...
-)
+) where {T} = PartitionMask{T}(n, indices_1, setdiff(1:n, indices_1, indices_3), indices_3)
 
 """
     PartitionMask(n::Int, indices)
@@ -118,28 +112,28 @@ PartitionMask(
 Assumes you want to _split_ the vector, where `indices` refer to the 
 parts of the vector you want to apply the bijector to.
 """
-function PartitionMask(n::Int, indices; sp_type = Bool)
+function PartitionMask{T}(n::Int, indices) where {T}
     indices_2 = setdiff(1:n, indices)
 
     # sparse arrays <3
-    A_1 = spzeros(sp_type, n, length(indices));
-    A_2 = spzeros(sp_type, n, length(indices_2));
+    A_1 = spzeros(T, n, length(indices));
+    A_2 = spzeros(T, n, length(indices_2));
 
     # Like doing:
     #    A[1, 1] = 1.0
     #    A[3, 2] = 1.0
     for (i, idx) in enumerate(indices)
-        A_1[idx, i] = one(sp_type)
+        A_1[idx, i] = one(T)
     end
 
     for (i, idx) in enumerate(indices_2)
-        A_2[idx, i] = one(sp_type)
+        A_2[idx, i] = one(T)
     end
 
-    return PartitionMask(A_1, A_2, spzeros(sp_type, n, 0))
+    return PartitionMask(A_1, A_2, spzeros(T, n, 0))
 end
-function PartitionMask(x::AbstractVector, indices; kwargs...)
-    return PartitionMask(length(x), indices; kwargs...)
+function PartitionMask{T}(x::AbstractVector, indices) where {T}
+    return PartitionMask(length(x), indices)
 end
 
 """
