@@ -97,7 +97,7 @@ PartitionMask(
     indices_3::Nothing;
     kwargs...
 ) = PartitionMask(
-    n, indices_1, indices_2, [i for i in 1:n if i ∉ (indices_1 ∪ indices_2)];
+    n, indices_1, indices_2, setdiff(1:n, indices_1, indices_2);
     kwargs...
 )
 
@@ -108,7 +108,7 @@ PartitionMask(
     indices_3::AbstractVector{Int};
     kwargs...
 ) = PartitionMask(
-    n, indices_1, [i for i in 1:n if i ∉ (indices_1 ∪ indices_3)], indices_3;
+    n, indices_1, setdiff(1:n, indices_1, indices_3), indices_3;
     kwargs...
 )
 
@@ -119,7 +119,7 @@ Assumes you want to _split_ the vector, where `indices` refer to the
 parts of the vector you want to apply the bijector to.
 """
 function PartitionMask(n::Int, indices; sp_type = Bool)
-    indices_2 = [i for i in 1:n if i ∉ indices]
+    indices_2 = setdiff(1:n, indices)
 
     # sparse arrays <3
     A_1 = spzeros(sp_type, n, length(indices));
