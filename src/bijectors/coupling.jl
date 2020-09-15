@@ -253,13 +253,5 @@ function logabsdetjac(cl::Coupling, x::AbstractVector)
 end
 
 function logabsdetjac(cl::Coupling, x::AbstractMatrix)
-    r = [logabsdetjac(cl, view(x, :, i)) for i in axes(x, 2)]
-
-    # FIXME: this really needs to be handled in a better way
-    # We need to return a `TrackedArray`
-    if Tracker.istracked(r[1])
-        return Tracker.collect(r)
-    else
-        return r
-    end
+    return [logabsdetjac(cl, view(x, :, i)) for i in axes(x, 2)]
 end
