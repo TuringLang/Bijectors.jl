@@ -155,6 +155,7 @@ include("bijectors/truncated.jl")
 # Normalizing flow related
 include("bijectors/planar_layer.jl")
 include("bijectors/radial_layer.jl")
+include("bijectors/coupling.jl")
 include("bijectors/normalise.jl")
 
 ##################
