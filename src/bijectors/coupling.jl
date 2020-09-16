@@ -65,21 +65,9 @@ function PartitionMask{T}(
     indices_2::AbstractVector{Int},
     indices_3::AbstractVector{Int}
 ) where {T<:Real}
-    A_1 = spzeros(T, n, length(indices_1));
-    A_2 = spzeros(T, n, length(indices_2));
-    A_3 = spzeros(T, n, length(indices_3));
-
-    for (i, idx) in enumerate(indices_1)
-        A_1[idx, i] = one(T)
-    end
-
-    for (i, idx) in enumerate(indices_2)
-        A_2[idx, i] = one(T)
-    end
-
-    for (i, idx) in enumerate(indices_3)
-        A_3[idx, i] = one(T)
-    end
+    A_1 = sparse(indices_1, 1:length(indices_1), one(T), n, length(indices_1))
+    A_2 = sparse(indices_2, 1:length(indices_2), one(T), n, length(indices_2))
+    A_3 = sparse(indices_3, 1:length(indices_3), one(T), n, length(indices_3))
 
     return PartitionMask(A_1, A_2, A_3)
 end
@@ -114,19 +102,8 @@ function PartitionMask{T}(n::Int, indices) where {T}
     indices_2 = setdiff(1:n, indices)
 
     # sparse arrays <3
-    A_1 = spzeros(T, n, length(indices));
-    A_2 = spzeros(T, n, length(indices_2));
-
-    # Like doing:
-    #    A[1, 1] = 1.0
-    #    A[3, 2] = 1.0
-    for (i, idx) in enumerate(indices)
-        A_1[idx, i] = one(T)
-    end
-
-    for (i, idx) in enumerate(indices_2)
-        A_2[idx, i] = one(T)
-    end
+    A_1 = sparse(indices, 1:length(indices), one(T), n, length(indices))
+    A_2 = sparse(indices_2, 1:length(indices_2), one(T), n, length(indices_2))
 
     return PartitionMask(A_1, A_2, spzeros(T, n, 0))
 end
