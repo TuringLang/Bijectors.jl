@@ -40,7 +40,8 @@ end
 end
 
 @generated function logabsdetjac(b::NamedBijector{names}, x::NamedTuple) where {names}
-    return :(sum([$([:(logabsdetjac(b.bs.$n, x.$n)) for n in names]...), ]))
+    exprs = [:(logabsdetjac(b.bs.$n, x.$n)) for n in names]
+    return :(+($(exprs...)))
 end
 
 
