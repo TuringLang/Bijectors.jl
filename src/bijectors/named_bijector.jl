@@ -31,8 +31,20 @@ end
 
 names_to_bijectors(b::NamedBijector) = b.bs
 
-@generated function (b::NamedBijector{names})(x::NamedTuple) where {names}
-    return :(merge(x, ($([:($n = b.bs.$n(x.$n)) for n in names]...), )))
+@generated function (b::NamedBijector{names1})(
+    x::NamedTuple{names2}
+) where {names1, names2}
+    exprs = []
+    for n in names2
+        if n in names1
+            # Use processed value
+            push!(exprs, :($n = b.bs.$n(x.$n)))
+        else
+            # Use existing value
+            push!(exprs, :($n = x.$n))
+        end
+    end
+    return :($(exprs...), )
 end
 
 @generated function Base.inv(b::NamedBijector{names}) where {names}
