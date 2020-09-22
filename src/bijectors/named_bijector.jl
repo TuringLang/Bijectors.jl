@@ -204,7 +204,7 @@ end
 coupling(b::NamedCoupling) = b.f
 # For some reason trying to use the parameteric types doesn't always work
 # so we have to do this weird approach of extracting type and then index `parameters`.
-target(b::NamedCoupling) = typeof(b).parameters[1]
+target(b::NamedCoupling{target}) where {target} = target
 deps(b::NamedCoupling) = typeof(b).parameters[2]
 
 @generated function (nc::NamedCoupling{target, deps, F})(x::NamedTuple) where {target, deps, F}
