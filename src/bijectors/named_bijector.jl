@@ -1,6 +1,6 @@
 abstract type AbstractNamedBijector <: AbstractBijector end
 
-forward(b::AbstractBijector, x) = (rv = b(x), logabsdetjac = logabsdetjac(b, x))
+forward(b::AbstractNamedBijector, x) = (rv = b(x), logabsdetjac = logabsdetjac(b, x))
 
 #######################
 ### `NamedBijector` ###
