@@ -29,7 +29,7 @@ struct NamedBijector{names, Bs<:NamedTuple{names}} <: AbstractNamedBijector
     bs::Bs
 end
 
-@inline names_to_bijectors(b::NamedBijector) = b.bs
+names_to_bijectors(b::NamedBijector) = b.bs
 
 @generated function (b::NamedBijector{names})(x::NamedTuple) where {names}
     return :(merge(x, ($([:($n = b.bs.$n(x.$n)) for n in names]...), )))
