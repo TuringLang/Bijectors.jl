@@ -710,6 +710,14 @@ end
         # AD verification
         @test log(abs(det(ForwardDiff.jacobian(sb, x)))) ≈ logabsdetjac(sb, x)
         @test log(abs(det(ForwardDiff.jacobian(isb, y)))) ≈ logabsdetjac(isb, y)
+
+        # Ensure `Stacked` works for a single bijector
+        d = (MvNormal(2, 1.0),)
+        sb = Stacked(bijector.(d), [1:2])
+        x = [.5, 1.]
+        @test sb(x) == x
+        @test logabsdetjac(sb, x) == 0
+        @test forward(sb, x) == (rv = x, logabsdetjac = zero(eltype(x)))
     end
 end
 

@@ -66,6 +66,7 @@ export  TransformDistribution,
         logpdf_forward,
         PlanarLayer,
         RadialLayer,
+        CouplingLayer,
         InvertibleBatchNorm
 
 if VERSION < v"1.1"
