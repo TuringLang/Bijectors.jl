@@ -111,7 +111,7 @@ function (cb::NamedComposition{<:AbstractArray{<:AbstractNamedBijector}})(x)
     return res
 end
 
-(cb::NamedComposition{<:Tuple})(x) = fold(|>, cb.bs; init=x)
+(cb::NamedComposition{<:Tuple})(x) = foldl(|>, cb.bs; init=x)
 
 function logabsdetjac(cb::NamedComposition, x)
     y, logjac = forward(cb.bs[1], x)
