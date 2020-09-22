@@ -156,6 +156,8 @@ include("bijectors/named_bijector.jl")
 # Normalizing flow related
 include("bijectors/planar_layer.jl")
 include("bijectors/radial_layer.jl")
+include("bijectors/leaky_relu.jl")
+include("bijectors/coupling.jl")
 include("bijectors/normalise.jl")
 
 ##################

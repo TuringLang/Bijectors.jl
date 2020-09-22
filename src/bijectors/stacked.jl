@@ -104,6 +104,10 @@ function logabsdetjac(
     end
 end
 
+function logabsdetjac(b::Stacked{<:Any, 1}, x::AbstractVector{<:Real})
+    return sum(logabsdetjac(b.bs[1], x[b.ranges[1]]))
+end
+
 function logabsdetjac(b::Stacked, x::AbstractMatrix{<:Real})
     return map(eachcol(x)) do c
         logabsdetjac(b, c)
