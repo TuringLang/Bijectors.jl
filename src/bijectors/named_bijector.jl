@@ -111,14 +111,7 @@ function (cb::NamedComposition{<:AbstractArray{<:AbstractNamedBijector}})(x)
     return res
 end
 
-@generated function (cb::NamedComposition{T})(x) where {T<:Tuple}
-    @assert length(T.parameters) > 0
-    expr = :(x)
-    for i in 1:length(T.parameters)
-        expr = :(cb.bs[$i]($expr))
-    end
-    return expr
-end
+(cb::NamedComposition{<:Tuple})(x) = fold(|>, cb.bs; init=x)
 
 function logabsdetjac(cb::NamedComposition, x)
     y, logjac = forward(cb.bs[1], x)
