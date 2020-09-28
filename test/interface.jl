@@ -160,10 +160,10 @@ end
         (stack(Exp{0}(), Scale(2.0)), randn(2, 3)),
         (Stacked((Exp{1}(), SimplexBijector()), [1:1, 2:3]),
          mapslices(z -> normalize(z, 1), rand(3, 2); dims = 1)),
-        (RationalQuadraticSpline(randn(3), randn(3), randn(3 - 1), 2.), [-0.5, 0.5])
+        (RationalQuadraticSpline(randn(3), randn(3), randn(3 - 1), 2.), [-0.5, 0.5]),
         (LeakyReLU(0.1), randn(3)),
         (LeakyReLU(Float32(0.1)), randn(3)),
-        (LeakyReLU(0.1; dim = Val(1)), randn(2, 3))
+        (LeakyReLU(0.1; dim = Val(1)), randn(2, 3)),
     ]
 
     for (b, xs) in bs_xs
