@@ -7,7 +7,7 @@ using Tracker
 using DistributionsAD
 
 using Bijectors
-using Bijectors: Log, Exp, Shift, Scale, Logit, SimplexBijector, PDBijector, Permute, PlanarLayer, RadialLayer, Stacked, TruncatedBijector, ADBijector, RationalQuadraticSpline
+using Bijectors: Log, Exp, Shift, Scale, Logit, SimplexBijector, PDBijector, Permute, PlanarLayer, RadialLayer, Stacked, TruncatedBijector, ADBijector, RationalQuadraticSpline, LeakyReLU
 
 Random.seed!(123)
 
@@ -161,6 +161,9 @@ end
         (Stacked((Exp{1}(), SimplexBijector()), [1:1, 2:3]),
          mapslices(z -> normalize(z, 1), rand(3, 2); dims = 1)),
         (RationalQuadraticSpline(randn(3), randn(3), randn(3 - 1), 2.), [-0.5, 0.5])
+        (LeakyReLU(0.1), randn(3)),
+        (LeakyReLU(Float32(0.1)), randn(3)),
+        (LeakyReLU(0.1; dim = Val(1)), randn(2, 3))
     ]
 
     for (b, xs) in bs_xs
@@ -173,7 +176,6 @@ end
             x = D == 0 ? xs[1] : xs[:, 1]
 
             y = @inferred b(x)
-
             ys = @inferred b(xs)
 
             # Computations which do not have closed-form implementations are not necessarily
@@ -709,6 +711,14 @@ end
         # AD verification
         @test log(abs(det(ForwardDiff.jacobian(sb, x)))) ≈ logabsdetjac(sb, x)
         @test log(abs(det(ForwardDiff.jacobian(isb, y)))) ≈ logabsdetjac(isb, y)
+
+        # Ensure `Stacked` works for a single bijector
+        d = (MvNormal(2, 1.0),)
+        sb = Stacked(bijector.(d), [1:2])
+        x = [.5, 1.]
+        @test sb(x) == x
+        @test logabsdetjac(sb, x) == 0
+        @test forward(sb, x) == (rv = x, logabsdetjac = zero(eltype(x)))
     end
 end
 

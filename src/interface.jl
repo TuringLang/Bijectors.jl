@@ -151,10 +151,13 @@ include("bijectors/simplex.jl")
 include("bijectors/pd.jl")
 include("bijectors/corr.jl")
 include("bijectors/truncated.jl")
+include("bijectors/named_bijector.jl")
 
 # Normalizing flow related
 include("bijectors/planar_layer.jl")
 include("bijectors/radial_layer.jl")
+include("bijectors/leaky_relu.jl")
+include("bijectors/coupling.jl")
 include("bijectors/normalise.jl")
 include("bijectors/rational_quadratic_spline.jl")
 
