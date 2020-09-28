@@ -28,6 +28,7 @@ if GROUP == "All" || GROUP == "Interface"
     include("transform.jl")
     include("norm_flows.jl")
     include("bijectors/permute.jl")
+    include("bijectors/named_bijector.jl")
     include("bijectors/leaky_relu.jl")
     include("bijectors/coupling.jl")
 end
