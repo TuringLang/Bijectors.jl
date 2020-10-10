@@ -35,5 +35,12 @@ end
 
 if !is_TRAVIS && (GROUP == "All" || GROUP == "AD")
     include("ad/distributions.jl")
+    if AD == "ReverseDiff"
+        @testset "Turing issue 1385" begin
+            dist = arraydist(truncated.(Laplace.(0, [1, 2]), -10.0, 70.0))
+            x = ReverseDiff.track(rand(dist))
+            @test typeof(bijector(dist)(x)) <: ReverseDiff.TrackedArray
+        end
+    end
 end
 

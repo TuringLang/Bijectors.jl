@@ -12,16 +12,18 @@ using .Tracker: Tracker,
 using Compat: eachcol
 using LinearAlgebra
 
-# Broadcasting here breaks Tracker for some reason
-maporbroadcast(f, x::Union{AbstractArray, TrackedArray, AbstractArray{<:TrackedReal}}...) = map(f, x...)
+# Broadcasting here breaks Tracker
+const TrackedT = Union{TrackedArray, AbstractArray{<:TrackedReal}}
 maporbroadcast(f, x::TrackedArray...) = f.(x...)
-function maporbroadcast(
-    f,
-    x1::TrackedArray{T, N},
-    x::AbstractArray{<:TrackedReal}...,
-) where {T, N}
-    return f.(convert(Array{TrackedReal{T}, N}, x1), x...)
-end
+maporbroadcast(f, x::Union{TrackedArray, AbstractArray{<:TrackedReal}}...) = map(f, x...)
+maporbroadcast(f, x1::TrackedT, x2::AbstractArray) = map(f, x1, x2)
+maporbroadcast(f, x1::AbstractArray, x2::TrackedT) = map(f, x1, x2)
+maporbroadcast(f, x1::TrackedT, x2::AbstractArray, x3::AbstractArray) = map(f, x1, x2, x3)
+maporbroadcast(f, x1::AbstractArray, x2::TrackedT, x3::AbstractArray) = map(f, x1, x2, x3)
+maporbroadcast(f, x1::AbstractArray, x2::AbstractArray, x3::TrackedT) = map(f, x1, x2, x3)
+maporbroadcast(f, x1::TrackedT, x2::TrackedT, x3::AbstractArray) = map(f, x1, x2, x3)
+maporbroadcast(f, x1::AbstractArray, x2::TrackedT, x3::TrackedT) = map(f, x1, x2, x3)
+maporbroadcast(f, x1::TrackedT, x2::AbstractArray, x3::TrackedT) = map(f, x1, x2, x3)
 
 _eps(::Type{<:TrackedReal{T}}) where {T} = _eps(T)
 function Base.minimum(d::LocationScale{<:TrackedReal})

@@ -46,8 +46,6 @@ function Base.maximum(d::LocationScale{<:TrackedReal})
     end
 end
 
-maporbroadcast(f, x::Union{AbstractArray, TrackedArray, AbstractArray{<:TrackedReal}}...) = f.(x...)
-
 logabsdetjac(b::Log{1}, x::Union{TrackedVector, TrackedMatrix}) = track(logabsdetjac, b, x)
 @grad function logabsdetjac(b::Log{1}, x::AbstractVector)
     return -sum(log, value(x)), Δ -> (nothing, -Δ ./ value(x))
