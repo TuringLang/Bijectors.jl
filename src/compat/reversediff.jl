@@ -1,7 +1,7 @@
 module ReverseDiffCompat
 
 using ..ReverseDiff: ReverseDiff, @grad, value, track, TrackedReal, TrackedVector, 
-    TrackedMatrix
+    TrackedMatrix, TrackedArray
 using Requires, LinearAlgebra
 
 using ..Bijectors: Log, SimplexBijector, maphcat, simplex_link_jacobian, 
@@ -45,6 +45,8 @@ function Base.maximum(d::LocationScale{<:TrackedReal})
         return m
     end
 end
+
+maporbroadcast(f, x::Union{AbstractArray, TrackedArray, AbstractArray{<:TrackedReal}}...) = f.(x...)
 
 logabsdetjac(b::Log{1}, x::Union{TrackedVector, TrackedMatrix}) = track(logabsdetjac, b, x)
 @grad function logabsdetjac(b::Log{1}, x::AbstractVector)

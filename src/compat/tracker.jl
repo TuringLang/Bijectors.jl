@@ -12,6 +12,8 @@ using .Tracker: Tracker,
 using Compat: eachcol
 using LinearAlgebra
 
+# Broadcasting here breaks Tracker for some reason
+maporbroadcast(f, x::Union{AbstractArray, TrackedArray, AbstractArray{<:TrackedReal}}...) = map(f, x...)
 maporbroadcast(f, x::TrackedArray...) = f.(x...)
 function maporbroadcast(
     f,
