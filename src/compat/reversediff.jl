@@ -1,7 +1,7 @@
 module ReverseDiffCompat
 
 using ..ReverseDiff: ReverseDiff, @grad, value, track, TrackedReal, TrackedVector, 
-    TrackedMatrix, TrackedArray
+    TrackedMatrix
 using Requires, LinearAlgebra
 
 using ..Bijectors: Log, SimplexBijector, maphcat, simplex_link_jacobian, 
