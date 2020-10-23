@@ -5,6 +5,9 @@ struct TruncatedBijector{N, T1, T2} <: Bijector{N}
     lb::T1
     ub::T2
 end
+
+@functor TruncatedBijector
+
 TruncatedBijector(lb, ub) = TruncatedBijector{0}(lb, ub)
 function TruncatedBijector{N}(lb::T1, ub::T2) where {N, T1, T2}
     return TruncatedBijector{N, T1, T2}(lb, ub)

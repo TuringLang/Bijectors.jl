@@ -41,6 +41,9 @@ struct Stacked{Bs, N} <: Bijector{1}
         return new{A, N}(bs, ranges)
     end
 end
+
+@functor Stacked
+
 Stacked(bs, ranges::AbstractArray) = Stacked(bs, tuple(ranges...))
 Stacked(bs) = Stacked(bs, tuple([i:i for i = 1:length(bs)]...))
 

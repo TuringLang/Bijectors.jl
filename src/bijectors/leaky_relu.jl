@@ -11,6 +11,8 @@ struct LeakyReLU{T, N} <: Bijector{N}
     α::T
 end
 
+@functor LeakyReLU
+
 LeakyReLU(α::T; dim::Val{N} = Val(0)) where {T<:Real, N} = LeakyReLU{T, N}(α)
 LeakyReLU(α::T; dim::Val{N} = Val(D)) where {D, T<:AbstractArray{<:Real, D}, N} = LeakyReLU{T, N}(α)
 

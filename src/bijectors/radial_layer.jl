@@ -18,6 +18,9 @@ mutable struct RadialLayer{T1<:Union{Real, AbstractVector{<:Real}}, T2<:Abstract
     β::T1
     z_0::T2
 end
+
+@functor RadialLayer
+
 function Base.:(==)(b1::RadialLayer, b2::RadialLayer)
     return b1.α_ == b2.α_ && b1.β == b2.β && b1.z_0 == b2.z_0
 end

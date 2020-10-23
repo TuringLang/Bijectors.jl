@@ -14,6 +14,9 @@ mutable struct InvertibleBatchNorm{T1,T2,T3} <: Bijector{1}
     eps     ::  T3
     mtm     ::  T3  # momentum
 end
+
+@functor InvertibleBatchNorm
+
 function Base.:(==)(b1::InvertibleBatchNorm, b2::InvertibleBatchNorm)
     return  b1.b == b2.b && 
             b1.logs == b2.logs &&

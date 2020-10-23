@@ -34,6 +34,7 @@ using StatsFuns
 using LinearAlgebra
 using MappedArrays
 using Roots
+using Functors
 using Base.Iterators: drop
 using LinearAlgebra: AbstractTriangular
 

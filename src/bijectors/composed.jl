@@ -89,6 +89,8 @@ struct Composed{A, N} <: Bijector{N}
     ts::A
 end
 
+@functor Composed
+
 Composed(bs::Tuple{Vararg{<:Bijector{N}}}) where N = Composed{typeof(bs),N}(bs)
 Composed(bs::AbstractArray{<:Bijector{N}}) where N = Composed{typeof(bs),N}(bs)
 

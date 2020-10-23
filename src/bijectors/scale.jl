@@ -2,6 +2,8 @@ struct Scale{T, N} <: Bijector{N}
     a::T
 end
 
+@functor Scale
+
 Base.:(==)(b1::Scale{<:Any, N}, b2::Scale{<:Any, N}) where {N} = b1.a == b2.a
 
 function Scale(a::Union{Real,AbstractArray}; dim::Val{D} = Val(ndims(a))) where D

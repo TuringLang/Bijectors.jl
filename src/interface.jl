@@ -66,6 +66,9 @@ struct Inverse{B <: Bijector, N} <: Bijector{N}
 
     Inverse(b::B) where {N, B<:Bijector{N}} = new{B, N}(b)
 end
+
+@functor Inverse
+
 up1(b::Inverse) = Inverse(up1(b.orig))
 
 inv(b::Bijector) = Inverse(b)

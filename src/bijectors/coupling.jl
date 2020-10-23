@@ -172,6 +172,8 @@ struct Coupling{F, M} <: Bijector{1} where {F, M <: PartitionMask}
     mask::M
 end
 
+@functor Coupling
+
 function Coupling(θ, n::Int)
     idx = div(n, 2)
     return Coupling(θ, PartitionMask(n, 1:idx))

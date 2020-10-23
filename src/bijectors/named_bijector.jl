@@ -29,6 +29,8 @@ struct NamedBijector{names, Bs<:NamedTuple{names}} <: AbstractNamedBijector
     bs::Bs
 end
 
+@functor NamedBijector
+
 names_to_bijectors(b::NamedBijector) = b.bs
 
 @generated function (b::NamedBijector{names1})(
@@ -70,6 +72,9 @@ See also: [`Inverse`](@ref)
 struct NamedInverse{B<:AbstractNamedBijector} <: AbstractNamedBijector
     orig::B
 end
+
+@functor NamedInverse
+
 Base.inv(nb::AbstractNamedBijector) = NamedInverse(nb)
 Base.inv(ni::NamedInverse) = ni.orig
 
@@ -92,6 +97,8 @@ See also: [`Composed`](@ref)
 struct NamedComposition{Bs} <: AbstractNamedBijector
     bs::Bs
 end
+
+@functor NamedComposition
 
 # Essentially just copy-paste from impl of composition for 'standard' bijectors,
 # with minor changes here and there.
@@ -200,6 +207,8 @@ julia> (a = x.a, b = (x.a + x.c) * x.b, c = x.c)
 struct NamedCoupling{target, deps, F} <: AbstractNamedBijector where {F, target}
     f::F
 end
+
+@functor NamedCoupling
 
 NamedCoupling(target, deps, f::F) where {F} = NamedCoupling{target, deps, F}(f)
 function NamedCoupling(::Val{target}, ::Val{deps}, f::F) where {target, deps, F}
