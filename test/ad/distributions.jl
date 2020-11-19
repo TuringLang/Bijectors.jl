@@ -408,6 +408,11 @@
 
             # Broken distributions
             d.f(d.θ...) isa Union{VonMises,TriangularDist} && continue
+            
+            # Skellam only fails in these tests with ReverseDiff
+            # Ref: https://github.com/TuringLang/DistributionsAD.jl/issues/126
+            filldist_broken = d.f(d.θ...) isa Skellam ? (:ReverseDiff,) : d.broken
+            arraydist_broken = d.broken
 
             # Create `filldist` distribution
             f_filldist = (θ...,) -> filldist(d.f(θ...), n)
@@ -429,10 +434,22 @@
 
                 # Test AD
                 test_ad(
-                    DistSpec(Symbol(:filldist, " (", d.name, ", $sz)"), f_filldist, d.θ, x)
+                    DistSpec(
+                        Symbol(:filldist, " (", d.name, ", $sz)"),
+                        f_filldist,
+                        d.θ,
+                        x;
+                        broken=filldist_broken,
+                    )
                 )
                 test_ad(
-                    DistSpec(Symbol(:arraydist, " (", d.name, ", $sz)"), f_arraydist, d.θ, x)
+                    DistSpec(
+                        Symbol(:arraydist, " (", d.name, ", $sz)"),
+                        f_arraydist,
+                        d.θ,
+                        x;
+                        broken=arraydist_broken,
+                    )
                 )
             end
         end
