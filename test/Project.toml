@@ -1,7 +1,7 @@
 [deps]
 Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
 DistributionsAD = "ced4e74d-a319-5a8a-b0ac-84af2272839c"
-FiniteDiff = "6a86dc24-6348-571c-b903-95158fe2bd41"
+FiniteDifferences = "26cc04aa-876d-5657-8c51-4c34ba976000"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
@@ -13,7 +13,7 @@ Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 [compat]
 Combinatorics = "1.0.2"
 DistributionsAD = "0.6.3"
-FiniteDiff = "2.6"
+FiniteDifferences = "0.11"
 ForwardDiff = "0.10.12"
 ReverseDiff = "1.4.2"
 Tracker = "0.2.11"

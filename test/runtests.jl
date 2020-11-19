@@ -2,7 +2,7 @@ using Bijectors
 
 using Combinatorics
 using DistributionsAD
-using FiniteDiff
+using FiniteDifferences
 using ForwardDiff
 using ReverseDiff
 using Tracker
