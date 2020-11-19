@@ -21,10 +21,10 @@ jobs:
         arch:
           - x64
         AD:
-          - AD: ForwardDiff
-          - AD: Tracker
-          - AD: ReverseDiff
-          - AD: Zygote
+          - ForwardDiff
+          - Tracker
+          - ReverseDiff
+          - Zygote
     steps:
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1
