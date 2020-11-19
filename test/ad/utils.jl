@@ -162,7 +162,7 @@ function test_ad(dist::DistSpec; kwargs...)
 end
 
 function test_ad(f, x, broken; rtol = 1e-6, atol = 1e-6)
-    finitediff = FDM.grad(central_fdm(5, 1), f, x)[1]
+    finitediff = FiniteDifferences.grad(central_fdm(5, 1), f, x)[1]
 
     if AD == "All" || AD == "Tracker"
         if :Tracker in broken
