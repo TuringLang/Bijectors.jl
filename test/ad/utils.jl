@@ -99,25 +99,14 @@ function test_ad(dist::DistSpec; kwargs...)
     g_x = g === nothing ? x : g(x)
     @test invlink(d, link(d, g_x)) ≈ g_x
 
-    # Create functions with all possible arguments
-    f_loglik_allargs = let f=f, g=g
+    # Create function with all possible arguments
+    f_allargs = let f=f, g=g
         function (x, θ...)
             dist = f(θ...)
             xtilde = g === nothing ? x : g(x)
             y = link(dist, xtilde)
             result = logpdf_with_trans(dist, invlink(dist, y), true)
             return sum(result)
-        end
-    end
-    f_logpdf_allargs = let f=f, g=g
-        function (x, θ...)
-            dist = f(θ...)
-            xtilde = g === nothing ? x : g(x)
-            if dist isa UnivariateDistribution && xtilde isa AbstractArray
-                return sum(logpdf.(dist, xtilde))
-            else
-                return sum(logpdf(dist, xtilde))
-            end
         end
     end
 
@@ -128,17 +117,10 @@ function test_ad(dist::DistSpec; kwargs...)
             xtest = mapreduce(vcat, inds) do i
                 vectorize(θ[i - 1])
             end
-            f_loglik_test = let xorig=x, θorig=θ, inds=inds
-                x -> f_loglik_allargs(unpack(x, inds, xorig, θorig...)...)
+            f_test = let xorig=x, θorig=θ, inds=inds
+                x -> f_allargs(unpack(x, inds, xorig, θorig...)...)
             end
-            f_logpdf_test = let xorig=x, θorig=θ, inds=inds
-                x -> f_logpdf_allargs(unpack(x, inds, xorig, θorig...)...)
-            end
-
-            @test f_loglik_test(xtest) ≈ f_logpdf_test(xtest)
-
-            test_ad(f_loglik_test, xtest, broken; kwargs...)
-            test_ad(f_logpdf_test, xtest, broken; kwargs...)
+            test_ad(f_test, xtest, broken; kwargs...)
         end
 
         # Test derivative with respect to location `x` as well
@@ -146,17 +128,10 @@ function test_ad(dist::DistSpec; kwargs...)
         if Distributions.value_support(typeof(dist)) === Continuous
             xtest = isempty(inds) ? vectorize(x) : vcat(vectorize(x), xtest)
             push!(inds, 1)
-            f_loglik_test = let xorig=x, θorig=θ, inds=inds
-                x -> f_loglik_allargs(unpack(x, inds, xorig, θorig...)...)
+            f_test = let xorig=x, θorig=θ, inds=inds
+                x -> f_allargs(unpack(x, inds, xorig, θorig...)...)
             end
-            f_logpdf_test = let xorig=x, θorig=θ, inds=inds
-                x -> f_logpdf_allargs(unpack(x, inds, xorig, θorig...)...)
-            end
-
-            @test f_loglik_test(xtest) ≈ f_logpdf_test(xtest)
-
-            test_ad(f_loglik_test, xtest, broken; kwargs...)
-            test_ad(f_logpdf_test, xtest, broken; kwargs...)
+            test_ad(f_test, xtest, broken; kwargs...)
         end
     end
 end
