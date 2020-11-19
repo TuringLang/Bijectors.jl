@@ -35,4 +35,4 @@ jobs:
       - uses: julia-actions/julia-runtest@latest
         env:
           GROUP: AD
-          AD: {{ matrix.AD }}
+          AD: ${{ matrix.AD }}
