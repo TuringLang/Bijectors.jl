@@ -504,10 +504,22 @@
 
             # Test AD
             test_ad(
-                DistSpec(Symbol(:filldist, " (", d.name, ", $n)"), f_filldist, d.θ, x_mat)
+                DistSpec(
+                    Symbol(:filldist, " (", d.name, ", $n)"),
+                    f_filldist,
+                    d.θ,
+                    x_mat;
+                    broken=d.broken,
+                )
             )
             test_ad(
-                DistSpec(Symbol(:arraydist, " (", d.name, ", $n)"), f_arraydist, d.θ, x_mat)
+                DistSpec(
+                    Symbol(:arraydist, " (", d.name, ", $n)"),
+                    f_arraydist,
+                    d.θ,
+                    x_mat;
+                    broken=d.broken,
+                )
             )
 
             # Vector of matrices `x`
@@ -519,7 +531,8 @@
                     Symbol(:filldist, " (", d.name, ", $n, 2)"),
                     f_filldist,
                     d.θ,
-                    x_vec_of_mat,
+                    x_vec_of_mat;
+                    broken=d.broken,
                 )
             )
             test_ad(
@@ -527,7 +540,8 @@
                     Symbol(:arraydist, " (", d.name, ", $n, 2)"),
                     f_arraydist,
                     d.θ,
-                    x_vec_of_mat,
+                    x_vec_of_mat;
+                    broken=d.broken,
                 )
             )
         end
@@ -561,10 +575,22 @@
 
             # Test AD
             test_ad(
-                DistSpec(Symbol(:filldist, " (", d.name, ", $n)"), f_filldist, d.θ, x_mat)
+                DistSpec(
+                    Symbol(:filldist, " (", d.name, ", $n)"),
+                    f_filldist,
+                    d.θ,
+                    x_mat;
+                    broken=d.broken,
+                )
             )
             test_ad(
-                DistSpec(Symbol(:arraydist, " (", d.name, ", $n)"), f_arraydist, d.θ, x_mat)
+                DistSpec(
+                    Symbol(:arraydist, " (", d.name, ", $n)"),
+                    f_arraydist,
+                    d.θ,
+                    x_mat;
+                    broken=d.broken,
+                )
             )
 
             # Vector of matrices `x`
@@ -576,7 +602,8 @@
                     Symbol(:filldist, " (", d.name, ", $n, 2)"),
                     f_filldist,
                     d.θ,
-                    x_vec_of_mat,
+                    x_vec_of_mat;
+                    broken=d.broken,
                 )
             )
             test_ad(
@@ -584,7 +611,8 @@
                     Symbol(:arraydist, " (", d.name, ", $n, 2)"),
                     f_arraydist,
                     d.θ,
-                    x_vec_of_mat,
+                    x_vec_of_mat;
+                    broken=d.broken,
                 )
             )
         end
