@@ -132,15 +132,15 @@ function test_bijector(
 
         # Test AD
         if isclosedform(b)
-            test_ad(x -> b(first(x)), [x_true, ])
+            test_ad(x -> b(first(x)), [x_true, ], ())
         end
 
         if isclosedform(ib)
             y = b(x_true)
-            test_ad(x -> ib(first(x)), [y, ])
+            test_ad(x -> ib(first(x)), [y, ], ())
         end
 
-        test_ad(x -> logabsdetjac(b, first(x)), [x_true, ])
+        test_ad(x -> logabsdetjac(b, first(x)), [x_true, ], ())
     end
 end
 
@@ -168,14 +168,14 @@ function test_bijector(
 
         # Test AD
         if isclosedform(b)
-            test_ad(x -> sum(b(x)), collect(x_true))
+            test_ad(x -> sum(b(x)), collect(x_true), ())
         end
         if isclosedform(ib)
             y = b(x_true)
-            test_ad(x -> sum(ib(x)), y)
+            test_ad(x -> sum(ib(x)), y, ())
         end
 
-        test_ad(x -> logabsdetjac(b, x), x_true)
+        test_ad(x -> logabsdetjac(b, x), x_true, ())
     end
 end
 
