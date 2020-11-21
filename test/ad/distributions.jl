@@ -47,12 +47,7 @@
     to_positive(x::AbstractArray{<:AbstractArray}) = to_positive.(x)
 
     # Create vectors in probability simplex.
-    # Custom implementation since `StatsFuns.softmax` is not compatible with Zygote.
-    function to_simplex(x::AbstractArray; dims=1)
-        maxx = maximum(x, dims=dims)
-        y = exp.(x .- maxx)
-        return y ./ sum(y, dims=dims)
-    end
+    to_simplex(x::AbstractArray; dims=1) = NNlib.softmax(x; dims=dims)
     to_simplex(x::AbstractArray{<:AbstractArray}; dims=1) = to_simplex.(x; dims=dims)
 
     function to_corr(x)

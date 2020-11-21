@@ -16,6 +16,8 @@ using Bijectors: Log, Exp, Shift, Scale, Logit, SimplexBijector, PDBijector, Per
 using DistributionsAD: TuringUniform, TuringMvNormal, TuringMvLogNormal,
     TuringPoissonBinomial
 
+import NNlib
+
 const is_TRAVIS = haskey(ENV, "TRAVIS")
 const GROUP = get(ENV, "GROUP", "All")
 
