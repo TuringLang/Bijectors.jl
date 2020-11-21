@@ -2,7 +2,7 @@
 const AD = get(ENV, "AD", "All")
 
 # Struct of distribution, corresponding parameters, and a sample.
-struct DistSpec{VF<:VariateForm,VS<:ValueSupport,F,T,X,G}
+struct DistSpec{VF<:VariateForm,VS<:ValueSupport,F,T,X,G,B<:Tuple}
     name::Symbol
     f::F
     "Distribution parameters."
@@ -11,19 +11,21 @@ struct DistSpec{VF<:VariateForm,VS<:ValueSupport,F,T,X,G}
     x::X
     "Transformation of sample `x`."
     xtrans::G
+    "Broken backends"
+    broken::B
 end
 
-function DistSpec(f, θ, x, xtrans=nothing)
+function DistSpec(f, θ, x, xtrans=nothing; broken=())
     name = f isa Distribution ? nameof(typeof(f)) : nameof(typeof(f(θ...)))
-    return DistSpec(name, f, θ, x, xtrans)
+    return DistSpec(name, f, θ, x, xtrans; broken=broken)
 end
 
-function DistSpec(name::Symbol, f, θ, x, xtrans=nothing)
+function DistSpec(name::Symbol, f, θ, x, xtrans=nothing; broken=())
     F = f isa Distribution ? typeof(f) : typeof(f(θ...))
     VF = Distributions.variate_form(F)
     VS = Distributions.value_support(F)
-    return DistSpec{VF,VS,typeof(f),typeof(θ),typeof(x),typeof(xtrans)}(
-        name, f, θ, x, xtrans
+    return DistSpec{VF,VS,typeof(f),typeof(θ),typeof(x),typeof(xtrans),typeof(broken)}(
+        name, f, θ, x, xtrans, broken,
     )
 end
 
@@ -90,6 +92,7 @@ function test_ad(dist::DistSpec; kwargs...)
     θ = dist.θ
     x = dist.x
     g = dist.xtrans
+    broken = dist.broken
 
     # Test links
     d = f(θ...)
@@ -107,58 +110,65 @@ function test_ad(dist::DistSpec; kwargs...)
         end
     end
 
-    if isempty(θ)
-        # In this case we can only test the gradient with respect to `x`
-        xtest = vectorize(x)
-        ftest = let xorig=x
-            x -> f_allargs(unpack(x, (1,), xorig)...)
-        end
-        test_ad(ftest, xtest; kwargs...)
-    else
-        # For all combinations of distribution parameters `θ`
-        for inds in combinations(2:(length(θ) + 1))
-            # Test only distribution parameters
+    # For all combinations of distribution parameters `θ`
+    for inds in powerset(2:(length(θ) + 1))
+        # Test only distribution parameters
+        if !isempty(inds)
             xtest = mapreduce(vcat, inds) do i
                 vectorize(θ[i - 1])
             end
-            ftest = let xorig=x, θorig=θ, inds=inds
+            f_test = let xorig=x, θorig=θ, inds=inds
                 x -> f_allargs(unpack(x, inds, xorig, θorig...)...)
             end
-            test_ad(ftest, xtest; kwargs...)
+            test_ad(f_test, xtest, broken; kwargs...)
+        end
 
-            # Test derivative with respect to location `x` as well
-            # if the distribution is continuous
-            if Distributions.value_support(typeof(dist)) === Continuous
-                xtest = vcat(vectorize(x), xtest)
-                push!(inds, 1)
-                ftest = let xorig=x, θorig=θ, inds=inds
-                    x -> f_allargs(unpack(x, inds, xorig, θorig...)...)
-                end
-                test_ad(ftest, xtest; kwargs...)
+        # Test derivative with respect to location `x` as well
+        # if the distribution is continuous
+        if Distributions.value_support(typeof(dist)) === Continuous
+            xtest = isempty(inds) ? vectorize(x) : vcat(vectorize(x), xtest)
+            push!(inds, 1)
+            f_test = let xorig=x, θorig=θ, inds=inds
+                x -> f_allargs(unpack(x, inds, xorig, θorig...)...)
             end
+            test_ad(f_test, xtest, broken; kwargs...)
         end
     end
 end
 
-function test_ad(f, x; rtol = 1e-6, atol = 1e-6, ad = AD)
-    finitediff = FiniteDiff.finite_difference_gradient(f, x)
+function test_ad(f, x, broken = (); rtol = 1e-6, atol = 1e-6)
+    finitediff = FiniteDifferences.grad(central_fdm(5, 1), f, x)[1]
 
-    if ad == "All" || ad == "ForwardDiff_Tracker"
-        tracker = Tracker.data(Tracker.gradient(f, x)[1])
-        @test tracker ≈ finitediff rtol=rtol atol=atol
-
-        forward = ForwardDiff.gradient(f, x)
-        @test forward ≈ finitediff rtol=rtol atol=atol
+    if AD == "All" || AD == "Tracker"
+        if :Tracker in broken
+            @test_broken Tracker.data(Tracker.gradient(f, x)[1]) ≈ finitediff rtol=rtol atol=atol
+        else
+            @test Tracker.data(Tracker.gradient(f, x)[1]) ≈ finitediff rtol=rtol atol=atol
+        end
     end
 
-    if ad == "All" || ad == "Zygote"
-        zygote = Zygote.gradient(f, x)[1]
-        @test zygote ≈ finitediff rtol=rtol atol=atol
+    if AD == "All" || AD == "ForwardDiff"
+        if :ForwardDiff in broken
+            @test_broken ForwardDiff.gradient(f, x) ≈ finitediff rtol=rtol atol=atol
+        else
+            @test ForwardDiff.gradient(f, x) ≈ finitediff rtol=rtol atol=atol
+        end
     end
 
-    if ad == "All" || ad == "ReverseDiff"
-        reversediff = ReverseDiff.gradient(f, x)
-        @test reversediff ≈ finitediff rtol=rtol atol=atol
+    if AD == "All" || AD == "Zygote"
+        if :Zygote in broken
+            @test_broken Zygote.gradient(f, x)[1] ≈ finitediff rtol=rtol atol=atol
+        else
+            @test Zygote.gradient(f, x)[1] ≈ finitediff rtol=rtol atol=atol
+        end
+    end
+
+    if AD == "All" || AD == "ReverseDiff"
+        if :ReverseDiff in broken
+            @test_broken ReverseDiff.gradient(f, x) ≈ finitediff rtol=rtol atol=atol
+        else
+            @test ReverseDiff.gradient(f, x) ≈ finitediff rtol=rtol atol=atol
+        end
     end
 
     return
