@@ -136,7 +136,7 @@ function test_ad(dist::DistSpec; kwargs...)
     end
 end
 
-function test_ad(f, x, broken; rtol = 1e-6, atol = 1e-6)
+function test_ad(f, x, broken = (); rtol = 1e-6, atol = 1e-6)
     finitediff = FiniteDifferences.grad(central_fdm(5, 1), f, x)[1]
 
     if AD == "All" || AD == "Tracker"
