@@ -120,7 +120,7 @@ julia> y = b(x)
 In this case we see that `bijector(d::Distribution)` returns the corresponding constrained-to-unconstrained bijection for `Beta`, which indeed is a `Logit` with `a = 0.0` and `b = 1.0`. The resulting `Logit <: Bijector` has a method `(b::Logit)(x)` defined, allowing us to call it just like any other function. Comparing with the above example, `b(x) ≈ link(dist, x)`. Just to convince ourselves:
 
 ```julia
-julia> b(x) ≈ link(dist, x)
+julia> b(x) =≈ link(dist, x)
 true
 ```
 
