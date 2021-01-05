@@ -176,25 +176,11 @@ end
 
             y = @inferred b(x)
             ys = @inferred b(xs)
-
-            # Computations which do not have closed-form implementations are not necessarily
-            # differentiable, and so we skip them.
-            # HACK: In reality, this is just circumventing the fact that Tracker isn't happy with
-            # the `find_zero` function used by some bijectors.
-            if isclosedform(b)
-                @inferred(b(param(xs)))
-            end
+            @inferred(b(param(xs)))
 
             x_ = @inferred ib(y)
             xs_ = @inferred ib(ys)
-
-            # Computations which do not have closed-form implementations are not necessarily
-            # differentiable, and so we skip them.
-            # HACK: In reality, this is just circumventing the fact that Tracker isn't happy with
-            # the `find_zero` function used by some bijectors.
-            if isclosedform(ib)
-                @inferred(ib(param(ys)))
-            end
+            @inferred(ib(param(ys)))
 
             result = @inferred forward(b, x)
             results = @inferred forward(b, xs)
@@ -226,8 +212,8 @@ end
                 @test length(logabsdetjac(b, xs)) == length(xs)
                 @test length(logabsdetjac(ib, ys)) == length(xs)
 
-                isclosedform(b) && @test @inferred(logabsdetjac(b, param(xs))) isa Union{Array, TrackedArray}
-                isclosedform(ib) && @test @inferred(logabsdetjac(ib, param(ys))) isa Union{Array, TrackedArray}
+                @test @inferred(logabsdetjac(b, param(xs))) isa Union{Array, TrackedArray}
+                @test @inferred(logabsdetjac(ib, param(ys))) isa Union{Array, TrackedArray}
 
                 @test size(results.logabsdetjac) == size(xs, )
                 @test size(iresults.logabsdetjac) == size(ys, )
@@ -240,8 +226,8 @@ end
                 @test logabsdetjac.(ib, ys) == @inferred(logabsdetjac(ib, ys))
                 @test @inferred(logabsdetjac(ib, ys)) ≈ ib_logjac_ad atol=1e-9
 
-                isclosedform(b) && @test logabsdetjac.(b, param(xs)) == @inferred(logabsdetjac(b, param(xs)))
-                isclosedform(ib) && @test logabsdetjac.(ib, param(ys)) == @inferred(logabsdetjac(ib, param(ys)))
+                @test logabsdetjac.(b, param(xs)) == @inferred(logabsdetjac(b, param(xs)))
+                @test logabsdetjac.(ib, param(ys)) == @inferred(logabsdetjac(ib, param(ys)))
 
                 @test results.logabsdetjac ≈ vec(logabsdetjac.(b, xs))
                 @test iresults.logabsdetjac ≈ vec(logabsdetjac.(ib, ys))
@@ -253,8 +239,8 @@ end
                 @test size(logabsdetjac(b, xs)) == (size(xs, 2), )
                 @test size(logabsdetjac(ib, ys)) == (size(xs, 2), )
 
-                isclosedform(b) && @test @inferred(logabsdetjac(b, param(xs))) isa Union{Array, TrackedArray}
-                isclosedform(ib) && @test @inferred(logabsdetjac(ib, param(ys))) isa Union{Array, TrackedArray}
+                @test @inferred(logabsdetjac(b, param(xs))) isa Union{Array, TrackedArray}
+                @test @inferred(logabsdetjac(ib, param(ys))) isa Union{Array, TrackedArray}
 
                 @test size(results.logabsdetjac) == (size(xs, 2), )
                 @test size(iresults.logabsdetjac) == (size(ys, 2), )
@@ -266,16 +252,15 @@ end
                 @test results.logabsdetjac ≈ vec(mapslices(z -> logabsdetjac(b, z), xs; dims = 1))
                 @test iresults.logabsdetjac ≈ vec(mapslices(z -> logabsdetjac(ib, z), ys; dims = 1))
 
-                # some have issues with numerically solving the inverse
                 # FIXME: `SimplexBijector` results in ∞ gradient if not in the domain
-                if isclosedform(b) && !contains(t -> t isa SimplexBijector, b)
+                if !contains(t -> t isa SimplexBijector, b)
                     b_logjac_ad = [logabsdet(ForwardDiff.jacobian(b, xs[:, i]))[1] for i = 1:size(xs, 2)]
-                    @test logabsdetjac(b, xs) ≈ b_logjac_ad atol=1e-9
-                end
+                    tol = isclosedform(b) ? 1e-9 : 1e-1
+                    @test logabsdetjac(b, xs) ≈ b_logjac_ad rtol=tol atol=tol
 
-                if isclosedform(inv(b)) && !contains(t -> t isa SimplexBijector, b)
                     ib_logjac_ad = [logabsdet(ForwardDiff.jacobian(ib, ys[:, i]))[1] for i = 1:size(ys, 2)]
-                    @test logabsdetjac(ib, ys) ≈ ib_logjac_ad atol=1e-9
+                    tol = isclosedform(ib) ? 1e-9 : 1e-1
+                    @test logabsdetjac(ib, ys) ≈ ib_logjac_ad rtol=tol atol=tol
                 end
             else
                 error("tests not implemented yet")

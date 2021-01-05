@@ -1,7 +1,6 @@
 using LinearAlgebra
 using Random
 using NNlib: softplus
-using Roots # for inverse
 
 ################################################################################
 #                            Planar and Radial Flows                           #
@@ -74,7 +73,7 @@ function (ib::Inverse{<:PlanarLayer})(y::AbstractVector{<:Real})
     # Find the scalar ``alpha`` from A.1.
     wt_y = dot(w, y)
     wt_u_hat = dot(w, u_hat)
-    alpha = find_alpha(y, wt_y, wt_u_hat, b)
+    alpha = find_alpha(wt_y, wt_u_hat, b)
 
     return y .- u_hat .* tanh(alpha * norm(w, 2) + b)
 end
@@ -88,14 +87,14 @@ function (ib::Inverse{<:PlanarLayer})(y::AbstractMatrix{<:Real})
     # Find the scalar ``alpha`` from A.1 for each column.
     wt_u_hat = dot(w, u_hat)
     alphas = mapvcat(eachcol(y)) do c
-        find_alpha(c, dot(w, c), wt_u_hat, b)
+        find_alpha(dot(w, c), wt_u_hat, b)
     end
 
-    return y .- u_hat .* tanh.(alphas' .* norm(w, 2) .+ b)
+    return y .- u_hat .* tanh.(reshape(alphas, 1, :) .* norm(w, 2) .+ b)
 end
 
 """
-    find_alpha(y::AbstractVector{<:Real}, wt_y, wt_u_hat, b)
+    find_alpha(wt_y, wt_u_hat, b)
 
 Compute an (approximate) real-valued solution ``α`` to the equation
 ```math
@@ -110,7 +109,7 @@ For details see appendix A.1 of the reference.
 D. Rezende, S. Mohamed (2015): Variational Inference with Normalizing Flows.
 arXiv:1505.05770
 """
-function find_alpha(y::AbstractVector{<:Real}, wt_y, wt_u_hat, b)
+function find_alpha(wt_y, wt_u_hat, b)
     # Compute the initial bracket ((-Inf, 0) or (0, Inf))
     f0 = wt_u_hat * tanh(b) - wt_y
     zero_f0 = zero(f0)
@@ -119,10 +118,10 @@ function find_alpha(y::AbstractVector{<:Real}, wt_y, wt_u_hat, b)
     else
         initial_bracket = (oftype(f0, -Inf), zero_f0)
     end
-    alpha = find_zero(initial_bracket) do x
+    prob = NonlinearSolve.NonlinearProblem{false}(initial_bracket) do x, _
         x + wt_u_hat * tanh(x + b) - wt_y
     end
-
+    alpha = NonlinearSolve.solve(prob, NonlinearSolve.Falsi()).left
     return alpha
 end
 

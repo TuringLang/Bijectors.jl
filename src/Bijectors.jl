@@ -33,9 +33,9 @@ using Reexport, Requires
 using StatsFuns
 using LinearAlgebra
 using MappedArrays
-using Roots
 using Base.Iterators: drop
 using LinearAlgebra: AbstractTriangular
+import NonlinearSolve
 
 export  TransformDistribution,
         PositiveDistribution,
