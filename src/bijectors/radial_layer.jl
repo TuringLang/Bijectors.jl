@@ -1,7 +1,6 @@
 using LinearAlgebra
 using Random
 using NNlib: softplus
-using Roots # for inverse
 
 ################################################################################
 #                            Planar and Radial Flows                           #
@@ -77,8 +76,9 @@ function (ib::Inverse{<:RadialLayer})(y::AbstractVector{<:Real})
     # Compute the norm ``r`` from A.2.
     y_minus_z0 = y .- z0
     r = compute_r(y_minus_z0, α, α_plus_β_hat)
+    γ = (α + r) / (α_plus_β_hat + r)
 
-    return z0 .+ ((α + r) / (α_plus_β_hat + r)) .* y_minus_z0
+    return z0 .+ γ .* y_minus_z0
 end
 
 function (ib::Inverse{<:RadialLayer})(y::AbstractMatrix{<:Real})
@@ -92,8 +92,9 @@ function (ib::Inverse{<:RadialLayer})(y::AbstractMatrix{<:Real})
     rs = mapvcat(eachcol(y_minus_z0)) do c
         return compute_r(c, α, α_plus_β_hat)
     end
+    γ = reshape((α .+ rs) ./ (α_plus_β_hat .+ rs), 1, :)
 
-    return z0 .+ ((α .+ rs) ./ (α_plus_β_hat .+ rs))' .* y_minus_z0
+    return z0 .+ γ .* y_minus_z0
 end
 
 """
@@ -124,4 +125,3 @@ function compute_r(y_minus_z0::AbstractVector{<:Real}, α, α_plus_β_hat)
 end
 
 logabsdetjac(flow::RadialLayer, x::AbstractVecOrMat) = forward(flow, x).logabsdetjac
-isclosedform(b::Inverse{<:RadialLayer}) = false
