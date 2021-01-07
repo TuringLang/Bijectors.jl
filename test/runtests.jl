@@ -18,7 +18,6 @@ using DistributionsAD: TuringUniform, TuringMvNormal, TuringMvLogNormal,
 
 import NNlib
 
-const is_TRAVIS = haskey(ENV, "TRAVIS")
 const GROUP = get(ENV, "GROUP", "All")
 
 # Always include this since it can be useful for other tests.
@@ -35,7 +34,7 @@ if GROUP == "All" || GROUP == "Interface"
     include("bijectors/coupling.jl")
 end
 
-if !is_TRAVIS && (GROUP == "All" || GROUP == "AD")
+if GROUP == "All" || GROUP == "AD"
     include("ad/distributions.jl")
 end
 
