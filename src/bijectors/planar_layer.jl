@@ -42,7 +42,7 @@ According to appendix A.1, vector ``û`` defined by
 ```math
 û(w, u) = u + (\\log(1 + \\exp{(wᵀu)}) - 1 - wᵀu) \\frac{w}{\\|w\\|²}
 ```
-guarantees that the planar layer ``f(z) = z + û tanh(wᵀz + b)`` is invertible.
+guarantees that the planar layer ``f(z) = z + û tanh(wᵀz + b)`` is invertible for all ``w, u ∈ ℝᵈ`` and ``b ∈ ℝ``.
 We can rewrite ``û`` as
 ```math
 û = u + (\\log(1 + \\exp{(-wᵀu)}) - 1) \\frac{w}{\\|w\\|²}.
