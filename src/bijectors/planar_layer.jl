@@ -60,7 +60,7 @@ function forward(flow::PlanarLayer, z::AbstractVecOrMat)
     else
         T = typeof(vec(psi))
     end
-    log_det_jacobian::T = log.(abs.(1.0 .+ psi' * u_hat)) # from eq(12)
+    log_det_jacobian::T = log.(abs.(1 .+ psi' * u_hat)) # from eq(12)
     return (rv = transformed, logabsdetjac = log_det_jacobian)
 end
 
@@ -75,7 +75,7 @@ function (ib::Inverse{<:PlanarLayer})(y::AbstractVector{<:Real})
     wt_u_hat = dot(w, u_hat)
     alpha = find_alpha(wt_y, wt_u_hat, b)
 
-    return y .- u_hat .* tanh(alpha * norm(w, 2) + b)
+    return y .- u_hat .* tanh(alpha + b)
 end
 
 function (ib::Inverse{<:PlanarLayer})(y::AbstractMatrix{<:Real})
@@ -90,7 +90,7 @@ function (ib::Inverse{<:PlanarLayer})(y::AbstractMatrix{<:Real})
         find_alpha(dot(w, c), wt_u_hat, b)
     end
 
-    return y .- u_hat .* tanh.(reshape(alphas, 1, :) .* norm(w, 2) .+ b)
+    return y .- u_hat .* tanh.(reshape(alphas, 1, :) .+ b)
 end
 
 """
