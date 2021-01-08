@@ -241,6 +241,7 @@ function getlogp(d::InverseWishart, Xcf, X)
     return -0.5 * ((d.df + dim(d) + 1) * logdet(Xcf) + tr(Xcf \ Ψ)) + d.logc0
 end
 
+include("utils.jl")
 include("interface.jl")
 
 # Broadcasting here breaks Tracker for some reason

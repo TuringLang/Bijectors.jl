@@ -65,13 +65,6 @@ function get_u_hat(u::AbstractVector{<:Real}, w::AbstractVector{<:Real})
     return û, wT_û
 end
 
-# Helper functions
-aT_b(a::AbstractVector{<:Real}, b::AbstractVector{<:Real}) = dot(a, b)
-aT_b(a::AbstractVector{<:Real}, b::AbstractMatrix{<:Real}) = permutedims(a) * b
-
-_vec(x::AbstractArray{<:Real}) = vec(x)
-_vec(x::Real) = x
-
 # An internal version of the transform in eq. (10) that returns intermediate variables
 function _transform(flow::PlanarLayer, z::AbstractVecOrMat{<:Real})
     w = flow.w
