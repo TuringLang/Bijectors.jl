@@ -60,7 +60,7 @@ function forward(flow::PlanarLayer, z::AbstractVecOrMat)
     else
         T = typeof(vec(psi))
     end
-    log_det_jacobian::T = log.(abs.(1.0 .+ psi' * u_hat)) # from eq(12)
+    log_det_jacobian::T = log.(abs.(1 .+ psi' * u_hat)) # from eq(12)
     return (rv = transformed, logabsdetjac = log_det_jacobian)
 end
 
@@ -75,7 +75,7 @@ function (ib::Inverse{<:PlanarLayer})(y::AbstractVector{<:Real})
     wt_u_hat = dot(w, u_hat)
     alpha = find_alpha(wt_y, wt_u_hat, b)
 
-    return y .- u_hat .* tanh(alpha * norm(w, 2) + b)
+    return y .- u_hat .* tanh(alpha + b)
 end
 
 function (ib::Inverse{<:PlanarLayer})(y::AbstractMatrix{<:Real})
@@ -90,13 +90,13 @@ function (ib::Inverse{<:PlanarLayer})(y::AbstractMatrix{<:Real})
         find_alpha(dot(w, c), wt_u_hat, b)
     end
 
-    return y .- u_hat .* tanh.(reshape(alphas, 1, :) .* norm(w, 2) .+ b)
+    return y .- u_hat .* tanh.(reshape(alphas, 1, :) .+ b)
 end
 
 """
     find_alpha(wt_y, wt_u_hat, b)
 
-Compute an (approximate) real-valued solution ``α`` to the equation
+Compute an (approximate) real-valued solution ``α̂`` to the equation
 ```math
 wt_y = α + wt_u_hat tanh(α + b)
 ```
@@ -104,22 +104,30 @@ wt_y = α + wt_u_hat tanh(α + b)
 The uniqueness of the solution is guaranteed since ``wt_u_hat ≥ -1``.
 For details see appendix A.1 of the reference.
 
+# Initial bracket
+
+For all ``α``, we have
+```math
+α - |wt_u_hat| - wt_y \\leq α + wt_u_hat tanh(α + b) - wt_y \\leq α + |wt_u_hat| - wt_y.
+```
+Thus
+```math
+α̂ - |wt_u_hat| - wt_y \\leq 0 \\leq α̂ + |wt_u_hat| - wt_y,
+```
+which implies ``α̂ ∈ [wt_y - |wt_u_hat|, wt_y + |wt_u_hat|]``.
+
 # References
 
 D. Rezende, S. Mohamed (2015): Variational Inference with Normalizing Flows.
 arXiv:1505.05770
 """
 function find_alpha(wt_y, wt_u_hat, b)
-    # Compute the initial bracket ((-Inf, 0) or (0, Inf))
-    f0 = wt_u_hat * tanh(b) - wt_y
-    zero_f0 = zero(f0)
-    if f0 < zero_f0
-        initial_bracket = (zero_f0, oftype(f0, Inf))
-    else
-        initial_bracket = (oftype(f0, -Inf), zero_f0)
-    end
-    prob = NonlinearSolve.NonlinearProblem{false}(initial_bracket) do x, _
-        x + wt_u_hat * tanh(x + b) - wt_y
+    # Compute the initial bracket.
+    _wt_y, _wt_u_hat, _b = promote(wt_y, wt_u_hat, b)
+    initial_bracket = (_wt_y - abs(_wt_u_hat), _wt_y + abs(_wt_u_hat))
+
+    prob = NonlinearSolve.NonlinearProblem{false}(initial_bracket) do α, _
+        α + _wt_u_hat * tanh(α + _b) - _wt_y
     end
     alpha = NonlinearSolve.solve(prob, NonlinearSolve.Falsi()).left
     return alpha
