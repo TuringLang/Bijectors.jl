@@ -36,6 +36,7 @@ using MappedArrays
 using Base.Iterators: drop
 using LinearAlgebra: AbstractTriangular
 import NonlinearSolve
+import ChainRulesCore
 
 export  TransformDistribution,
         PositiveDistribution,
@@ -243,6 +244,7 @@ end
 
 include("utils.jl")
 include("interface.jl")
+include("chainrules.jl")
 
 # Broadcasting here breaks Tracker for some reason
 maporbroadcast(f, x::AbstractArray{<:Any, N}...) where {N} = map(f, x...)

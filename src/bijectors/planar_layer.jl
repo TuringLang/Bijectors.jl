@@ -151,13 +151,16 @@ D. Rezende, S. Mohamed (2015): Variational Inference with Normalizing Flows.
 arXiv:1505.05770
 """
 function find_alpha(wt_y::Real, wt_u_hat::Real, b::Real)
-    # Compute the initial bracket
-    _wt_y, _wt_u_hat, _b = promote(wt_y, wt_u_hat, b)
-    initial_bracket = (_wt_y - abs(_wt_u_hat), _wt_y + abs(_wt_u_hat))
+    # avoid promotions in root-finding algorithm and simplify AD dispatches
+    return find_alpha(promote(wt_y, wt_u_hat, b)...)
+end
+function find_alpha(wt_y::T, wt_u_hat::T, b::T) where {T<:Real}
+    # Compute the initial bracket (see above).
+    initial_bracket = (wt_y - abs(wt_u_hat), wt_y + abs(wt_u_hat))
 
     # Try to solve the root-finding problem, i.e., compute a final bracket
     prob = NonlinearSolve.NonlinearProblem{false}(initial_bracket) do α, _
-        α + _wt_u_hat * tanh(α + _b) - _wt_y
+        α + wt_u_hat * tanh(α + b) - wt_y
     end
     sol = NonlinearSolve.solve(prob, NonlinearSolve.Falsi())
     if sol.retcode === NonlinearSolve.MAXITERS_EXCEED

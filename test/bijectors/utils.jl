@@ -131,14 +131,10 @@ function test_bijector(
         test_bijector_reals(b, x_true, y_true, logjac_true; kwargs...)
 
         # Test AD
-        if isclosedform(b)
-            test_ad(x -> b(first(x)), [x_true, ])
-        end
+        test_ad(x -> b(first(x)), [x_true, ])
 
-        if isclosedform(ib)
-            y = b(x_true)
-            test_ad(x -> ib(first(x)), [y, ])
-        end
+        y = b(x_true)
+        test_ad(x -> ib(first(x)), [y, ])
 
         test_ad(x -> logabsdetjac(b, first(x)), [x_true, ])
     end
@@ -167,28 +163,20 @@ function test_bijector(
         test_bijector_arrays(b, collect(x_true), collect(y_true), logjac_true; kwargs...)
 
         # Test AD
-        if isclosedform(b)
-            test_ad(x -> sum(b(x)), collect(x_true))
-        end
-        if isclosedform(ib)
-            y = b(x_true)
-            test_ad(x -> sum(ib(x)), y)
-        end
+        test_ad(x -> sum(b(x)), collect(x_true))
+        y = b(x_true)
+        test_ad(x -> sum(ib(x)), y)
 
         test_ad(x -> logabsdetjac(b, x), x_true)
     end
 end
 
 function test_logabsdetjac(b::Bijector{1}, xs::AbstractMatrix; tol=1e-6)
-    if isclosedform(b)
-        logjac_ad = [logabsdet(ForwardDiff.jacobian(b, x))[1] for x in eachcol(xs)]
-        @test mean(logabsdetjac(b, xs) - logjac_ad) ≤ tol
-    end
+    logjac_ad = [logabsdet(ForwardDiff.jacobian(b, x))[1] for x in eachcol(xs)]
+    @test mean(logabsdetjac(b, xs) - logjac_ad) ≤ tol
 end
 
 function test_logabsdetjac(b::Bijector{0}, xs::AbstractVector; tol=1e-6)
-    if isclosedform(b)
-        logjac_ad = [log(abs(ForwardDiff.derivative(b, x))) for x in xs]
-        @test mean(logabsdetjac(b, xs) - logjac_ad) ≤ tol
-    end
+    logjac_ad = [log(abs(ForwardDiff.derivative(b, x))) for x in xs]
+    @test mean(logabsdetjac(b, xs) - logjac_ad) ≤ tol
 end

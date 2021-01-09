@@ -181,5 +181,18 @@ lower(A::TrackedMatrix) = track(lower, A)
     return lower(Ad), Δ -> (lower(Δ),)
 end
 
+function find_alpha(wt_y::T, wt_u_hat::T, b::T) where {T<:TrackedReal}
+    return track(find_alpha, wt_y, wt_u_hat, b)
+end
+@grad function find_alpha(wt_y::TrackedReal, wt_u_hat::TrackedReal, b::TrackedReal)
+    α = find_alpha(data(wt_y), data(wt_u_hat), data(b))
+
+    ∂wt_y = inv(1 + wt_u_hat * sech(α + b)^2)
+    ∂wt_u_hat = - tanh(α + b) * ∂wt_y
+    ∂b = ∂wt_y - 1
+    find_alpha_pullback(Δ::Real) = (Δ * ∂wt_y, Δ * ∂wt_u_hat, Δ * ∂b)
+
+    return α, find_alpha_pullback
+end
 
 end
