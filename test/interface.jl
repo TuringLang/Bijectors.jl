@@ -255,12 +255,10 @@ end
                 # FIXME: `SimplexBijector` results in ∞ gradient if not in the domain
                 if !contains(t -> t isa SimplexBijector, b)
                     b_logjac_ad = [logabsdet(ForwardDiff.jacobian(b, xs[:, i]))[1] for i = 1:size(xs, 2)]
-                    tol = isclosedform(b) ? 1e-9 : 1e-1
-                    @test logabsdetjac(b, xs) ≈ b_logjac_ad rtol=tol atol=tol
+                    @test logabsdetjac(b, xs) ≈ b_logjac_ad atol=1e-9
 
                     ib_logjac_ad = [logabsdet(ForwardDiff.jacobian(ib, ys[:, i]))[1] for i = 1:size(ys, 2)]
-                    tol = isclosedform(ib) ? 1e-9 : 1e-1
-                    @test logabsdetjac(ib, ys) ≈ ib_logjac_ad rtol=tol atol=tol
+                    @test logabsdetjac(ib, ys) ≈ ib_logjac_ad atol=1e-9
                 end
             else
                 error("tests not implemented yet")
