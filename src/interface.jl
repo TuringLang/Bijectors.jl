@@ -51,7 +51,7 @@ has a closed-form implementation.
 
 Most bijectors have closed-form evaluations, but there are cases where
 this is not the case. For example the *inverse* evaluation of `PlanarLayer`
-requires an iterative procedure to evaluate and thus is not differentiable.
+requires an iterative procedure to evaluate.
 """
 isclosedform(b::Bijector) = true
 
