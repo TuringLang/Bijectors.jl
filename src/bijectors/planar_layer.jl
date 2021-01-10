@@ -30,6 +30,9 @@ function PlanarLayer(dims::Int, wrapper=identity)
     return PlanarLayer(w, u, b)
 end
 
+# all fields are numerical parameters
+Functors.@functor PlanarLayer
+
 """
     get_u_hat(u::AbstractVector{<:Real}, w::AbstractVector{<:Real})
 

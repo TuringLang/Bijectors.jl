@@ -29,6 +29,14 @@ struct NamedBijector{names, Bs<:NamedTuple{names}} <: AbstractNamedBijector
     bs::Bs
 end
 
+# fields contain nested numerical parameters
+function Functors.functor(::Type{<:NamedBijector{names}}, x) where names
+    function reconstruct_namedbijector(xs)
+        return NamedBijector{names,typeof(xs.bs)}(xs.bs)
+    end
+    return (bs = x.bs,), reconstruct_namedbijector
+end
+
 names_to_bijectors(b::NamedBijector) = b.bs
 
 @generated function (b::NamedBijector{names1})(

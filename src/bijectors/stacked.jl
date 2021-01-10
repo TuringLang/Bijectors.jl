@@ -44,6 +44,16 @@ end
 Stacked(bs, ranges::AbstractArray) = Stacked(bs, tuple(ranges...))
 Stacked(bs) = Stacked(bs, tuple([i:i for i = 1:length(bs)]...))
 
+# define nested numerical parameters
+# TODO: replace with `Functors.@functor Stacked (bs,)` when
+# https://github.com/FluxML/Functors.jl/pull/7 is merged
+function Functors.functor(::Type{<:Stacked}, x)
+    function reconstruct_stacked(xs)
+        return Stacked(xs.bs, x.ranges)
+    end
+    return (bs = x.bs,), reconstruct_stacked
+end
+
 function Base.:(==)(b1::Stacked, b2::Stacked)
     bs1, bs2 = b1.bs, b2.bs
     if !(bs1 isa Tuple && bs2 isa Tuple || bs1 isa Vector && bs2 isa Vector)

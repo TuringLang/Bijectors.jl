@@ -4,6 +4,7 @@ using Combinatorics
 using DistributionsAD
 using FiniteDifferences
 using ForwardDiff
+using Functors
 using ReverseDiff
 using Tracker
 using Zygote

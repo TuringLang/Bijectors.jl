@@ -9,6 +9,15 @@ TruncatedBijector(lb, ub) = TruncatedBijector{0}(lb, ub)
 function TruncatedBijector{N}(lb::T1, ub::T2) where {N, T1, T2}
     return TruncatedBijector{N, T1, T2}(lb, ub)
 end
+
+# field are numerical parameters
+function Functors.functor(::Type{<:TruncatedBijector{N}}, x) where N
+    function reconstruct_truncatedbijector(xs)
+        return TruncatedBijector{N}(xs.lb, xs.ub)
+    end
+    return (lb = x.lb, ub = x.ub,), reconstruct_truncatedbijector
+end
+
 up1(b::TruncatedBijector{N}) where {N} = TruncatedBijector{N + 1}(b.lb, b.ub)
 
 function Base.:(==)(b1::TruncatedBijector, b2::TruncatedBijector)

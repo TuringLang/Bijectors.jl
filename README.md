@@ -362,7 +362,7 @@ true
 ```
 
 ### Normalizing flows
-A very interesting application is that of _normalizing flows_.[1] Usually this is done by sampling from a multivariate normal distribution, and then transforming this to a target distribution using invertible neural networks. Currently there are two such transforms available in Bijectors.jl: `PlanarFlow` and `RadialFlow`. Let's create a flow with a single `PlanarLayer`:
+A very interesting application is that of _normalizing flows_.[1] Usually this is done by sampling from a multivariate normal distribution, and then transforming this to a target distribution using invertible neural networks. Currently there are two such transforms available in Bijectors.jl: `PlanarLayer` and `RadialLayer`. Let's create a flow with a single `PlanarLayer`:
 
 ```julia
 julia> d = MvNormal(zeros(2), ones(2));
@@ -394,7 +394,7 @@ julia> y = rand(flow)
  1.3337915588180933
  1.010861989639227 
 
-julia> logpdf(flow, y)         # uses inverse of `b`; not very efficient for `PlanarFlow` and not 100% accurate
+julia> logpdf(flow, y)         # uses inverse of `b`
 -2.8996106373788293
 
 julia> x = rand(flow.dist)
@@ -471,22 +471,15 @@ julia> Tracker.grad(b.w)
   0.0013039074681623036
 ```
 
-We can easily create more complex flows by simply doing `PlanarFlow(10) ∘ PlanarFlow(10) ∘ RadialFlow(10)` and so on.
+We can easily create more complex flows by simply doing `PlanarLayer(10) ∘ PlanarLayer(10) ∘ RadialLayer(10)` and so on.
 
-In those cases, it might be useful to use Flux.jl's `treelike` to extract the parameters:
+In those cases, it might be useful to use Flux.jl's `Flux.params` to extract the parameters:
 ```julia
 julia> using Flux
-
-julia> @Flux.treelike Composed
-
-julia> @Flux.treelike TransformedDistribution
-
-julia> @Flux.treelike PlanarLayer
 
 julia> Flux.params(flow)
 Params([[-1.05099; 0.502079] (tracked), [-0.216248; -0.706424] (tracked), [-4.33747] (tracked)])
 ```
-Though we might just do this for you in the future, so then all you'll have to do is call `Flux.params`.
 
 Another useful function is the `forward(d::Distribution)` method. It is similar to `forward(b::Bijector)` in the sense that it does a forward pass of the entire process "sample then transform" and returns all the most useful quantities in process using the most efficent computation path.
 

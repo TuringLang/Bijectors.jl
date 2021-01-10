@@ -14,6 +14,14 @@ end
 LeakyReLU(α::T; dim::Val{N} = Val(0)) where {T<:Real, N} = LeakyReLU{T, N}(α)
 LeakyReLU(α::T; dim::Val{N} = Val(D)) where {D, T<:AbstractArray{<:Real, D}, N} = LeakyReLU{T, N}(α)
 
+# field is a numerical parameter
+function Functors.functor(::Type{LeakyReLU{<:Any,N}}, x) where N
+    function reconstruct_leakyrelu(xs)
+        return LeakyReLU{typeof(xs.α),N}(xs.α)
+    end
+    return (α = x.α,), reconstruct_leakyrelu
+end
+
 up1(b::LeakyReLU{T, N}) where {T, N} = LeakyReLU{T, N + 1}(b.α)
 
 # (N=0) Univariate case

@@ -10,6 +10,15 @@ Base.:(==)(b1::Shift{<:Any, N}, b2::Shift{<:Any, N}) where {N} = b1.a == b2.a
 function Shift(a::Union{Real,AbstractArray}; dim::Val{D} = Val(ndims(a))) where D
     return Shift{typeof(a), D}(a)
 end
+
+# field is a numerical parameter
+function Functors.functor(::Type{<:Shift{<:Any,N}}, x) where N
+    function reconstruct_shift(xs)
+        return Shift{typeof(xs.a),N}(xs.a)
+    end
+    return (a = x.a,), reconstruct_shift
+end
+
 up1(b::Shift{T, N}) where {T, N} = Shift{T, N + 1}(b.a)
 
 (b::Shift)(x) = b.a .+ x
