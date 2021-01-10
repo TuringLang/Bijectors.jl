@@ -477,11 +477,11 @@ In those cases, it might be useful to use Flux.jl's `treelike` to extract the pa
 ```julia
 julia> using Flux
 
-julia> @Flux.treelike Composed
+julia> @Flux.functor Composed
 
-julia> @Flux.treelike TransformedDistribution
+julia> @Flux.functor TransformedDistribution
 
-julia> @Flux.treelike PlanarLayer
+julia> @Flux.functor PlanarLayer
 
 julia> Flux.params(flow)
 Params([[-1.05099; 0.502079] (tracked), [-0.216248; -0.706424] (tracked), [-4.33747] (tracked)])
