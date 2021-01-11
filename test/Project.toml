@@ -1,4 +1,5 @@
 [deps]
+ChainRulesTestUtils = "cdddcdb0-9152-4a09-a978-84456f9df70a"
 Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
 DistributionsAD = "ced4e74d-a319-5a8a-b0ac-84af2272839c"
 FiniteDifferences = "26cc04aa-876d-5657-8c51-4c34ba976000"
@@ -12,6 +13,7 @@ Tracker = "9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [compat]
+ChainRulesTestUtils = "0.5"
 Combinatorics = "1.0.2"
 DistributionsAD = "0.6.3"
 FiniteDifferences = "0.11, 0.12"

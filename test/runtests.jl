@@ -1,5 +1,6 @@
 using Bijectors
 
+using ChainRulesTestUtils
 using Combinatorics
 using DistributionsAD
 using FiniteDifferences
@@ -35,6 +36,8 @@ if GROUP == "All" || GROUP == "Interface"
 end
 
 if GROUP == "All" || GROUP == "AD"
+    include("ad/chainrules.jl")
+    include("ad/flows.jl")
     include("ad/distributions.jl")
 end
 
