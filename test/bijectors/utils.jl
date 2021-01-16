@@ -180,3 +180,10 @@ function test_logabsdetjac(b::Bijector{0}, xs::AbstractVector; tol=1e-6)
     logjac_ad = [log(abs(ForwardDiff.derivative(b, x))) for x in xs]
     @test mean(logabsdetjac(b, xs) - logjac_ad) ≤ tol
 end
+
+# Check if `Functors.functor` works properly
+function test_functor(x, xs)
+    _xs, re = Functors.functor(x)
+    @test x == re(_xs)
+    @test _xs == xs
+end

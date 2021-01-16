@@ -92,6 +92,9 @@ end
 Composed(bs::Tuple{Vararg{<:Bijector{N}}}) where N = Composed{typeof(bs),N}(bs)
 Composed(bs::AbstractArray{<:Bijector{N}}) where N = Composed{typeof(bs),N}(bs)
 
+# field contains nested numerical parameters
+Functors.@functor Composed
+
 isclosedform(b::Composed) = all(isclosedform, b.ts)
 up1(b::Composed) = Composed(up1.(b.ts))
 function Base.:(==)(b1::Composed{<:Any, N}, b2::Composed{<:Any, N}) where {N}

@@ -17,6 +17,8 @@ seed!(1)
     y, ladj = forward(bn, x)
     @test log(abs(det(ForwardDiff.jacobian(bn, x)))) ≈ sum(ladj)
     @test log(abs(det(ForwardDiff.jacobian(inv(bn), y)))) ≈ sum(logabsdetjac(inv(bn), y))
+
+    test_functor(bn, (b = bn.b, logs = bn.logs))
 end
 
 @testset "PlanarLayer" begin
@@ -37,6 +39,9 @@ end
     flow = PlanarLayer(w, u, b)
     z = ones(10, 100)
     @test inv(flow)(flow(z)) ≈ z
+
+    test_functor(flow, (w = w, u = u, b = b))
+    test_functor(inv(flow), (orig = flow,))
 end
 
 @testset "RadialLayer" begin
@@ -57,6 +62,9 @@ end
     z = ones(10, 100)
     flow = RadialLayer(α_, β, z_0)
     @test inv(flow)(flow(z)) ≈ z
+
+    test_functor(flow, (α_ = α_, β = β, z_0 = z_0))
+    test_functor(inv(flow), (orig = flow,))
 end
 
 @testset "Flows" begin

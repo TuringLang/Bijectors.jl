@@ -8,6 +8,8 @@ struct TransformedDistribution{D, B, V} <: Distribution{V, Continuous} where {D<
     TransformedDistribution(d::MatrixDistribution, b::Bijector{2}) = new{typeof(d), typeof(b), Matrixvariate}(d, b)
 end
 
+# fields may contain nested numerical parameters
+Functors.@functor TransformedDistribution
 
 const UnivariateTransformed = TransformedDistribution{<:Distribution, <:Bijector, Univariate}
 const MultivariateTransformed = TransformedDistribution{<:Distribution, <:Bijector, Multivariate}

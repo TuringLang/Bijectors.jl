@@ -11,6 +11,16 @@ function Logit(a, b)
     T = promote_type(typeof(a), typeof(b))
     Logit{0, T}(a, b)
 end
+
+# fields are numerical parameters
+function Functors.functor(::Type{<:Logit{N}}, x) where N
+    function reconstruct_logit(xs)
+        T = promote_type(typeof(xs.a), typeof(xs.b))
+        return Logit{N,T}(xs.a, xs.b)
+    end
+    return (a = x.a, b = x.b,), reconstruct_logit
+end
+
 up1(b::Logit{N, T}) where {N, T} = Logit{N + 1, T}(b.a, b.b)
 # For equality of Logit with Float64 fields to one with Duals
 Base.:(==)(b1::Logit, b2::Logit) = b1.a == b2.a && b1.b == b2.b

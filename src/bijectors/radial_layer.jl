@@ -28,6 +28,9 @@ function RadialLayer(dims::Int, wrapper=identity)
     return RadialLayer(α_, β, z_0)
 end
 
+# all fields are numerical parameters
+Functors.@functor RadialLayer
+
 h(α, r) = 1 ./ (α .+ r)     # for radial flow from eq(14)
 #dh(α, r) = .- (1 ./ (α .+ r)) .^ 2   # for radial flow; derivative of h()
 

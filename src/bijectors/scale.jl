@@ -8,6 +8,14 @@ function Scale(a::Union{Real,AbstractArray}; dim::Val{D} = Val(ndims(a))) where 
     return Scale{typeof(a), D}(a)
 end
 
+# field is a numerical parameter
+function Functors.functor(::Type{<:Scale{<:Any,N}}, x) where N
+    function reconstruct_scale(xs)
+        return Scale{typeof(xs.a),N}(xs.a)
+    end
+    return (a = x.a,), reconstruct_scale
+end
+
 up1(b::Scale{T, N}) where {N, T} = Scale{T, N + 1}(a)
 
 (b::Scale)(x) = b.a .* x

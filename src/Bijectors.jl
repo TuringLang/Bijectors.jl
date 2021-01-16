@@ -35,6 +35,7 @@ using LinearAlgebra
 using MappedArrays
 using Base.Iterators: drop
 using LinearAlgebra: AbstractTriangular
+import Functors
 import NonlinearSolve
 import ChainRulesCore
 
@@ -268,7 +269,6 @@ function __init__()
     @require Zygote="e88e6eb3-aa80-5325-afca-941959d7151f" include("compat/zygote.jl")
     @require ReverseDiff="37e2e3b7-166d-5795-8a7a-e32c996b4267" include("compat/reversediff.jl")
     @require DistributionsAD="ced4e74d-a319-5a8a-b0ac-84af2272839c" include("compat/distributionsad.jl")
-    @require Flux="587475ba-b771-5e3f-ad9e-33799f191a9c" include("compat/flux.jl")
 end
 
 end # module
