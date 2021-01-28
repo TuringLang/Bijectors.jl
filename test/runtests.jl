@@ -35,7 +35,7 @@ end
 
 if !is_TRAVIS && (GROUP == "All" || GROUP == "AD")
     include("ad/distributions.jl")
-    if AD == "ReverseDiff"
+    if AD == "All" || AD == "ReverseDiff" 
         @testset "Turing issue 1385" begin
             dist = arraydist(truncated.(Laplace.(0, [1, 2]), -10.0, 70.0))
             x = ReverseDiff.track(rand(dist))
@@ -43,4 +43,3 @@ if !is_TRAVIS && (GROUP == "All" || GROUP == "AD")
         end
     end
 end
-
