@@ -56,6 +56,7 @@ bijector(d::Distributions.AbstractMvNormal) = Identity{1}()
 bijector(d::Distributions.AbstractMvLogNormal) = Log{1}()
 bijector(d::PositiveDistribution) = Log{0}()
 bijector(d::SimplexDistribution) = SimplexBijector{1}()
+bijector(d::AngularDistribution) = Angle()
 bijector(d::KSOneSided) = Logit(zero(eltype(d)), one(eltype(d)))
 
 bijector_bounded(d, a=minimum(d), b=maximum(d)) = Logit(a, b)
