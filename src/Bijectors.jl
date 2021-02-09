@@ -43,6 +43,7 @@ export  TransformDistribution,
         PositiveDistribution,
         UnitDistribution,
         SimplexDistribution,
+        AngularDistribution,
         PDMatDistribution,
         link,
         invlink,
@@ -154,6 +155,8 @@ function logpdf_with_trans(d::UnivariateDistribution, x, transform::Bool)
         return map(x -> logpdf(d, x), x)
     end
 end
+
+const AngularDistribution = Union{VonMises}
 
 ## Multivariate
 
