@@ -27,17 +27,14 @@ up1(b::Logit{N, T}) where {N, T} = Logit{N + 1, T}(b.a, b.b)
 # For equality of Logit with Float64 fields to one with Duals
 Base.:(==)(b1::Logit, b2::Logit) = b1.a == b2.a && b1.b == b2.b
 
-(b::Logit{0})(x::Real) = _logit(x, b.a, b.b)
 (b::Logit)(x) = _logit.(x, b.a, b.b)
 (b::Logit)(x::AbstractArray{<:AbstractArray}) = map(b, x)
 _logit(x, a, b) = logit((x - a) / (b - a))
 
-(ib::Inverse{<:Logit{0}})(y::Real) = _ilogit(y, ib.orig.a, ib.orig.b)
 (ib::Inverse{<:Logit})(y) = _ilogit.(y, ib.orig.a, ib.orig.b)
 (ib::Inverse{<:Logit})(x::AbstractArray{<:AbstractArray}) = map(ib, x)
 _ilogit(y, a, b) = (b - a) * logistic(y) + a
 
-logabsdetjac(b::Logit{0}, x::Real) = logit_logabsdetjac(x, b.a, b.b)
 logabsdetjac(b::Logit{0}, x) = logit_logabsdetjac.(x, b.a, b.b)
 logabsdetjac(b::Logit{1}, x::AbstractVector) = sum(logit_logabsdetjac.(x, b.a, b.b))
 logabsdetjac(b::Logit{1}, x::AbstractMatrix) = vec(sum(logit_logabsdetjac.(x, b.a, b.b), dims = 1))
