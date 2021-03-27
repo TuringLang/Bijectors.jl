@@ -7,9 +7,11 @@ struct Logit{N, T<:Real} <: Bijector{N}
     a::T
     b::T
 end
-function Logit(a, b)
+Logit(a::Real, b::Real) = Logit{0}(a, b)
+Logit(a::AbstractArray{<:Real, N}, b::AbstractArray{<:Real, N}) where {N} = Logit{N}(a, b)
+function Logit{N}(a, b)
     T = promote_type(typeof(a), typeof(b))
-    Logit{0, T}(a, b)
+    Logit{N, T}(a, b)
 end
 
 # fields are numerical parameters
@@ -26,18 +28,12 @@ up1(b::Logit{N, T}) where {N, T} = Logit{N + 1, T}(b.a, b.b)
 Base.:(==)(b1::Logit, b2::Logit) = b1.a == b2.a && b1.b == b2.b
 
 (b::Logit{0})(x::Real) = _logit(x, b.a, b.b)
-(b::Logit{0})(x) = _logit.(x, b.a, b.b)
-(b::Logit{1})(x::AbstractVector) = _logit.(x, b.a, b.b)
-(b::Logit{1})(x::AbstractMatrix) = _logit.(x, b.a, b.b)
-(b::Logit{2})(x::AbstractMatrix) = _logit.(x, b.a, b.b)
-(b::Logit{2})(x::AbstractArray{<:AbstractMatrix}) = map(b, x)
-_logit(x, a, b) = logit((x - a) / (b - a))
+(b::Logit)(x) = _logit.(x, b.a, b.b)
+(b::Logit)(x::AbstractArray{<:AbstractArray}) = map(b, x)
 
 (ib::Inverse{<:Logit{0}})(y::Real) = _ilogit(y, ib.orig.a, ib.orig.b)
-(ib::Inverse{<:Logit{0}})(y) = _ilogit.(y, ib.orig.a, ib.orig.b)
-(ib::Inverse{<:Logit{1}})(x::AbstractVecOrMat) = _ilogit.(x, ib.orig.a, ib.orig.b)
-(ib::Inverse{<:Logit{2}})(x::AbstractMatrix) = _ilogit.(x, ib.orig.a, ib.orig.b)
-(ib::Inverse{<:Logit{2}})(x::AbstractArray{<:AbstractMatrix}) = map(ib, x)
+(ib::Inverse{<:Logit})(y) = _ilogit.(y, ib.orig.a, ib.orig.b)
+(ib::Inverse{<:Logit})(x::AbstractArray{<:AbstractArray}) = map(ib, x)
 _ilogit(y, a, b) = (b - a) * logistic(y) + a
 
 logabsdetjac(b::Logit{0}, x::Real) = logit_logabsdetjac(x, b.a, b.b)
