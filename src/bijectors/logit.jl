@@ -9,7 +9,7 @@ struct Logit{N, T<:Real} <: Bijector{N}
 end
 Logit(a::Real, b::Real) = Logit{0}(a, b)
 Logit(a::AbstractArray{<:Real, N}, b::AbstractArray{<:Real, N}) where {N} = Logit{N}(a, b)
-function Logit{N}(a, b)
+function Logit{N}(a, b) where {N}
     T = promote_type(typeof(a), typeof(b))
     Logit{N, T}(a, b)
 end
