@@ -38,10 +38,10 @@ function single_sample_tests(dist)
 
     # Check that invlink is inverse of link.
     x = rand(dist)
-    @test invlink(dist, link(dist, copy(x))) ≈ x atol=1e-9
+    @test @inferred(invlink(dist, link(dist, copy(x)))) ≈ x atol=1e-9
 
     # Check that link is inverse of invlink. Hopefully this just holds given the above...
-    y = link(dist, x)
+    y = @inferred(link(dist, x))
     if dist isa Dirichlet
         # `logit` and `logistic` are not perfect inverses. This leads to a diversion.
         # Example:
@@ -49,9 +49,9 @@ function single_sample_tests(dist)
         #    1.0
         # julia> logistic(logit(0.9999999999999998))
         # 0.9999999999999998
-        @test link(dist, invlink(dist, copy(y))) ≈ y atol=0.5
+        @test @inferred(link(dist, invlink(dist, copy(y)))) ≈ y atol=0.5
     else
-        @test link(dist, invlink(dist, copy(y))) ≈ y atol=1e-9
+        @test @inferred(link(dist, invlink(dist, copy(y)))) ≈ y atol=1e-9
     end
     if dist isa SimplexDistribution
         # This should probably be exact.
@@ -72,9 +72,9 @@ end
 # univariate distributions, just a vector of identical values. For vector-valued
 # distributions, a matrix whose columns are identical.
 function multi_sample_tests(dist, x, xs, N)
-    ys = link(dist, copy(xs))
-    @test invlink(dist, link(dist, copy(xs))) ≈ xs atol=1e-9
-    @test link(dist, invlink(dist, copy(ys))) ≈ ys atol=1e-9
+    ys = @inferred(link(dist, copy(xs)))
+    @test @inferred(invlink(dist, link(dist, copy(xs)))) ≈ xs atol=1e-9
+    @test @inferred(link(dist, invlink(dist, copy(ys)))) ≈ ys atol=1e-9
     @test logpdf_with_trans(dist, xs, true) == fill(logpdf_with_trans(dist, x, true), N)
     @test logpdf_with_trans(dist, xs, false) == fill(logpdf_with_trans(dist, x, false), N)
 
@@ -147,7 +147,7 @@ let ϵ = eps(Float64)
             # This should fail at the minute. Not sure what the correct way to test this is.
             x = rand(dist)
             logpdf_turing = logpdf_with_trans(dist, x, true)
-            J = jacobian(x->link(dist, x, false), x)
+            J = jacobian(x->link(dist, x, Val(false)), x)
             @test logpdf(dist, x .+ ϵ) - _logabsdet(J) ≈ logpdf_turing
 
             # Issue #12
@@ -264,18 +264,18 @@ end
     function test_link_and_invlink()
         dist = Dirichlet(4, 4)
         x = rand(dist)
-        y = link(dist, x)
+        y = @inferred(link(dist, x))
 
-        f1 = x -> link(dist, x, true)
-        f2 = x -> link(dist, x, false)
-        g1 = y -> invlink(dist, y, true)
-        g2 = y -> invlink(dist, y, false)
+        f1 = x -> link(dist, x, Val(true))
+        f2 = x -> link(dist, x, Val(false))
+        g1 = y -> invlink(dist, y, Val(true))
+        g2 = y -> invlink(dist, y, Val(false))
 
-        @test @aeq jacobian(f1, x) Bijectors.simplex_link_jacobian(x, true)
-        @test @aeq jacobian(f2, x) Bijectors.simplex_link_jacobian(x, false)
-        @test @aeq jacobian(g1, y) Bijectors.simplex_invlink_jacobian(y, true)
-        @test @aeq jacobian(g2, y) Bijectors.simplex_invlink_jacobian(y, false)
-        @test @aeq Bijectors.simplex_link_jacobian(x, false) * Bijectors.simplex_invlink_jacobian(y, false) I
+        @test @aeq jacobian(f1, x) @inferred(Bijectors.simplex_link_jacobian(x, Val(true)))
+        @test @aeq jacobian(f2, x) @inferred(Bijectors.simplex_link_jacobian(x, Val(false)))
+        @test @aeq jacobian(g1, y) @inferred(Bijectors.simplex_invlink_jacobian(y, Val(true)))
+        @test @aeq jacobian(g2, y) @inferred(Bijectors.simplex_invlink_jacobian(y, Val(false)))
+        @test @aeq Bijectors.simplex_link_jacobian(x, Val(false)) * Bijectors.simplex_invlink_jacobian(y, Val(false)) I
     end
     for i in 1:4
         test_link_and_invlink()
