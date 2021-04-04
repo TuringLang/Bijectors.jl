@@ -3,13 +3,11 @@
 ####################
 struct SimplexBijector{N, T} <: Bijector{N} end
 SimplexBijector() = SimplexBijector{1}()
-function SimplexBijector{N}() where {N}
-    if N isa Bool
-        SimplexBijector{1, N}()
-    else
-        SimplexBijector{N, true}()
-    end
-end
+SimplexBijector{N}() where {N} = SimplexBijector{N,true}()
+
+# Special case `N = 1`
+SimplexBijector{true}() = SimplexBijector{1,true}()
+SimplexBijector{false}() = SimplexBijector{1,false}()
 
 (b::SimplexBijector{1})(x::AbstractVector) = _simplex_bijector(x, b)
 (b::SimplexBijector{1})(y::AbstractVector, x::AbstractVector) = _simplex_bijector!(y, x, b)
