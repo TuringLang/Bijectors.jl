@@ -3,13 +3,11 @@
 ####################
 struct SimplexBijector{N, T} <: Bijector{N} end
 SimplexBijector() = SimplexBijector{1}()
-function SimplexBijector{N}() where {N}
-    if N isa Bool
-        SimplexBijector{1, N}()
-    else
-        SimplexBijector{N, true}()
-    end
-end
+SimplexBijector{N}() where {N} = SimplexBijector{N,true}()
+
+# Special case `N = 1`
+SimplexBijector{true}() = SimplexBijector{1,true}()
+SimplexBijector{false}() = SimplexBijector{1,false}()
 
 (b::SimplexBijector{1})(x::AbstractVector) = _simplex_bijector(x, b)
 (b::SimplexBijector{1})(y::AbstractVector, x::AbstractVector) = _simplex_bijector!(y, x, b)
@@ -276,8 +274,8 @@ end
 
 function simplex_link_jacobian(
     x::AbstractVector{T},
-    proj::Bool = true,
-) where {T <: Real}
+    ::Val{proj}=Val(true),
+) where {T<:Real, proj}
     K = length(x)
     @assert K > 1 "x needs to be of length greater than 1"
     dydxt = similar(x, length(x), length(x))
@@ -306,7 +304,7 @@ function simplex_link_jacobian(
     return UpperTriangular(dydxt)'
 end
 function jacobian(b::SimplexBijector{1, proj}, x::AbstractVector{T}) where {proj, T}
-    return simplex_link_jacobian(x, proj)
+    return simplex_link_jacobian(x, Val(proj))
 end
 
 #=
@@ -377,8 +375,8 @@ end
 
 function simplex_invlink_jacobian(
     y::AbstractVector{T},
-    proj::Bool = true,
-) where {T <: Real}
+    ::Val{proj}=Val(true),
+) where {T<:Real, proj}
     K = length(y)
     @assert K > 1 "x needs to be of length greater than 1"
     dxdy = similar(y, length(y), length(y))
@@ -428,7 +426,7 @@ function simplex_invlink_jacobian(
 end
 # jacobian
 function jacobian(ib::Inverse{<:SimplexBijector{1, proj}}, y::AbstractVector{T}) where {proj, T}
-    return simplex_invlink_jacobian(y, proj)
+    return simplex_invlink_jacobian(y, Val(proj))
 end
 
 #=
