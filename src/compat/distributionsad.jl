@@ -39,31 +39,31 @@ isdirichlet(::TuringDirichlet) = true
 function link(
     d::TuringDirichlet,
     x::AbstractVecOrMat{<:Real},
-    proj::Bool = true,
-)
+    ::Val{proj}=Val(true),
+) where {proj}
     return SimplexBijector{proj}()(x)
 end
 
 function link_jacobian(
     d::TuringDirichlet,
-    x::AbstractVector{T},
-    proj::Bool = true,
-) where {T<:Real}
+    x::AbstractVector{<:Real},
+    ::Val{proj}=Val(true),
+) where {proj}
     return jacobian(SimplexBijector{proj}(), x)
 end
 
 function invlink(
     d::TuringDirichlet,
     y::AbstractVecOrMat{<:Real},
-    proj::Bool = true
-)
+    ::Val{proj}=Val(true),
+) where {proj}
     return inv(SimplexBijector{proj}())(y)
 end
 function invlink_jacobian(
     d::TuringDirichlet,
-    y::AbstractVector{T},
-    proj::Bool = true
-) where {T<:Real}
+    y::AbstractVector{<:Real},
+    ::Val{proj}=Val(true),
+) where {proj}
     return jacobian(inv(SimplexBijector{proj}()), y)
 end
 
