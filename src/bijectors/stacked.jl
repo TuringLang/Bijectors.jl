@@ -24,24 +24,7 @@ b([0.0, 1.0]) == [b1(0.0), 1.0]  # => true
 struct Stacked{Bs, N} <: Bijector{1}
     bs::Bs
     ranges::NTuple{N, UnitRange{Int}}
-
-    function Stacked(
-        bs::C,
-        ranges::NTuple{N, UnitRange{Int}}
-    ) where {N, C<:Tuple{Vararg{<:ZeroOrOneDimBijector, N}}}
-        return new{C, N}(bs, ranges)
-    end
-
-    function Stacked(
-        bs::A,
-        ranges::NTuple{N, UnitRange{Int}}
-    ) where {N, A<:AbstractArray{<:Bijector}}
-        @assert length(bs) == N "number of bijectors is not same as number of ranges"
-        @assert all(b -> isa(b, ZeroOrOneDimBijector), bs)
-        return new{A, N}(bs, ranges)
-    end
 end
-Stacked(bs, ranges::AbstractArray) = Stacked(bs, tuple(ranges...))
 Stacked(bs) = Stacked(bs, tuple([i:i for i = 1:length(bs)]...))
 
 # define nested numerical parameters
@@ -96,6 +79,8 @@ function (sb::Stacked{<:Tuple})(x::AbstractVector{<:Real})
 end
 # The Stacked{<:AbstractArray} version is not TrackedArray friendly
 function (sb::Stacked{<:AbstractArray, N})(x::AbstractVector{<:Real}) where {N}
+    N == 1 && return sb.bs[1](x[sb.ranges[1]])
+
     y = mapvcat(1:N) do i
         sb.bs[i](x[sb.ranges[i]])
     end
