@@ -102,6 +102,11 @@ function logabsdetjac(
     end
 end
 
+# Handle the case of just one bijector
+function logabsdetjac(b::Stacked{<:Tuple{<:Bijector}}, x::AbstractVector{<:Real})
+    return sum(logabsdetjac(b.bs[1], x[b.ranges[1]]))
+end
+
 function logabsdetjac(b::Stacked, x::AbstractMatrix{<:Real})
     return map(eachcol(x)) do c
         logabsdetjac(b, c)
