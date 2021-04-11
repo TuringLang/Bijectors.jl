@@ -25,7 +25,7 @@ struct Stacked{Bs, Rs} <: Bijector{1}
     bs::Bs
     ranges::Rs
 end
-Stacked(bs::Tuple) = Stacked(bs, ntuple(i - i:i, length(bs)))
+Stacked(bs::Tuple) = Stacked(bs, ntuple(i -> i:i, length(bs)))
 Stacked(bs::AbstractArray) = Stacked(bs, [i:i for i in 1:length(bs)])
 
 # define nested numerical parameters
