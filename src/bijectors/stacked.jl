@@ -21,9 +21,9 @@ b = stack(b1, b2)
 b([0.0, 1.0]) == [b1(0.0), 1.0]  # => true
 ```
 """
-struct Stacked{Bs, N} <: Bijector{1}
+struct Stacked{Bs, Rs} <: Bijector{1}
     bs::Bs
-    ranges::NTuple{N, UnitRange{Int}}
+    ranges::Rs
 end
 Stacked(bs) = Stacked(bs, tuple([i:i for i = 1:length(bs)]...))
 
@@ -78,7 +78,8 @@ function (sb::Stacked{<:Tuple})(x::AbstractVector{<:Real})
     return y
 end
 # The Stacked{<:AbstractArray} version is not TrackedArray friendly
-function (sb::Stacked{<:AbstractArray, N})(x::AbstractVector{<:Real}) where {N}
+function (sb::Stacked{<:AbstractArray})(x::AbstractVector{<:Real})
+    N = length(sb.bs)
     N == 1 && return sb.bs[1](x[sb.ranges[1]])
 
     y = mapvcat(1:N) do i
@@ -90,17 +91,14 @@ end
 
 (sb::Stacked)(x::AbstractMatrix{<:Real}) = eachcolmaphcat(sb, x)
 function logabsdetjac(
-    b::Stacked{<:Any, N},
+    b::Stacked,
     x::AbstractVector{<:Real}
-) where {N}
+)
+    N = length(b.bs)
     init = sum(logabsdetjac(b.bs[1], x[b.ranges[1]]))
     init + sum(2:N) do i
         sum(logabsdetjac(b.bs[i], x[b.ranges[i]]))
     end
-end
-
-function logabsdetjac(b::Stacked{<:Any, 1}, x::AbstractVector{<:Real})
-    return sum(logabsdetjac(b.bs[1], x[b.ranges[1]]))
 end
 
 function logabsdetjac(b::Stacked, x::AbstractMatrix{<:Real})
@@ -118,7 +116,9 @@ end
 #     logjac += sum(_logjac)
 #     return (rv = vcat(y_1, y_2), logabsdetjac = logjac)
 # end
-@generated function forward(b::Stacked{T, N}, x::AbstractVector) where {N, T<:Tuple}
+@generated function forward(b::Stacked{T}, x::AbstractVector) where {T<:Tuple}
+    N = length(T.parameters)
+    
     expr = Expr(:block)
     y_names = []
 
@@ -140,7 +140,8 @@ end
     return expr
 end
 
-function forward(sb::Stacked{<:AbstractArray, N}, x::AbstractVector) where {N}
+function forward(sb::Stacked{<:AbstractArray}, x::AbstractVector)
+    N = length(sb.bs)
     yinit, linit = forward(sb.bs[1], x[sb.ranges[1]])
     logjac = sum(linit)
     ys = mapvcat(drop(sb.bs, 1), drop(sb.ranges, 1)) do b, r
