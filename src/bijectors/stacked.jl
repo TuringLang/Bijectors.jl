@@ -122,7 +122,7 @@ end
 #     logjac += sum(_logjac)
 #     return (rv = vcat(y_1, y_2), logabsdetjac = logjac)
 # end
-@generated function forward(b::Stacked{<:Tuple{Vararg{<:Any,N}}}, x::AbstractVector) where {N<:Tuple}
+@generated function forward(b::Stacked{<:Tuple{Vararg{<:Any, N}}}, x::AbstractVector) where {N}
     expr = Expr(:block)
     y_names = []
 
