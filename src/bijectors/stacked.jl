@@ -97,6 +97,21 @@ function logabsdetjac(
 )
     N = length(b.bs)
     init = sum(logabsdetjac(b.bs[1], x[b.ranges[1]]))
+
+    return if N > 1
+        init + sum(2:N) do i
+            sum(logabsdetjac(b.bs[i], x[b.ranges[i]]))
+        end
+    else
+        init
+    end
+end
+
+function logabsdetjac(
+    b::Stacked{<:Tuple{Vararg{<:Any, N}}},
+    x::AbstractVector{<:Real}
+) where {N}
+    init = sum(logabsdetjac(b.bs[1], x[b.ranges[1]]))
     init + sum(2:N) do i
         sum(logabsdetjac(b.bs[i], x[b.ranges[i]]))
     end
@@ -130,7 +145,7 @@ end
     # TODO: drop the `sum` when we have dimensionality
     push!(expr.args, :(logjac = sum(_logjac)))
     push!(y_names, :y_1)
-    for i = 2:length(T.parameters)
+    for i = 2:N
         y_name = Symbol("y_$i")
         push!(expr.args, :(($y_name, _logjac) = forward(b.bs[$i], x[b.ranges[$i]])))
 
