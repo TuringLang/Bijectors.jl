@@ -85,8 +85,8 @@
         DistSpec(Poisson, (0.5,), 1),
         DistSpec(Poisson, (0.5,), [1, 1]),
 
-        DistSpec(Skellam, (1.0, 2.0), -2; broken=(:Zygote,)),
-        DistSpec(Skellam, (1.0, 2.0), [-2, -2]; broken=(:Zygote,)),
+        DistSpec(Skellam, (1.0, 2.0), -2),
+        DistSpec(Skellam, (1.0, 2.0), [-2, -2]),
 
         DistSpec(PoissonBinomial, ([0.5, 0.5],), 0),
 
@@ -193,8 +193,9 @@
 
         DistSpec(NormalCanon, (1.0, 2.0), 0.5),
 
-        DistSpec(NormalInverseGaussian, (1.0, 2.0, 1.0, 1.0), 0.5; broken=(:Zygote,)),
+        DistSpec(NormalInverseGaussian, (1.0, 2.0, 1.0, 1.0), 0.5),
 
+        DistSpec(Pareto, (), 1.5),
         DistSpec(Pareto, (1.0,), 1.5),
         DistSpec(Pareto, (1.0, 1.0), 1.5),
 
@@ -245,11 +246,8 @@
         DistSpec(VonMises, (1.0,), 1.0),
         DistSpec(VonMises, (1, 1), 1),
 
-        # Only some Zygote tests are broken and therefore this can not be checked
-        DistSpec(Pareto, (), 1.5; broken=(:Zygote,)),
-
         # Some tests are broken on some Julia versions, therefore it can't be checked reliably
-        DistSpec(PoissonBinomial, ([0.5, 0.5],), [0, 0]; broken=(:Zygote,)),        
+        DistSpec(PoissonBinomial, ([0.5, 0.5],), [0, 0]; broken=(:Zygote,)),
     ]
 
     # Tests that have a `broken` field can be executed but, according to FiniteDifferences,
@@ -405,7 +403,7 @@
             B,
             to_posdef,
         ),
-        DistSpec((eta) -> LKJ(10, eta), (1.), A_big, to_corr) 
+        DistSpec(eta -> LKJ(10, eta), (1.,), A_big, to_corr)
         # AD for parameters of LKJ requires more DistributionsAD supports
     ]
 
@@ -435,17 +433,21 @@
             # Skellam only fails in these tests with ReverseDiff
             # Ref: https://github.com/TuringLang/DistributionsAD.jl/issues/126
             # PoissonBinomial fails with Zygote
+            # Matrix case does not work with Skellam:
+            # https://github.com/TuringLang/DistributionsAD.jl/pull/172#issuecomment-853721493
             filldist_broken = if d.f(d.θ...) isa Skellam
-                (d.broken..., :ReverseDiff)
+                ((d.broken..., :ReverseDiff), (d.broken..., :Zygote, :ReverseDiff))
             elseif d.f(d.θ...) isa PoissonBinomial
-                (d.broken..., :Zygote)
+                ((d.broken..., :Zygote), (d.broken..., :Zygote))
             else
-                d.broken
+                (d.broken, d.broken)
             end
-            arraydist_broken = if d.f(d.θ...) isa PoissonBinomial
-                (d.broken..., :Zygote)
+            arraydist_broken = if d.f(d.θ...) isa Skellam
+                (d.broken, (d.broken..., :Zygote))
+            elseif d.f(d.θ...) isa PoissonBinomial
+                ((d.broken..., :Zygote), (d.broken..., :Zygote))
             else
-                d.broken
+                (d.broken, d.broken)
             end
 
             # Create `filldist` distribution
@@ -456,7 +458,7 @@
             f_arraydist = (θ...,) -> arraydist([d.f(θ...) for _ in 1:n])
             d_arraydist = f_arraydist(d.θ...)
 
-            for sz in ((n,), (n, 2))
+            for (i, sz) in enumerate(((n,), (n, 2)))
                 # Matrix case doesn't work for continuous distributions for some reason
                 # now but not too important (?!)
                 if length(sz) == 2 && Distributions.value_support(typeof(d)) === Continuous
@@ -474,7 +476,7 @@
                         d.θ,
                         x,
                         d.xtrans;
-                        broken=filldist_broken,
+                        broken=filldist_broken[i],
                     )
                 )
                 test_ad(
@@ -484,7 +486,7 @@
                         d.θ,
                         x,
                         d.xtrans;
-                        broken=arraydist_broken,
+                        broken=arraydist_broken[i],
                     )
                 )
             end
