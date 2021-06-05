@@ -6,7 +6,7 @@ using Statistics: mean
 
 istraining() = false
 
-mutable struct InvertibleBatchNorm{T1,T2,T3} <: Bijector{1}
+mutable struct InvertibleBatchNorm{T1,T2,T3} <: Bijector
     b       ::  T1  # bias
     logs    ::  T1  # log-scale
     m       ::  T2  # moving mean
@@ -80,8 +80,7 @@ function forward(bn::InvertibleBatchNorm, x)
 end
 
 logabsdetjac(bn::InvertibleBatchNorm, x) = forward(bn, x).logabsdetjac
-
-(bn::InvertibleBatchNorm)(x) = forward(bn, x).result
+transform(bn::InvertibleBatchNorm, x) = forward(bn, x).result
 
 function forward(invbn::Inverse{<:InvertibleBatchNorm}, y)
     @assert !istraining() "`forward(::Inverse{InvertibleBatchNorm})` is only available in test mode."
@@ -97,7 +96,7 @@ function forward(invbn::Inverse{<:InvertibleBatchNorm}, y)
     return (result=x, logabsdetjac=-logabsdetjac(bn, x))
 end
 
-(bn::Inverse{<:InvertibleBatchNorm})(y) = forward(bn, y).result
+transform(bn::Inverse{<:InvertibleBatchNorm}, y) = forward(bn, y).result
 
 function Base.show(io::IO, l::InvertibleBatchNorm)
     print(io, "InvertibleBatchNorm($(join(size(l.b), ", ")))")
