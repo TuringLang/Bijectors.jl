@@ -199,9 +199,9 @@ function logabsdetjac(cb::Composed, x)
 end
 
 function logabsdetjac_batch(cb::Composed, x)
-    init = forward(cb.ts[1], x)
+    init = forward_batch(cb.ts[1], x)
     result = reduce(cb.ts[2:end]; init = init) do (y, logjac), b
-        return forward(b, y)
+        return forward_batch(b, y)
     end
 
     return result.logabsdetjac
