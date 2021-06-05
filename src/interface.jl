@@ -215,7 +215,19 @@ Transform `xs` by `b`, treating `xs` as a "batch", i.e. a collection of independ
 
 See also: [`transform`](@ref)
 """
-transform_batch
+transform_batch(b, xs) = _transform_batch(b, xs)
+# Default implementations uses private methods to avoid method ambiguity.
+_transform_batch(b, xs::VectorBatch) = reconstruct(xs, map(b, value(xs)))
+function _transform_batch(b, xs::ArrayBatch{2})
+    # TODO: Check if we can avoid using these custom methods.
+    return eachcolmaphcat(b, x)
+end
+function _transform_batch(b, xs::ArrayBatch{N}) where {N}
+    res = reduce(map(b, eachslice(value(xs), dims=N))) do acc, x
+        cat(acc, x; dims = N)
+    end
+    return reconstruct(xs, res)
+end
 
 """
     logabsdetjac_batch(b, xs)
@@ -224,7 +236,12 @@ Computes `logabsdetjac(b, xs)`, treating `xs` as a "batch", i.e. a collection of
 
 See also: [`logabsdetjac`](@ref)
 """
-logabsdetjac_batch
+logabsdetjac_batch(b, xs) = _logabsdetjac_batch(b, xs)
+# Default implementations uses private methods to avoid method ambiguity.
+_logabsdetjac_batch(b, xs::VectorBatch) = reconstruct(xs, map(x -> logabsdetjac(b, x), value(xs)))
+function _logabsdetjac_batch(b, xs::ArrayBatch{N}) where {N}
+    return reconstruct(xs, map(x -> logabsdetjac(b, x), eachslice(value(xs), dims=N)))
+end
 
 """
     forward_batch(b, xs)
