@@ -1,33 +1,26 @@
 #################
 # Shift & Scale #
 #################
-struct Shift{T, N} <: Bijector{N}
+struct Shift{T} <: Bijector
     a::T
 end
 
 Base.:(==)(b1::Shift{<:Any, N}, b2::Shift{<:Any, N}) where {N} = b1.a == b2.a
 
-function Shift(a::Union{Real,AbstractArray}; dim::Val{D} = Val(ndims(a))) where D
-    return Shift{typeof(a), D}(a)
-end
+Functors.@functor Shift
 
-# field is a numerical parameter
-function Functors.functor(::Type{<:Shift{<:Any,N}}, x) where N
-    function reconstruct_shift(xs)
-        return Shift{typeof(xs.a),N}(xs.a)
-    end
-    return (a = x.a,), reconstruct_shift
-end
+transform(b::Shift, x) = b.a .+ x
 
-up1(b::Shift{T, N}) where {T, N} = Shift{T, N + 1}(b.a)
-
-(b::Shift)(x) = b.a .+ x
-(b::Shift{<:Any, 2})(x::AbstractArray{<:AbstractMatrix}) = map(b, x)
-
-inv(b::Shift{T, N}) where {T, N} = Shift{T, N}(-b.a)
+inv(b::Shift) = Shift(-b.a)
 
 # FIXME: implement custom adjoint to ensure we don't get tracking
-logabsdetjac(b::Shift{T, N}, x) where {T, N} = _logabsdetjac_shift(b.a, x, Val(N))
+function logabsdetjac(b::Shift, x::AbstractArray{<:Real, N}) where {N}
+    return _logabsdetjac_shift(b.a, x, Val(N))
+end
+
+function logabsdetjac_batch(b::Shift, x::AbstractArray{<:Real, N}) where {N}
+    return _logabsdetjac_shift(b.a, x, Val(N - 1))
+end
 
 _logabsdetjac_shift(a::Real, x::Real, ::Val{0}) = zero(eltype(x))
 _logabsdetjac_shift(a::Real, x::AbstractVector{T}, ::Val{0}) where {T<:Real} = zeros(T, length(x))
