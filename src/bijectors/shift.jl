@@ -19,7 +19,7 @@ function logabsdetjac(b::Shift, x::AbstractArray{<:Real, N}) where {N}
 end
 
 function logabsdetjac_batch(b::Shift, x::AbstractArray{<:Real, N}) where {N}
-    return _logabsdetjac_shift(b.a, x, Val(N - 1))
+    return Batch(_logabsdetjac_shift(b.a, x, Val(N - 1)))
 end
 
 _logabsdetjac_shift(a::Real, x::Real, ::Val{0}) = zero(eltype(x))

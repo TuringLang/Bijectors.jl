@@ -19,7 +19,7 @@ function logabsdetjac(b::Scale, x::AbstractArray{<:Real, N}) where {N}
 end
 
 function logabsdetjac_batch(b::Scale, x::ArrayBatch{N}) where {N}
-    return Batch(_logabsdetjac_scale(b, value(x), Val(N - 1)))
+    return Batch(_logabsdetjac_scale(b.a, value(x), Val(N - 1)))
 end
 
 # Scalar: single input.
