@@ -12,7 +12,7 @@ using NNlib: softplus
 # RadialLayer #
 ###############
 
-mutable struct RadialLayer{T1<:Union{Real, AbstractVector{<:Real}}, T2<:AbstractVector{<:Real}} <: Bijector{1}
+mutable struct RadialLayer{T1<:Union{Real, AbstractVector{<:Real}}, T2<:AbstractVector{<:Real}} <: Bijector
     α_::T1
     β::T1
     z_0::T2
@@ -50,8 +50,10 @@ function _radial_transform(α_, β, z_0, z)
     return (transformed = transformed, α = α, β_hat = β_hat, r = r)
 end
 
-(b::RadialLayer)(z::AbstractMatrix{<:Real}) = _transform(b, z).transformed
-(b::RadialLayer)(z::AbstractVector{<:Real}) = vec(_transform(b, z).transformed)
+transform(b::RadialLayer, z::AbstractVector{<:Real}) = vec(_transform(b, z).transformed)
+transform(b::RadialLayer, z::AbstractMatrix{<:Real}) = _transform(b, z).transformed
+
+transform_batch(b::RadialLayer, z::ArrayBatch{2}) = Batch(transform(b, value(z)))
 
 function forward(flow::RadialLayer, z::AbstractVecOrMat)
     transformed, α, β_hat, r = _transform(flow, z)
@@ -70,7 +72,12 @@ function forward(flow::RadialLayer, z::AbstractVecOrMat)
     return (result = transformed, logabsdetjac = log_det_jacobian)
 end
 
-function (ib::Inverse{<:RadialLayer})(y::AbstractVector{<:Real})
+function forward_batch(b::RadialLayer, z::ArrayBatch{2})
+    result, logjac = forward(b, value(z))
+    return (result = Batch(result), logabsdetjac = Batch(logjac))
+end
+
+function transform(ib::Inverse{<:RadialLayer}, y::AbstractVector{<:Real})
     flow = ib.orig
     z0 = flow.z_0
     α = softplus(first(flow.α_))            # from A.2
@@ -84,7 +91,7 @@ function (ib::Inverse{<:RadialLayer})(y::AbstractVector{<:Real})
     return z0 .+ γ .* y_minus_z0
 end
 
-function (ib::Inverse{<:RadialLayer})(y::AbstractMatrix{<:Real})
+function transform(ib::Inverse{<:RadialLayer}, y::AbstractMatrix{<:Real})
     flow = ib.orig
     z0 = flow.z_0
     α = softplus(first(flow.α_))            # from A.2
@@ -98,6 +105,10 @@ function (ib::Inverse{<:RadialLayer})(y::AbstractMatrix{<:Real})
     γ = reshape((α .+ rs) ./ (α_plus_β_hat .+ rs), 1, :)
 
     return z0 .+ γ .* y_minus_z0
+end
+
+function transform_batch(ib::Inverse{<:RadialLayer}, y::ArrayBatch{2})
+    return Batch(transform(ib, value(y)))
 end
 
 """
@@ -120,7 +131,7 @@ where ``γ = \\|y_minus_z0\\|_2``. For details see appendix A.2 of the reference
 D. Rezende, S. Mohamed (2015): Variational Inference with Normalizing Flows.
 arXiv:1505.05770
 """
-function compute_r(y_minus_z0::AbstractVector{<:Real}, α, α_plus_β_hat)
+function compute_r(y_minus_z0::AbstractVector{<:Real}, α, α_plus_test/β_hat)
     γ = norm(y_minus_z0)
     a = α_plus_β_hat - γ
     r = (sqrt(a^2 + 4 * α * γ) - a) / 2
@@ -128,3 +139,7 @@ function compute_r(y_minus_z0::AbstractVector{<:Real}, α, α_plus_β_hat)
 end
 
 logabsdetjac(flow::RadialLayer, x::AbstractVecOrMat) = forward(flow, x).logabsdetjac
+
+function logabsdetjac_batch(flow::RadialLayer, x::ArrayBatch{2})
+    return Batch(logabsdetjac(flow, value(x)))
+end
