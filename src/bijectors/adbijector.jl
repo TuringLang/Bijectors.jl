@@ -2,7 +2,7 @@
 Abstract type for a `Bijector{N}` making use of auto-differentation (AD) to
 implement `jacobian` and, by impliciation, `logabsdetjac`.
 """
-abstract type ADBijector{AD, N} <: Bijector{N} end
+abstract type ADBijector{AD} <: Bijector end
 
 struct SingularJacobianException{B<:Bijector} <: Exception
     b::B
