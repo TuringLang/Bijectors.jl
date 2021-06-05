@@ -61,6 +61,8 @@ Finally, there are _batched_ versions of the above methods which can _optionally
 - [`forward_batch`](@ref)
 
 and similarly for the mutating versions. Default implementations depends on the type of `xs`.
+Note that these methods are usually used through broadcasting, i.e. `b.(x)` with `x` a `AbstractBatch`
+falls back to `transform_batch(b, x)`.
 """
 abstract type Transform end
 
@@ -198,6 +200,14 @@ logabsdetjac!(::Identity, x, logjac) = logjac
 ####################
 # Batched versions #
 ####################
+# NOTE: This needs to be after we've defined some `transform`, `logabsdetjac`, etc.
+# so we can actually reference them. Since we just did this for `Identity`, we're good.
+Broadcast.broadcasted(b::Transform, xs::Batch) = transform_batch(b, xs)
+Broadcast.broadcasted(::typeof(transform), b::Transform, xs::Batch) = transform_batch(b, xs)
+Broadcast.broadcasted(::typeof(logabsdetjac), b::Transform, xs::Batch) = logabsdetjac_batch(b, xs)
+Broadcast.broadcasted(::typeof(forward), b::Transform, xs::Batch) = forward_batch(b, xs)
+
+
 """
     transform_batch(b, xs)
 
