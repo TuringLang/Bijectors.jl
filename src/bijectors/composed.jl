@@ -163,7 +163,7 @@ function transform_batch(cb::Composed, x)
     @assert length(cb.ts) > 0
     res = cb.ts[1].(x)
     for b ∈ Base.Iterators.drop(cb.ts, 1)
-        res = b.(res)
+        res = transform_batch(b, res)
     end
 
     return res
