@@ -31,16 +31,120 @@ ADBackend(::Val) = error("The requested AD backend is not available. Make sure t
 ######################
 # Bijector interface #
 ######################
-"Abstract type for a bijector."
-abstract type AbstractBijector end
+"""
 
-"Abstract type of bijectors with fixed dimensionality."
-abstract type Bijector{N} <: AbstractBijector end
+Abstract type for a transformation.
 
-dimension(b::Bijector{N}) where {N} = N
-dimension(b::Type{<:Bijector{N}}) where {N} = N
+## Implementing
 
-Broadcast.broadcastable(b::Bijector) = Ref(b)
+A subtype of `Transform` of should at least implement `transform(b, x)`.
+
+If the `Transform` is also invertible:
+- Required:
+  - [`invertible`](@ref): should return [`Invertible`](@ref).
+  - _Either_ of the following:
+    - `transform(::Inverse{<:MyTransform}, x)`: the `transform` for its inverse.
+    - `Base.inv(b::MyTransform)`: returns an existing `Transform`.
+  - [`logabsdetjac`](@ref): computes the log-abs-det jacobian factor.
+- Optional:
+  - [`forward`](@ref): `transform` and `logabsdetjac` combined. Useful in cases where we
+    can exploit shared computation in the two.
+
+For the above methods, there are mutating versions which can _optionally_ be implemented:
+- [`transform!`](@ref)
+- [`logabsdetjac!`](@ref)
+- [`forward!`](@ref)
+
+Finally, there are _batched_ versions of the above methods which can _optionally_ be implemented:
+- [`transform_batch`](@ref)
+- [`logabsdetjac_batch`](@ref)
+- [`forward_batch`](@ref)
+
+and similarly for the mutating versions. Default implementations depends on the type of `xs`.
+Note that these methods are usually used through broadcasting, i.e. `b.(x)` with `x` a `AbstractBatch`
+falls back to `transform_batch(b, x)`.
+"""
+abstract type Transform end
+
+Broadcast.broadcastable(b::Transform) = Ref(b)
+
+# Invertibility "trait".
+struct NotInvertible end
+struct Invertible end
+
+# Useful for checking if compositions, etc. are invertible or not.
+Base.:+(::NotInvertible, ::Invertible) = NotInvertible()
+Base.:+(::Invertible, ::NotInvertible) = NotInvertible()
+Base.:+(::NotInvertible, ::NotInvertible) = NotInvertible()
+Base.:+(::Invertible, ::Invertible) = Invertible()
+
+invertible(::Transform) = NotInvertible()
+
+"""
+    inv(t::Transform[, ::Invertible])
+
+Returns the inverse of transform `t`.
+"""
+Base.inv(t::Transform) = Base.inv(t, invertible(t))
+Base.inv(t::Transform, ::NotInvertible) = error("$(t) is not invertible")
+
+"""
+    transform(b, x)
+
+Transform `x` using `b`.
+
+Alternatively, one can just call `b`, i.e. `b(x)`.
+"""
+transform
+(t::Transform)(x) = transform(t, x)
+
+"""
+    transform!(b, x, y)
+
+Transforms `x` using `b`, storing the result in `y`.
+"""
+transform!(b, x, y) = (y .= transform(b, x))
+
+"""
+    logabsdetjac(b, x)
+
+Computes the log(abs(det(J(b(x))))) where J is the jacobian of the transform.
+"""
+logabsdetjac
+
+"""
+    logabsdetjac!(b, x, logjac)
+
+Computes the log(abs(det(J(b(x))))) where J is the jacobian of the transform,
+_accumulating_ the result in `logjac`.
+"""
+logabsdetjac!(b, x, logjac) = (logjac += logabsdetjac(b, x))
+
+"""
+    forward(b, x)
+
+Computes both `transform` and `logabsdetjac` in one forward pass, and
+returns a named tuple `(rv=b(x), logabsdetjac=logabsdetjac(b, x))`.
+
+This defaults to the call above, but often one can re-use computation
+in the computation of the forward pass and the computation of the
+`logabsdetjac`. `forward` allows the user to take advantange of such
+efficiencies, if they exist.
+"""
+forward(b, x) = (result = transform(b, x), logabsdetjac = logabsdetjac(b, x))
+
+function forward!(b, x, out)
+    y, logjac = forward(b, x)
+    out.result .= y
+    out.logabsdetjac .+= logjac
+
+    return out
+end
+
+"Abstract type of a bijector, i.e. differentiable bijection with differentiable inverse."
+abstract type Bijector <: Transform end
+
+invertible(::Bijector) = Invertible()
 
 """
     isclosedform(b::Bijector)::bool
@@ -61,45 +165,18 @@ isclosedform(b::Bijector) = true
 
 A `Bijector` representing the inverse transform of `b`.
 """
-struct Inverse{B <: Bijector, N} <: Bijector{N}
+struct Inverse{B<:Bijector} <: Bijector
     orig::B
-
-    Inverse(b::B) where {N, B<:Bijector{N}} = new{B, N}(b)
 end
 
 # field contains nested numerical parameters
 Functors.@functor Inverse
 
-up1(b::Inverse) = Inverse(up1(b.orig))
-
 inv(b::Bijector) = Inverse(b)
 inv(ib::Inverse{<:Bijector}) = ib.orig
 Base.:(==)(b1::Inverse{<:Bijector}, b2::Inverse{<:Bijector}) = b1.orig == b2.orig
 
-"""
-    logabsdetjac(b::Bijector, x)
-    logabsdetjac(ib::Inverse{<:Bijector}, y)
-
-Computes the log(abs(det(J(b(x))))) where J is the jacobian of the transform.
-Similarily for the inverse-transform.
-
-Default implementation for `Inverse{<:Bijector}` is implemented as
-`- logabsdetjac` of original `Bijector`.
-"""
-logabsdetjac(ib::Inverse{<:Bijector}, y) = - logabsdetjac(ib.orig, ib(y))
-
-"""
-    forward(b::Bijector, x)
-
-Computes both `transform` and `logabsdetjac` in one forward pass, and
-returns a named tuple `(rv=b(x), logabsdetjac=logabsdetjac(b, x))`.
-
-This defaults to the call above, but often one can re-use computation
-in the computation of the forward pass and the computation of the
-`logabsdetjac`. `forward` allows the user to take advantange of such
-efficiencies, if they exist.
-"""
-forward(b::Bijector, x) = (rv=b(x), logabsdetjac=logabsdetjac(b, x))
+logabsdetjac(ib::Inverse{<:Bijector}, y) = -logabsdetjac(ib.orig, ib(y))
 
 """
     logabsdetjacinv(b::Bijector, y)
@@ -112,30 +189,51 @@ logabsdetjacinv(b::Bijector, y) = logabsdetjac(inv(b), y)
 # Example bijector: Identity #
 ##############################
 
-struct Identity{N} <: Bijector{N} end
-(::Identity)(x) = copy(x)
+struct Identity <: Bijector end
 inv(b::Identity) = b
-up1(::Identity{N}) where {N} = Identity{N + 1}()
 
-logabsdetjac(::Identity{0}, x::Real) = zero(eltype(x))
-@generated function logabsdetjac(
-    b::Identity{N1},
-    x::AbstractArray{T2, N2}
-) where {N1, T2, N2}
-    if N1 == N2
-        return :(zero(eltype(x)))
-    elseif N1 + 1 == N2
-        return :(zeros(eltype(x), size(x, $N2)))
-    else
-        return :(throw(MethodError(logabsdetjac, (b, x))))
-    end
-end
-logabsdetjac(::Identity{2}, x::AbstractArray{<:AbstractMatrix}) = zeros(eltype(x[1]), size(x))
+transform(::Identity, x) = copy(x)
+transform!(::Identity, x, y) = (y .= x; return y)
+logabsdetjac(::Identity, x) = zero(eltype(x))
+logabsdetjac!(::Identity, x, logjac) = logjac
 
-########################
-# Convenient constants #
-########################
-const ZeroOrOneDimBijector = Union{Bijector{0}, Bijector{1}}
+####################
+# Batched versions #
+####################
+# NOTE: This needs to be after we've defined some `transform`, `logabsdetjac`, etc.
+# so we can actually reference them. Since we just did this for `Identity`, we're good.
+Broadcast.broadcasted(b::Transform, xs::Batch) = transform_batch(b, xs)
+Broadcast.broadcasted(::typeof(transform), b::Transform, xs::Batch) = transform_batch(b, xs)
+Broadcast.broadcasted(::typeof(logabsdetjac), b::Transform, xs::Batch) = logabsdetjac_batch(b, xs)
+Broadcast.broadcasted(::typeof(forward), b::Transform, xs::Batch) = forward_batch(b, xs)
+
+
+"""
+    transform_batch(b, xs)
+
+Transform `xs` by `b`, treating `xs` as a "batch", i.e. a collection of independent inputs.
+
+See also: [`transform`](@ref)
+"""
+transform_batch
+
+"""
+    logabsdetjac_batch(b, xs)
+
+Computes `logabsdetjac(b, xs)`, treating `xs` as a "batch", i.e. a collection of independent inputs.
+
+See also: [`logabsdetjac`](@ref)
+"""
+logabsdetjac_batch
+
+"""
+    forward_batch(b, xs)
+
+Computes `forward(b, xs)`, treating `xs` as a "batch", i.e. a collection of independent inputs.
+
+See also: [`transform`](@ref)
+"""
+forward_batch(b, xs) = (result = transform_batch(b, xs), logabsdetjac = logabsdetjac_batch(b, xs))
 
 ######################
 # Bijectors includes #
