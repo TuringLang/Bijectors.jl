@@ -61,8 +61,6 @@ Finally, there are _batched_ versions of the above methods which can _optionally
 - [`forward_batch`](@ref)
 
 and similarly for the mutating versions. Default implementations depends on the type of `xs`.
-Note that these methods are usually used through broadcasting, i.e. `b.(x)` with `x` a `AbstractBatch`
-falls back to `transform_batch(b, x)`.
 """
 abstract type Transform end
 
