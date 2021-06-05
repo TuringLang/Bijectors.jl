@@ -131,7 +131,7 @@ end
 #     logjac = sum(_logjac)
 #     (y_2, _logjac) = forward(b.bs[2], x[b.ranges[2]])
 #     logjac += sum(_logjac)
-#     return (rv = vcat(y_1, y_2), logabsdetjac = logjac)
+#     return (result = vcat(y_1, y_2), logabsdetjac = logjac)
 # end
 @generated function forward(b::Stacked{T, N}, x::AbstractVector) where {N, T<:Tuple}
     expr = Expr(:block)
@@ -151,7 +151,7 @@ end
         push!(y_names, y_name)
     end
 
-    push!(expr.args, :(return (rv = vcat($(y_names...)), logabsdetjac = logjac)))
+    push!(expr.args, :(return (result = vcat($(y_names...)), logabsdetjac = logjac)))
     return expr
 end
 
@@ -163,5 +163,5 @@ function forward(sb::Stacked{<:AbstractArray, N}, x::AbstractVector) where {N}
         logjac += sum(l)
         y
     end
-    return (rv = vcat(yinit, ys), logabsdetjac = logjac)
+    return (result = vcat(yinit, ys), logabsdetjac = logjac)
 end

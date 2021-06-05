@@ -50,7 +50,7 @@ logabsdetjac(b::LeakyReLU{<:Real, 0}, x::AbstractVector{<:Real}) = map(x -> loga
 function forward(b::LeakyReLU{<:Any, 0}, x::Real)
     mask = x < zero(x)
     J = mask * b.α + !mask * one(x)
-    return (rv=J * x, logabsdetjac=log(abs(J)))
+    return (result=J * x, logabsdetjac=log(abs(J)))
 end
 
 # Batched version
@@ -58,7 +58,7 @@ function forward(b::LeakyReLU{<:Any, 0}, x::AbstractVector)
     J = let T = eltype(x), z = zero(T), o = one(T)
         @. (x < z) * b.α + (x > z) * o
     end
-    return (rv=J .* x, logabsdetjac=log.(abs.(J)))
+    return (result=J .* x, logabsdetjac=log.(abs.(J)))
 end
 
 # (N=1) Multivariate case
@@ -97,5 +97,5 @@ function forward(b::LeakyReLU{<:Any, 1}, x::AbstractVecOrMat)
     end
 
     y = J .* x
-    return (rv=y, logabsdetjac=logjac)
+    return (result=y, logabsdetjac=logjac)
 end

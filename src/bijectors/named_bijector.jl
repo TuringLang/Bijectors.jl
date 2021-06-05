@@ -1,6 +1,6 @@
 abstract type AbstractNamedBijector <: AbstractBijector end
 
-forward(b::AbstractNamedBijector, x) = (rv = b(x), logabsdetjac = logabsdetjac(b, x))
+forward(b::AbstractNamedBijector, x) = (result = b(x), logabsdetjac = logabsdetjac(b, x))
 
 #######################
 ### `NamedBijector` ###
@@ -125,7 +125,7 @@ function logabsdetjac(cb::NamedComposition, x)
     y, logjac = forward(cb.bs[1], x)
     for i = 2:length(cb.bs)
         res = forward(cb.bs[i], y)
-        y = res.rv
+        y = res.result
         logjac += res.logabsdetjac
     end
 
@@ -141,7 +141,7 @@ end
     for i = 2:N - 1
         temp = gensym(:res)
         push!(expr.args, :($temp = forward(cb.bs[$i], y)))
-        push!(expr.args, :(y = $temp.rv))
+        push!(expr.args, :(y = $temp.result))
         push!(expr.args, :(logjac += $temp.logabsdetjac))
     end
     # don't need to evaluate the last bijector, only it's `logabsdetjac`
@@ -154,14 +154,14 @@ end
 
 
 function forward(cb::NamedComposition, x)
-    rv, logjac = forward(cb.bs[1], x)
+    result, logjac = forward(cb.bs[1], x)
     
     for t in cb.bs[2:end]
-        res = forward(t, rv)
-        rv = res.rv
+        res = forward(t, result)
+        result = res.result
         logjac = res.logabsdetjac + logjac
     end
-    return (rv=rv, logabsdetjac=logjac)
+    return (result=result, logabsdetjac=logjac)
 end
 
 
@@ -171,10 +171,10 @@ end
     for i = 2:length(T.parameters)
         temp = gensym(:temp)
         push!(expr.args, :($temp = forward(cb.bs[$i], y)))
-        push!(expr.args, :(y = $temp.rv))
+        push!(expr.args, :(y = $temp.result))
         push!(expr.args, :(logjac += $temp.logabsdetjac))
     end
-    push!(expr.args, :(return (rv = y, logabsdetjac = logjac)))
+    push!(expr.args, :(return (result = y, logabsdetjac = logjac)))
 
     return expr
 end

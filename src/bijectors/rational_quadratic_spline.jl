@@ -346,7 +346,7 @@ function rqs_forward(
     T = promote_type(eltype(widths), eltype(heights), eltype(derivatives), eltype(x))
 
     if (x ≤ -widths[end]) || (x ≥ widths[end])
-        return (rv = one(T) * x, logabsdetjac = zero(T) * x)
+        return (result = one(T) * x, logabsdetjac = zero(T) * x)
     end
 
     # Find which bin `x` is in
@@ -379,7 +379,7 @@ function rqs_forward(
     numerator_y = Δy * (s * ξ^2 + d_k * ξ * (1 - ξ))
     y = h_k + numerator_y / denominator
 
-    return (rv = y, logabsdetjac = logjac)
+    return (result = y, logabsdetjac = logjac)
 end
 
 function forward(b::RationalQuadraticSpline{<:AbstractVector, 0}, x::Real)

@@ -105,7 +105,7 @@ function forward(flow::PlanarLayer, z::AbstractVecOrMat{<:Real})
     b = first(flow.b)
     log_det_jacobian = log1p.(wT_û .* abs2.(sech.(_vec(wT_z) .+ b)))
 
-    return (rv = transformed, logabsdetjac = log_det_jacobian)
+    return (result = transformed, logabsdetjac = log_det_jacobian)
 end
 
 function (ib::Inverse{<:PlanarLayer})(y::AbstractVecOrMat{<:Real})
