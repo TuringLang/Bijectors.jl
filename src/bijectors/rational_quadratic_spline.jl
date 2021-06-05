@@ -90,7 +90,7 @@ struct RationalQuadraticSpline{T} <: Bijector
         @assert length(widths) == length(heights) == length(derivatives)
         @assert all(derivatives .> 0) "derivatives need to be positive"
         
-        return new{T, 0}(widths, heights, derivatives)
+        return new{T}(widths, heights, derivatives)
     end
 
     function RationalQuadraticSpline(
@@ -100,7 +100,7 @@ struct RationalQuadraticSpline{T} <: Bijector
     ) where {T<:AbstractMatrix}
         @assert size(widths, 2) == size(heights, 2) == size(derivatives, 2)
         @assert all(derivatives .> 0) "derivatives need to be positive"
-        return new{T, 1}(widths, heights, derivatives)
+        return new{T}(widths, heights, derivatives)
     end
 end
 

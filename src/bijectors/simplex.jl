@@ -110,7 +110,7 @@ end
 # Batched versions.
 transform_batch(ib::Inverse{<:SimplexBijector}, Y::ArrayBatch{2}) = _simplex_inv_bijector(Y, ib.orig)
 function transform_batch!(
-    ib::Inverse{<:SimplexBijector}
+    ib::Inverse{<:SimplexBijector},
     X::Batch{<:AbstractMatrix{T}},
     Y::Batch{<:AbstractMatrix{T}},
 ) where {T<:Real}

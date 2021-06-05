@@ -131,7 +131,7 @@ where ``γ = \\|y_minus_z0\\|_2``. For details see appendix A.2 of the reference
 D. Rezende, S. Mohamed (2015): Variational Inference with Normalizing Flows.
 arXiv:1505.05770
 """
-function compute_r(y_minus_z0::AbstractVector{<:Real}, α, α_plus_test/β_hat)
+function compute_r(y_minus_z0::AbstractVector{<:Real}, α, α_plus_test)
     γ = norm(y_minus_z0)
     a = α_plus_β_hat - γ
     r = (sqrt(a^2 + 4 * α * γ) - a) / 2

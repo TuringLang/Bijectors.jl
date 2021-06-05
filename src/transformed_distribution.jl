@@ -2,11 +2,11 @@
 struct TransformedDistribution{D, B, V} <: Distribution{V, Continuous} where {D<:Distribution{V, Continuous}, B<:Bijector}
     dist::D
     transform::B
-
-    TransformedDistribution(d::UnivariateDistribution, b::Bijector{0}) = new{typeof(d), typeof(b), Univariate}(d, b)
-    TransformedDistribution(d::MultivariateDistribution, b::Bijector{1}) = new{typeof(d), typeof(b), Multivariate}(d, b)
-    TransformedDistribution(d::MatrixDistribution, b::Bijector{2}) = new{typeof(d), typeof(b), Matrixvariate}(d, b)
 end
+
+TransformedDistribution(d::UnivariateDistribution, b::Bijector) = new{typeof(d), typeof(b), Univariate}(d, b)
+TransformedDistribution(d::MultivariateDistribution, b::Bijector) = new{typeof(d), typeof(b), Multivariate}(d, b)
+TransformedDistribution(d::MatrixDistribution, b::Bijector) = new{typeof(d), typeof(b), Matrixvariate}(d, b)
 
 # fields may contain nested numerical parameters
 Functors.@functor TransformedDistribution
@@ -38,9 +38,9 @@ Returns the constrained-to-unconstrained bijector for distribution `d`.
 bijector(d::DiscreteUnivariateDistribution) = Identity{0}()
 bijector(d::DiscreteMultivariateDistribution) = Identity{1}()
 bijector(d::ContinuousUnivariateDistribution) = TruncatedBijector(minimum(d), maximum(d))
-bijector(d::Product{Discrete}) = Identity{1}()
+bijector(d::Product{Discrete}) = Identity()
 function bijector(d::Product{Continuous})
-    return TruncatedBijector{1}(_minmax(d.v)...)
+    return TruncatedBijector(_minmax(d.v)...)
 end
 @generated function _minmax(d::AbstractArray{T}) where {T}
     try
@@ -51,11 +51,11 @@ end
     end
 end
 
-bijector(d::Normal) = Identity{0}()
-bijector(d::Distributions.AbstractMvNormal) = Identity{1}()
-bijector(d::Distributions.AbstractMvLogNormal) = Log{1}()
-bijector(d::PositiveDistribution) = Log{0}()
-bijector(d::SimplexDistribution) = SimplexBijector{1}()
+bijector(d::Normal) = Identity()
+bijector(d::Distributions.AbstractMvNormal) = Identity()
+bijector(d::Distributions.AbstractMvLogNormal) = Log()
+bijector(d::PositiveDistribution) = Log()
+bijector(d::SimplexDistribution) = SimplexBijector()
 bijector(d::KSOneSided) = Logit(zero(eltype(d)), one(eltype(d)))
 
 bijector_bounded(d, a=minimum(d), b=maximum(d)) = Logit(a, b)

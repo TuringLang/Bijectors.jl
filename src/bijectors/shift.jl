@@ -5,7 +5,7 @@ struct Shift{T} <: Bijector
     a::T
 end
 
-Base.:(==)(b1::Shift{<:Any, N}, b2::Shift{<:Any, N}) where {N} = b1.a == b2.a
+Base.:(==)(b1::Shift, b2::Shift) = b1.a == b2.a
 
 Functors.@functor Shift
 

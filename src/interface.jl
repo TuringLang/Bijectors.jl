@@ -220,7 +220,7 @@ transform_batch(b, xs) = _transform_batch(b, xs)
 _transform_batch(b, xs::VectorBatch) = reconstruct(xs, map(b, value(xs)))
 function _transform_batch(b, xs::ArrayBatch{2})
     # TODO: Check if we can avoid using these custom methods.
-    return eachcolmaphcat(b, x)
+    return Batch(eachcolmaphcat(b, value(xs)))
 end
 function _transform_batch(b, xs::ArrayBatch{N}) where {N}
     res = reduce(map(b, eachslice(value(xs), dims=N))) do acc, x
