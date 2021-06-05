@@ -1,20 +1,16 @@
 ####################
 # Simplex bijector #
 ####################
-struct SimplexBijector{N, T} <: Bijector{N} end
-SimplexBijector() = SimplexBijector{1}()
-SimplexBijector{N}() where {N} = SimplexBijector{N,true}()
+struct SimplexBijector{T} <: Bijector end
+SimplexBijector() = SimplexBijector{true}()
 
-# Special case `N = 1`
-SimplexBijector{true}() = SimplexBijector{1,true}()
-SimplexBijector{false}() = SimplexBijector{1,false}()
+transform(b::SimplexBijector, x) = _simplex_bijector(x, b)
+transform!(b::SimplexBijector, y, x) = _simplex_bijector!(y, x, b)
 
-(b::SimplexBijector{1})(x::AbstractVector) = _simplex_bijector(x, b)
-(b::SimplexBijector{1})(y::AbstractVector, x::AbstractVector) = _simplex_bijector!(y, x, b)
-function _simplex_bijector(x::AbstractVector, b::SimplexBijector{1})
-    return _simplex_bijector!(similar(x), x, b)
-end
-function _simplex_bijector!(y, x::AbstractVector, ::SimplexBijector{1, proj}) where {proj}
+_simplex_bijector(x::AbstractArray, b::SimplexBijector) = _simplex_bijector!(similar(x), x, b)
+
+# Vector implementation.
+function _simplex_bijector!(y, x::AbstractVector, ::SimplexBijector{proj}) where {proj}
     K = length(x)
     @assert K > 1 "x needs to be of length greater than 1"
     T = eltype(x)
@@ -39,24 +35,19 @@ function _simplex_bijector!(y, x::AbstractVector, ::SimplexBijector{1, proj}) wh
     return y
 end
 
-# Vectorised implementation of the above.
-function (b::SimplexBijector{1})(X::AbstractMatrix)
-    _simplex_bijector(X, b)
+function transform_batch(b::SimplexBijector, X::ArrayBatch{2})
+    Batch(_simplex_bijector(value(X), b))
 end
-function (b::SimplexBijector{1})(
-    Y::AbstractMatrix,
-    X::AbstractMatrix,
-)
-    _simplex_bijector!(Y, X, b)
+function transform_batch!(
+    b::SimplexBijector,
+    Y::Batch{<:AbstractMatrix{T}},
+    X::Batch{<:AbstractMatrix{T}},
+) where {T}
+    Batch(_simplex_bijector!(value(Y), value(X), b))
 end
-function (b::SimplexBijector{2, proj})(X::AbstractMatrix) where {proj}
-    SimplexBijector{1, proj}()(X)
-end
-(b::SimplexBijector{2})(X::AbstractArray{<:AbstractMatrix}) = map(b, X)
-function _simplex_bijector(X::AbstractMatrix, b::SimplexBijector{1})
-    _simplex_bijector!(similar(X), X, b)
-end
-function _simplex_bijector!(Y, X::AbstractMatrix, ::SimplexBijector{1, proj}) where {proj}
+
+# Matrix implementation.
+function _simplex_bijector!(Y, X::AbstractMatrix, ::SimplexBijector{proj}) where {proj}
     K, N = size(X, 1), size(X, 2)
     @assert K > 1 "x needs to be of length greater than 1"
     T = eltype(X)
@@ -81,19 +72,19 @@ function _simplex_bijector!(Y, X::AbstractMatrix, ::SimplexBijector{1, proj}) wh
     return Y
 end
 
-function (ib::Inverse{<:SimplexBijector{1, proj}})(y::AbstractVector{T}) where {T, proj}
-    _simplex_inv_bijector(y, ib.orig)
-end
-function (ib::Inverse{<:SimplexBijector{1}})(
-    x::AbstractVector{T},
-    y::AbstractVector{T},
+# Inverse.
+transform(ib::Inverse{<:SimplexBijector}, y::AbstractArray) = _simplex_inv_bijector(y, ib.orig)
+function transform!(
+    ib::Inverse{<:SimplexBijector},
+    x::AbstractArray{T},
+    y::AbstractArray{T},
 ) where {T}
-    _simplex_inv_bijector!(x, y, ib.orig)
+    return _simplex_inv_bijector!(x, y, ib.orig)
 end
-function _simplex_inv_bijector(y::AbstractVector, b::SimplexBijector{1})
-    return _simplex_inv_bijector!(similar(y), y, b)
-end
-function _simplex_inv_bijector!(x, y::AbstractVector, b::SimplexBijector{1, proj}) where {proj}
+
+_simplex_inv_bijector(y, b) = _simplex_inv_bijector!(similar(y), y, b)
+
+function _simplex_inv_bijector!(x, y::AbstractVector, b::SimplexBijector{proj}) where {proj}
     K = length(y)
     @assert K > 1 "x needs to be of length greater than 1"
     T = eltype(y)
@@ -116,27 +107,17 @@ function _simplex_inv_bijector!(x, y::AbstractVector, b::SimplexBijector{1, proj
     return x
 end
 
-# Vectorised implementation of the above.
-function (ib::Inverse{<:SimplexBijector{1}})(Y::AbstractMatrix)
-    _simplex_inv_bijector(Y, ib.orig)
+# Batched versions.
+transform_batch(ib::Inverse{<:SimplexBijector}, Y::ArrayBatch{2}) = _simplex_inv_bijector(Y, ib.orig)
+function transform_batch!(
+    ib::Inverse{<:SimplexBijector}
+    X::Batch{<:AbstractMatrix{T}},
+    Y::Batch{<:AbstractMatrix{T}},
+) where {T<:Real}
+    return Batch(_simplex_inv_bijector!(value(X), value(Y), ib.orig))
 end
-function (ib::Inverse{<:SimplexBijector{1}})(
-    X::AbstractMatrix{T},
-    Y::AbstractMatrix{T},
-) where {T <: Real}
-    _simplex_inv_bijector!(X, Y, ib.orig)
-end
-function (ib::Inverse{<:SimplexBijector{2, proj}})(Y::AbstractMatrix) where {proj}
-    inv(SimplexBijector{1, proj}())(Y)
-end
-function (ib::Inverse{<:SimplexBijector{2, proj}})(X::AbstractMatrix, Y::AbstractMatrix) where {proj}
-    inv(SimplexBijector{1, proj}())(X, Y)
-end
-(ib::Inverse{<:SimplexBijector{2}})(Y::AbstractArray{<:AbstractMatrix}) = map(ib, Y)
-function _simplex_inv_bijector(Y::AbstractMatrix, b::SimplexBijector{1})
-    _simplex_inv_bijector!(similar(Y), Y, b)
-end
-function _simplex_inv_bijector!(X, Y::AbstractMatrix, b::SimplexBijector{1, proj}) where {proj}
+
+function _simplex_inv_bijector!(X, Y::AbstractMatrix, b::SimplexBijector{proj}) where {proj}
     K, N = size(Y, 1), size(Y, 2)
     @assert K > 1 "x needs to be of length greater than 1"
     T = eltype(Y)
@@ -160,7 +141,7 @@ function _simplex_inv_bijector!(X, Y::AbstractMatrix, b::SimplexBijector{1, proj
     return X
 end
 
-function logabsdetjac(b::SimplexBijector{1}, x::AbstractVector{T}) where {T}
+function logabsdetjac(b::SimplexBijector, x::AbstractVector{T}) where {T}
     ϵ = _eps(T)
     lp = zero(T)
     
@@ -211,7 +192,9 @@ function simplex_logabsdetjac_gradient(x::AbstractVector)
     end
     return g
 end
-function logabsdetjac(b::SimplexBijector{1}, x::AbstractMatrix{T}) where {T}
+function logabsdetjac_batch(b::SimplexBijector, x::Batch{<:AbstractMatrix{T}}) where {T}
+    x = value(x)
+    
     ϵ = _eps(T)
     nlp = similar(x, T, size(x, 2))
     nlp .= zero(T)
@@ -227,14 +210,12 @@ function logabsdetjac(b::SimplexBijector{1}, x::AbstractMatrix{T}) where {T}
             nlp[col] -= log(max(z, ϵ)) + log(max(one(T) - z, ϵ)) + log(max(one(T) - sum_tmp, ϵ))
         end
     end
-    return nlp
+    return Batch(nlp)
 end
-function logabsdetjac(b::SimplexBijector{2, proj}, x::AbstractMatrix) where {proj}
-    return sum(logabsdetjac(SimplexBijector{1, proj}(), x))
+function logabsdetjac(b::SimplexBijector, x::AbstractMatrix)
+    return sum(value(logabsdetjac(b, Batch(x))))
 end
-function logabsdetjac(b::SimplexBijector{2}, x::AbstractArray{<:AbstractMatrix})
-    return map(x -> logabsdetjac(b, x), x)
-end
+
 function simplex_logabsdetjac_gradient(x::AbstractMatrix)
     T = eltype(x)
     ϵ = _eps(T)
@@ -303,7 +284,7 @@ function simplex_link_jacobian(
     end
     return UpperTriangular(dydxt)'
 end
-function jacobian(b::SimplexBijector{1, proj}, x::AbstractVector{T}) where {proj, T}
+function jacobian(b::SimplexBijector{proj}, x::AbstractVector{T}) where {proj, T}
     return simplex_link_jacobian(x, Val(proj))
 end
 
@@ -425,7 +406,7 @@ function simplex_invlink_jacobian(
     return LowerTriangular(dxdy)
 end
 # jacobian
-function jacobian(ib::Inverse{<:SimplexBijector{1, proj}}, y::AbstractVector{T}) where {proj, T}
+function jacobian(ib::Inverse{<:SimplexBijector{proj}}, y::AbstractVector{T}) where {proj, T}
     return simplex_invlink_jacobian(y, Val(proj))
 end
 
