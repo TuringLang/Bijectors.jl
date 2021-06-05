@@ -1,5 +1,5 @@
 """
-    LeakyReLU{T, N}(α::T) <: Bijector{N}
+    LeakyReLU{T}(α::T) <: Bijector
 
 Defines the invertible mapping
 
@@ -7,95 +7,95 @@ Defines the invertible mapping
 
 where α > 0.
 """
-struct LeakyReLU{T, N} <: Bijector{N}
+struct LeakyReLU{T} <: Bijector
     α::T
 end
 
-LeakyReLU(α::T; dim::Val{N} = Val(0)) where {T<:Real, N} = LeakyReLU{T, N}(α)
-LeakyReLU(α::T; dim::Val{N} = Val(D)) where {D, T<:AbstractArray{<:Real, D}, N} = LeakyReLU{T, N}(α)
+Functors.@functor LeakyReLU
 
-# field is a numerical parameter
-function Functors.functor(::Type{LeakyReLU{<:Any,N}}, x) where N
-    function reconstruct_leakyrelu(xs)
-        return LeakyReLU{typeof(xs.α),N}(xs.α)
-    end
-    return (α = x.α,), reconstruct_leakyrelu
-end
-
-up1(b::LeakyReLU{T, N}) where {T, N} = LeakyReLU{T, N + 1}(b.α)
+Base.inv(b::LeakyReLU) = LeakyReLU(inv.(b.α))
 
 # (N=0) Univariate case
-function (b::LeakyReLU{<:Any, 0})(x::Real)
+function transform(b::LeakyReLU, x::Real)
     mask = x < zero(x)
     return mask * b.α * x + !mask * x
 end
-(b::LeakyReLU{<:Any, 0})(x::AbstractVector{<:Real}) = map(b, x)
 
-function Base.inv(b::LeakyReLU{<:Any,N}) where N
-    invα = inv.(b.α)
-    return LeakyReLU{typeof(invα),N}(invα)
-end
-
-function logabsdetjac(b::LeakyReLU{<:Any, 0}, x::Real)
+function logabsdetjac(b::LeakyReLU, x::Real)
     mask = x < zero(x)
     J = mask * b.α + (1 - mask) * one(x)
     return log(abs(J))
 end
-logabsdetjac(b::LeakyReLU{<:Real, 0}, x::AbstractVector{<:Real}) = map(x -> logabsdetjac(b, x), x)
-
 
 # We implement `forward` by hand since we can re-use the computation of
 # the Jacobian of the transformation. This will lead to faster sampling
 # when using `rand` on a `TransformedDistribution` making use of `LeakyReLU`.
-function forward(b::LeakyReLU{<:Any, 0}, x::Real)
+function forward(b::LeakyReLU, x::Real)
     mask = x < zero(x)
     J = mask * b.α + !mask * one(x)
     return (result=J * x, logabsdetjac=log(abs(J)))
 end
 
-# Batched version
-function forward(b::LeakyReLU{<:Any, 0}, x::AbstractVector)
+function forward_batch(b::LeakyReLU, xs::Batch{<:AbstractVector})
+    x = value(xs)
+    
     J = let T = eltype(x), z = zero(T), o = one(T)
         @. (x < z) * b.α + (x > z) * o
     end
-    return (result=J .* x, logabsdetjac=log.(abs.(J)))
+    return (result=Batch(J .* x), logabsdetjac=Batch(log.(abs.(J))))
 end
 
-# (N=1) Multivariate case
-function (b::LeakyReLU{<:Any, 1})(x::AbstractVecOrMat)
+# Array inputs.
+function transform(b::LeakyReLU, x::AbstractArray)
     return let z = zero(eltype(x))
         @. (x < z) * b.α * x + (x > z) * x
     end
 end
 
-function logabsdetjac(b::LeakyReLU{<:Any, 1}, x::AbstractVecOrMat)
+function logabsdetjac(b::LeakyReLU, x::AbstractArray)
+    return sum(value(logabsdetjac_batch(b, Batch(x))))
+end
+
+function logabsdetjac_batch(b::LeakyReLU, xs::ArrayBatch{N}) where {N}
+    x = value(xs)
+
     # Is really diagonal of jacobian
     J = let T = eltype(x), z = zero(T), o = one(T)
         @. (x < z) * b.α + (x > z) * o
     end
-
-    if x isa AbstractVector
-        return sum(log.(abs.(J)))
-    elseif x isa AbstractMatrix
-        return vec(sum(log.(abs.(J)); dims = 1))  # sum along column
+    
+    logjac = if N ≤ 1
+        sum(log ∘ abs, J)
+    else
+        vec(sum(map(log ∘ abs, J); dims = 1:N - 1))
     end
+
+    return Batch(logjac)
 end
 
 # We implement `forward` by hand since we can re-use the computation of
 # the Jacobian of the transformation. This will lead to faster sampling
 # when using `rand` on a `TransformedDistribution` making use of `LeakyReLU`.
-function forward(b::LeakyReLU{<:Any, 1}, x::AbstractVecOrMat)
+function forward(b::LeakyReLU, x::AbstractArray)
+    y, logjac = forward_batch(b, Batch(x))
+
+    return (result = value(y), logabsdetjac = sum(value(logjac)))
+end
+
+function forward_batch(b::LeakyReLU, xs::ArrayBatch{N}) where {N}
+    x = value(xs)
+    
     # Is really diagonal of jacobian
     J = let T = eltype(x), z = zero(T), o = one(T)
         @. (x < z) * b.α + (x > z) * o
     end
 
-    if x isa AbstractVector
-        logjac = sum(log.(abs.(J)))
-    elseif x isa AbstractMatrix
-        logjac = vec(sum(log.(abs.(J)); dims = 1))  # sum along column
+    logjac = if N ≤ 1
+        sum(log ∘ abs, J)
+    else
+        vec(sum(map(log ∘ abs, J); dims = 1:N - 1))
     end
 
     y = J .* x
-    return (result=y, logabsdetjac=logjac)
+    return (result=Batch(y), logabsdetjac=Batch(logjac))
 end
