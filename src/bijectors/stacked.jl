@@ -21,7 +21,7 @@ b = stack(b1, b2)
 b([0.0, 1.0]) == [b1(0.0), 1.0]  # => true
 ```
 """
-struct Stacked{Bs, Rs} <: Bijector{1}
+struct Stacked{Bs, Rs} <: Transform
     bs::Bs
     ranges::Rs
 end
@@ -48,13 +48,15 @@ end
 
 isclosedform(b::Stacked) = all(isclosedform, b.bs)
 
-stack(bs::Bijector{0}...) = Stacked(bs)
+invertible(b::Stacked) = sum(map(invertible, b.bs))
+
+stack(bs::Bijector...) = Stacked(bs)
 
 # For some reason `inv.(sb.bs)` was unstable... This works though.
-inv(sb::Stacked) = Stacked(map(inv, sb.bs), sb.ranges)
+inv(sb::Stacked, ::Invertible) = Stacked(map(inv, sb.bs), sb.ranges)
 # map is not type stable for many stacked bijectors as a large tuple
 # hence the generated function
-@generated function inv(sb::Stacked{A}) where {A <: Tuple}
+@generated function inv(sb::Stacked{A}, ::Invertible) where {A <: Tuple}
     exprs = []
     for i = 1:length(A.parameters)
         push!(exprs, :(inv(sb.bs[$i])))
@@ -79,7 +81,7 @@ function (sb::Stacked{<:Tuple})(x::AbstractVector{<:Real})
     return y
 end
 # The Stacked{<:AbstractArray} version is not TrackedArray friendly
-function (sb::Stacked{<:AbstractArray})(x::AbstractVector{<:Real})
+function transform(sb::Stacked{<:AbstractArray}, x::AbstractVector{<:Real})
     N = length(sb.bs)
     N == 1 && return sb.bs[1](x[sb.ranges[1]])
 
@@ -90,7 +92,6 @@ function (sb::Stacked{<:AbstractArray})(x::AbstractVector{<:Real})
     return y
 end
 
-(sb::Stacked)(x::AbstractMatrix{<:Real}) = eachcolmaphcat(sb, x)
 function logabsdetjac(
     b::Stacked,
     x::AbstractVector{<:Real}
@@ -120,12 +121,6 @@ end
 # Handle the case of just one bijector
 function logabsdetjac(b::Stacked{<:Tuple{<:Bijector}}, x::AbstractVector{<:Real})
     return sum(logabsdetjac(b.bs[1], x[b.ranges[1]]))
-end
-
-function logabsdetjac(b::Stacked, x::AbstractMatrix{<:Real})
-    return map(eachcol(x)) do c
-        logabsdetjac(b, c)
-    end
 end
 
 # Generates something similar to:
