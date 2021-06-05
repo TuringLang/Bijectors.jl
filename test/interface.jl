@@ -158,7 +158,7 @@ end
         (Exp{1}() ∘ PlanarLayer(2) ∘ RadialLayer(2), randn(2, 3)),
         (SimplexBijector(), mapslices(z -> normalize(z, 1), rand(2, 3); dims = 1)),
         (stack(Exp{0}(), Scale(2.0)), randn(2, 3)),
-        (Stacked((Exp{1}(), SimplexBijector()), [1:1, 2:3]),
+        (Stacked((Exp{1}(), SimplexBijector()), (1:1, 2:3)),
          mapslices(z -> normalize(z, 1), rand(3, 2); dims = 1)),
         (RationalQuadraticSpline(randn(3), randn(3), randn(3 - 1), 2.), [-0.5, 0.5]),
         (LeakyReLU(0.1), randn(3)),
@@ -611,7 +611,7 @@ end
 
 
     # TODO: change when we have dimensionality in the type
-    sb = @inferred Stacked((Bijectors.Exp(), Bijectors.SimplexBijector()), [1:1, 2:3])
+    sb = @inferred Stacked((Bijectors.Exp(), Bijectors.SimplexBijector()), (1:1, 2:3))
     x = ones(3) ./ 3.0
     res = @inferred forward(sb, x)
     @test sb(param(x)) isa TrackedArray
@@ -623,8 +623,18 @@ end
     x = ones(4) ./ 4.0
     @test_throws AssertionError sb(x)
 
-    @test_throws AssertionError Stacked([Bijectors.Exp(), ], (1:1, 2:3))
-    @test_throws MethodError Stacked((Bijectors.Exp(), ), (1:1, 2:3))
+    # Array-version
+    sb = Stacked([Bijectors.Exp(), Bijectors.SimplexBijector()], [1:1, 2:3])
+    x = ones(3) ./ 3.0
+    res = forward(sb, x)
+    @test sb(param(x)) isa TrackedArray
+    @test sb(x) == [exp(x[1]), sb.bs[2](x[2:3])...]
+    @test res.rv == [exp(x[1]), sb.bs[2](x[2:3])...]
+    @test logabsdetjac(sb, x) == sum([sum(logabsdetjac(sb.bs[i], x[sb.ranges[i]])) for i = 1:2])
+    @test res.logabsdetjac == logabsdetjac(sb, x)
+
+    x = ones(4) ./ 4.0
+    @test_throws AssertionError sb(x)
 
     @testset "Stacked: ADVI with MvNormal" begin
         # MvNormal test
@@ -649,6 +659,7 @@ end
             push!(ranges, idx:idx + length(d) - 1)
             idx += length(d)
         end
+        ranges = tuple(ranges...)
 
         num_params = ranges[end][end]
         d = MvNormal(zeros(num_params), ones(num_params))
@@ -675,7 +686,7 @@ end
         ibs = inv.(bs)
         sb = @inferred Stacked(ibs, ranges)
         isb = @inferred inv(sb)
-        @test sb isa Stacked{<: Tuple}
+        @test sb isa Stacked{<:Tuple}
 
         # inverse
         td = @inferred transformed(d, sb)
@@ -697,7 +708,7 @@ end
 
         # Ensure `Stacked` works for a single bijector
         d = (MvNormal(2, 1.0),)
-        sb = Stacked(bijector.(d), [1:2])
+        sb = Stacked(bijector.(d), (1:2, ))
         x = [.5, 1.]
         @test sb(x) == x
         @test logabsdetjac(sb, x) == 0

@@ -94,7 +94,7 @@ end
 function mapvcat(f, args...)
     out = map(f, args...)
     init = vcat(out[1])
-    return reshape(reduce(vcat, drop(out, 1); init = init), size(out))
+    return reduce(vcat, drop(out, 1); init = init)
 end
 
 function maphcat(f, args...)
