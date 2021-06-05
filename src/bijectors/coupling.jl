@@ -167,7 +167,7 @@ Shift{Array{Float64,1},1}([2.0])
 # References
 [1] Kobyzev, I., Prince, S., & Brubaker, M. A., Normalizing flows: introduction and ideas, CoRR, (),  (2019). 
 """
-struct Coupling{F, M} <: Bijector{1} where {F, M <: PartitionMask}
+struct Coupling{F, M} <: Bijector where {F, M <: PartitionMask}
     θ::F
     mask::M
 end
@@ -195,7 +195,7 @@ function couple(cl::Coupling, x::AbstractVector)
     return b
 end
 
-function (cl::Coupling)(x::AbstractVector)
+function transform(cl::Coupling, x::AbstractVector)
     # partition vector using `cl.mask::PartitionMask`
     x_1, x_2, x_3 = partition(cl.mask, x)
 
@@ -205,10 +205,8 @@ function (cl::Coupling)(x::AbstractVector)
     # recombine the vector again using the `PartitionMask`
     return combine(cl.mask, b(x_1), x_2, x_3)
 end
-(cl::Coupling)(x::AbstractMatrix) = eachcolmaphcat(cl, x)
 
-
-function (icl::Inverse{<:Coupling})(y::AbstractVector)
+function transform(icl::Inverse{<:Coupling}, y::AbstractVector)
     cl = icl.orig
     
     y_1, y_2, y_3 = partition(cl.mask, y)
@@ -218,7 +216,6 @@ function (icl::Inverse{<:Coupling})(y::AbstractVector)
 
     return combine(cl.mask, ib(y_1), y_2, y_3)
 end
-(icl::Inverse{<:Coupling})(y::AbstractMatrix) = eachcolmaphcat(icl, y)
 
 function logabsdetjac(cl::Coupling, x::AbstractVector)
     x_1, x_2, x_3 = partition(cl.mask, x)
@@ -227,8 +224,4 @@ function logabsdetjac(cl::Coupling, x::AbstractVector)
     # `B` might be 0-dim in which case it will treat `x_1` as a batch
     # therefore we sum to ensure such a thing does not happen
     return sum(logabsdetjac(b, x_1))
-end
-
-function logabsdetjac(cl::Coupling, x::AbstractMatrix)
-    return [logabsdetjac(cl, view(x, :, i)) for i in axes(x, 2)]
 end
