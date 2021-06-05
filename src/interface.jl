@@ -200,14 +200,6 @@ logabsdetjac!(::Identity, x, logjac) = logjac
 ####################
 # Batched versions #
 ####################
-# NOTE: This needs to be after we've defined some `transform`, `logabsdetjac`, etc.
-# so we can actually reference them. Since we just did this for `Identity`, we're good.
-Broadcast.broadcasted(b::Transform, xs::Batch) = transform_batch(b, xs)
-Broadcast.broadcasted(::typeof(transform), b::Transform, xs::Batch) = transform_batch(b, xs)
-Broadcast.broadcasted(::typeof(logabsdetjac), b::Transform, xs::Batch) = logabsdetjac_batch(b, xs)
-Broadcast.broadcasted(::typeof(forward), b::Transform, xs::Batch) = forward_batch(b, xs)
-
-
 """
     transform_batch(b, xs)
 
