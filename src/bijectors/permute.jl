@@ -81,7 +81,7 @@ julia> inv(b1)(b1([1., 2., 3.]))
  3.0
 ```
 """
-struct Permute{A} <: Bijector{1}
+struct Permute{A} <: Bijector
     A::A
 end
 
@@ -150,8 +150,8 @@ function Permute(n::Int, indices::Pair{Vector{Int}, Vector{Int}}...)
 end
 
 
-@inline (b::Permute)(x::AbstractVecOrMat) = b.A * x
+@inline transform(b::Permute, x::AbstractVecOrMat) = b.A * x
 @inline inv(b::Permute) = Permute(transpose(b.A))
 
 logabsdetjac(b::Permute, x::AbstractVector) = zero(eltype(x))
-logabsdetjac(b::Permute, x::AbstractMatrix) = zero(eltype(x), size(x, 2))
+logabsdetjac_batch(b::Permute, x::Batch) = zero(eltype(x), length(x))
