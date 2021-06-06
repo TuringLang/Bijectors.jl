@@ -79,6 +79,7 @@ Base.:+(::NotInvertible, ::NotInvertible) = NotInvertible()
 Base.:+(::Invertible, ::Invertible) = Invertible()
 
 invertible(::Transform) = NotInvertible()
+isinvertible(t::Transform) = invertible(t) isa Invertible
 
 """
     inv(t::Transform[, ::Invertible])
@@ -160,21 +161,31 @@ requires an iterative procedure to evaluate.
 isclosedform(b::Bijector) = true
 
 """
-    inv(b::Bijector)
-    Inverse(b::Bijector)
+    inv(b::Transform)
+    Inverse(b::Transform)
 
-A `Bijector` representing the inverse transform of `b`.
+A `Transform` representing the inverse transform of `b`.
 """
-struct Inverse{B<:Bijector} <: Bijector
-    orig::B
+struct Inverse{T<:Transform} <: Transform
+    orig::T
+
+    function Inverse(orig::Transform)
+        if !isinvertible(orig)
+            error("$(orig) is not invertible")
+        end
+
+        return new{typeof(orig)}(orig)
+    end
 end
 
-# field contains nested numerical parameters
 Functors.@functor Inverse
 
-inv(b::Bijector) = Inverse(b)
-inv(ib::Inverse{<:Bijector}) = ib.orig
-Base.:(==)(b1::Inverse{<:Bijector}, b2::Inverse{<:Bijector}) = b1.orig == b2.orig
+inv(b, ::Invertible) = Inverse(b)
+inv(ib::Inverse) = ib.orig
+
+invertible(ib::Inverse) = Invertible()
+
+Base.:(==)(b1::Inverse, b2::Inverse) = b1.orig == b2.orig
 
 logabsdetjac(ib::Inverse{<:Bijector}, y) = -logabsdetjac(ib.orig, ib(y))
 
