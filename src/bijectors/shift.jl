@@ -14,17 +14,13 @@ transform(b::Shift, x) = b.a .+ x
 inv(b::Shift) = Shift(-b.a)
 
 # FIXME: implement custom adjoint to ensure we don't get tracking
-function logabsdetjac(b::Shift, x::AbstractArray{<:Real, N}) where {N}
-    return _logabsdetjac_shift(b.a, x, Val(N))
+function logabsdetjac(b::Shift, x::Union{Real, AbstractArray{<:Real}})
+    return _logabsdetjac_shift(b.a, x)
 end
 
-function logabsdetjac_batch(b::Shift, x::AbstractArray{<:Real, N}) where {N}
-    return Batch(_logabsdetjac_shift(b.a, x, Val(N - 1)))
+function logabsdetjac_batch(b::Shift, x::ArrayBatch)
+    return Batch(_logabsdetjac_shift_array_batch(b.a, value(x)))
 end
 
-_logabsdetjac_shift(a::Real, x::Real, ::Val{0}) = zero(eltype(x))
-_logabsdetjac_shift(a::Real, x::AbstractVector{T}, ::Val{0}) where {T<:Real} = zeros(T, length(x))
-_logabsdetjac_shift(a::T1, x::AbstractVector{T2}, ::Val{1}) where {T1<:Union{Real, AbstractVector}, T2<:Real} = zero(T2)
-_logabsdetjac_shift(a::T1, x::AbstractMatrix{T2}, ::Val{1}) where {T1<:Union{Real, AbstractVector}, T2<:Real} = zeros(T2, size(x, 2))
-_logabsdetjac_shift(a::T1, x::AbstractMatrix{T2}, ::Val{2}) where {T1<:Union{Real, AbstractVector}, T2<:Real} = zero(T2)
-_logabsdetjac_shift(a::T1, x::AbstractArray{<:AbstractMatrix{T2}}, ::Val{2}) where {T1<:Union{Real, AbstractVector}, T2<:Real} = zeros(T2, size(x))
+_logabsdetjac_shift(a, x) = zero(eltype(x))
+_logabsdetjac_shift_array_batch(a, x) = zeros(eltype(x), size(x, ndims(x)))
