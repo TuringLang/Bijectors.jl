@@ -14,7 +14,7 @@ using NNlib: softplus
 
 # TODO: add docstring
 
-struct PlanarLayer{T1<:AbstractVector{<:Real}, T2<:Union{Real, AbstractVector{<:Real}}} <: Bijector{1}
+struct PlanarLayer{T1<:AbstractVector{<:Real}, T2<:Union{Real, AbstractVector{<:Real}}} <: Bijector
     w::T1
     u::T1
     b::T2
@@ -78,7 +78,7 @@ function _transform(flow::PlanarLayer, z::AbstractVecOrMat{<:Real})
     return (transformed = transformed, wT_û = wT_û, wT_z = wT_z)
 end
 
-(b::PlanarLayer)(z) = _transform(b, z).transformed
+transform(b::PlanarLayer, z) = _transform(b, z).transformed
 
 #=
 Log-determinant of the Jacobian of the planar layer
@@ -105,10 +105,10 @@ function forward(flow::PlanarLayer, z::AbstractVecOrMat{<:Real})
     b = first(flow.b)
     log_det_jacobian = log1p.(wT_û .* abs2.(sech.(_vec(wT_z) .+ b)))
 
-    return (rv = transformed, logabsdetjac = log_det_jacobian)
+    return (result = transformed, logabsdetjac = log_det_jacobian)
 end
 
-function (ib::Inverse{<:PlanarLayer})(y::AbstractVecOrMat{<:Real})
+function transform(ib::Inverse{<:PlanarLayer}, y::AbstractVecOrMat{<:Real})
     flow = ib.orig
     w = flow.w
     b = first(flow.b)

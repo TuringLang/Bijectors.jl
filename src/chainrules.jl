@@ -6,3 +6,11 @@ ChainRulesCore.@scalar_rule(
     ),
     (x, - tanh(Ω + b) * x, x - 1),
 )
+
+function ChainRulesCore.rrule(::typeof(_logabsdetjac_shift), a, x)
+    return _logabsdetjac_shift(a, x), Δ -> (ChainRulesCore.NO_FIELDS, ChainRulesCore.ZeroTangent(), ChainRulesCore.ZeroTangent())
+end
+
+function ChainRulesCore.rrule(::typeof(_logabsdetjac_shift_array_batch), a, x)
+    return _logabsdetjac_shift_array_batch(a, x), Δ -> (ChainRulesCore.NO_FIELDS, ChainRulesCore.ZeroTangent(), ChainRulesCore.ZeroTangent())
+end

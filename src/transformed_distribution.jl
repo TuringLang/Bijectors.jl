@@ -2,11 +2,11 @@
 struct TransformedDistribution{D, B, V} <: Distribution{V, Continuous} where {D<:Distribution{V, Continuous}, B<:Bijector}
     dist::D
     transform::B
-
-    TransformedDistribution(d::UnivariateDistribution, b::Bijector{0}) = new{typeof(d), typeof(b), Univariate}(d, b)
-    TransformedDistribution(d::MultivariateDistribution, b::Bijector{1}) = new{typeof(d), typeof(b), Multivariate}(d, b)
-    TransformedDistribution(d::MatrixDistribution, b::Bijector{2}) = new{typeof(d), typeof(b), Matrixvariate}(d, b)
 end
+
+TransformedDistribution(d::UnivariateDistribution, b::Bijector) = new{typeof(d), typeof(b), Univariate}(d, b)
+TransformedDistribution(d::MultivariateDistribution, b::Bijector) = new{typeof(d), typeof(b), Multivariate}(d, b)
+TransformedDistribution(d::MatrixDistribution, b::Bijector) = new{typeof(d), typeof(b), Matrixvariate}(d, b)
 
 # fields may contain nested numerical parameters
 Functors.@functor TransformedDistribution
@@ -38,9 +38,9 @@ Returns the constrained-to-unconstrained bijector for distribution `d`.
 bijector(d::DiscreteUnivariateDistribution) = Identity{0}()
 bijector(d::DiscreteMultivariateDistribution) = Identity{1}()
 bijector(d::ContinuousUnivariateDistribution) = TruncatedBijector(minimum(d), maximum(d))
-bijector(d::Product{Discrete}) = Identity{1}()
+bijector(d::Product{Discrete}) = Identity()
 function bijector(d::Product{Continuous})
-    return TruncatedBijector{1}(_minmax(d.v)...)
+    return TruncatedBijector(_minmax(d.v)...)
 end
 @generated function _minmax(d::AbstractArray{T}) where {T}
     try
@@ -51,11 +51,11 @@ end
     end
 end
 
-bijector(d::Normal) = Identity{0}()
-bijector(d::Distributions.AbstractMvNormal) = Identity{1}()
-bijector(d::Distributions.AbstractMvLogNormal) = Log{1}()
-bijector(d::PositiveDistribution) = Log{0}()
-bijector(d::SimplexDistribution) = SimplexBijector{1}()
+bijector(d::Normal) = Identity()
+bijector(d::Distributions.AbstractMvNormal) = Identity()
+bijector(d::Distributions.AbstractMvLogNormal) = Log()
+bijector(d::PositiveDistribution) = Log()
+bijector(d::SimplexDistribution) = SimplexBijector()
 bijector(d::KSOneSided) = Logit(zero(eltype(d)), one(eltype(d)))
 
 bijector_bounded(d, a=minimum(d), b=maximum(d)) = Logit(a, b)
@@ -85,14 +85,14 @@ Base.size(td::Transformed) = size(td.dist)
 
 function logpdf(td::UnivariateTransformed, y::Real)
     res = forward(inv(td.transform), y)
-    return logpdf(td.dist, res.rv) + res.logabsdetjac
+    return logpdf(td.dist, res.result) + res.logabsdetjac
 end
 
 # TODO: implement more efficiently for flows in the case of `Matrix`
 function logpdf(td::MvTransformed, y::AbstractMatrix{<:Real})
     # batch-implementation for multivariate
     res = forward(inv(td.transform), y)
-    return logpdf(td.dist, res.rv) + res.logabsdetjac
+    return logpdf(td.dist, res.result) + res.logabsdetjac
 end
 
 function logpdf(td::MvTransformed{<:Dirichlet}, y::AbstractMatrix{<:Real})
@@ -100,12 +100,12 @@ function logpdf(td::MvTransformed{<:Dirichlet}, y::AbstractMatrix{<:Real})
     ϵ = _eps(T)
 
     res = forward(inv(td.transform), y)
-    return logpdf(td.dist, mappedarray(x->x+ϵ, res.rv)) + res.logabsdetjac
+    return logpdf(td.dist, mappedarray(x->x+ϵ, res.result)) + res.logabsdetjac
 end
 
 function _logpdf(td::MvTransformed, y::AbstractVector{<:Real})
     res = forward(inv(td.transform), y)
-    return logpdf(td.dist, res.rv) + res.logabsdetjac
+    return logpdf(td.dist, res.result) + res.logabsdetjac
 end
 
 function _logpdf(td::MvTransformed{<:Dirichlet}, y::AbstractVector{<:Real})
@@ -113,12 +113,12 @@ function _logpdf(td::MvTransformed{<:Dirichlet}, y::AbstractVector{<:Real})
     ϵ = _eps(T)
 
     res = forward(inv(td.transform), y)
-    return logpdf(td.dist, mappedarray(x->x+ϵ, res.rv)) + res.logabsdetjac
+    return logpdf(td.dist, mappedarray(x->x+ϵ, res.result)) + res.logabsdetjac
 end
 
 # TODO: should eventually drop using `logpdf_with_trans` and replace with
 # res = forward(inv(td.transform), y)
-# logpdf(td.dist, res.rv) .- res.logabsdetjac
+# logpdf(td.dist, res.result) .- res.logabsdetjac
 function _logpdf(td::MatrixTransformed, y::AbstractMatrix{<:Real})
     return logpdf_with_trans(td.dist, inv(td.transform)(y), true)
 end
@@ -163,18 +163,18 @@ and returns a tuple `(logpdf, logabsdetjac)`.
 """
 function logpdf_with_jac(td::UnivariateTransformed, y::Real)
     res = forward(inv(td.transform), y)
-    return (logpdf(td.dist, res.rv) + res.logabsdetjac, res.logabsdetjac)
+    return (logpdf(td.dist, res.result) + res.logabsdetjac, res.logabsdetjac)
 end
 
 # TODO: implement more efficiently for flows in the case of `Matrix`
 function logpdf_with_jac(td::MvTransformed, y::AbstractVector{<:Real})
     res = forward(inv(td.transform), y)
-    return (logpdf(td.dist, res.rv) + res.logabsdetjac, res.logabsdetjac)
+    return (logpdf(td.dist, res.result) + res.logabsdetjac, res.logabsdetjac)
 end
 
 function logpdf_with_jac(td::MvTransformed, y::AbstractMatrix{<:Real})
     res = forward(inv(td.transform), y)
-    return (logpdf(td.dist, res.rv) + res.logabsdetjac, res.logabsdetjac)
+    return (logpdf(td.dist, res.result) + res.logabsdetjac, res.logabsdetjac)
 end
 
 function logpdf_with_jac(td::MvTransformed{<:Dirichlet}, y::AbstractVector{<:Real})
@@ -182,14 +182,14 @@ function logpdf_with_jac(td::MvTransformed{<:Dirichlet}, y::AbstractVector{<:Rea
     ϵ = _eps(T)
 
     res = forward(inv(td.transform), y)
-    lp = logpdf(td.dist, mappedarray(x->x+ϵ, res.rv)) + res.logabsdetjac
+    lp = logpdf(td.dist, mappedarray(x->x+ϵ, res.result)) + res.logabsdetjac
     return (lp, res.logabsdetjac)
 end
 
 # TODO: should eventually drop using `logpdf_with_trans`
 function logpdf_with_jac(td::MatrixTransformed, y::AbstractMatrix{<:Real})
     res = forward(inv(td.transform), y)
-    return (logpdf_with_trans(td.dist, res.rv, true), res.logabsdetjac)
+    return (logpdf_with_trans(td.dist, res.result, true), res.logabsdetjac)
 end
 
 """

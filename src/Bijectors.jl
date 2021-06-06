@@ -33,6 +33,7 @@ using Reexport, Requires
 using StatsFuns
 using LinearAlgebra
 using MappedArrays
+using ConstructionBase
 using Base.Iterators: drop
 using LinearAlgebra: AbstractTriangular
 import Functors
@@ -244,6 +245,7 @@ function getlogp(d::InverseWishart, Xcf, X)
 end
 
 include("utils.jl")
+include("batch.jl")
 include("interface.jl")
 include("chainrules.jl")
 

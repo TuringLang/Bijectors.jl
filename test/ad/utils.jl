@@ -136,14 +136,19 @@ function test_ad(dist::DistSpec; kwargs...)
     end
 end
 
-function test_ad(f, x, broken = (); rtol = 1e-6, atol = 1e-6)
+function test_ad(_f, _x, broken = (); rtol = 1e-6, atol = 1e-6)
+    f = _x isa Real ? _f ∘ first : _f
+    x = [_x;]
+
     finitediff = FiniteDifferences.grad(central_fdm(5, 1), f, x)[1]
 
     if AD == "All" || AD == "Tracker"
         if :Tracker in broken
             @test_broken Tracker.data(Tracker.gradient(f, x)[1]) ≈ finitediff rtol=rtol atol=atol
         else
-            @test Tracker.data(Tracker.gradient(f, x)[1]) ≈ finitediff rtol=rtol atol=atol
+            ∇tracker = Tracker.gradient(f, x)[1]
+            @test Tracker.data(∇tracker) ≈ finitediff rtol=rtol atol=atol
+            @test Tracker.istracked(∇tracker)
         end
     end
 
@@ -159,7 +164,8 @@ function test_ad(f, x, broken = (); rtol = 1e-6, atol = 1e-6)
         if :Zygote in broken
             @test_broken Zygote.gradient(f, x)[1] ≈ finitediff rtol=rtol atol=atol
         else
-            @test Zygote.gradient(f, x)[1] ≈ finitediff rtol=rtol atol=atol
+            ∇zygote = Zygote.gradient(f, x)[1]
+            @test (all(finitediff .== 0) && ∇zygote === nothing) || isapprox(∇zygote, finitediff, rtol=rtol, atol=atol)
         end
     end
 

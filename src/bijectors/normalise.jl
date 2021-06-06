@@ -6,7 +6,7 @@ using Statistics: mean
 
 istraining() = false
 
-mutable struct InvertibleBatchNorm{T1,T2,T3} <: Bijector{1}
+mutable struct InvertibleBatchNorm{T1,T2,T3} <: Bijector
     b       ::  T1  # bias
     logs    ::  T1  # log-scale
     m       ::  T2  # moving mean
@@ -72,16 +72,15 @@ function forward(bn::InvertibleBatchNorm, x)
         v = reshape(bn.v, as...)
     end
 
-    rv = s .* (x .- m) ./ sqrt.(v .+ bn.eps) .+ b
+    result = s .* (x .- m) ./ sqrt.(v .+ bn.eps) .+ b
     logabsdetjac = (
         fill(sum(logs - log.(v .+ bn.eps) / 2), size(x, dims))
     )
-    return (rv=rv, logabsdetjac=logabsdetjac)
+    return (result=result, logabsdetjac=logabsdetjac)
 end
 
 logabsdetjac(bn::InvertibleBatchNorm, x) = forward(bn, x).logabsdetjac
-
-(bn::InvertibleBatchNorm)(x) = forward(bn, x).rv
+transform(bn::InvertibleBatchNorm, x) = forward(bn, x).result
 
 function forward(invbn::Inverse{<:InvertibleBatchNorm}, y)
     @assert !istraining() "`forward(::Inverse{InvertibleBatchNorm})` is only available in test mode."
@@ -94,10 +93,10 @@ function forward(invbn::Inverse{<:InvertibleBatchNorm}, y)
     v = reshape(bn.v, as...)
 
     x = (y .- b) ./ s .* sqrt.(v .+ bn.eps) .+ m
-    return (rv=x, logabsdetjac=-logabsdetjac(bn, x))
+    return (result=x, logabsdetjac=-logabsdetjac(bn, x))
 end
 
-(bn::Inverse{<:InvertibleBatchNorm})(y) = forward(bn, y).rv
+transform(bn::Inverse{<:InvertibleBatchNorm}, y) = forward(bn, y).result
 
 function Base.show(io::IO, l::InvertibleBatchNorm)
     print(io, "InvertibleBatchNorm($(join(size(l.b), ", ")))")

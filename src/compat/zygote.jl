@@ -291,3 +291,20 @@ end
 
 end
 
+# Otherwise Zygote complains.
+Zygote.@adjoint function Batch(x)
+    return Batch(x), function(_Δ)
+        # Sometimes `Batch` has been extraced using `value`, in which case
+        # we get back a `NamedTuple`.
+        # Other times the value was extracted by iterating over `Batch`,
+        # in which case we don't get a `NamedTuple`.
+        Δ = _Δ isa NamedTuple{(:value, )} ? _Δ.value : _Δ
+        return if Δ isa AbstractArray{<:Real}
+            (Δ, )
+        else
+            Δ_new = similar(x, eltype(Δ[1]))
+            Δ_new[:] .= vcat(Δ...)
+            (Δ_new, )
+        end
+    end
+end
