@@ -121,6 +121,19 @@ function forward!(b, x, out)
     return out
 end
 
+"""
+    isclosedform(b::Transform)::bool
+    isclosedform(b⁻¹::Inverse{<:Transform})::bool
+
+Returns `true` or `false` depending on whether or not evaluation of `b`
+has a closed-form implementation.
+
+Most transformations have closed-form evaluations, but there are cases where
+this is not the case. For example the *inverse* evaluation of `PlanarLayer`
+requires an iterative procedure to evaluate.
+"""
+isclosedform(b::Transform) = true
+
 # Invertibility "trait".
 struct NotInvertible end
 struct Invertible end
@@ -170,19 +183,6 @@ Base.:(==)(b1::Inverse, b2::Inverse) = b1.orig == b2.orig
 abstract type Bijector <: Transform end
 
 invertible(::Bijector) = Invertible()
-
-"""
-    isclosedform(b::Bijector)::bool
-    isclosedform(b⁻¹::Inverse{<:Bijector})::bool
-
-Returns `true` or `false` depending on whether or not evaluation of `b`
-has a closed-form implementation.
-
-Most bijectors have closed-form evaluations, but there are cases where
-this is not the case. For example the *inverse* evaluation of `PlanarLayer`
-requires an iterative procedure to evaluate.
-"""
-isclosedform(b::Bijector) = true
 
 # Default implementation for inverse of a `Bijector`.
 logabsdetjac(ib::Inverse{<:Bijector}, y) = -logabsdetjac(ib.orig, ib(y))
