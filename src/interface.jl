@@ -239,6 +239,27 @@ function _transform_batch(b, xs::ArrayBatch{N}) where {N}
 end
 
 """
+    transform_batch!(b, xs, ys)
+
+Transform `xs` by `b` treating `xs` as a "batch", i.e. a collection of independent inputs,
+and storing the result in `ys`.
+
+See also: [`transform!`](@ref)
+"""
+transform_batch!(b, xs, ys) = _transform_batch!(b, xs, ys)
+function _transform_batch!(b, xs, ys)
+    for i = 1:length(xs)
+        if eltype(ys) <: Real
+            ys[i] = transform(b, xs[i])
+        else
+            transform!(b, xs[i], ys[i])
+        end
+    end
+
+    return ys
+end
+
+"""
     logabsdetjac_batch(b, xs)
 
 Computes `logabsdetjac(b, xs)`, treating `xs` as a "batch", i.e. a collection of independent inputs.
@@ -253,6 +274,27 @@ function _logabsdetjac_batch(b, xs::ArrayBatch{N}) where {N}
 end
 
 """
+    logabsdetjac_batch!(b, xs, logjacs)
+
+Computes `logabsdetjac(b, xs)`, treating `xs` as a "batch", i.e. a collection of independent inputs,
+accumulating the result in `logjacs`.
+
+See also: [`logabsdetjac!`](@ref)
+"""
+logabsdetjac_batch!(b, xs, logjacs) = _logabsdetjac_batch!(b, xs, logjacs)
+function _logabsdetjac_batch!(b, xs, logjacs)
+    for i = 1:length(xs)
+        if eltype(logjacs) <: Real
+            logjacs[i] += logabsdetjac(b, xs[i])
+        else
+            logabsdetjac!(b, xs[i], logjacs[i])
+        end
+    end
+
+    return logjacs
+end
+
+"""
     forward_batch(b, xs)
 
 Computes `forward(b, xs)`, treating `xs` as a "batch", i.e. a collection of independent inputs.
@@ -260,6 +302,20 @@ Computes `forward(b, xs)`, treating `xs` as a "batch", i.e. a collection of inde
 See also: [`transform`](@ref)
 """
 forward_batch(b, xs) = (result = transform_batch(b, xs), logabsdetjac = logabsdetjac_batch(b, xs))
+
+"""
+    forward_batch!(b, xs, out)
+
+Computes `forward(b, xs)` in place, treating `xs` as a "batch", i.e. a collection of independent inputs.
+
+See also: [`forward!`](@ref)
+"""
+function forward_batch!(b, xs, out)
+    transform_batch!(b, xs, out.result)
+    logabsdetjac_batch!(b, xs, out.logabsdetjac)
+
+    return out
+end
 
 ######################
 # Bijectors includes #
