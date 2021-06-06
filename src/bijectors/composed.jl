@@ -146,7 +146,7 @@ end
 ∘(::Identity, b::Transform) = b
 ∘(b::Transform, ::Identity) = b
 
-inv(ct::Composed, ::Invertible) = Composed(reverse(map(inv, ct.ts)))
+Base.inv(ct::Composed) = Composed(reverse(map(inv, ct.ts)))
 
 # TODO: should arrays also be using recursive implementation instead?
 function transform(cb::Composed, x)

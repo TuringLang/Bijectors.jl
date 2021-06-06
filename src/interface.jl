@@ -68,27 +68,6 @@ abstract type Transform end
 
 Broadcast.broadcastable(b::Transform) = Ref(b)
 
-# Invertibility "trait".
-struct NotInvertible end
-struct Invertible end
-
-# Useful for checking if compositions, etc. are invertible or not.
-Base.:+(::NotInvertible, ::Invertible) = NotInvertible()
-Base.:+(::Invertible, ::NotInvertible) = NotInvertible()
-Base.:+(::NotInvertible, ::NotInvertible) = NotInvertible()
-Base.:+(::Invertible, ::Invertible) = Invertible()
-
-invertible(::Transform) = NotInvertible()
-isinvertible(t::Transform) = invertible(t) isa Invertible
-
-"""
-    inv(t::Transform[, ::Invertible])
-
-Returns the inverse of transform `t`.
-"""
-Base.inv(t::Transform) = Base.inv(t, invertible(t))
-Base.inv(t::Transform, ::NotInvertible) = error("$(t) is not invertible")
-
 """
     transform(b, x)
 
@@ -142,23 +121,18 @@ function forward!(b, x, out)
     return out
 end
 
-"Abstract type of a bijector, i.e. differentiable bijection with differentiable inverse."
-abstract type Bijector <: Transform end
+# Invertibility "trait".
+struct NotInvertible end
+struct Invertible end
 
-invertible(::Bijector) = Invertible()
+# Useful for checking if compositions, etc. are invertible or not.
+Base.:+(::NotInvertible, ::Invertible) = NotInvertible()
+Base.:+(::Invertible, ::NotInvertible) = NotInvertible()
+Base.:+(::NotInvertible, ::NotInvertible) = NotInvertible()
+Base.:+(::Invertible, ::Invertible) = Invertible()
 
-"""
-    isclosedform(b::Bijector)::bool
-    isclosedform(b⁻¹::Inverse{<:Bijector})::bool
-
-Returns `true` or `false` depending on whether or not evaluation of `b`
-has a closed-form implementation.
-
-Most bijectors have closed-form evaluations, but there are cases where
-this is not the case. For example the *inverse* evaluation of `PlanarLayer`
-requires an iterative procedure to evaluate.
-"""
-isclosedform(b::Bijector) = true
+invertible(::Transform) = NotInvertible()
+isinvertible(t::Transform) = invertible(t) isa Invertible
 
 """
     inv(b::Transform)
@@ -180,13 +154,37 @@ end
 
 Functors.@functor Inverse
 
-inv(b, ::Invertible) = Inverse(b)
-inv(ib::Inverse) = ib.orig
+"""
+    inv(t::Transform[, ::Invertible])
+
+Returns the inverse of transform `t`.
+"""
+Base.inv(t::Transform) = Inverse(t)
+Base.inv(ib::Inverse) = ib.orig
 
 invertible(ib::Inverse) = Invertible()
 
 Base.:(==)(b1::Inverse, b2::Inverse) = b1.orig == b2.orig
 
+"Abstract type of a bijector, i.e. differentiable bijection with differentiable inverse."
+abstract type Bijector <: Transform end
+
+invertible(::Bijector) = Invertible()
+
+"""
+    isclosedform(b::Bijector)::bool
+    isclosedform(b⁻¹::Inverse{<:Bijector})::bool
+
+Returns `true` or `false` depending on whether or not evaluation of `b`
+has a closed-form implementation.
+
+Most bijectors have closed-form evaluations, but there are cases where
+this is not the case. For example the *inverse* evaluation of `PlanarLayer`
+requires an iterative procedure to evaluate.
+"""
+isclosedform(b::Bijector) = true
+
+# Default implementation for inverse of a `Bijector`.
 logabsdetjac(ib::Inverse{<:Bijector}, y) = -logabsdetjac(ib.orig, ib(y))
 
 """
