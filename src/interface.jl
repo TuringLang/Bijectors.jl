@@ -232,7 +232,7 @@ function _transform_batch(b, xs::ArrayBatch{2})
     return Batch(eachcolmaphcat(b, value(xs)))
 end
 function _transform_batch(b, xs::ArrayBatch{N}) where {N}
-    res = reduce(map(b, eachslice(value(xs), dims=N))) do acc, x
+    res = reduce(map(b, eachslice(value(xs), Val{N}()))) do acc, x
         cat(acc, x; dims = N)
     end
     return reconstruct(xs, res)
@@ -269,8 +269,11 @@ See also: [`logabsdetjac`](@ref)
 logabsdetjac_batch(b, xs) = _logabsdetjac_batch(b, xs)
 # Default implementations uses private methods to avoid method ambiguity.
 _logabsdetjac_batch(b, xs::VectorBatch) = reconstruct(xs, map(x -> logabsdetjac(b, x), value(xs)))
+function _logabsdetjac_batch(b, xs::ArrayBatch{2})
+    return reconstruct(xs, map(x -> logabsdetjac(b, x), eachcol(value(xs))))
+end
 function _logabsdetjac_batch(b, xs::ArrayBatch{N}) where {N}
-    return reconstruct(xs, map(x -> logabsdetjac(b, x), eachslice(value(xs), dims=N)))
+    return reconstruct(xs, map(x -> logabsdetjac(b, x), eachslice(value(xs), Val{N}())))
 end
 
 """
