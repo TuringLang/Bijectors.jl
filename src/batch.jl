@@ -17,7 +17,7 @@ value(x::Batch) = x.value
 
 # Convenient aliases
 const ArrayBatch{N} = Batch{<:AbstractArray{<:Real, N}}
-const VectorBatch = Batch{<:AbstractVector{<:AbstractArray{<:Real}}}
+const VectorBatch = Batch{<:AbstractVector}
 
 # Constructor for `ArrayBatch`.
 Batch(x::AbstractVector{<:Real}) = Batch{typeof(x), eltype(x)}(x)
