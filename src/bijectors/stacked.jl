@@ -115,7 +115,7 @@ function logabsdetjac(
     init = sum(logabsdetjac(b.bs[1], x[b.ranges[1]]))
 
     return if N == 1
-        return init
+        init
     else
         init + sum(2:N) do i
             sum(logabsdetjac(b.bs[i], x[b.ranges[i]]))
