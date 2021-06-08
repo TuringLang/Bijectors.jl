@@ -109,7 +109,7 @@ function logabsdetjac(
 end
 
 function logabsdetjac(
-    b::Stacked{<:Tuple{Vararg{<:Any, N}}},
+    b::Stacked{<:Tuple{Vararg{<:Any, N}}, <:Tuple{Vararg{<:Any, N}}},
     x::AbstractVector{<:Real}
 ) where {N}
     init = sum(logabsdetjac(b.bs[1], x[b.ranges[1]]))
@@ -119,7 +119,7 @@ function logabsdetjac(
 end
 
 # Handle the case of just one bijector
-function logabsdetjac(b::Stacked{<:Tuple{<:Bijector}}, x::AbstractVector{<:Real})
+function logabsdetjac(b::Stacked{<:Tuple{<:Bijector}, <:Tuple{<:Bijector}}, x::AbstractVector{<:Real})
     return sum(logabsdetjac(b.bs[1], x[b.ranges[1]]))
 end
 
