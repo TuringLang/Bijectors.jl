@@ -637,7 +637,8 @@ end
     @test_throws AssertionError sb(x)
 
     # Mixed versions
-    sb = Stacked([Bijectors.Exp(), Bijectors.SimplexBijector()], (1:1, 2:3])
+    # Tuple, Array
+    sb = Stacked([Bijectors.Exp(), Bijectors.SimplexBijector()], (1:1, 2:3))
     x = ones(3) ./ 3.0
     res = forward(sb, x)
     @test sb(param(x)) isa TrackedArray
@@ -649,6 +650,7 @@ end
     x = ones(4) ./ 4.0
     @test_throws AssertionError sb(x)
 
+    # Array, Tuple
     sb = Stacked((Bijectors.Exp(), Bijectors.SimplexBijector()), [1:1, 2:3])
     x = ones(3) ./ 3.0
     res = forward(sb, x)
