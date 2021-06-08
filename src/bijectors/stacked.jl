@@ -73,13 +73,13 @@ function _transform(x, rs::NTuple{1, UnitRange{Int}}, b::Bijector)
     @assert rs[1] == 1:length(x)
     return b(x)
 end
-function (sb::Stacked{<:Tuple})(x::AbstractVector{<:Real})
+function (sb::Stacked{<:Tuple,<:Tuple})(x::AbstractVector{<:Real})
     y = _transform(x, sb.ranges, sb.bs...)
     @assert size(y) == size(x) "x is size $(size(x)) but y is $(size(y))"
     return y
 end
 # The Stacked{<:AbstractArray} version is not TrackedArray friendly
-function (sb::Stacked{<:AbstractArray})(x::AbstractVector{<:Real})
+function (sb::Stacked)(x::AbstractVector{<:Real})
     N = length(sb.bs)
     N == 1 && return sb.bs[1](x[sb.ranges[1]])
 
@@ -91,6 +91,7 @@ function (sb::Stacked{<:AbstractArray})(x::AbstractVector{<:Real})
 end
 
 (sb::Stacked)(x::AbstractMatrix{<:Real}) = eachcolmaphcat(sb, x)
+
 function logabsdetjac(
     b::Stacked,
     x::AbstractVector{<:Real}
@@ -137,7 +138,7 @@ end
 #     logjac += sum(_logjac)
 #     return (rv = vcat(y_1, y_2), logabsdetjac = logjac)
 # end
-@generated function forward(b::Stacked{<:Tuple{Vararg{<:Any, N}}}, x::AbstractVector) where {N}
+@generated function forward(b::Stacked{<:Tuple{Vararg{<:Any, N}}, <:Tuple{Vararg{<:Any, N}}}, x::AbstractVector) where {N}
     expr = Expr(:block)
     y_names = []
 
@@ -159,7 +160,7 @@ end
     return expr
 end
 
-function forward(sb::Stacked{<:AbstractArray}, x::AbstractVector)
+function forward(sb::Stacked, x::AbstractVector)
     N = length(sb.bs)
     yinit, linit = forward(sb.bs[1], x[sb.ranges[1]])
     logjac = sum(linit)
