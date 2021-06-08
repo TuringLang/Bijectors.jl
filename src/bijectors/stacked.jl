@@ -113,14 +113,14 @@ function logabsdetjac(
     x::AbstractVector{<:Real}
 ) where {N}
     init = sum(logabsdetjac(b.bs[1], x[b.ranges[1]]))
-    init + sum(2:N) do i
-        sum(logabsdetjac(b.bs[i], x[b.ranges[i]]))
-    end
-end
 
-# Handle the case of just one bijector
-function logabsdetjac(b::Stacked{<:Tuple{<:Bijector}, <:Tuple{<:Bijector}}, x::AbstractVector{<:Real})
-    return sum(logabsdetjac(b.bs[1], x[b.ranges[1]]))
+    return if N == 1
+        return init
+    else
+        init + sum(2:N) do i
+            sum(logabsdetjac(b.bs[i], x[b.ranges[i]]))
+        end
+    end
 end
 
 function logabsdetjac(b::Stacked, x::AbstractMatrix{<:Real})
