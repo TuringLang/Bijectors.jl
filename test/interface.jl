@@ -636,6 +636,34 @@ end
     x = ones(4) ./ 4.0
     @test_throws AssertionError sb(x)
 
+    # Mixed versions
+    # Tuple, Array
+    sb = Stacked([Bijectors.Exp(), Bijectors.SimplexBijector()], (1:1, 2:3))
+    x = ones(3) ./ 3.0
+    res = forward(sb, x)
+    @test sb(param(x)) isa TrackedArray
+    @test sb(x) == [exp(x[1]), sb.bs[2](x[2:3])...]
+    @test res.rv == [exp(x[1]), sb.bs[2](x[2:3])...]
+    @test logabsdetjac(sb, x) == sum([sum(logabsdetjac(sb.bs[i], x[sb.ranges[i]])) for i = 1:2])
+    @test res.logabsdetjac == logabsdetjac(sb, x)
+
+    x = ones(4) ./ 4.0
+    @test_throws AssertionError sb(x)
+
+    # Array, Tuple
+    sb = Stacked((Bijectors.Exp(), Bijectors.SimplexBijector()), [1:1, 2:3])
+    x = ones(3) ./ 3.0
+    res = forward(sb, x)
+    @test sb(param(x)) isa TrackedArray
+    @test sb(x) == [exp(x[1]), sb.bs[2](x[2:3])...]
+    @test res.rv == [exp(x[1]), sb.bs[2](x[2:3])...]
+    @test logabsdetjac(sb, x) == sum([sum(logabsdetjac(sb.bs[i], x[sb.ranges[i]])) for i = 1:2])
+    @test res.logabsdetjac == logabsdetjac(sb, x)
+
+    x = ones(4) ./ 4.0
+    @test_throws AssertionError sb(x)
+
+
     @testset "Stacked: ADVI with MvNormal" begin
         # MvNormal test
         dists = [
@@ -798,8 +826,8 @@ end
         SimplexBijector(),
         Stacked((Exp{0}(), Log{0}())),
         Stacked((Log{0}(), Exp{0}())),
-        # Stacked([Exp{0}(), Log{0}()]),
-        # Stacked([Log{0}(), Exp{0}()]),
+        Stacked([Exp{0}(), Log{0}()]),
+        Stacked([Log{0}(), Exp{0}()]),
         Composed((Exp{0}(), Log{0}())),
         Composed((Log{0}(), Exp{0}())),
         # Composed([Exp{0}(), Log{0}()]),
