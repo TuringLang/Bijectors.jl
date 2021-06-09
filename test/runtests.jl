@@ -41,5 +41,11 @@ if GROUP == "All" || GROUP == "AD"
     include("ad/chainrules.jl")
     include("ad/flows.jl")
     include("ad/distributions.jl")
+    if AD == "All" || AD == "ReverseDiff" 
+        @testset "Turing issue 1385" begin
+            dist = arraydist(truncated.(Laplace.(0, [1, 2]), -10.0, 70.0))
+            x = ReverseDiff.track(rand(dist))
+            @test typeof(bijector(dist)(x)) <: ReverseDiff.TrackedArray
+        end
+    end
 end
-
