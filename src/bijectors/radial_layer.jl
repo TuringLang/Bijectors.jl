@@ -105,15 +105,15 @@ end
 
 Compute the unique solution ``r`` to the equation
 ```math
-\\|y_minus_z0\\|_2 = r \\left(1 + \\frac{α_plus_β_hat - α}{α + r}\\right)
+\\|y_minus_z0\\|_2 = r \\left(1 + \\frac{α_{plus_{β}_{hat}} - α}{α + r}\\right)
 ```
 subject to ``r ≥ 0`` and ``r ≠ α``.
 
-Since ``α > 0`` and ``α_plus_β_hat > 0``, the solution is unique and given by
+Since ``α > 0`` and ``α_{plus_{β}_{hat}} > 0``, the solution is unique and given by
 ```math
-r = (\\sqrt{(α_plus_β_hat - γ)^2 + 4 α γ} - (α_plus_β_hat - γ)) / 2,
+r = (\\sqrt{(α_{plus_{β}_{hat}} - γ)^2 + 4 α γ} - (α_{plus_{β}_{hat}} - γ)) / 2,
 ```
-where ``γ = \\|y_minus_z0\\|_2``. For details see appendix A.2 of the reference.
+where ``γ = \\|y_{minus_{z0}}\\|_2``. For details see appendix A.2 of the reference.
 
 # References
 
