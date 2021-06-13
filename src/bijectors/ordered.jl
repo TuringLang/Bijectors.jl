@@ -23,7 +23,7 @@ function _transform_ordered(y::AbstractVector)
     @assert !isempty(y)
 
     @inbounds x[1] = y[1]
-    @inbounds for i = 2:size(x, 1)
+    @inbounds for i = 2:length(x)
         x[i] = x[i - 1] + exp(y[i])
     end
 
@@ -52,7 +52,7 @@ function _transform_inverse_ordered(x::AbstractVector)
     @assert !isempty(y)
 
     @inbounds y[1] = x[1]
-    @inbounds for i = length(y)
+    @inbounds for i = 2:length(y)
         y[i] = log(x[i] - x[i - 1])
     end
 
