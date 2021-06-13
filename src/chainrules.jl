@@ -56,9 +56,12 @@ end
 
 function ChainRulesCore.rrule(::typeof(_transform_inverse_ordered), x::AbstractVector)
     r = similar(x)
-    r[1] = 1
-    if length(r) > 1
-        r[2:end] = x[2:end] - x[1:end - 1]
+    @inbounds for i = 1:length(r)
+        if i == 1
+            r[i] = 1
+        else
+            r[i] = x[i] - x[i - 1]
+        end
     end
 
     function _transform_inverse_ordered_adjoint(Δ)
@@ -69,15 +72,15 @@ function ChainRulesCore.rrule(::typeof(_transform_inverse_ordered), x::AbstractV
         @inbounds for j = 1:n - 1
             Δ_new[j] = (Δ[j] / r[j]) - (Δ[j + 1] / r[j + 1])
         end
-        Δ_new[n] = Δ[n] / r[n]
+        @inbounds Δ_new[n] = Δ[n] / r[n]
 
         return (ChainRulesCore.NoTangent(), Δ_new)
     end
 
     y = similar(x)
-    y[1] = x[1]
-    if size(y, 1) > 1
-        y[2:end] = log.(r[2:end])
+    @inbounds y[1] = x[1]
+    @inbounds for i = 2:length(x)
+        y[i] = log(r[i])
     end
 
     return y, _transform_inverse_ordered_adjoint
@@ -85,9 +88,12 @@ end
 
 function ChainRulesCore.rrule(::typeof(_transform_inverse_ordered), x::AbstractMatrix)
     r = similar(x)
-    r[1, :] .= 1
-    if size(r, 1) > 1
-        r[2:end, :] = x[2:end, :] - x[1:end - 1, :]
+    @inbounds for j = 1:size(x, 2), i = 1:size(x, 1)
+        if i == 1
+            r[i, j] = 1
+        else
+            r[i, j] = x[i, j] - x[i - 1, j]
+        end
     end
 
     function _transform_inverse_ordered_adjoint(Δ)
@@ -95,10 +101,13 @@ function ChainRulesCore.rrule(::typeof(_transform_inverse_ordered), x::AbstractM
         n = length(Δ)
         @assert n == size(Δ_new, 1)
 
-        @inbounds for j = 1:n - 1
-            Δ_new[j, :] = @. (Δ[j, :] / r[j, :]) - (Δ[j + 1, :] / r[j + 1, :])
+        @inbounds for j = 1:size(Δ_new, 2), i = 1:n - 1
+            Δ_new[i, j] = (Δ[i, j] / r[i, j]) - (Δ[i + 1, j] / r[i + 1, j])
         end
-        Δ_new[n, :] = Δ[n, :] ./ r[n, :]
+
+        @inbounds for j = 1:size(Δ_new)
+            Δ_new[n, j] = Δ[n, j] / r[n, j]
+        end
 
         return (ChainRulesCore.NoTangent(), Δ_new)
     end
@@ -106,9 +115,12 @@ function ChainRulesCore.rrule(::typeof(_transform_inverse_ordered), x::AbstractM
     # Compute primal here so we can make use of the already
     # computed `r`.
     y = similar(x)
-    y[1, :] = x[1, :]
-    if size(y, 1) > 1
-        y[2:end, :] = log.(r[2:end, :])
+    @inbounds for j = 1:size(x, 2), i = 1:size(x, 1)
+        if i == 1
+            y[i, j] = x[i, j]
+        else
+            y[i, j] = log(r[i, j])
+        end
     end
 
     return y, _transform_inverse_ordered_adjoint
