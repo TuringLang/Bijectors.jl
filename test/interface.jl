@@ -108,8 +108,10 @@ end
             b = bijector(d)
             x = rand(d)
             y = b(x)
-            @test log(abs(ForwardDiff.derivative(b, x))) ≈ logabsdetjac(b, x)
-            @test log(abs(ForwardDiff.derivative(inv(b), y))) ≈ logabsdetjac(inv(b), y)
+            # `ForwardDiff.derivative` can lead to some numerical inaccuracy,
+            # so we use a slightly higher `atol` than default.
+            @test log(abs(ForwardDiff.derivative(b, x))) ≈ logabsdetjac(b, x) atol=1e-6
+            @test log(abs(ForwardDiff.derivative(inv(b), y))) ≈ logabsdetjac(inv(b), y) atol=1e-6
         end
 
         @testset "$dist: ForwardDiff AD" begin
