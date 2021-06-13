@@ -20,7 +20,9 @@ ordered(d::Distribution) = Bijectors.transformed(d, OrderedBijector())
 
 function _transform_ordered(y::AbstractVector)
     x = similar(y)
-    x[1] = y[1]
+    @assert !isempty(y)
+
+    @inbounds x[1] = y[1]
     @inbounds for i = 2:size(x, 1)
         x[i] = x[i - 1] + exp(y[i])
     end
@@ -30,9 +32,14 @@ end
 
 function _transform_ordered(y::AbstractMatrix)
     x = similar(y)
-    x[1, :] = y[1, :]
-    @inbounds for i = 2:size(x, 1)
-        x[i, :] = x[i - 1, :] + exp.(y[i, :])
+    @assert !isempty(y)
+
+    @inbounds for j = 1:size(x, 2), i = 1:size(x, 1)
+        if i == 1
+            x[i, j] = y[i, j]
+        else
+            x[i, j] = x[i - 1, j] + exp(y[i, j])
+        end
     end
 
     return x
@@ -42,16 +49,27 @@ end
 
 function _transform_inverse_ordered(x::AbstractVector)
     y = similar(x)
-    y[1] = x[1]
-    @. y[2:end] = log(x[2:end] - x[1:end - 1])
+    @assert !isempty(y)
+
+    @inbounds y[1] = x[1]
+    @inbounds for i = length(y)
+        y[i] = log(x[i] - x[i - 1])
+    end
 
     return y
 end
 
 function _transform_inverse_ordered(x::AbstractMatrix)
     y = similar(x)
-    y[1, :] = x[1, :]
-    @. y[2:end, :] = log(x[2:end, :] - x[1:end - 1, :])
+    @assert !isempty(y)
+
+    @inbounds for j = 1:size(y, 2), i = 1:size(y, 1)
+        if i == 1
+            y[i, j] = x[i, j]
+        else
+            y[i, j] = log(x[i, j] - x[i - 1, j])
+        end
+    end
 
     return y
 end
