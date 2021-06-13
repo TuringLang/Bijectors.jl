@@ -403,6 +403,8 @@ end
         MvLogNormal(MvNormal(randn(10), exp.(randn(10)))),
         Dirichlet([1000 * one(Float64), eps(Float64)]), 
         Dirichlet([eps(Float64), 1000 * one(Float64)]),
+        transformed(MvNormal(randn(10), exp.(randn(10)))),
+        transformed(MvLogNormal(MvNormal(randn(10), exp.(randn(10)))))
     ]
 
     for dist in vector_dists
