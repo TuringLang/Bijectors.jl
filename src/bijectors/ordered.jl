@@ -1,9 +1,18 @@
+"""
+    OrderedBijector()
+
+A bijector mapping ordered vectors in ℝᵈ to an unordered vectors in ℝᵈ.
+
+## See also
+- [Stan's documentation](https://mc-stan.org/docs/2_27/reference-manual/ordered-vector.html)
+  - Note that this transformation and its inverse are the _opposite_ of in this reference.
+"""
 struct OrderedBijector <: Bijector{1} end
 
 """
     ordered(d::Distribution)
 
-TODO
+Returns a `Distribution` whose domain is now ordered vectors.
 """
 ordered(d::Distribution) = Bijectors.transformed(d, OrderedBijector())
 
