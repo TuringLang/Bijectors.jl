@@ -452,9 +452,11 @@ end
                 b = bijector(dist)
                 x = rand(dist)
                 y = b(x)
+                # `ForwardDiff.derivative` can lead to some numerical inaccuracy,
+                # so we use a slightly higher `atol` than default.
                 @test b(param(x)) isa TrackedArray
-                @test log(abs(det(ForwardDiff.jacobian(b, x)))) ≈ logabsdetjac(b, x)
-                @test log(abs(det(ForwardDiff.jacobian(inv(b), y)))) ≈ logabsdetjac(inv(b), y)
+                @test log(abs(det(ForwardDiff.jacobian(b, x)))) ≈ logabsdetjac(b, x) atol=1e-6
+                @test log(abs(det(ForwardDiff.jacobian(inv(b), y)))) ≈ logabsdetjac(inv(b), y) atol=1e-6
             end
         end
     end
