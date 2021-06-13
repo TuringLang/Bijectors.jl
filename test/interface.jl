@@ -63,6 +63,8 @@ end
         Rayleigh(1.0),
         TDist(2),
         truncated(Normal(0, 1), -Inf, 2),
+        transformed(Beta(2,2)),
+        transformed(Exponential()),
     ]
     
     for dist in uni_dists
