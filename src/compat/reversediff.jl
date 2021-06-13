@@ -9,7 +9,9 @@ using ..Bijectors: Log, SimplexBijector, maphcat, simplex_link_jacobian,
     ReverseDiffAD, Inverse
 import ..Bijectors: _eps, logabsdetjac, _logabsdetjac_scale, _simplex_bijector, 
     _simplex_inv_bijector, replace_diag, jacobian, getpd, lower, 
-    _inv_link_chol_lkj, _link_chol_lkj
+    _inv_link_chol_lkj, _link_chol_lkj, _transform_ordered, _transform_inverse_ordered
+
+import ChainRulesCore
 
 using Compat: eachcol
 using Distributions: LocationScale
@@ -194,5 +196,27 @@ end
 
     return α, find_alpha_pullback
 end
+
+# `OrderedBijector`
+function _transform_ordered(y::Union{TrackedVector, TrackedMatrix})
+    return track(_transform_ordered, y)
+end
+@grad function _transform_ordered(y::AbstractVecOrMat)
+    x, dx = ChainRulesCore.rrule(_transform_ordered, value(y))
+    return x, (wrap_chainrules_output ∘ Base.tail ∘ dx)
+end
+
+function _transform_inverse_ordered(x::Union{TrackedVector, TrackedMatrix})
+    return track(_transform_inverse_ordered, x)
+end
+@grad function _transform_inverse_ordered(x::AbstractVecOrMat)
+    y, dy = ChainRulesCore.rrule(_transform_inverse_ordered, value(x))
+    return y, (wrap_chainrules_output ∘ Base.tail ∘ dy)
+end
+
+# NOTE: Probably doesn't work in complete generality.
+wrap_chainrules_output(x) = x
+wrap_chainrules_output(x::ChainRulesCore.AbstractZero) = nothing
+wrap_chainrules_output(x::Tuple) = map(wrap_chainrules_output, x)
 
 end
