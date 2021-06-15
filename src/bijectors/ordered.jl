@@ -74,5 +74,5 @@ function _transform_inverse_ordered(x::AbstractMatrix)
     return y
 end
 
-logabsdetjac(b::OrderedBijector, x::AbstractVector) = sum(x[2:end])
-logabsdetjac(b::OrderedBijector, x::AbstractMatrix) = vec(sum(x[2:end, :]; dims = 1))
+logabsdetjac(b::OrderedBijector, x::AbstractVector) = sum(@view(x[2:end]))
+logabsdetjac(b::OrderedBijector, x::AbstractMatrix) = vec(sum(@view(x[2:end, :]); dims = 1))
