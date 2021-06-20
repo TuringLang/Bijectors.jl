@@ -25,7 +25,8 @@ function ChainRulesCore.rrule(::typeof(_transform_ordered), y::AbstractVector)
             Δ_new[i] = s * exp(y[i])
         end
 
-        return (ChainRulesCore.NoTangent(), Δ_new)
+        # Using `NO_FIELDS` to be backwards-compatible.
+        return (ChainRulesCore.NO_FIELDS, Δ_new)
     end
 
     return _transform_ordered(y), _transform_ordered_adjoint
@@ -48,7 +49,7 @@ function ChainRulesCore.rrule(::typeof(_transform_ordered), y::AbstractMatrix)
             Δ_new[i, :] = s * exp.(y[i, :])
         end
 
-        return (ChainRulesCore.NoTangent(), Δ_new)
+        return (ChainRulesCore.NO_FIELDS, Δ_new)
     end
 
     return _transform_ordered(y), _transform_ordered_adjoint
@@ -74,7 +75,7 @@ function ChainRulesCore.rrule(::typeof(_transform_inverse_ordered), x::AbstractV
         end
         @inbounds Δ_new[n] = Δ[n] / r[n]
 
-        return (ChainRulesCore.NoTangent(), Δ_new)
+        return (ChainRulesCore.NO_FIELDS, Δ_new)
     end
 
     y = similar(x)
@@ -109,7 +110,7 @@ function ChainRulesCore.rrule(::typeof(_transform_inverse_ordered), x::AbstractM
             Δ_new[n, j] = Δ[n, j] / r[n, j]
         end
 
-        return (ChainRulesCore.NoTangent(), Δ_new)
+        return (ChainRulesCore.NO_FIELDS, Δ_new)
     end
 
     # Compute primal here so we can make use of the already
