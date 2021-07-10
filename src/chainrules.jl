@@ -35,18 +35,18 @@ end
 function ChainRulesCore.rrule(::typeof(_transform_ordered), y::AbstractMatrix)
     function _transform_ordered_adjoint(Δ)
         Δ_new = similar(y)
-        n = length(Δ)
-        @assert n == size(Δ_new, 1)
+        n = size(Δ, 1)
+        @assert size(Δ) == size(Δ_new)
 
-        s = sum(Δ)
+        s = vec(sum(Δ; dims=1))
         Δ_new[1, :] .= s
         @inbounds for i in 2:n
             # Equivalent to
             #
             #    Δ_new[i] = sum(Δ[i:end]) * yexp[i - 1]
             #
-            s -= Δ[i - 1]
-            Δ_new[i, :] = s * exp.(y[i, :])
+            s -= Δ[i - 1, :]
+            Δ_new[i, :] = s .* exp.(y[i, :])
         end
 
         return (ChainRulesCore.NO_FIELDS, Δ_new)
@@ -99,14 +99,14 @@ function ChainRulesCore.rrule(::typeof(_transform_inverse_ordered), x::AbstractM
 
     function _transform_inverse_ordered_adjoint(Δ)
         Δ_new = similar(x)
-        n = length(Δ)
-        @assert n == size(Δ_new, 1)
+        n = size(Δ, 1)
+        @assert size(Δ) == size(Δ_new)
 
         @inbounds for j = 1:size(Δ_new, 2), i = 1:n - 1
             Δ_new[i, j] = (Δ[i, j] / r[i, j]) - (Δ[i + 1, j] / r[i + 1, j])
         end
 
-        @inbounds for j = 1:size(Δ_new)
+        @inbounds for j = 1:size(Δ_new, 2)
             Δ_new[n, j] = Δ[n, j] / r[n, j]
         end
 
