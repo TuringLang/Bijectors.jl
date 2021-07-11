@@ -1,7 +1,7 @@
 """
     OrderedBijector()
 
-A bijector mapping ordered vectors in ℝᵈ to an unordered vectors in ℝᵈ.
+A bijector mapping ordered vectors in ℝᵈ to unordered vectors in ℝᵈ.
 
 ## See also
 - [Stan's documentation](https://mc-stan.org/docs/2_27/reference-manual/ordered-vector.html)
@@ -12,9 +12,9 @@ struct OrderedBijector <: Bijector{1} end
 """
     ordered(d::Distribution)
 
-Returns a `Distribution` whose domain is now ordered vectors.
+Return a `Distribution` whose support are ordered vectors, i.e., vectors with increasingly ordered elements.
 """
-ordered(d::Distribution) = Bijectors.transformed(d, OrderedBijector())
+ordered(d::ContinuousMultivariateDistribution) = Bijectors.transformed(d, OrderedBijector())
 
 (b::OrderedBijector)(y::AbstractVecOrMat) = _transform_ordered(y)
 
