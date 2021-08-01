@@ -63,6 +63,8 @@ end
         Rayleigh(1.0),
         TDist(2),
         truncated(Normal(0, 1), -Inf, 2),
+        transformed(Beta(2,2)),
+        transformed(Exponential()),
     ]
     
     for dist in uni_dists
@@ -106,8 +108,10 @@ end
             b = bijector(d)
             x = rand(d)
             y = b(x)
-            @test log(abs(ForwardDiff.derivative(b, x))) ≈ logabsdetjac(b, x)
-            @test log(abs(ForwardDiff.derivative(inv(b), y))) ≈ logabsdetjac(inv(b), y)
+            # `ForwardDiff.derivative` can lead to some numerical inaccuracy,
+            # so we use a slightly higher `atol` than default.
+            @test log(abs(ForwardDiff.derivative(b, x))) ≈ logabsdetjac(b, x) atol=1e-6
+            @test log(abs(ForwardDiff.derivative(inv(b), y))) ≈ logabsdetjac(inv(b), y) atol=1e-6
         end
 
         @testset "$dist: ForwardDiff AD" begin
@@ -401,6 +405,8 @@ end
         MvLogNormal(MvNormal(randn(10), exp.(randn(10)))),
         Dirichlet([1000 * one(Float64), eps(Float64)]), 
         Dirichlet([eps(Float64), 1000 * one(Float64)]),
+        transformed(MvNormal(randn(10), exp.(randn(10)))),
+        transformed(MvLogNormal(MvNormal(randn(10), exp.(randn(10)))))
     ]
 
     for dist in vector_dists
@@ -446,9 +452,11 @@ end
                 b = bijector(dist)
                 x = rand(dist)
                 y = b(x)
+                # `ForwardDiff.derivative` can lead to some numerical inaccuracy,
+                # so we use a slightly higher `atol` than default.
                 @test b(param(x)) isa TrackedArray
-                @test log(abs(det(ForwardDiff.jacobian(b, x)))) ≈ logabsdetjac(b, x)
-                @test log(abs(det(ForwardDiff.jacobian(inv(b), y)))) ≈ logabsdetjac(inv(b), y)
+                @test log(abs(det(ForwardDiff.jacobian(b, x)))) ≈ logabsdetjac(b, x) atol=1e-6
+                @test log(abs(det(ForwardDiff.jacobian(inv(b), y)))) ≈ logabsdetjac(inv(b), y) atol=1e-6
             end
         end
     end
@@ -636,6 +644,34 @@ end
     x = ones(4) ./ 4.0
     @test_throws AssertionError sb(x)
 
+    # Mixed versions
+    # Tuple, Array
+    sb = Stacked([Bijectors.Exp(), Bijectors.SimplexBijector()], (1:1, 2:3))
+    x = ones(3) ./ 3.0
+    res = forward(sb, x)
+    @test sb(param(x)) isa TrackedArray
+    @test sb(x) == [exp(x[1]), sb.bs[2](x[2:3])...]
+    @test res.rv == [exp(x[1]), sb.bs[2](x[2:3])...]
+    @test logabsdetjac(sb, x) == sum([sum(logabsdetjac(sb.bs[i], x[sb.ranges[i]])) for i = 1:2])
+    @test res.logabsdetjac == logabsdetjac(sb, x)
+
+    x = ones(4) ./ 4.0
+    @test_throws AssertionError sb(x)
+
+    # Array, Tuple
+    sb = Stacked((Bijectors.Exp(), Bijectors.SimplexBijector()), [1:1, 2:3])
+    x = ones(3) ./ 3.0
+    res = forward(sb, x)
+    @test sb(param(x)) isa TrackedArray
+    @test sb(x) == [exp(x[1]), sb.bs[2](x[2:3])...]
+    @test res.rv == [exp(x[1]), sb.bs[2](x[2:3])...]
+    @test logabsdetjac(sb, x) == sum([sum(logabsdetjac(sb.bs[i], x[sb.ranges[i]])) for i = 1:2])
+    @test res.logabsdetjac == logabsdetjac(sb, x)
+
+    x = ones(4) ./ 4.0
+    @test_throws AssertionError sb(x)
+
+
     @testset "Stacked: ADVI with MvNormal" begin
         # MvNormal test
         dists = [
@@ -798,8 +834,8 @@ end
         SimplexBijector(),
         Stacked((Exp{0}(), Log{0}())),
         Stacked((Log{0}(), Exp{0}())),
-        # Stacked([Exp{0}(), Log{0}()]),
-        # Stacked([Log{0}(), Exp{0}()]),
+        Stacked([Exp{0}(), Log{0}()]),
+        Stacked([Log{0}(), Exp{0}()]),
         Composed((Exp{0}(), Log{0}())),
         Composed((Log{0}(), Exp{0}())),
         # Composed([Exp{0}(), Log{0}()]),

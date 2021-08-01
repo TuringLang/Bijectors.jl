@@ -75,7 +75,7 @@ function _transform(x, rs::NTuple{1, UnitRange{Int}}, b::Bijector)
     @assert rs[1] == 1:length(x)
     return b(x)
 end
-function (sb::Stacked{<:Tuple})(x::AbstractVector{<:Real})
+function (sb::Stacked{<:Tuple,<:Tuple})(x::AbstractVector{<:Real})
     y = _transform(x, sb.ranges, sb.bs...)
     @assert size(y) == size(x) "x is size $(size(x)) but y is $(size(y))"
     return y
@@ -109,18 +109,18 @@ function logabsdetjac(
 end
 
 function logabsdetjac(
-    b::Stacked{<:Tuple{Vararg{<:Any, N}}},
+    b::Stacked{<:Tuple{Vararg{<:Any, N}}, <:Tuple{Vararg{<:Any, N}}},
     x::AbstractVector{<:Real}
 ) where {N}
     init = sum(logabsdetjac(b.bs[1], x[b.ranges[1]]))
-    init + sum(2:N) do i
-        sum(logabsdetjac(b.bs[i], x[b.ranges[i]]))
-    end
-end
 
-# Handle the case of just one bijector
-function logabsdetjac(b::Stacked{<:Tuple{<:Bijector}}, x::AbstractVector{<:Real})
-    return sum(logabsdetjac(b.bs[1], x[b.ranges[1]]))
+    return if N == 1
+        init
+    else
+        init + sum(2:N) do i
+            sum(logabsdetjac(b.bs[i], x[b.ranges[i]]))
+        end
+    end
 end
 
 # Generates something similar to:
@@ -132,7 +132,7 @@ end
 #     logjac += sum(_logjac)
 #     return (result = vcat(y_1, y_2), logabsdetjac = logjac)
 # end
-@generated function forward(b::Stacked{<:Tuple{Vararg{<:Any, N}}}, x::AbstractVector) where {N}
+@generated function forward(b::Stacked{<:Tuple{Vararg{<:Any, N}}, <:Tuple{Vararg{<:Any, N}}}, x::AbstractVector) where {N}
     expr = Expr(:block)
     y_names = []
 
@@ -154,7 +154,7 @@ end
     return expr
 end
 
-function forward(sb::Stacked{<:AbstractArray}, x::AbstractVector)
+function forward(sb::Stacked, x::AbstractVector)
     N = length(sb.bs)
     yinit, linit = forward(sb.bs[1], x[sb.ranges[1]])
     logjac = sum(linit)
