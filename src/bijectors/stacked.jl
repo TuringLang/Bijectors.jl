@@ -164,10 +164,10 @@ function forward(sb::Stacked, x::AbstractVector)
     N = length(sb.bs)
     yinit, linit = forward(sb.bs[1], x[sb.ranges[1]])
     logjac = sum(linit)
-    ys = mapvcat(drop(sb.bs, 1), drop(sb.ranges, 1)) do b, r
+    ys = mapreduce(vcat, sb.bs[2:end], sb.ranges[2:end]; init=yinit) do b, r
         y, l = forward(b, x[r])
         logjac += sum(l)
         y
     end
-    return (rv = vcat(yinit, ys), logabsdetjac = logjac)
+    return (rv = ys, logabsdetjac = logjac)
 end
