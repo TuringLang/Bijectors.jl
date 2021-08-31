@@ -9,8 +9,9 @@ ChainRulesCore.@scalar_rule(
 
 # `OrderedBijector`
 function ChainRulesCore.rrule(::typeof(_transform_ordered), y::AbstractVector)
-    function _transform_ordered_adjoint(Δ)
+    function _transform_ordered_adjoint(ΔΩ)
         Δ_new = similar(y)
+        Δ = ChainRulesCore.unthunk(ΔΩ)
         n = length(Δ)
         @assert n == length(Δ_new)
 
@@ -25,16 +26,16 @@ function ChainRulesCore.rrule(::typeof(_transform_ordered), y::AbstractVector)
             Δ_new[i] = s * exp(y[i])
         end
 
-        # Using `NO_FIELDS` to be backwards-compatible.
-        return (ChainRulesCore.NO_FIELDS, Δ_new)
+        return (ChainRulesCore.NoTangent(), Δ_new)
     end
 
     return _transform_ordered(y), _transform_ordered_adjoint
 end
 
 function ChainRulesCore.rrule(::typeof(_transform_ordered), y::AbstractMatrix)
-    function _transform_ordered_adjoint(Δ)
+    function _transform_ordered_adjoint(ΔΩ)
         Δ_new = similar(y)
+        Δ = ChainRulesCore.unthunk(ΔΩ)
         n = size(Δ, 1)
         @assert size(Δ) == size(Δ_new)
 
@@ -49,7 +50,7 @@ function ChainRulesCore.rrule(::typeof(_transform_ordered), y::AbstractMatrix)
             Δ_new[i, :] = s .* exp.(y[i, :])
         end
 
-        return (ChainRulesCore.NO_FIELDS, Δ_new)
+        return (ChainRulesCore.NoTangent(), Δ_new)
     end
 
     return _transform_ordered(y), _transform_ordered_adjoint
@@ -65,8 +66,9 @@ function ChainRulesCore.rrule(::typeof(_transform_inverse_ordered), x::AbstractV
         end
     end
 
-    function _transform_inverse_ordered_adjoint(Δ)
+    function _transform_inverse_ordered_adjoint(ΔΩ)
         Δ_new = similar(x)
+        Δ = ChainRulesCore.unthunk(ΔΩ)
         @assert length(Δ_new) == length(Δ)
 
         n = length(Δ_new)
@@ -75,7 +77,7 @@ function ChainRulesCore.rrule(::typeof(_transform_inverse_ordered), x::AbstractV
         end
         @inbounds Δ_new[n] = Δ[n] / r[n]
 
-        return (ChainRulesCore.NO_FIELDS, Δ_new)
+        return (ChainRulesCore.NoTangent(), Δ_new)
     end
 
     y = similar(x)
@@ -97,8 +99,9 @@ function ChainRulesCore.rrule(::typeof(_transform_inverse_ordered), x::AbstractM
         end
     end
 
-    function _transform_inverse_ordered_adjoint(Δ)
+    function _transform_inverse_ordered_adjoint(ΔΩ)
         Δ_new = similar(x)
+        Δ = ChainRulesCore.unthunk(ΔΩ)
         n = size(Δ, 1)
         @assert size(Δ) == size(Δ_new)
 
@@ -110,7 +113,7 @@ function ChainRulesCore.rrule(::typeof(_transform_inverse_ordered), x::AbstractM
             Δ_new[n, j] = Δ[n, j] / r[n, j]
         end
 
-        return (ChainRulesCore.NO_FIELDS, Δ_new)
+        return (ChainRulesCore.NoTangent(), Δ_new)
     end
 
     # Compute primal here so we can make use of the already
