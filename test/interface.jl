@@ -401,12 +401,12 @@ end
         Dirichlet(2, 3),
         Dirichlet([1000 * one(Float64), eps(Float64)]),
         Dirichlet([eps(Float64), 1000 * one(Float64)]),
-        MvNormal(randn(10), exp.(randn(10))),
-        MvLogNormal(MvNormal(randn(10), exp.(randn(10)))),
+        MvNormal(randn(10), Diagonal(exp.(randn(10)))),
+        MvLogNormal(MvNormal(randn(10), Diagonal(exp.(randn(10))))),
         Dirichlet([1000 * one(Float64), eps(Float64)]), 
         Dirichlet([eps(Float64), 1000 * one(Float64)]),
-        transformed(MvNormal(randn(10), exp.(randn(10)))),
-        transformed(MvLogNormal(MvNormal(randn(10), exp.(randn(10)))))
+        transformed(MvNormal(randn(10), Diagonal(exp.(randn(10))))),
+        transformed(MvLogNormal(MvNormal(randn(10), Diagonal(exp.(randn(10))))))
     ]
 
     for dist in vector_dists
@@ -685,7 +685,7 @@ end
             InverseGamma(),
             Cauchy(),
             Gamma(),
-            MvNormal(zeros(2), ones(2))
+            MvNormal(zeros(2), I)
         ]
 
         ranges = []
@@ -698,7 +698,7 @@ end
         ranges = tuple(ranges...)
 
         num_params = ranges[end][end]
-        d = MvNormal(zeros(num_params), ones(num_params))
+        d = MvNormal(zeros(num_params), I)
 
         # Stacked{<:Array}
         bs = bijector.(dists)     # constrained-to-unconstrained bijectors for dists
@@ -743,7 +743,7 @@ end
         @test log(abs(det(ForwardDiff.jacobian(isb, y)))) ≈ logabsdetjac(isb, y)
 
         # Ensure `Stacked` works for a single bijector
-        d = (MvNormal(2, 1.0),)
+        d = (MvNormal(zeros(2), I),)
         sb = Stacked(bijector.(d), (1:2, ))
         x = [.5, 1.]
         @test sb(x) == x

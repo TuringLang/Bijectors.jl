@@ -68,7 +68,7 @@ end
 end
 
 @testset "Flows" begin
-    d = MvNormal(zeros(2), ones(2))
+    d = MvNormal(zeros(2), I)
     b = PlanarLayer(2)
     flow = transformed(d, b)  # <= Radial flow
 
