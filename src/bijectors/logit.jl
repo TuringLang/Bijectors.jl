@@ -1,8 +1,6 @@
 ######################
 # Logit and Logistic #
 ######################
-using StatsFuns: logit, logistic
-
 struct Logit{N, T<:Real} <: Bijector{N}
     a::T
     b::T
@@ -29,11 +27,11 @@ Base.:(==)(b1::Logit, b2::Logit) = b1.a == b2.a && b1.b == b2.b
 
 (b::Logit)(x) = _logit.(x, b.a, b.b)
 (b::Logit)(x::AbstractArray{<:AbstractArray}) = map(b, x)
-_logit(x, a, b) = logit((x - a) / (b - a))
+_logit(x, a, b) = LogExpFunctions.logit((x - a) / (b - a))
 
 (ib::Inverse{<:Logit})(y) = _ilogit.(y, ib.orig.a, ib.orig.b)
 (ib::Inverse{<:Logit})(x::AbstractArray{<:AbstractArray}) = map(ib, x)
-_ilogit(y, a, b) = (b - a) * logistic(y) + a
+_ilogit(y, a, b) = (b - a) * LogExpFunctions.logistic(y) + a
 
 logabsdetjac(b::Logit{0}, x) = logit_logabsdetjac.(x, b.a, b.b)
 logabsdetjac(b::Logit{1}, x::AbstractVector) = sum(logit_logabsdetjac.(x, b.a, b.b))

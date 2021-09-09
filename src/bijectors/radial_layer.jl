@@ -1,7 +1,3 @@
-using LinearAlgebra
-using Random
-using NNlib: softplus
-
 ################################################################################
 #                            Planar and Radial Flows                           #
 #             Ref: Variational Inference with Normalizing Flows,               #
@@ -39,8 +35,8 @@ function _transform(flow::RadialLayer, z::AbstractVecOrMat)
     return _radial_transform(first(flow.α_), first(flow.β), flow.z_0, z)
 end
 function _radial_transform(α_, β, z_0, z)
-    α = softplus(α_)            # from A.2
-    β_hat = -α + softplus(β)    # from A.2
+    α = LogExpFunctions.log1pexp(α_)            # from A.2
+    β_hat = -α + LogExpFunctions.log1pexp(β)    # from A.2
     if z isa AbstractVector
         r = norm(z .- z_0)
     else
@@ -73,8 +69,8 @@ end
 function (ib::Inverse{<:RadialLayer})(y::AbstractVector{<:Real})
     flow = ib.orig
     z0 = flow.z_0
-    α = softplus(first(flow.α_))            # from A.2
-    α_plus_β_hat = softplus(first(flow.β))  # from A.2
+    α = LogExpFunctions.log1pexp(first(flow.α_))            # from A.2
+    α_plus_β_hat = LogExpFunctions.log1pexp(first(flow.β))  # from A.2
 
     # Compute the norm ``r`` from A.2.
     y_minus_z0 = y .- z0
@@ -87,8 +83,8 @@ end
 function (ib::Inverse{<:RadialLayer})(y::AbstractMatrix{<:Real})
     flow = ib.orig
     z0 = flow.z_0
-    α = softplus(first(flow.α_))            # from A.2
-    α_plus_β_hat = softplus(first(flow.β))  # from A.2
+    α = LogExpFunctions.log1pexp(first(flow.α_))            # from A.2
+    α_plus_β_hat = LogExpFunctions.log1pexp(first(flow.β))  # from A.2
 
     # Compute the norm ``r`` from A.2 for each column.
     y_minus_z0 = y .- z0

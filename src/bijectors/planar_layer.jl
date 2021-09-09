@@ -1,7 +1,3 @@
-using LinearAlgebra
-using Random
-using NNlib: softplus
-
 ################################################################################
 #                            Planar and Radial Flows                           #
 #             Ref: Variational Inference with Normalizing Flows,               #
@@ -63,8 +59,8 @@ arXiv:1505.05770
 """
 function get_u_hat(u::AbstractVector{<:Real}, w::AbstractVector{<:Real})
     wT_u = dot(w, u)
-    û = u .+ ((softplus(-wT_u) - 1) / sum(abs2, w)) .* w
-    wT_û = softplus(wT_u) - 1
+    û = u .+ ((LogExpFunctions.log1pexp(-wT_u) - 1) / sum(abs2, w)) .* w
+    wT_û = LogExpFunctions.log1pexp(wT_u) - 1
     return û, wT_û
 end
 

@@ -30,12 +30,14 @@ module Bijectors
 
 using Reexport, Requires
 @reexport using Distributions
-using StatsFuns
 using LinearAlgebra
 using MappedArrays
 using Base.Iterators: drop
 using LinearAlgebra: AbstractTriangular
+
 import Functors
+import IrrationalConstants
+import LogExpFunctions
 import NonlinearSolve
 import ChainRulesCore
 

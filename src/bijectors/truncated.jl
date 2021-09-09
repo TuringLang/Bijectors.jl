@@ -58,7 +58,7 @@ end
 function truncated_link(x::Real, a, b)
     lowerbounded, upperbounded = isfinite(a), isfinite(b)
     if lowerbounded && upperbounded
-        return StatsFuns.logit((x - a) / (b - a))
+        return LogExpFunctions.logit((x - a) / (b - a))
     elseif lowerbounded
         return log(x - a)
     elseif upperbounded
@@ -102,7 +102,7 @@ end
 function truncated_invlink(y, a, b)
     lowerbounded, upperbounded = isfinite(a), isfinite(b)
     if lowerbounded && upperbounded
-        return (b - a) * StatsFuns.logistic(y) + a
+        return (b - a) * LogExpFunctions.logistic(y) + a
     elseif lowerbounded
         return exp(y) + a
     elseif upperbounded
