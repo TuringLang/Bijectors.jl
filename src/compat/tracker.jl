@@ -16,6 +16,7 @@ using ..Bijectors: Log, SimplexBijector, ADBijector,
     TrackerAD, Inverse, Stacked, Exp
 
 import ChainRulesCore
+import LogExpFunctions
 
 using Compat: eachcol
 using LinearAlgebra
@@ -250,8 +251,8 @@ for header in [
 ]
     @eval begin
         function Bijectors._radial_transform($(header...))
-            α = Bijectors.softplus(α_)            # from A.2
-            β_hat = -α + Bijectors.softplus(β)    # from A.2
+            α = LogExpFunctions.log1pexp(α_)            # from A.2
+            β_hat = -α + LogExpFunctions.log1pexp(β)    # from A.2
             if β_hat isa TrackedReal
                 TV = vectorof(typeof(β_hat))
                 T = vectorof(typeof(β_hat))
@@ -285,8 +286,8 @@ for header in [
 ]
     @eval begin
         function Bijectors._radial_transform($(header...))
-            α = Bijectors.softplus(α_)            # from A.2
-            β_hat = -α + Bijectors.softplus(β)    # from A.2
+            α = LogExpFunctions.log1pexp(α_)            # from A.2
+            β_hat = -α + LogExpFunctions.log1pexp(β)    # from A.2
             if β_hat isa TrackedReal
                 TV = vectorof(typeof(β_hat))
                 T = matrixof(TV)

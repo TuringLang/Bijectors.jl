@@ -6,6 +6,7 @@ using DistributionsAD
 using FiniteDifferences
 using ForwardDiff
 using Functors
+using LogExpFunctions
 using ReverseDiff
 using Tracker
 using Zygote
@@ -17,8 +18,6 @@ using Bijectors: Log, Exp, Shift, Scale, Logit, SimplexBijector, PDBijector, Per
 
 using DistributionsAD: TuringUniform, TuringMvNormal, TuringMvLogNormal,
     TuringPoissonBinomial
-
-import NNlib
 
 const GROUP = get(ENV, "GROUP", "All")
 

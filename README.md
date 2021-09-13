@@ -514,7 +514,7 @@ logabsdetjac(::Identity{0}, y::Real) = zero(eltype(y)) # ∂ₓid(x) = ∂ₓ x 
 A slightly more complex example is `Logit`:
 
 ```julia
-using StatsFuns: logit, logistic
+using LogExpFunctions: logit, logistic
 
 struct Logit{T<:Real} <: Bijector{0}
     a::T
@@ -586,7 +586,7 @@ As you can see it's a very contrived example, but you get the idea.
 We could also have implemented `Logit` as an `ADBijector`:
 
 ```julia
-using StatsFuns: logit, logistic
+using LogExpFunctions: logit, logistic
 using Bijectors: ADBackend
 
 struct ADLogit{T, AD} <: ADBijector{AD, 0}

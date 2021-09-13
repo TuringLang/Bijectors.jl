@@ -134,8 +134,8 @@ let ϵ = eps(Float64)
         Dirichlet(2, 3),
         Dirichlet([1000 * one(Float64), eps(Float64)]),
         Dirichlet([eps(Float64), 1000 * one(Float64)]),
-        MvNormal(randn(10), exp.(randn(10))),
-        MvLogNormal(MvNormal(randn(10), exp.(randn(10)))),
+        MvNormal(randn(10), Diagonal(exp.(randn(10)))),
+        MvLogNormal(MvNormal(randn(10), Diagonal(exp.(randn(10))))),
         Dirichlet([1000 * one(Float64), eps(Float64)]), 
         Dirichlet([eps(Float64), 1000 * one(Float64)]),
     ]
