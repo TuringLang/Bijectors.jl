@@ -30,13 +30,13 @@ The following table lists mathematical operations for a bijector and the corresp
 | `p ↦ b` such that `support(b_* p) = ℝᵈ`               | `bijector(p)`           | ✓         |
 | `(x ∼ p, b(x), log｜det J(b, x)｜, log q(y))` | `forward(q)`            | ✓         |
 
-In this table, `b` denotes a `Bijector`, `J(b, x)` denotes the jacobian of `b` evaluated at `x`, `b_*` denotes the [push-forward](https://www.wikiwand.com/en/Pushforward_measure) of `p` by `b`, and `x ∼ p` denotes `x` sampled from the distribution with density `p`.
+In this table, `b` denotes a `Bijector`, `J(b, x)` denotes the Jacobian of `b` evaluated at `x`, `b_*` denotes the [push-forward](https://www.wikiwand.com/en/Pushforward_measure) of `p` by `b`, and `x ∼ p` denotes `x` sampled from the distribution with density `p`.
 
 The "Automatic" column in the table refers to whether or not you are required to implement the feature for a custom `Bijector`. "AD" refers to the fact that it can be implemented "automatically" using automatic differentiation, i.e. `ADBijector`.
 
 ## Functions
 
-1. `link`: maps a sample of a random distribution `dist` from its support to a value in R^n. Example:
+1. `link`: maps a sample of a random distribution `dist` from its support to a value in ℝⁿ. Example:
 
 ```julia
 julia> using Bijectors
@@ -84,7 +84,7 @@ julia> logpdf_with_trans(dist, x, true) # considering the transformation
 ## `Bijector` interface
 A `Bijector` is a differentiable bijection with a differentiable inverse. That's basically it.
 
-The primary application of `Bijector`s is the (very profitable) business of transforming (usually continuous) probability densities. If we transfrom a random variable `x ~ p(x)` to `y = b(x)` where `b` is a `Bijector`, we also get a canonical density `q(y) = p(b⁻¹(y)) |det J(b⁻¹, y)|` for `y`. Here `J(b⁻¹, y)` is the jacobian of the inverse transform evaluated at `y`. `q` is also known as the _push-forward_ of `p` by `b` in measure theory.
+The primary application of `Bijector`s is the (very profitable) business of transforming (usually continuous) probability densities. If we transfrom a random variable `x ~ p(x)` to `y = b(x)` where `b` is a `Bijector`, we also get a canonical density `q(y) = p(b⁻¹(y)) |det J(b⁻¹, y)|` for `y`. Here `J(b⁻¹, y)` is the Jacobian of the inverse transform evaluated at `y`. `q` is also known as the _push-forward_ of `p` by `b` in measure theory.
 
 There's plenty of different reasons why one would want to do something like this. It can be because your `p` has non-zero probability (support) on a closed interval `[a, b]` and you want to use AD without having to worry about reaching the boundary. E.g. `Beta` has support `[0, 1]` so if we could transform `p = Beta` into a density `q` with support on ℝ, we could instead compute the derivative of `logpdf(q, y)` wrt. `y`, and then transform back `x = b⁻¹(y)`. This is very useful for certain inference methods, e.g. Hamiltonian Monte-Carlo, where we need to take the derivative of the logpdf-computation wrt. input.
 
@@ -717,7 +717,7 @@ The following methods are implemented by all subtypes of `Bijector`, this also i
 - `logabsdetjac(b::Bijector, x)`: computes log(abs(det(jacobian(b, x)))).
 - `forward(b::Bijector, x)`: returns named tuple `(rv=b(x), logabsdetjac=logabsdetjac(b, x))` in the most efficient manner.
 - `∘`, `composel`, `composer`: convenient and type-safe constructors for `Composed`. `composel(bs...)` composes s.t. the resulting composition is evaluated left-to-right, while `composer(bs...)` is evaluated right-to-left. `∘` is right-to-left, as excepted from standard mathematical notation.
-- `jacobian(b::Bijector, x)` [OPTIONAL]: returns the jacobian of the transformation. In some cases the analytical jacobian has been implemented for efficiency.
+- `jacobian(b::Bijector, x)` [OPTIONAL]: returns the Jacobian of the transformation. In some cases the analytical Jacobian has been implemented for efficiency.
 - `dimension(b::Bijector)`: returns the dimensionality of `b`.
 - `isclosedform(b::Bijector)`: returns `true` or `false` depending on whether or not `b(x)` has a closed-form implementation.
 
