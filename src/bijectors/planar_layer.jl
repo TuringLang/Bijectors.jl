@@ -157,16 +157,12 @@ function find_alpha(wt_y::T, wt_u_hat::T, b::T) where {T<:Real}
     # Compute the initial bracket (see above).
     initial_bracket = (wt_y - abs(wt_u_hat), wt_y + abs(wt_u_hat))
 
-    # Try to solve the root-finding problem, i.e., compute a final bracket
-    prob = NonlinearSolve.NonlinearProblem{false}(initial_bracket) do α, _
-        α + wt_u_hat * tanh(α + b) - wt_y
-    end
-    sol = NonlinearSolve.solve(prob, NonlinearSolve.Falsi())
-    if sol.retcode === NonlinearSolve.MAXITERS_EXCEED
-        @warn "Planar layer: root finding algorithm did not converge" sol
+    # Solve the root-finding problem
+    α0 = Roots.find_zero(initial_bracket) do α
+        return α + wt_u_hat * tanh(α + b) - wt_y
     end
 
-    return sol.left
+    return α0
 end
 
 logabsdetjac(flow::PlanarLayer, x) = forward(flow, x).logabsdetjac

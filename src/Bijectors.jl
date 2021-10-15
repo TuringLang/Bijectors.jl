@@ -35,11 +35,11 @@ using MappedArrays
 using Base.Iterators: drop
 using LinearAlgebra: AbstractTriangular
 
+import ChainRulesCore
 import Functors
 import IrrationalConstants
 import LogExpFunctions
-import NonlinearSolve
-import ChainRulesCore
+import Roots
 
 export  TransformDistribution,
         PositiveDistribution,
