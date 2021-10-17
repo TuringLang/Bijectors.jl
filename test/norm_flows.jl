@@ -42,6 +42,24 @@ end
 
     test_functor(flow, (w = w, u = u, b = b))
     test_functor(inv(flow), (orig = flow,))
+
+    @testset "find_alpha" begin
+        for wt_y in (-20.3, -3, -3//2, 0.0, 5, 29//4, 12.3)
+            # the root finding algorithm assumes wt_u_hat ≥ -1 (satisfied for the flow)
+            # |wt_u_hat| < eps checks that empty brackets are handled correctly
+            # https://github.com/TuringLang/Bijectors.jl/issues/204
+            for wt_u_hat in (-1, -1//2, -1e-20, 0, 1e-20, 3, 11//3, 17.2)
+                for b in (-19.3, -8//3, -1, 0.0, 1//2, 3, 4.3)
+                    # find α that solves wt_y = α + wt_u_hat * tanh(α + b)
+                    α = @inferred(Bijectors.find_alpha(wt_y, wt_u_hat, b))
+
+                    # check if α is an approximate solution to the considered equation
+                    # have to set atol if wt_y is zero (otherwise only equality is checked)
+                    @test wt_y ≈ α + wt_u_hat * tanh(α + b) atol=iszero(wt_y) ? 1e-14 : 0.0
+                end
+            end
+        end
+    end
 end
 
 @testset "RadialLayer" begin
