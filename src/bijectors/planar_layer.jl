@@ -155,10 +155,17 @@ function find_alpha(wt_y::Real, wt_u_hat::Real, b::Real)
 end
 function find_alpha(wt_y::T, wt_u_hat::T, b::T) where {T<:Real}
     # Compute the initial bracket (see above).
-    initial_bracket = (wt_y - abs(wt_u_hat), wt_y + abs(wt_u_hat))
+    abs_wt_u_hat = abs(wt_u_hat)
+    lower = float(wt_y - abs_wt_u_hat)
+    upper = float(wt_y + abs_wt_u_hat)
+
+    # Handle empty brackets (https://github.com/TuringLang/Bijectors.jl/issues/204)
+    if lower == upper
+        return lower
+    end
 
     # Solve the root-finding problem
-    α0 = Roots.find_zero(initial_bracket) do α
+    α0 = Roots.find_zero((lower, upper)) do α
         return α + wt_u_hat * tanh(α + b) - wt_y
     end
 
