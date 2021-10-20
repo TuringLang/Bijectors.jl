@@ -59,6 +59,13 @@ end
                 end
             end
         end
+
+        # floating point issues
+        # https://github.com/TuringLang/Bijectors.jl/issues/204
+        wt_y = 0.8845640339582252
+        wt_u_hat = 0.8296950433716855
+        b = -1e8
+        @test Bijectors.find_alpha(wt_y, wt_u_hat, b) ≈ wt_y + wt_u_hat
     end
 end
 
