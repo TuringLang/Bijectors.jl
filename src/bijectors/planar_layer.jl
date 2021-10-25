@@ -143,6 +143,9 @@ Thus
 α̂ - |wt_u_hat| - wt_y \\leq 0 \\leq α̂ + |wt_u_hat| - wt_y,
 ```
 which implies ``α̂ ∈ [wt_y - |wt_u_hat|, wt_y + |wt_u_hat|]``.
+To avoid floating point issues if ``α̂  = wt_y ± |wt_u_hat|``, we use the more conservative
+interval ``[wt_y - 2 |wt_u_hat|, wt_y + 2|wt_u_hat|]`` as initial bracket, at the cost of
+one additional iteration step.
 
 # References
 
@@ -155,9 +158,9 @@ function find_alpha(wt_y::Real, wt_u_hat::Real, b::Real)
 end
 function find_alpha(wt_y::T, wt_u_hat::T, b::T) where {T<:Real}
     # Compute the initial bracket (see above).
-    abs_wt_u_hat = abs(wt_u_hat)
-    lower = float(wt_y - abs_wt_u_hat)
-    upper = float(wt_y + abs_wt_u_hat)
+    Δ = 2 * abs(wt_u_hat)
+    lower = float(wt_y - Δ)
+    upper = float(wt_y + Δ)
 
     # Handle empty brackets (https://github.com/TuringLang/Bijectors.jl/issues/204)
     if lower == upper
