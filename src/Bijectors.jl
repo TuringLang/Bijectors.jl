@@ -35,8 +35,9 @@ using MappedArrays
 using Base.Iterators: drop
 using LinearAlgebra: AbstractTriangular
 
+import ChangesOfVariables: with_logabsdet_jacobian
+
 import ChainRulesCore
-import ChangesOfVariables
 import Functors
 import InverseFunctions
 import IrrationalConstants
@@ -250,6 +251,8 @@ end
 include("utils.jl")
 include("interface.jl")
 include("chainrules.jl")
+
+Base.@deprecate forward(b::AbstractBijector, x) with_logabsdet_jacobian(b, x)
 
 # Broadcasting here breaks Tracker for some reason
 maporbroadcast(f, x::AbstractArray{<:Any, N}...) where {N} = map(f, x...)

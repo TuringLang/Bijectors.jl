@@ -63,7 +63,7 @@ function forward(flow::RadialLayer, z::AbstractVecOrMat)
         (d - 1) * log(1 + β_hat * h_)
         + log(1 +  β_hat * h_ + β_hat * (- h_ ^ 2) * r)
     )   # from eq(14)
-    return (rv = transformed, logabsdetjac = log_det_jacobian)
+    return (transformed, log_det_jacobian)
 end
 
 function (ib::Inverse{<:RadialLayer})(y::AbstractVector{<:Real})
@@ -123,4 +123,4 @@ function compute_r(y_minus_z0::AbstractVector{<:Real}, α, α_plus_β_hat)
     return r
 end
 
-logabsdetjac(flow::RadialLayer, x::AbstractVecOrMat) = forward(flow, x).logabsdetjac
+logabsdetjac(flow::RadialLayer, x::AbstractVecOrMat) = forward(flow, x)[2]

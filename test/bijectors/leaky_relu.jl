@@ -41,12 +41,12 @@ true_logabsdetjac(b::Bijector{1}, xs::AbstractMatrix) = mapreduce(z -> true_loga
 
     # Forward
     f = forward(b, xs)
-    @test f.logabsdetjac ≈ logabsdetjac(b, xs)
-    @test f.rv ≈ b(xs)
+    @test f[2] ≈ logabsdetjac(b, xs)
+    @test f[1] ≈ b(xs)
 
     f = forward(b, Float32.(xs))
-    @test f.logabsdetjac == logabsdetjac(b, Float32.(xs))
-    @test f.rv ≈ b(Float32.(xs))
+    @test f[2] == logabsdetjac(b, Float32.(xs))
+    @test f[1] ≈ b(Float32.(xs))
 end
 
 @testset "0-dim parameter, 1-dim input" begin
@@ -67,12 +67,12 @@ end
 
     # Forward
     f = forward(b, xs)
-    @test f.logabsdetjac ≈ logabsdetjac(b, xs)
-    @test f.rv ≈ b(xs)
+    @test f[2] ≈ logabsdetjac(b, xs)
+    @test f[1] ≈ b(xs)
 
     f = forward(b, Float32.(xs))
-    @test f.logabsdetjac == logabsdetjac(b, Float32.(xs))
-    @test f.rv ≈ b(Float32.(xs))
+    @test f[2] == logabsdetjac(b, Float32.(xs))
+    @test f[1] ≈ b(Float32.(xs))
 
     # Mixing of types
     # 1. Changes in input-type

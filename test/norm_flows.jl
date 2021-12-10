@@ -26,7 +26,7 @@ end
         flow = PlanarLayer(2)
         z = randn(2, 20)
         forward_diff = log(abs(det(ForwardDiff.jacobian(t -> flow(t), z))))
-        our_method = sum(forward(flow, z).logabsdetjac)
+        our_method = sum(forward(flow, z)[2])
 
         @test our_method ≈ forward_diff
         @test inv(flow)(flow(z)) ≈ z
@@ -74,7 +74,7 @@ end
         flow = RadialLayer(2)
         z = randn(2, 20)
         forward_diff = log(abs(det(ForwardDiff.jacobian(t -> flow(t), z))))
-        our_method = sum(forward(flow, z).logabsdetjac)
+        our_method = sum(forward(flow, z)[2])
 
         @test our_method ≈ forward_diff
         @test inv(flow)(flow(z)) ≈ z rtol=0.2
@@ -103,9 +103,9 @@ end
     x = rand(d)
     y = flow.transform(x)
     res = forward(flow.transform, x)
-    lp = logpdf_forward(flow, x, res.logabsdetjac)
+    lp = logpdf_forward(flow, x, res[2])
 
-    @test res.rv ≈ y
+    @test res[1] ≈ y
     @test logpdf(flow, y) ≈ lp rtol=0.1
 
     # flow with unconstrained-to-constrained

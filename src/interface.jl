@@ -89,17 +89,17 @@ Default implementation for `Inverse{<:Bijector}` is implemented as
 logabsdetjac(ib::Inverse{<:Bijector}, y) = - logabsdetjac(ib.orig, ib(y))
 
 """
-    forward(b::Bijector, x)
+    with_logabsdet_jacobian(b::Bijector, x)
 
 Computes both `transform` and `logabsdetjac` in one forward pass, and
-returns a named tuple `(rv=b(x), logabsdetjac=logabsdetjac(b, x))`.
+returns a named tuple `(b(x), logabsdetjac(b, x))`.
 
 This defaults to the call above, but often one can re-use computation
 in the computation of the forward pass and the computation of the
 `logabsdetjac`. `forward` allows the user to take advantange of such
 efficiencies, if they exist.
 """
-forward(b::Bijector, x) = (rv=b(x), logabsdetjac=logabsdetjac(b, x))
+with_logabsdet_jacobian(b::Bijector, x) = (b(x), logabsdetjac(b, x))
 
 """
     logabsdetjacinv(b::Bijector, y)

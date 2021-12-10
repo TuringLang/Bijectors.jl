@@ -24,7 +24,7 @@ The following table lists mathematical operations for a bijector and the corresp
 | `x ↦ b(x)`                                     | `b(x)`                  | ×         |
 | `y ↦ b⁻¹(y)`                                   | `inv(b)(y)`             | ×         |
 | `x ↦ log｜det J(b, x)｜`                       | `logabsdetjac(b, x)`    | AD        |
-| `x ↦ b(x), log｜det J(b, x)｜`                 | `forward(b, x)`         | ✓         |
+| `x ↦ b(x), log｜det J(b, x)｜`                 | `with_logabsdet_jacobian(b, x)`         | ✓         |
 | `p ↦ q := b_* p`                                | `q = transformed(p, b)` | ✓         |
 | `y ∼ q`                                        | `y = rand(q)`           | ✓         |
 | `p ↦ b` such that `support(b_* p) = ℝᵈ`               | `bijector(p)`           | ✓         |
@@ -221,18 +221,18 @@ true
 which is always the case for a differentiable bijection with differentiable inverse. Therefore if you want to compute `logabsdetjac(b⁻¹, y)` and we know that `logabsdetjac(b, b⁻¹(y))` is actually more efficient, we'll return `-logabsdetjac(b, b⁻¹(y))` instead. For some bijectors it might be easy to compute, say, the forward pass `b(x)`, but expensive to compute `b⁻¹(y)`. Because of this you might want to avoid doing anything "backwards", i.e. using `b⁻¹`. This is where `forward` comes to good use:
 
 ```julia
-julia> forward(b, x)
-(rv = -0.5369949942509267, logabsdetjac = 1.4575353795716655)
+julia> with_logabsdet_jacobian(b, x)
+(-0.5369949942509267, 1.4575353795716655)
 ```
 
 Similarily
 
 ```julia
 julia> forward(inv(b), y)
-(rv = 0.3688868996596376, logabsdetjac = -1.4575353795716655)
+(0.3688868996596376, -1.4575353795716655)
 ```
 
-In fact, the purpose of `forward` is to just _do the right thing_, not necessarily "forward". In this function we'll have access to both the original value `x` and the transformed value `y`, so we can compute `logabsdetjac(b, x)` in either direction. Furthermore, in a lot of cases we can re-use a lot of the computation from `b(x)` in the computation of `logabsdetjac(b, x)`, or vice-versa. `forward(b, x)` will take advantage of such opportunities (if implemented).
+In fact, the purpose of `with_logabsdet_jacobian` is to just _do the right thing_, not necessarily "forward". In this function we'll have access to both the original value `x` and the transformed value `y`, so we can compute `logabsdetjac(b, x)` in either direction. Furthermore, in a lot of cases we can re-use a lot of the computation from `b(x)` in the computation of `logabsdetjac(b, x)`, or vice-versa. `with_logabsdet_jacobian(b, x)` will take advantage of such opportunities (if implemented).
 
 #### Sampling from `TransformedDistribution`
 At this point we've only shown that we can replicate the existing functionality. But we said `TransformedDistribution isa Distribution`, so we also have `rand`:
@@ -481,7 +481,7 @@ julia> Flux.params(flow)
 Params([[-1.05099; 0.502079] (tracked), [-0.216248; -0.706424] (tracked), [-4.33747] (tracked)])
 ```
 
-Another useful function is the `forward(d::Distribution)` method. It is similar to `forward(b::Bijector)` in the sense that it does a forward pass of the entire process "sample then transform" and returns all the most useful quantities in process using the most efficent computation path.
+Another useful function is the `forward(d::Distribution)` method. It is similar to `with_logabsdet_jacobian(b::Bijector, x)` in the sense that it does a forward pass of the entire process "sample then transform" and returns all the most useful quantities in process using the most efficent computation path.
 
 ```julia
 julia> x, y, logjac, logpdf_y = forward(flow) # sample + transform and returns all the useful quantities in one pass
@@ -555,28 +555,29 @@ Tracked 2-element Array{Float64,1}:
  -1.546158373866469 
  -1.6098711387913573
 
-julia> forward(b, 0.6)         # defaults to `(rv=b(x), logabsdetjac=logabsdetjac(b, x))`
-(rv = 0.4054651081081642, logabsdetjac = 1.4271163556401458)
+julia> with_logabsdet_jacobian(b, 0.6)         # defaults to `(b(x), logabsdetjac(b, x))`
+(0.4054651081081642, 1.4271163556401458)
 ```
 
-For further efficiency, one could manually implement `forward(b::Logit, x)`:
+For further efficiency, one could manually implement `with_logabsdet_jacobian(b::Logit, x)`:
 
 ```julia
 julia> import Bijectors: forward, Logit
+julia> import ChangesOfVariables: with_logabsdet_jacobian
 
-julia> function forward(b::Logit{<:Real}, x)
+julia> function with_logabsdet_jacobian(b::Logit{<:Real}, x)
            totally_worth_saving = @. (x - b.a) / (b.b - b.a)  # spoiler: it's probably not
            y = logit.(totally_worth_saving)
            logjac = @. - log((b.b - x) * totally_worth_saving)
-           return (rv=y, logabsdetjac = logjac)
+           return (y, logjac)
        end
 forward (generic function with 16 methods)
 
-julia> forward(b, 0.6)
-(rv = 0.4054651081081642, logabsdetjac = 1.4271163556401458)
+julia> with_logabsdet_jacobian(b, 0.6)
+(0.4054651081081642, 1.4271163556401458)
 
-julia> @which forward(b, 0.6)
-forward(b::Logit{#s4} where #s4<:Real, x) in Main at REPL[43]:2
+julia> @which with_logabsdet_jacobian(b, 0.6)
+with_logabsdet_jacobian(b::Logit{#s4} where #s4<:Real, x) in Main at REPL[43]:2
 ```
 
 As you can see it's a very contrived example, but you get the idea.
@@ -715,7 +716,7 @@ The following methods are implemented by all subtypes of `Bijector`, this also i
 - `(b::Bijector)(x)`: implements the transform of the `Bijector`
 - `inv(b::Bijector)`: returns the inverse of `b`, i.e. `ib::Bijector` s.t. `(ib ∘ b)(x) ≈ x`. In most cases this is `Inverse{<:Bijector}`.
 - `logabsdetjac(b::Bijector, x)`: computes log(abs(det(jacobian(b, x)))).
-- `forward(b::Bijector, x)`: returns named tuple `(rv=b(x), logabsdetjac=logabsdetjac(b, x))` in the most efficient manner.
+- `with_logabsdet_jacobian(b::Bijector, x)`: returns named tuple `(b(x), logabsdetjac(b, x))` in the most efficient manner.
 - `∘`, `composel`, `composer`: convenient and type-safe constructors for `Composed`. `composel(bs...)` composes s.t. the resulting composition is evaluated left-to-right, while `composer(bs...)` is evaluated right-to-left. `∘` is right-to-left, as excepted from standard mathematical notation.
 - `jacobian(b::Bijector, x)` [OPTIONAL]: returns the Jacobian of the transformation. In some cases the analytical Jacobian has been implemented for efficiency.
 - `dimension(b::Bijector)`: returns the dimensionality of `b`.

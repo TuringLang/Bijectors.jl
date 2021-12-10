@@ -200,15 +200,15 @@ end
             @test size(x_) == size(x)
             @test size(xs_) == size(xs)
 
-            @test size(result.rv) == size(x)
-            @test size(results.rv) == size(xs)
+            @test size(result[1]) == size(x)
+            @test size(results[1]) == size(xs)
 
-            @test size(iresult.rv) == size(y)
-            @test size(iresults.rv) == size(ys)
+            @test size(iresult[1]) == size(y)
+            @test size(iresults[1]) == size(ys)
 
             # Values
             @test ys ≈ hcat([b(xs[:, i]) for i = 1:size(xs, 2)]...)
-            @test ys ≈ results.rv
+            @test ys ≈ results[1]
 
             if D == 0
                 # Sizes
@@ -220,8 +220,8 @@ end
                 @test @inferred(logabsdetjac(b, param(xs))) isa Union{Array, TrackedArray}
                 @test @inferred(logabsdetjac(ib, param(ys))) isa Union{Array, TrackedArray}
 
-                @test size(results.logabsdetjac) == size(xs, )
-                @test size(iresults.logabsdetjac) == size(ys, )
+                @test size(results[2]) == size(xs, )
+                @test size(iresults[2]) == size(ys, )
 
                 # Values
                 b_logjac_ad = [(log ∘ abs)(ForwardDiff.derivative(b, xs[i])) for i = 1:length(xs)]
@@ -234,8 +234,8 @@ end
                 @test logabsdetjac.(b, param(xs)) == @inferred(logabsdetjac(b, param(xs)))
                 @test logabsdetjac.(ib, param(ys)) == @inferred(logabsdetjac(ib, param(ys)))
 
-                @test results.logabsdetjac ≈ vec(logabsdetjac.(b, xs))
-                @test iresults.logabsdetjac ≈ vec(logabsdetjac.(ib, ys))
+                @test results[2] ≈ vec(logabsdetjac.(b, xs))
+                @test iresults[2] ≈ vec(logabsdetjac.(ib, ys))
             elseif D == 1
                 @test y == ys[:, 1]
                 # Comparing sizes instead of lengths ensures we catch errors s.t.
@@ -247,15 +247,15 @@ end
                 @test @inferred(logabsdetjac(b, param(xs))) isa Union{Array, TrackedArray}
                 @test @inferred(logabsdetjac(ib, param(ys))) isa Union{Array, TrackedArray}
 
-                @test size(results.logabsdetjac) == (size(xs, 2), )
-                @test size(iresults.logabsdetjac) == (size(ys, 2), )
+                @test size(results[2]) == (size(xs, 2), )
+                @test size(iresults[2]) == (size(ys, 2), )
 
                 # Test all values
                 @test @inferred(logabsdetjac(b, xs)) ≈ vec(mapslices(z -> logabsdetjac(b, z), xs; dims = 1))
                 @test @inferred(logabsdetjac(ib, ys)) ≈ vec(mapslices(z -> logabsdetjac(ib, z), ys; dims = 1))
 
-                @test results.logabsdetjac ≈ vec(mapslices(z -> logabsdetjac(b, z), xs; dims = 1))
-                @test iresults.logabsdetjac ≈ vec(mapslices(z -> logabsdetjac(ib, z), ys; dims = 1))
+                @test results[2] ≈ vec(mapslices(z -> logabsdetjac(b, z), xs; dims = 1))
+                @test iresults[2] ≈ vec(mapslices(z -> logabsdetjac(ib, z), ys; dims = 1))
 
                 # FIXME: `SimplexBijector` results in ∞ gradient if not in the domain
                 if !contains(t -> t isa SimplexBijector, b)
@@ -575,17 +575,17 @@ end
     res1 = forward(sb1, [x, x, y, y])
     @test sb1(param([x, x, y, y])) isa TrackedArray
 
-    @test sb1([x, x, y, y]) ≈ res1.rv
+    @test sb1([x, x, y, y]) ≈ res1[1]
     @test logabsdetjac(sb1, [x, x, y, y]) ≈ 0 atol=1e-6
-    @test res1.logabsdetjac ≈ 0 atol=1e-6
+    @test res1[2] ≈ 0 atol=1e-6
 
     sb2 = Stacked([b, b, inv(b), inv(b)])        # <= Array
     res2 = forward(sb2, [x, x, y, y])
     @test sb2(param([x, x, y, y])) isa TrackedArray
 
-    @test sb2([x, x, y, y]) ≈ res2.rv
+    @test sb2([x, x, y, y]) ≈ res2[1]
     @test logabsdetjac(sb2, [x, x, y, y]) ≈ 0.0 atol=1e-12
-    @test res2.logabsdetjac ≈ 0.0 atol=1e-12
+    @test res2[2] ≈ 0.0 atol=1e-12
 
     # `logabsdetjac` with AD
     b = MyADBijector(d)
@@ -595,17 +595,17 @@ end
     res1 = forward(sb1, [x, x, y, y])
     @test sb1(param([x, x, y, y])) isa TrackedArray
 
-    @test sb1([x, x, y, y]) == res1.rv
+    @test sb1([x, x, y, y]) == res1[1]
     @test logabsdetjac(sb1, [x, x, y, y]) ≈ 0 atol=1e-12
-    @test res1.logabsdetjac ≈ 0.0 atol=1e-12
+    @test res1[2] ≈ 0.0 atol=1e-12
 
     sb2 = Stacked([b, b, inv(b), inv(b)])        # <= Array
     res2 = forward(sb2, [x, x, y, y])
     @test sb2(param([x, x, y, y])) isa TrackedArray
 
-    @test sb2([x, x, y, y]) == res2.rv
+    @test sb2([x, x, y, y]) == res2[1]
     @test logabsdetjac(sb2, [x, x, y, y]) ≈ 0.0 atol=1e-12
-    @test res2.logabsdetjac ≈ 0.0 atol=1e-12
+    @test res2[2] ≈ 0.0 atol=1e-12
 
     # value-test
     x = ones(3)
@@ -613,9 +613,9 @@ end
     res = forward(sb, x)
     @test sb(param(x)) isa TrackedArray
     @test sb(x) == [exp(x[1]), log(x[2]), x[3] + 5.0]
-    @test res.rv == [exp(x[1]), log(x[2]), x[3] + 5.0]
+    @test res[1] == [exp(x[1]), log(x[2]), x[3] + 5.0]
     @test logabsdetjac(sb, x) == sum([sum(logabsdetjac(sb.bs[i], x[sb.ranges[i]])) for i = 1:3])
-    @test res.logabsdetjac == logabsdetjac(sb, x)
+    @test res[2] == logabsdetjac(sb, x)
 
 
     # TODO: change when we have dimensionality in the type
@@ -624,9 +624,9 @@ end
     res = @inferred forward(sb, x)
     @test sb(param(x)) isa TrackedArray
     @test sb(x) == [exp(x[1]), sb.bs[2](x[2:3])...]
-    @test res.rv == [exp(x[1]), sb.bs[2](x[2:3])...]
+    @test res[1] == [exp(x[1]), sb.bs[2](x[2:3])...]
     @test logabsdetjac(sb, x) == sum([sum(logabsdetjac(sb.bs[i], x[sb.ranges[i]])) for i = 1:2])
-    @test res.logabsdetjac == logabsdetjac(sb, x)
+    @test res[2] == logabsdetjac(sb, x)
 
     x = ones(4) ./ 4.0
     @test_throws AssertionError sb(x)
@@ -637,9 +637,9 @@ end
     res = forward(sb, x)
     @test sb(param(x)) isa TrackedArray
     @test sb(x) == [exp(x[1]), sb.bs[2](x[2:3])...]
-    @test res.rv == [exp(x[1]), sb.bs[2](x[2:3])...]
+    @test res[1] == [exp(x[1]), sb.bs[2](x[2:3])...]
     @test logabsdetjac(sb, x) == sum([sum(logabsdetjac(sb.bs[i], x[sb.ranges[i]])) for i = 1:2])
-    @test res.logabsdetjac == logabsdetjac(sb, x)
+    @test res[2] == logabsdetjac(sb, x)
 
     x = ones(4) ./ 4.0
     @test_throws AssertionError sb(x)
@@ -651,9 +651,9 @@ end
     res = forward(sb, x)
     @test sb(param(x)) isa TrackedArray
     @test sb(x) == [exp(x[1]), sb.bs[2](x[2:3])...]
-    @test res.rv == [exp(x[1]), sb.bs[2](x[2:3])...]
+    @test res[1] == [exp(x[1]), sb.bs[2](x[2:3])...]
     @test logabsdetjac(sb, x) == sum([sum(logabsdetjac(sb.bs[i], x[sb.ranges[i]])) for i = 1:2])
-    @test res.logabsdetjac == logabsdetjac(sb, x)
+    @test res[2] == logabsdetjac(sb, x)
 
     x = ones(4) ./ 4.0
     @test_throws AssertionError sb(x)
@@ -664,9 +664,9 @@ end
     res = forward(sb, x)
     @test sb(param(x)) isa TrackedArray
     @test sb(x) == [exp(x[1]), sb.bs[2](x[2:3])...]
-    @test res.rv == [exp(x[1]), sb.bs[2](x[2:3])...]
+    @test res[1] == [exp(x[1]), sb.bs[2](x[2:3])...]
     @test logabsdetjac(sb, x) == sum([sum(logabsdetjac(sb.bs[i], x[sb.ranges[i]])) for i = 1:2])
-    @test res.logabsdetjac == logabsdetjac(sb, x)
+    @test res[2] == logabsdetjac(sb, x)
 
     x = ones(4) ./ 4.0
     @test_throws AssertionError sb(x)
@@ -748,7 +748,7 @@ end
         x = [.5, 1.]
         @test sb(x) == x
         @test logabsdetjac(sb, x) == 0
-        @test forward(sb, x) == (rv = x, logabsdetjac = zero(eltype(x)))
+        @test forward(sb, x) == (x, zero(eltype(x)))
     end
 end
 

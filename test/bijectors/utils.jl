@@ -17,21 +17,21 @@ function test_bijector_reals(
     ires = isequal ? @inferred(forward(inv(b), y_true)) : @inferred(forward(inv(b), y))
 
     # Always want the following to hold
-    @test ires.rv ≈ x_true atol=tol
-    @test ires.logabsdetjac ≈ -logjac atol=tol
+    @test ires[1] ≈ x_true atol=tol
+    @test ires[2] ≈ -logjac atol=tol
 
     if isequal
         @test y ≈ y_true atol=tol                      # forward
         @test (@inferred ib(y_true)) ≈ x_true atol=tol # inverse
         @test logjac ≈ logjac_true                     # logjac forward
-        @test res.rv ≈ y_true atol=tol                 # forward using `forward`
-        @test res.logabsdetjac ≈ logjac_true atol=tol  # logjac using `forward`
+        @test res[1] ≈ y_true atol=tol                 # forward using `forward`
+        @test res[2] ≈ logjac_true atol=tol  # logjac using `forward`
     else
         @test y ≠ y_true                          # forward
         @test (@inferred ib(y)) ≈ x_true atol=tol # inverse
         @test logjac ≠ logjac_true                # logjac forward
-        @test res.rv ≠ y_true                     # forward using `forward`
-        @test res.logabsdetjac ≠ logjac_true      # logjac using `forward`
+        @test res[1] ≠ y_true                     # forward using `forward`
+        @test res[2] ≠ logjac_true      # logjac using `forward`
     end
 end
 
@@ -54,25 +54,25 @@ function test_bijector_arrays(
     # always want the following to hold
     @test ys isa typeof(ys_true)
     @test logjacs isa typeof(logjacs_true)
-    @test mean(abs, ires.rv - xs_true) ≤ tol
-    @test mean(abs, ires.logabsdetjac + logjacs) ≤ tol
+    @test mean(abs, ires[1] - xs_true) ≤ tol
+    @test mean(abs, ires[2] + logjacs) ≤ tol
 
     if isequal
         @test mean(abs, ys - ys_true) ≤ tol                     # forward
         @test mean(abs, (ib(ys_true)) - xs_true) ≤ tol          # inverse
         @test mean(abs, logjacs - logjacs_true) ≤ tol           # logjac forward
-        @test mean(abs, res.rv - ys_true) ≤ tol                 # forward using `forward`
-        @test mean(abs, res.logabsdetjac - logjacs_true) ≤ tol  # logjac `forward`
-        @test mean(abs, ires.logabsdetjac + logjacs_true) ≤ tol # inverse logjac `forward`
+        @test mean(abs, res[1] - ys_true) ≤ tol                 # forward using `forward`
+        @test mean(abs, res[2] - logjacs_true) ≤ tol  # logjac `forward`
+        @test mean(abs, ires[2] + logjacs_true) ≤ tol # inverse logjac `forward`
     else
         # Don't want the following to be equal to their "true" values
         @test mean(abs, ys - ys_true) > tol           # forward
         @test mean(abs, logjacs - logjacs_true) > tol # logjac forward
-        @test mean(abs, res.rv - ys_true) > tol       # forward using `forward`
+        @test mean(abs, res[1] - ys_true) > tol       # forward using `forward`
 
         # Still want the following to be equal to the COMPUTED values
         @test mean(abs, ib(ys) - xs_true) ≤ tol           # inverse
-        @test mean(abs, res.logabsdetjac - logjacs) ≤ tol # logjac forward using `forward`
+        @test mean(abs, res[2] - logjacs) ≤ tol # logjac forward using `forward`
     end
 end
 

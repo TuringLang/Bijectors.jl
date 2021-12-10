@@ -48,7 +48,7 @@ function Functors.functor(::Type{<:InvertibleBatchNorm}, x)
     return (b = x.b, logs = x.logs), reconstruct_invertiblebatchnorm
 end
 
-function forward(bn::InvertibleBatchNorm, x)
+function with_logabsdet_jacobian(bn::InvertibleBatchNorm, x)
     dims = ndims(x)
     size(x, dims - 1) == length(bn.b) ||
         error("InvertibleBatchNorm expected $(length(bn.b)) channels, got $(size(x, dims - 1))")
@@ -76,12 +76,12 @@ function forward(bn::InvertibleBatchNorm, x)
     logabsdetjac = (
         fill(sum(logs - log.(v .+ bn.eps) / 2), size(x, dims))
     )
-    return (rv=rv, logabsdetjac=logabsdetjac)
+    return (rv, logabsdetjac)
 end
 
-logabsdetjac(bn::InvertibleBatchNorm, x) = forward(bn, x).logabsdetjac
+logabsdetjac(bn::InvertibleBatchNorm, x) = with_logabsdet_jacobian(bn, x)[2]
 
-(bn::InvertibleBatchNorm)(x) = forward(bn, x).rv
+(bn::InvertibleBatchNorm)(x) = with_logabsdet_jacobian(bn, x)[1]
 
 function forward(invbn::Inverse{<:InvertibleBatchNorm}, y)
     @assert !istraining() "`forward(::Inverse{InvertibleBatchNorm})` is only available in test mode."
@@ -94,10 +94,10 @@ function forward(invbn::Inverse{<:InvertibleBatchNorm}, y)
     v = reshape(bn.v, as...)
 
     x = (y .- b) ./ s .* sqrt.(v .+ bn.eps) .+ m
-    return (rv=x, logabsdetjac=-logabsdetjac(bn, x))
+    return (x, -logabsdetjac(bn, x))
 end
 
-(bn::Inverse{<:InvertibleBatchNorm})(y) = forward(bn, y).rv
+(bn::Inverse{<:InvertibleBatchNorm})(y) = with_logabsdet_jacobian(bn, y)[1]
 
 function Base.show(io::IO, l::InvertibleBatchNorm)
     print(io, "InvertibleBatchNorm($(join(size(l.b), ", ")))")
