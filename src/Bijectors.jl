@@ -252,7 +252,7 @@ include("utils.jl")
 include("interface.jl")
 include("chainrules.jl")
 
-Base.@deprecate forward(b::AbstractBijector, x) with_logabsdet_jacobian(b, x)
+Base.@deprecate forward(b::AbstractBijector, x) NamedTuple{(:rv,:logabsdetjac)}(with_logabsdet_jacobian(b, x))
 
 import Base.inv
 Base.@deprecate inv(b::AbstractBijector) inverse(b)
