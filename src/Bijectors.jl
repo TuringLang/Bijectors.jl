@@ -36,7 +36,9 @@ using Base.Iterators: drop
 using LinearAlgebra: AbstractTriangular
 
 import ChainRulesCore
+import ChangesOfVariables
 import Functors
+import InverseFunctions
 import IrrationalConstants
 import LogExpFunctions
 import Roots

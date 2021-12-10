@@ -1,15 +1,18 @@
 using Bijectors
 
 using ChainRulesTestUtils
+using ChangesOfVariables
 using Combinatorics
 using DistributionsAD
 using FiniteDifferences
 using ForwardDiff
 using Functors
+using InverseFunctions
 using LogExpFunctions
 using ReverseDiff
 using Tracker
 using Zygote
+
 
 using Random, LinearAlgebra, Test
 
