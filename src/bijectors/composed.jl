@@ -17,7 +17,7 @@ A `Bijector` representing composition of bijectors. `composel` and `composer` re
 `Composed` for which application occurs from left-to-right and right-to-left, respectively.
 
 Note that all the alternative ways of constructing a `Composed` returns a `Tuple` of bijectors.
-This ensures type-stability of implementations of all relating methdos, e.g. `inv`.
+This ensures type-stability of implementations of all relating methdos, e.g. `inverse`.
 
 If you want to use an `Array` as the container instead you can do
 
@@ -41,7 +41,7 @@ Composed{Tuple{Exp{0},Exp{0}},0}((Exp{0}(), Exp{0}()))
 julia> (b ∘ b)(1.0) == exp(exp(1.0))    # evaluation
 true
 
-julia> inv(b ∘ b)(exp(exp(1.0))) == 1.0 # inversion
+julia> inverse(b ∘ b)(exp(exp(1.0))) == 1.0 # inversion
 true
 
 julia> logabsdetjac(b ∘ b, 1.0)         # determinant of jacobian
@@ -153,7 +153,7 @@ end
 ∘(::Identity{N}, b::Bijector{N}) where {N} = b
 ∘(b::Bijector{N}, ::Identity{N}) where {N} = b
 
-inv(ct::Composed) = Composed(reverse(map(inv, ct.ts)))
+inverse(ct::Composed) = Composed(reverse(map(inv, ct.ts)))
 
 # # TODO: should arrays also be using recursive implementation instead?
 function (cb::Composed{<:AbstractArray{<:Bijector}})(x)

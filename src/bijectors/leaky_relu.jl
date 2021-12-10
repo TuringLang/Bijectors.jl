@@ -31,7 +31,7 @@ function (b::LeakyReLU{<:Any, 0})(x::Real)
 end
 (b::LeakyReLU{<:Any, 0})(x::AbstractVector{<:Real}) = map(b, x)
 
-function Base.inv(b::LeakyReLU{<:Any,N}) where N
+function inverse(b::LeakyReLU{<:Any,N}) where N
     invα = inv.(b.α)
     return LeakyReLU{typeof(invα),N}(invα)
 end

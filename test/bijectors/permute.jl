@@ -21,10 +21,10 @@ using Bijectors: Permute
     @test b1.A == b2.A == b3.A == b4.A
 
     x = [1., 2.]
-    @test (inv(b1) ∘ b1)(x) == x
-    @test (inv(b2) ∘ b2)(x) == x
-    @test (inv(b3) ∘ b3)(x) == x
-    @test (inv(b4) ∘ b4)(x) == x
+    @test (inverse(b1) ∘ b1)(x) == x
+    @test (inverse(b2) ∘ b2)(x) == x
+    @test (inverse(b3) ∘ b3)(x) == x
+    @test (inverse(b4) ∘ b4)(x) == x
 
     # Slightly more complex case; one entry is not permuted
     b1 = Permute([
@@ -39,10 +39,10 @@ using Bijectors: Permute
     @test b1.A == b2.A == b3.A == b4.A
     
     x = [1., 2., 3.]
-    @test (inv(b1) ∘ b1)(x) == x
-    @test (inv(b2) ∘ b2)(x) == x
-    @test (inv(b3) ∘ b3)(x) == x
-    @test (inv(b4) ∘ b4)(x) == x
+    @test (inverse(b1) ∘ b1)(x) == x
+    @test (inverse(b2) ∘ b2)(x) == x
+    @test (inverse(b3) ∘ b3)(x) == x
+    @test (inverse(b4) ∘ b4)(x) == x
 
     # logabsdetjac
     @test logabsdetjac(b1, x) == 0.0

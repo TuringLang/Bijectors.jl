@@ -1,4 +1,4 @@
-import Base: inv, ∘
+import Base: ∘
 
 import Random: AbstractRNG
 import Distributions: logpdf, rand, rand!, _rand!, _logpdf
@@ -56,7 +56,7 @@ requires an iterative procedure to evaluate.
 isclosedform(b::Bijector) = true
 
 """
-    inv(b::Bijector)
+inverse(b::Bijector)
     Inverse(b::Bijector)
 
 A `Bijector` representing the inverse transform of `b`.
@@ -72,8 +72,8 @@ Functors.@functor Inverse
 
 up1(b::Inverse) = Inverse(up1(b.orig))
 
-inv(b::Bijector) = Inverse(b)
-inv(ib::Inverse{<:Bijector}) = ib.orig
+inverse(b::Bijector) = Inverse(b)
+inverse(ib::Inverse{<:Bijector}) = ib.orig
 Base.:(==)(b1::Inverse{<:Bijector}, b2::Inverse{<:Bijector}) = b1.orig == b2.orig
 
 """
@@ -104,9 +104,9 @@ with_logabsdet_jacobian(b::Bijector, x) = (b(x), logabsdetjac(b, x))
 """
     logabsdetjacinv(b::Bijector, y)
 
-Just an alias for `logabsdetjac(inv(b), y)`.
+Just an alias for `logabsdetjac(inverse(b), y)`.
 """
-logabsdetjacinv(b::Bijector, y) = logabsdetjac(inv(b), y)
+logabsdetjacinv(b::Bijector, y) = logabsdetjac(inverse(b), y)
 
 ##############################
 # Example bijector: Identity #
@@ -114,7 +114,7 @@ logabsdetjacinv(b::Bijector, y) = logabsdetjac(inv(b), y)
 
 struct Identity{N} <: Bijector{N} end
 (::Identity)(x) = copy(x)
-inv(b::Identity) = b
+inverse(b::Identity) = b
 up1(::Identity{N}) where {N} = Identity{N + 1}()
 
 logabsdetjac(::Identity{0}, x::Real) = zero(eltype(x))

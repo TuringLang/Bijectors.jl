@@ -50,14 +50,14 @@ isclosedform(b::Stacked) = all(isclosedform, b.bs)
 
 stack(bs::Bijector{0}...) = Stacked(bs)
 
-# For some reason `inv.(sb.bs)` was unstable... This works though.
-inv(sb::Stacked) = Stacked(map(inv, sb.bs), sb.ranges)
+# For some reason `inverse.(sb.bs)` was unstable... This works though.
+inverse(sb::Stacked) = Stacked(map(inverse, sb.bs), sb.ranges)
 # map is not type stable for many stacked bijectors as a large tuple
 # hence the generated function
-@generated function inv(sb::Stacked{A}) where {A <: Tuple}
+@generated function inverse(sb::Stacked{A}) where {A <: Tuple}
     exprs = []
     for i = 1:length(A.parameters)
-        push!(exprs, :(inv(sb.bs[$i])))
+        push!(exprs, :(inverse(sb.bs[$i])))
     end
     :(Stacked(($(exprs...), ), sb.ranges))
 end

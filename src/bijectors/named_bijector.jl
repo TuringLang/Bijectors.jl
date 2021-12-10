@@ -55,8 +55,8 @@ names_to_bijectors(b::NamedBijector) = b.bs
     return :($(exprs...), )
 end
 
-@generated function Base.inv(b::NamedBijector{names}) where {names}
-    return :(NamedBijector(($([:($n = inv(b.bs.$n)) for n in names]...), )))
+@generated function inverse(b::NamedBijector{names}) where {names}
+    return :(NamedBijector(($([:($n = inverse(b.bs.$n)) for n in names]...), )))
 end
 
 @generated function logabsdetjac(b::NamedBijector{names}, x::NamedTuple) where {names}
@@ -78,10 +78,10 @@ See also: [`Inverse`](@ref)
 struct NamedInverse{B<:AbstractNamedBijector} <: AbstractNamedBijector
     orig::B
 end
-Base.inv(nb::AbstractNamedBijector) = NamedInverse(nb)
-Base.inv(ni::NamedInverse) = ni.orig
+inverse(nb::AbstractNamedBijector) = NamedInverse(nb)
+inverse(ni::NamedInverse) = ni.orig
 
-logabsdetjac(ni::NamedInverse, y::NamedTuple) = -logabsdetjac(inv(ni), ni(y))
+logabsdetjac(ni::NamedInverse, y::NamedTuple) = -logabsdetjac(inverse(ni), ni(y))
 
 ##########################
 ### `NamedComposition` ###
@@ -107,7 +107,7 @@ composel(bs::AbstractNamedBijector...) = NamedComposition(bs)
 composer(bs::AbstractNamedBijector...) = NamedComposition(reverse(bs))
 ∘(b1::AbstractNamedBijector, b2::AbstractNamedBijector) = composel(b2, b1)
 
-inv(ct::NamedComposition) = NamedComposition(reverse(map(inv, ct.bs)))
+inverse(ct::NamedComposition) = NamedComposition(reverse(map(inv, ct.bs)))
 
 function (cb::NamedComposition{<:AbstractArray{<:AbstractNamedBijector}})(x)
     @assert length(cb.bs) > 0
@@ -232,7 +232,7 @@ end
 ) where {target, deps, F}
     return quote
         b = ni.orig.f($([:(x.$d) for d in deps]...))
-        return merge(x, ($target = inv(b)(x.$target), ))
+        return merge(x, ($target = inverse(b)(x.$target), ))
     end
 end
 

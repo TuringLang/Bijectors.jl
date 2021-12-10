@@ -34,9 +34,9 @@ using Bijectors:
         @test cl2(x) == cl1(x)
 
         # inversion
-        icl1 = inv(cl1)
+        icl1 = inverse(cl1)
         @test icl1(cl1(x)) == x
-        @test inv(cl2)(cl2(x)) == x
+        @test inverse(cl2)(cl2(x)) == x
 
         # This `cl2` should result in
         b = Shift(x[2:2])

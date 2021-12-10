@@ -127,10 +127,10 @@ function (ib::Inverse{<:SimplexBijector{1}})(
     _simplex_inv_bijector!(X, Y, ib.orig)
 end
 function (ib::Inverse{<:SimplexBijector{2, proj}})(Y::AbstractMatrix) where {proj}
-    inv(SimplexBijector{1, proj}())(Y)
+    inverse(SimplexBijector{1, proj}())(Y)
 end
 function (ib::Inverse{<:SimplexBijector{2, proj}})(X::AbstractMatrix, Y::AbstractMatrix) where {proj}
-    inv(SimplexBijector{1, proj}())(X, Y)
+    inverse(SimplexBijector{1, proj}())(X, Y)
 end
 (ib::Inverse{<:SimplexBijector{2}})(Y::AbstractArray{<:AbstractMatrix}) = map(ib, Y)
 function _simplex_inv_bijector(Y::AbstractMatrix, b::SimplexBijector{1})

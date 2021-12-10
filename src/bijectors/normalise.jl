@@ -87,7 +87,7 @@ function forward(invbn::Inverse{<:InvertibleBatchNorm}, y)
     @assert !istraining() "`forward(::Inverse{InvertibleBatchNorm})` is only available in test mode."
     dims = ndims(y)
     as = ntuple(i -> i == ndims(y) - 1 ? size(y, i) : 1, dims)
-    bn = inv(invbn)
+    bn = inverse(invbn)
     s = reshape(exp.(bn.logs), as...)
     b = reshape(bn.b, as...)
     m = reshape(bn.m, as...)

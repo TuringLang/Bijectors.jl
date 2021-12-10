@@ -6,7 +6,7 @@ function test_bijector_reals(
     isequal = true,
     tol = 1e-6
 )
-    ib = @inferred inv(b)
+    ib = @inferred inverse(b)
     y = @inferred b(x_true)
     logjac = @inferred logabsdetjac(b, x_true)
     ilogjac = @inferred logabsdetjac(ib, y_true)
@@ -14,7 +14,7 @@ function test_bijector_reals(
 
     # If `isequal` is false, then we use the computed `y`,
     # but if it's true, we use the true `y`.
-    ires = isequal ? @inferred(forward(inv(b), y_true)) : @inferred(forward(inv(b), y))
+    ires = isequal ? @inferred(forward(inverse(b), y_true)) : @inferred(forward(inverse(b), y))
 
     # Always want the following to hold
     @test ires[1] ≈ x_true atol=tol
@@ -43,13 +43,13 @@ function test_bijector_arrays(
     isequal = true,
     tol = 1e-6
 )
-    ib = @inferred inv(b)
+    ib = @inferred inverse(b)
     ys = @inferred b(xs_true)
     logjacs = @inferred logabsdetjac(b, xs_true)
     res = @inferred forward(b, xs_true)
     # If `isequal` is false, then we use the computed `y`,
     # but if it's true, we use the true `y`.
-    ires = isequal ? @inferred(forward(inv(b), ys_true)) : @inferred(forward(inv(b), ys))
+    ires = isequal ? @inferred(forward(inverse(b), ys_true)) : @inferred(forward(inverse(b), ys))
 
     # always want the following to hold
     @test ys isa typeof(ys_true)
@@ -118,7 +118,7 @@ function test_bijector(
     logjacs_true::AbstractVector{<:Real};
     kwargs...
 )
-    ib = inv(b)
+    ib = inverse(b)
 
     # Batch
     test_bijector_arrays(b, xs_true, ys_true, logjacs_true; kwargs...)
@@ -148,7 +148,7 @@ function test_bijector(
     logjacs_true::AbstractVector{<:Real};
     kwargs...
 )
-    ib = inv(b)
+    ib = inverse(b)
 
     # Batch
     test_bijector_arrays(b, xs_true, ys_true, logjacs_true; kwargs...)
