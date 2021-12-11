@@ -27,8 +27,8 @@ Log() = Log{0}()
 (b::Exp{2})(y::AbstractArray{<:AbstractMatrix{<:Real}}) = map(b, y)
 (b::Log{2})(x::AbstractArray{<:AbstractMatrix{<:Real}}) = map(b, x)
 
-inverse(b::Exp{N}) where {N} = Log{N}()
-inverse(b::Log{N}) where {N} = Exp{N}()
+InverseFunctions.inverse(b::Exp{N}) where {N} = Log{N}()
+InverseFunctions.inverse(b::Log{N}) where {N} = Exp{N}()
 
 logabsdetjac(b::Exp{0}, x::Real) = x
 logabsdetjac(b::Exp{0}, x::AbstractVector) = x

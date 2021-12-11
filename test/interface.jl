@@ -187,11 +187,11 @@ end
             xs_ = @inferred ib(ys)
             @inferred(ib(param(ys)))
 
-            result = @inferred forward(b, x)
-            results = @inferred forward(b, xs)
+            result = @inferred with_logabsdet_jacobian(b, x)
+            results = @inferred with_logabsdet_jacobian(b, xs)
 
-            iresult = @inferred forward(ib, y)
-            iresults = @inferred forward(ib, ys)
+            iresult = @inferred with_logabsdet_jacobian(ib, y)
+            iresults = @inferred with_logabsdet_jacobian(ib, ys)
 
             # Sizes
             @test size(y) == size(x)
@@ -748,7 +748,7 @@ end
         x = [.5, 1.]
         @test sb(x) == x
         @test logabsdetjac(sb, x) == 0
-        @test forward(sb, x) == (x, zero(eltype(x)))
+        @test with_logabsdet_jacobian(sb, x) == (x, zero(eltype(x)))
     end
 end
 

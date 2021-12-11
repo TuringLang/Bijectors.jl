@@ -94,7 +94,7 @@ we get
 \\log |det ∂f(z)/∂z| = \\log(1 + sech²(wᵀz + b) wᵀû).
 ```
 =#
-function forward(flow::PlanarLayer, z::AbstractVecOrMat{<:Real})
+function ChangesOfVariables.with_logabsdet_jacobian(flow::PlanarLayer, z::AbstractVecOrMat{<:Real})
     transformed, wT_û, wT_z = _transform(flow, z)
 
     # Compute ``\\log |det ∂f(z)/∂z|`` (see above).

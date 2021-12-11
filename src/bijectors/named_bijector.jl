@@ -1,6 +1,6 @@
 abstract type AbstractNamedBijector <: AbstractBijector end
 
-with_logabsdet_jacobian(b::AbstractNamedBijector, x) = (b(x), logabsdetjac(b, x))
+ChangesOfVariables.with_logabsdet_jacobian(b::AbstractNamedBijector, x) = (b(x), logabsdetjac(b, x))
 
 #######################
 ### `NamedBijector` ###
@@ -55,7 +55,7 @@ names_to_bijectors(b::NamedBijector) = b.bs
     return :($(exprs...), )
 end
 
-@generated function inverse(b::NamedBijector{names}) where {names}
+@generated function InverseFunctions.inverse(b::NamedBijector{names}) where {names}
     return :(NamedBijector(($([:($n = inverse(b.bs.$n)) for n in names]...), )))
 end
 
@@ -78,8 +78,8 @@ See also: [`Inverse`](@ref)
 struct NamedInverse{B<:AbstractNamedBijector} <: AbstractNamedBijector
     orig::B
 end
-inverse(nb::AbstractNamedBijector) = NamedInverse(nb)
-inverse(ni::NamedInverse) = ni.orig
+InverseFunctions.inverse(nb::AbstractNamedBijector) = NamedInverse(nb)
+InverseFunctions.inverse(ni::NamedInverse) = ni.orig
 
 logabsdetjac(ni::NamedInverse, y::NamedTuple) = -logabsdetjac(inverse(ni), ni(y))
 
@@ -107,7 +107,7 @@ composel(bs::AbstractNamedBijector...) = NamedComposition(bs)
 composer(bs::AbstractNamedBijector...) = NamedComposition(reverse(bs))
 ∘(b1::AbstractNamedBijector, b2::AbstractNamedBijector) = composel(b2, b1)
 
-inverse(ct::NamedComposition) = NamedComposition(reverse(map(inv, ct.bs)))
+InverseFunctions.inverse(ct::NamedComposition) = NamedComposition(reverse(map(inv, ct.bs)))
 
 function (cb::NamedComposition{<:AbstractArray{<:AbstractNamedBijector}})(x)
     @assert length(cb.bs) > 0
@@ -135,7 +135,7 @@ end
     N = length(T.parameters)
 
     expr = Expr(:block)
-    push!(expr.args, :((y, logjac) = forward(cb.bs[1], x)))
+    push!(expr.args, :((y, logjac) = with_logabsdet_jacobian(cb.bs[1], x)))
 
     for i = 2:N - 1
         temp = gensym(:res_logjac)
@@ -151,8 +151,8 @@ end
 end
 
 
-function forward(cb::NamedComposition, x)
-    rv, logjac = forward(cb.bs[1], x)
+function ChangesOfVariables.with_logabsdet_jacobian(cb::NamedComposition, x)
+    rv, logjac = with_logabsdet_jacobian(cb.bs[1], x)
     
     for t in cb.bs[2:end]
         rv, res_logjac = with_logabsdet_jacobian(t, rv)
@@ -162,9 +162,9 @@ function forward(cb::NamedComposition, x)
 end
 
 
-@generated function forward(cb::NamedComposition{T}, x) where {T<:Tuple}
+@generated function ChangesOfVariables.with_logabsdet_jacobian(cb::NamedComposition{T}, x) where {T<:Tuple}
     expr = Expr(:block)
-    push!(expr.args, :((y, logjac) = forward(cb.bs[1], x)))
+    push!(expr.args, :((y, logjac) = with_logabsdet_jacobian(cb.bs[1], x)))
     for i = 2:length(T.parameters)
         temp = gensym(:res_logjac)
         push!(expr.args, :(y, $temp = with_logabsdet_jacobian(cb.bs[$i], y)))
