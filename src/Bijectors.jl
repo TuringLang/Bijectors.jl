@@ -255,7 +255,7 @@ include("chainrules.jl")
 Base.@deprecate forward(b::AbstractBijector, x) NamedTuple{(:rv,:logabsdetjac)}(with_logabsdet_jacobian(b, x))
 
 @noinline function Base.inv(b::AbstractBijector)
-    Base.depwarn("`Base.inv(b::AbstractBijector)` is deprecated, use `InverseFunctions.inverse(b)` instead.", :(Base.inv))
+    Base.depwarn("`Base.inv(b::AbstractBijector)` is deprecated, use `InverseFunctions.inverse(b)` instead.", :inv)
     inverse(b)
 end
 
