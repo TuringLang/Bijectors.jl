@@ -10,11 +10,11 @@ function test_bijector_reals(
     y = @inferred b(x_true)
     logjac = @inferred logabsdetjac(b, x_true)
     ilogjac = @inferred logabsdetjac(ib, y_true)
-    res = @inferred forward(b, x_true)
+    res = @inferred with_logabsdet_jacobian(b, x_true)
 
     # If `isequal` is false, then we use the computed `y`,
     # but if it's true, we use the true `y`.
-    ires = isequal ? @inferred(forward(inverse(b), y_true)) : @inferred(forward(inverse(b), y))
+    ires = isequal ? @inferred(with_logabsdet_jacobian(inverse(b), y_true)) : @inferred(with_logabsdet_jacobian(inverse(b), y))
 
     # Always want the following to hold
     @test ires[1] ≈ x_true atol=tol
@@ -46,10 +46,10 @@ function test_bijector_arrays(
     ib = @inferred inverse(b)
     ys = @inferred b(xs_true)
     logjacs = @inferred logabsdetjac(b, xs_true)
-    res = @inferred forward(b, xs_true)
+    res = @inferred with_logabsdet_jacobian(b, xs_true)
     # If `isequal` is false, then we use the computed `y`,
     # but if it's true, we use the true `y`.
-    ires = isequal ? @inferred(forward(inverse(b), ys_true)) : @inferred(forward(inverse(b), ys))
+    ires = isequal ? @inferred(with_logabsdet_jacobian(inverse(b), ys_true)) : @inferred(with_logabsdet_jacobian(inverse(b), ys))
 
     # always want the following to hold
     @test ys isa typeof(ys_true)

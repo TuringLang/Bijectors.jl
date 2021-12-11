@@ -50,16 +50,16 @@ using Bijectors: Permute
     @test logabsdetjac(b3, x) == 0.0
     @test logabsdetjac(b4, x) == 0.0
 
-    # forward
-    y, logjac = forward(b1, x)
+    # with_logabsdet_jacobian
+    y, logjac = with_logabsdet_jacobian(b1, x)
     @test (y == b1(x)) & (logjac == 0.0)
 
-    y, logjac = forward(b2, x)
+    y, logjac = with_logabsdet_jacobian(b2, x)
     @test (y == b2(x)) & (logjac == 0.0)
 
-    y, logjac = forward(b3, x)
+    y, logjac = with_logabsdet_jacobian(b3, x)
     @test (y == b3(x)) & (logjac == 0.0)
 
-    y, logjac = forward(b4, x)
+    y, logjac = with_logabsdet_jacobian(b4, x)
     @test (y == b4(x)) & (logjac == 0.0)
 end
