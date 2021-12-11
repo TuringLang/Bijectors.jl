@@ -232,7 +232,7 @@ function _forward(d::Distribution, x)
 end
 
 function _forward(td::Transformed, x)
-    y, logjac = forward(td.transform, x)
+    y, logjac = with_logabsdet_jacobian(td.transform, x)
     return (
         x = x,
         y = y,
