@@ -510,10 +510,10 @@ end
     b = @inferred Bijectors.composel(td.transform, Bijectors.Identity{0}())
     ib = @inferred inverse(b)
 
-    @test forward(b, x) == forward(td.transform, x)
-    @test forward(ib, y) == forward(inverse(td.transform), y)
+    @test with_logabsdet_jacobian(b, x) == with_logabsdet_jacobian(td.transform, x)
+    @test with_logabsdet_jacobian(ib, y) == with_logabsdet_jacobian(inverse(td.transform), y)
 
-    @test forward(b, x) == forward(Bijectors.composer(b.ts...), x)
+    @test with_logabsdet_jacobian(b, x) == with_logabsdet_jacobian(Bijectors.composer(b.ts...), x)
 
     # inverse works fine for composition
     cb = @inferred b ∘ ib
@@ -547,10 +547,10 @@ end
     x = rand(d)
 
     cb_t = b⁻¹ ∘ b⁻¹
-    f_t = forward(cb_t, x)
+    f_t = with_logabsdet_jacobian(cb_t, x)
 
     cb_a = Composed([b⁻¹, b⁻¹])
-    f_a = forward(cb_a, x)
+    f_a = with_logabsdet_jacobian(cb_a, x)
 
     @test f_t == f_a
 
@@ -572,7 +572,7 @@ end
     y = b(x)
 
     sb1 = @inferred stack(b, b, inverse(b), inverse(b))             # <= Tuple
-    res1 = forward(sb1, [x, x, y, y])
+    res1 = with_logabsdet_jacobian(sb1, [x, x, y, y])
     @test sb1(param([x, x, y, y])) isa TrackedArray
 
     @test sb1([x, x, y, y]) ≈ res1[1]
@@ -580,7 +580,7 @@ end
     @test res1[2] ≈ 0 atol=1e-6
 
     sb2 = Stacked([b, b, inverse(b), inverse(b)])        # <= Array
-    res2 = forward(sb2, [x, x, y, y])
+    res2 = with_logabsdet_jacobian(sb2, [x, x, y, y])
     @test sb2(param([x, x, y, y])) isa TrackedArray
 
     @test sb2([x, x, y, y]) ≈ res2[1]
@@ -592,7 +592,7 @@ end
     y = b(x)
     
     sb1 = stack(b, b, inverse(b), inverse(b))             # <= Tuple
-    res1 = forward(sb1, [x, x, y, y])
+    res1 = with_logabsdet_jacobian(sb1, [x, x, y, y])
     @test sb1(param([x, x, y, y])) isa TrackedArray
 
     @test sb1([x, x, y, y]) == res1[1]
@@ -600,7 +600,7 @@ end
     @test res1[2] ≈ 0.0 atol=1e-12
 
     sb2 = Stacked([b, b, inverse(b), inverse(b)])        # <= Array
-    res2 = forward(sb2, [x, x, y, y])
+    res2 = with_logabsdet_jacobian(sb2, [x, x, y, y])
     @test sb2(param([x, x, y, y])) isa TrackedArray
 
     @test sb2([x, x, y, y]) == res2[1]
@@ -610,7 +610,7 @@ end
     # value-test
     x = ones(3)
     sb = @inferred stack(Bijectors.Exp(), Bijectors.Log(), Bijectors.Shift(5.0))
-    res = forward(sb, x)
+    res = with_logabsdet_jacobian(sb, x)
     @test sb(param(x)) isa TrackedArray
     @test sb(x) == [exp(x[1]), log(x[2]), x[3] + 5.0]
     @test res[1] == [exp(x[1]), log(x[2]), x[3] + 5.0]
@@ -621,7 +621,7 @@ end
     # TODO: change when we have dimensionality in the type
     sb = @inferred Stacked((Bijectors.Exp(), Bijectors.SimplexBijector()), (1:1, 2:3))
     x = ones(3) ./ 3.0
-    res = @inferred forward(sb, x)
+    res = @inferred with_logabsdet_jacobian(sb, x)
     @test sb(param(x)) isa TrackedArray
     @test sb(x) == [exp(x[1]), sb.bs[2](x[2:3])...]
     @test res[1] == [exp(x[1]), sb.bs[2](x[2:3])...]
@@ -634,7 +634,7 @@ end
     # Array-version
     sb = Stacked([Bijectors.Exp(), Bijectors.SimplexBijector()], [1:1, 2:3])
     x = ones(3) ./ 3.0
-    res = forward(sb, x)
+    res = with_logabsdet_jacobian(sb, x)
     @test sb(param(x)) isa TrackedArray
     @test sb(x) == [exp(x[1]), sb.bs[2](x[2:3])...]
     @test res[1] == [exp(x[1]), sb.bs[2](x[2:3])...]
@@ -648,7 +648,7 @@ end
     # Tuple, Array
     sb = Stacked([Bijectors.Exp(), Bijectors.SimplexBijector()], (1:1, 2:3))
     x = ones(3) ./ 3.0
-    res = forward(sb, x)
+    res = with_logabsdet_jacobian(sb, x)
     @test sb(param(x)) isa TrackedArray
     @test sb(x) == [exp(x[1]), sb.bs[2](x[2:3])...]
     @test res[1] == [exp(x[1]), sb.bs[2](x[2:3])...]
@@ -661,7 +661,7 @@ end
     # Array, Tuple
     sb = Stacked((Bijectors.Exp(), Bijectors.SimplexBijector()), [1:1, 2:3])
     x = ones(3) ./ 3.0
-    res = forward(sb, x)
+    res = with_logabsdet_jacobian(sb, x)
     @test sb(param(x)) isa TrackedArray
     @test sb(x) == [exp(x[1]), sb.bs[2](x[2:3])...]
     @test res[1] == [exp(x[1]), sb.bs[2](x[2:3])...]

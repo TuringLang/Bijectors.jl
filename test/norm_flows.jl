@@ -11,10 +11,10 @@ seed!(1)
     @test inverse(inverse(bn)) == bn
     @test inverse(bn)(bn(x)) ≈ x
     @test (inverse(bn) ∘ bn)(x) ≈ x
-    @test_throws ErrorException forward(bn, randn(10,2))
+    @test_throws ErrorException with_logabsdet_jacobian(bn, randn(10,2))
     @test logabsdetjac(inverse(bn), bn(x)) ≈ - logabsdetjac(bn, x)
 
-    y, ladj = forward(bn, x)
+    y, ladj = with_logabsdet_jacobian(bn, x)
     @test log(abs(det(ForwardDiff.jacobian(bn, x)))) ≈ sum(ladj)
     @test log(abs(det(ForwardDiff.jacobian(inverse(bn), y)))) ≈ sum(logabsdetjac(inverse(bn), y))
 
@@ -26,7 +26,7 @@ end
         flow = PlanarLayer(2)
         z = randn(2, 20)
         forward_diff = log(abs(det(ForwardDiff.jacobian(t -> flow(t), z))))
-        our_method = sum(forward(flow, z)[2])
+        our_method = sum(with_logabsdet_jacobian(flow, z)[2])
 
         @test our_method ≈ forward_diff
         @test inverse(flow)(flow(z)) ≈ z
@@ -74,7 +74,7 @@ end
         flow = RadialLayer(2)
         z = randn(2, 20)
         forward_diff = log(abs(det(ForwardDiff.jacobian(t -> flow(t), z))))
-        our_method = sum(forward(flow, z)[2])
+        our_method = sum(with_logabsdet_jacobian(flow, z)[2])
 
         @test our_method ≈ forward_diff
         @test inverse(flow)(flow(z)) ≈ z rtol=0.2
@@ -102,7 +102,7 @@ end
 
     x = rand(d)
     y = flow.transform(x)
-    res = forward(flow.transform, x)
+    res = with_logabsdet_jacobian(flow.transform, x)
     lp = logpdf_forward(flow, x, res[2])
 
     @test res[1] ≈ y

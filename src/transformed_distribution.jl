@@ -218,7 +218,7 @@ end
 const GLOBAL_RNG = Distributions.GLOBAL_RNG
 
 function _forward(d::UnivariateDistribution, x)
-    y, logjac = forward(Identity{0}(), x)
+    y, logjac = with_logabsdet_jacobian(Identity{0}(), x)
     return (x = x, y = y, logabsdetjac = logjac, logpdf = logpdf.(d, x))
 end
 
@@ -227,7 +227,7 @@ function forward(rng::AbstractRNG, d::Distribution, num_samples::Int)
     return _forward(d, rand(rng, d, num_samples))
 end
 function _forward(d::Distribution, x)
-    y, logjac = forward(Identity{length(size(d))}(), x)
+    y, logjac = with_logabsdet_jacobian(Identity{length(size(d))}(), x)
     return (x = x, y = y, logabsdetjac = logjac, logpdf = logpdf(d, x))
 end
 
