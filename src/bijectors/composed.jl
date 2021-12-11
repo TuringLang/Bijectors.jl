@@ -153,7 +153,7 @@ end
 ∘(::Identity{N}, b::Bijector{N}) where {N} = b
 ∘(b::Bijector{N}, ::Identity{N}) where {N} = b
 
-InverseFunctions.inverse(ct::Composed) = Composed(reverse(map(inv, ct.ts)))
+InverseFunctions.inverse(ct::Composed) = Composed(reverse(map(inverse, ct.ts)))
 
 # # TODO: should arrays also be using recursive implementation instead?
 function (cb::Composed{<:AbstractArray{<:Bijector}})(x)
