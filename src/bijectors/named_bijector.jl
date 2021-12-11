@@ -164,13 +164,17 @@ end
 
 @generated function ChangesOfVariables.with_logabsdet_jacobian(cb::NamedComposition{T}, x) where {T<:Tuple}
     expr = Expr(:block)
-    push!(expr.args, :((y, logjac) = with_logabsdet_jacobian(cb.bs[1], x)))
+
+    sym_y, sym_ladj, sym_tmp_ladj = gensym(:y), gensym(:lady), gensym(:tmp_lady)
+    push!(expr.args, :(($sym_y, $sym_ladj) = with_logabsdet_jacobian(cb.bs[1], x)))
+    sym_last_y, sym_last_ladj = sym_y, sym_ladj
     for i = 2:length(T.parameters)
-        temp = gensym(:res_logjac)
-        push!(expr.args, :(y, $temp = with_logabsdet_jacobian(cb.bs[$i], y)))
-        push!(expr.args, :(logjac += $temp))
+        sym_y, sym_ladj, sym_tmp_ladj = gensym(:y), gensym(:lady), gensym(:tmp_lady)
+        push!(expr.args, :(($sym_y, $sym_tmp_ladj) = with_logabsdet_jacobian(cb.bs[$i], $sym_last_y)))
+        push!(expr.args, :($sym_ladj = $sym_tmp_ladj + $sym_last_ladj))
+        sym_last_y, sym_last_ladj = sym_y, sym_ladj
     end
-    push!(expr.args, :(return (y, logjac)))
+    push!(expr.args, :(return ($sym_y, $sym_ladj)))
 
     return expr
 end
