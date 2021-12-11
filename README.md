@@ -199,7 +199,7 @@ julia> logpdf_forward(td, x)
 -1.123311289915276
 ```
 
-#### `logabsdetjac` and `forward`
+#### `logabsdetjac` and `with_logabsdet_jacobian`
 
 In the computation of both `logpdf` and `logpdf_forward` we need to compute `log(abs(det(jacobian(inverse(b), y))))` and `log(abs(det(jacobian(b, x))))`, respectively. This computation is available using the `logabsdetjac` method
 
@@ -218,7 +218,7 @@ julia> logabsdetjac(b, x) ≈ -logabsdetjac(b⁻¹, y)
 true
 ```
 
-which is always the case for a differentiable bijection with differentiable inverse. Therefore if you want to compute `logabsdetjac(b⁻¹, y)` and we know that `logabsdetjac(b, b⁻¹(y))` is actually more efficient, we'll return `-logabsdetjac(b, b⁻¹(y))` instead. For some bijectors it might be easy to compute, say, the forward pass `b(x)`, but expensive to compute `b⁻¹(y)`. Because of this you might want to avoid doing anything "backwards", i.e. using `b⁻¹`. This is where `forward` comes to good use:
+which is always the case for a differentiable bijection with differentiable inverse. Therefore if you want to compute `logabsdetjac(b⁻¹, y)` and we know that `logabsdetjac(b, b⁻¹(y))` is actually more efficient, we'll return `-logabsdetjac(b, b⁻¹(y))` instead. For some bijectors it might be easy to compute, say, the forward pass `b(x)`, but expensive to compute `b⁻¹(y)`. Because of this you might want to avoid doing anything "backwards", i.e. using `b⁻¹`. This is where `with_logabsdet_jacobian` comes to good use:
 
 ```julia
 julia> with_logabsdet_jacobian(b, x)
@@ -228,7 +228,7 @@ julia> with_logabsdet_jacobian(b, x)
 Similarily
 
 ```julia
-julia> forward(inverse(b), y)
+julia> with_logabsdet_jacobian(inverse(b), y)
 (0.3688868996596376, -1.4575353795716655)
 ```
 
@@ -716,7 +716,7 @@ The following methods are implemented by all subtypes of `Bijector`, this also i
 - `(b::Bijector)(x)`: implements the transform of the `Bijector`
 - `inverse(b::Bijector)`: returns the inverse of `b`, i.e. `ib::Bijector` s.t. `(ib ∘ b)(x) ≈ x`. In most cases this is `Inverse{<:Bijector}`.
 - `logabsdetjac(b::Bijector, x)`: computes log(abs(det(jacobian(b, x)))).
-- `with_logabsdet_jacobian(b::Bijector, x)`: returns named tuple `(b(x), logabsdetjac(b, x))` in the most efficient manner.
+- `with_logabsdet_jacobian(b::Bijector, x)`: returns the tuple `(b(x), logabsdetjac(b, x))` in the most efficient manner.
 - `∘`, `composel`, `composer`: convenient and type-safe constructors for `Composed`. `composel(bs...)` composes s.t. the resulting composition is evaluated left-to-right, while `composer(bs...)` is evaluated right-to-left. `∘` is right-to-left, as excepted from standard mathematical notation.
 - `jacobian(b::Bijector, x)` [OPTIONAL]: returns the Jacobian of the transformation. In some cases the analytical Jacobian has been implemented for efficiency.
 - `dimension(b::Bijector)`: returns the dimensionality of `b`.

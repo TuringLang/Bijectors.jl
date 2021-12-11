@@ -35,8 +35,8 @@ using MappedArrays
 using Base.Iterators: drop
 using LinearAlgebra: AbstractTriangular
 
-import ChangesOfVariables: with_logabsdet_jacobian
-import InverseFunctions: inverse
+using ChangesOfVariables: ChangesOfVariables, with_logabsdet_jacobian
+using InverseFunctions: InverseFunctions, inverse
 
 import ChainRulesCore
 import Functors

@@ -123,4 +123,4 @@ function compute_r(y_minus_z0::AbstractVector{<:Real}, α, α_plus_β_hat)
     return r
 end
 
-logabsdetjac(flow::RadialLayer, x::AbstractVecOrMat) = forward(flow, x)[2]
+logabsdetjac(flow::RadialLayer, x::AbstractVecOrMat) = last(with_logabsdet_jacobian(flow, x))

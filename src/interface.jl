@@ -56,7 +56,7 @@ requires an iterative procedure to evaluate.
 isclosedform(b::Bijector) = true
 
 """
-inverse(b::Bijector)
+    inverse(b::Bijector)
     Inverse(b::Bijector)
 
 A `Bijector` representing the inverse transform of `b`.

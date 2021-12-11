@@ -175,5 +175,5 @@ function find_alpha(wt_y::T, wt_u_hat::T, b::T) where {T<:Real}
     return α0
 end
 
-logabsdetjac(flow::PlanarLayer, x) = forward(flow, x)[2]
+logabsdetjac(flow::PlanarLayer, x) = last(with_logabsdet_jacobian(flow, x))
 isclosedform(b::Inverse{<:PlanarLayer}) = false

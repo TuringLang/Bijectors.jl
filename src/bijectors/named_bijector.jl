@@ -122,11 +122,10 @@ end
 (cb::NamedComposition{<:Tuple})(x) = foldl(|>, cb.bs; init=x)
 
 function logabsdetjac(cb::NamedComposition, x)
-    y, logjac = forward(cb.bs[1], x)
+    y, logjac = with_logabsdet_jacobian(cb.bs[1], x)
     for i = 2:length(cb.bs)
-        res = forward(cb.bs[i], y)
-        y = res[1]
-        logjac += res[2]
+        y, res_logjac = with_logabsdet_jacobian(cb.bs[i], y)
+        logjac += res_logjac
     end
 
     return logjac
@@ -139,10 +138,9 @@ end
     push!(expr.args, :((y, logjac) = forward(cb.bs[1], x)))
 
     for i = 2:N - 1
-        temp = gensym(:res)
-        push!(expr.args, :($temp = forward(cb.bs[$i], y)))
-        push!(expr.args, :(y = $temp[1]))
-        push!(expr.args, :(logjac += $temp[2]))
+        temp = gensym(:res_logjac)
+        push!(expr.args, :(y, $temp = with_logabsdet_jacobian(cb.bs[$i], y)))
+        push!(expr.args, :(logjac += $temp))
     end
     # don't need to evaluate the last bijector, only it's `logabsdetjac`
     push!(expr.args, :(logjac += logabsdetjac(cb.bs[$N], y)))
@@ -157,9 +155,8 @@ function forward(cb::NamedComposition, x)
     rv, logjac = forward(cb.bs[1], x)
     
     for t in cb.bs[2:end]
-        res = forward(t, rv)
-        rv = res[1]
-        logjac = res[2] + logjac
+        rv, res_logjac = with_logabsdet_jacobian(t, rv)
+        logjac += res_logjac
     end
     return (rv, logjac)
 end
@@ -169,10 +166,9 @@ end
     expr = Expr(:block)
     push!(expr.args, :((y, logjac) = forward(cb.bs[1], x)))
     for i = 2:length(T.parameters)
-        temp = gensym(:temp)
-        push!(expr.args, :($temp = forward(cb.bs[$i], y)))
-        push!(expr.args, :(y = $temp[1]))
-        push!(expr.args, :(logjac += $temp[2]))
+        temp = gensym(:res_logjac)
+        push!(expr.args, :(y, $temp = with_logabsdet_jacobian(cb.bs[$i], y)))
+        push!(expr.args, :(logjac += $temp))
     end
     push!(expr.args, :(return (y, logjac)))
 
