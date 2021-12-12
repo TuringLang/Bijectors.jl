@@ -859,5 +859,5 @@ end
     x = 0.3
 
     @test @test_deprecated(forward(b, x)) == NamedTuple{(:rv, :logabsdetjac)}(with_logabsdet_jacobian(b, x))
-    @test inv(b) == inverse(b)
+    @test @test_deprecated(inv(b)) == inverse(b)
 end
