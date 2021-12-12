@@ -60,7 +60,7 @@ function _logabsdetjac_scale(a::TrackedReal, x::Real, ::Val{0})
     return track(_logabsdetjac_scale, a, value(x), Val(0))
 end
 @grad function _logabsdetjac_scale(a::Real, x::Real, v::Val{0})
-    return _logabsdetjac_scale(value(a), value(x), Val(0)), Δ -> (inverse(value(a)) .* Δ, nothing, nothing)
+    return _logabsdetjac_scale(value(a), value(x), Val(0)), Δ -> (inv(value(a)) .* Δ, nothing, nothing)
 end
 # Need to treat `AbstractVector` and `AbstractMatrix` separately due to ambiguity errors
 function _logabsdetjac_scale(a::TrackedReal, x::AbstractVector, ::Val{0})
@@ -68,7 +68,7 @@ function _logabsdetjac_scale(a::TrackedReal, x::AbstractVector, ::Val{0})
 end
 @grad function _logabsdetjac_scale(a::Real, x::AbstractVector, v::Val{0})
     da = value(a)
-    J = fill(inverse.(da), length(x))
+    J = fill(inv.(da), length(x))
     return _logabsdetjac_scale(da, value(x), Val(0)), Δ -> (transpose(J) * Δ, nothing, nothing)
 end
 function _logabsdetjac_scale(a::TrackedReal, x::AbstractMatrix, ::Val{0})
