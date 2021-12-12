@@ -702,7 +702,7 @@ end
 
         # Stacked{<:Array}
         bs = bijector.(dists)     # constrained-to-unconstrained bijectors for dists
-        ibs = inv.(bs)            # invert, so we get unconstrained-to-constrained
+        ibs = inverse.(bs)            # invert, so we get unconstrained-to-constrained
         sb = Stacked(ibs, ranges) # => Stacked <: Bijector
         x = rand(d)
 
