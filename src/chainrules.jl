@@ -7,6 +7,20 @@ ChainRulesCore.@scalar_rule(
     (x, - tanh(Ω + b) * x, x - 1),
 )
 
+function ChainRulesCore.rrule(::typeof(combine), m::PartitionMask, x_1, x_2, x_3)
+    proj_x_1 = ChainRulesCore.ProjectTo(x_1)
+    proj_x_2 = ChainRulesCore.ProjectTo(x_2)
+    proj_x_3 = ChainRulesCore.ProjectTo(x_3)
+
+    function combine_pullback(ΔΩ)
+        Δ = ChainRulesCore.unthunk(ΔΩ)
+        dx_1, dx_2, dx_3 = partition(m, Δ)
+        return ChainRulesCore.NoTangent(), ChainRulesCore.NoTangent(), proj_x_1(dx_1), proj_x_2(dx_2), proj_x_3(dx_3)
+    end
+
+    return combine(m, x_1, x_2, x_3), combine_pullback
+end
+
 # `OrderedBijector`
 function ChainRulesCore.rrule(::typeof(_transform_ordered), y::AbstractVector)
     # ensures that we remain in the primal's subspace

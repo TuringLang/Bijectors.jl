@@ -118,21 +118,6 @@ Combines `x_1`, `x_2`, and `x_3` into a single vector.
 """
 @inline combine(m::PartitionMask, x_1, x_2, x_3) = m.A_1 * x_1 .+ m.A_2 * x_2 .+ m.A_3 * x_3
 
-function ChainRulesCore.rrule(::typeof(combine), m::PartitionMask, x_1, x_2, x_3)
-    proj_x_1 = ChainRulesCore.ProjectTo(x_1)
-    proj_x_2 = ChainRulesCore.ProjectTo(x_2)
-    proj_x_3 = ChainRulesCore.ProjectTo(x_3)
-
-    function combine_pullback(ΔΩ)
-        Δ = ChainRulesCore.unthunk(ΔΩ)
-        dx_1, dx_2, dx_3 = partition(m, Δ)
-        return ChainRulesCore.NoTangent(), ChainRulesCore.NoTangent(), proj_x_1(dx_1), proj_x_2(dx_2), proj_x_3(dx_3)
-    end
-
-    return combine(m, x_1, x_2, x_3), combine_pullback
-end
-
-
 """
     partition(m::PartitionMask, x)
 
