@@ -562,8 +562,9 @@ julia> with_logabsdet_jacobian(b, 0.6)         # defaults to `(b(x), logabsdetja
 For further efficiency, one could manually implement `with_logabsdet_jacobian(b::Logit, x)`:
 
 ```julia
-julia> import Bijectors: forward, Logit
-julia> import ChangesOfVariables: with_logabsdet_jacobian
+julia> using Bijectors: Logit
+
+julia> import Bijectors: with_logabsdet_jacobian
 
 julia> function with_logabsdet_jacobian(b::Logit{<:Real}, x)
            totally_worth_saving = @. (x - b.a) / (b.b - b.a)  # spoiler: it's probably not
