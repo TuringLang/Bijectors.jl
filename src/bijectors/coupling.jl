@@ -119,16 +119,17 @@ Combines `x_1`, `x_2`, and `x_3` into a single vector.
 @inline combine(m::PartitionMask, x_1, x_2, x_3) = m.A_1 * x_1 .+ m.A_2 * x_2 .+ m.A_3 * x_3
 
 function ChainRulesCore.rrule(::typeof(combine), m::PartitionMask, x_1, x_2, x_3)
-    prj = map(ChainRulesCore.ProjectTo, (x_1, x_2, x_3))
+    proj_x_1 = ChainRulesCore.ProjectTo(x_1)
+    proj_x_2 = ChainRulesCore.ProjectTo(x_2)
+    proj_x_3 = ChainRulesCore.ProjectTo(x_3)
 
-    function _transform_ordered_adjoint(ΔΩ)
+    function combine_pullback(ΔΩ)
         Δ = ChainRulesCore.unthunk(ΔΩ)
         dx_1, dx_2, dx_3 = partition(m, Δ)
-
-        return ChainRulesCore.NoTangent(), ChainRulesCore.NoTangent(), prj[1](dx_1), prj[2](dx_2), prj[3](dx_3)
+        return ChainRulesCore.NoTangent(), ChainRulesCore.NoTangent(), proj_x_1(dx_1), proj_x_2(dx_2), proj_x_3(dx_3)
     end
 
-    return combine(m, x_1, x_2, x_3), _transform_ordered_adjoint
+    return combine(m, x_1, x_2, x_3), combine_pullback
 end
 
 
@@ -209,7 +210,6 @@ function couple(cl::Coupling, x::AbstractVector)
     return b
 end
 
-#!!!!!!!!!!!!!
 function (cl::Coupling)(x::AbstractVector)
     # partition vector using `cl.mask::PartitionMask`
     x_1, x_2, x_3 = partition(cl.mask, x)
