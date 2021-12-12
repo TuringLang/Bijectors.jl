@@ -858,8 +858,6 @@ end
     b = Bijectors.Exp()
     x = 0.3
 
-    @test let r = forward(b, x)
-        (r.rv, r.logabsdetjac) == with_logabsdet_jacobian(b, x)
-    end
+    @test @test_deprecated(forward(b, x)) == NamedTuple{(:rv, :logabsdetjac)}(with_logabsdet_jacobian(b, x))
     @test inv(b) == inverse(b)
 end
