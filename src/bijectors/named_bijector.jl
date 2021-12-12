@@ -107,7 +107,7 @@ composel(bs::AbstractNamedBijector...) = NamedComposition(bs)
 composer(bs::AbstractNamedBijector...) = NamedComposition(reverse(bs))
 ∘(b1::AbstractNamedBijector, b2::AbstractNamedBijector) = composel(b2, b1)
 
-InverseFunctions.inverse(ct::NamedComposition) = NamedComposition(reverse(map(inv, ct.bs)))
+InverseFunctions.inverse(ct::NamedComposition) = NamedComposition(reverse(map(inverse, ct.bs)))
 
 function (cb::NamedComposition{<:AbstractArray{<:AbstractNamedBijector}})(x)
     @assert length(cb.bs) > 0
