@@ -72,8 +72,8 @@ Functors.@functor Inverse
 
 up1(b::Inverse) = Inverse(up1(b.orig))
 
-InverseFunctions.inverse(b::Bijector) = Inverse(b)
-InverseFunctions.inverse(ib::Inverse{<:Bijector}) = ib.orig
+inverse(b::Bijector) = Inverse(b)
+inverse(ib::Inverse{<:Bijector}) = ib.orig
 Base.:(==)(b1::Inverse{<:Bijector}, b2::Inverse{<:Bijector}) = b1.orig == b2.orig
 
 """
@@ -99,7 +99,7 @@ in the computation of the forward pass and the computation of the
 `logabsdetjac`. `forward` allows the user to take advantange of such
 efficiencies, if they exist.
 """
-ChangesOfVariables.with_logabsdet_jacobian(b::Bijector, x) = (b(x), logabsdetjac(b, x))
+with_logabsdet_jacobian(b::Bijector, x) = (b(x), logabsdetjac(b, x))
 
 """
     logabsdetjacinv(b::Bijector, y)
@@ -114,7 +114,7 @@ logabsdetjacinv(b::Bijector, y) = logabsdetjac(inverse(b), y)
 
 struct Identity{N} <: Bijector{N} end
 (::Identity)(x) = copy(x)
-InverseFunctions.inverse(b::Identity) = b
+inverse(b::Identity) = b
 up1(::Identity{N}) where {N} = Identity{N + 1}()
 
 logabsdetjac(::Identity{0}, x::Real) = zero(eltype(x))

@@ -1,6 +1,6 @@
 abstract type AbstractNamedBijector <: AbstractBijector end
 
-ChangesOfVariables.with_logabsdet_jacobian(b::AbstractNamedBijector, x) = (b(x), logabsdetjac(b, x))
+with_logabsdet_jacobian(b::AbstractNamedBijector, x) = (b(x), logabsdetjac(b, x))
 
 #######################
 ### `NamedBijector` ###
@@ -55,7 +55,7 @@ names_to_bijectors(b::NamedBijector) = b.bs
     return :($(exprs...), )
 end
 
-@generated function InverseFunctions.inverse(b::NamedBijector{names}) where {names}
+@generated function inverse(b::NamedBijector{names}) where {names}
     return :(NamedBijector(($([:($n = inverse(b.bs.$n)) for n in names]...), )))
 end
 
@@ -78,8 +78,8 @@ See also: [`Inverse`](@ref)
 struct NamedInverse{B<:AbstractNamedBijector} <: AbstractNamedBijector
     orig::B
 end
-InverseFunctions.inverse(nb::AbstractNamedBijector) = NamedInverse(nb)
-InverseFunctions.inverse(ni::NamedInverse) = ni.orig
+inverse(nb::AbstractNamedBijector) = NamedInverse(nb)
+inverse(ni::NamedInverse) = ni.orig
 
 logabsdetjac(ni::NamedInverse, y::NamedTuple) = -logabsdetjac(inverse(ni), ni(y))
 
@@ -107,7 +107,7 @@ composel(bs::AbstractNamedBijector...) = NamedComposition(bs)
 composer(bs::AbstractNamedBijector...) = NamedComposition(reverse(bs))
 ∘(b1::AbstractNamedBijector, b2::AbstractNamedBijector) = composel(b2, b1)
 
-InverseFunctions.inverse(ct::NamedComposition) = NamedComposition(reverse(map(inverse, ct.bs)))
+inverse(ct::NamedComposition) = NamedComposition(reverse(map(inverse, ct.bs)))
 
 function (cb::NamedComposition{<:AbstractArray{<:AbstractNamedBijector}})(x)
     @assert length(cb.bs) > 0
@@ -151,7 +151,7 @@ end
 end
 
 
-function ChangesOfVariables.with_logabsdet_jacobian(cb::NamedComposition, x)
+function with_logabsdet_jacobian(cb::NamedComposition, x)
     rv, logjac = with_logabsdet_jacobian(cb.bs[1], x)
     
     for t in cb.bs[2:end]
@@ -162,7 +162,7 @@ function ChangesOfVariables.with_logabsdet_jacobian(cb::NamedComposition, x)
 end
 
 
-@generated function ChangesOfVariables.with_logabsdet_jacobian(cb::NamedComposition{T}, x) where {T<:Tuple}
+@generated function with_logabsdet_jacobian(cb::NamedComposition{T}, x) where {T<:Tuple}
     expr = Expr(:block)
 
     sym_y, sym_ladj, sym_tmp_ladj = gensym(:y), gensym(:lady), gensym(:tmp_lady)

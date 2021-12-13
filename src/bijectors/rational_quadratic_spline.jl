@@ -379,6 +379,6 @@ function rqs_forward(
     return (y, logjac)
 end
 
-function ChangesOfVariables.with_logabsdet_jacobian(b::RationalQuadraticSpline{<:AbstractVector, 0}, x::Real)
+function with_logabsdet_jacobian(b::RationalQuadraticSpline{<:AbstractVector, 0}, x::Real)
     return rqs_forward(b.widths, b.heights, b.derivatives, x)
 end

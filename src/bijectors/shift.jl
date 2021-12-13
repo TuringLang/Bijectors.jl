@@ -24,7 +24,7 @@ up1(b::Shift{T, N}) where {T, N} = Shift{T, N + 1}(b.a)
 (b::Shift)(x) = b.a .+ x
 (b::Shift{<:Any, 2})(x::AbstractArray{<:AbstractMatrix}) = map(b, x)
 
-InverseFunctions.inverse(b::Shift{T, N}) where {T, N} = Shift{T, N}(-b.a)
+inverse(b::Shift{T, N}) where {T, N} = Shift{T, N}(-b.a)
 
 # FIXME: implement custom adjoint to ensure we don't get tracking
 logabsdetjac(b::Shift{T, N}, x) where {T, N} = _logabsdetjac_shift(b.a, x, Val(N))

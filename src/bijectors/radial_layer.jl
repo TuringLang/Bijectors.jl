@@ -49,7 +49,7 @@ end
 (b::RadialLayer)(z::AbstractMatrix{<:Real}) = _transform(b, z).transformed
 (b::RadialLayer)(z::AbstractVector{<:Real}) = vec(_transform(b, z).transformed)
 
-function ChangesOfVariables.with_logabsdet_jacobian(flow::RadialLayer, z::AbstractVecOrMat)
+function with_logabsdet_jacobian(flow::RadialLayer, z::AbstractVecOrMat)
     transformed, α, β_hat, r = _transform(flow, z)
     # Compute log_det_jacobian
     d = size(flow.z_0, 1)

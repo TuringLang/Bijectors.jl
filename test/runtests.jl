@@ -1,13 +1,11 @@
 using Bijectors
 
 using ChainRulesTestUtils
-using ChangesOfVariables
 using Combinatorics
 using DistributionsAD
 using FiniteDifferences
 using ForwardDiff
 using Functors
-using InverseFunctions
 using LogExpFunctions
 using ReverseDiff
 using Tracker
@@ -17,6 +15,9 @@ using Random, LinearAlgebra, Test
 
 using Bijectors: Log, Exp, Shift, Scale, Logit, SimplexBijector, PDBijector, Permute,
     PlanarLayer, RadialLayer, Stacked, TruncatedBijector, ADBijector
+
+using ChangesOfVariables: test_with_logabsdet_jacobian
+using InverseFunctions: test_inverse
 
 using DistributionsAD: TuringUniform, TuringMvNormal, TuringMvLogNormal,
     TuringPoissonBinomial

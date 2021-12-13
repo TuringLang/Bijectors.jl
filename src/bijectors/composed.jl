@@ -153,7 +153,7 @@ end
 ∘(::Identity{N}, b::Bijector{N}) where {N} = b
 ∘(b::Bijector{N}, ::Identity{N}) where {N} = b
 
-InverseFunctions.inverse(ct::Composed) = Composed(reverse(map(inverse, ct.ts)))
+inverse(ct::Composed) = Composed(reverse(map(inverse, ct.ts)))
 
 # # TODO: should arrays also be using recursive implementation instead?
 function (cb::Composed{<:AbstractArray{<:Bijector}})(x)
@@ -208,7 +208,7 @@ end
 end
 
 
-function ChangesOfVariables.with_logabsdet_jacobian(cb::Composed, x)
+function with_logabsdet_jacobian(cb::Composed, x)
     rv, logjac = with_logabsdet_jacobian(cb.ts[1], x)
     
     for t in cb.ts[2:end]
@@ -218,7 +218,7 @@ function ChangesOfVariables.with_logabsdet_jacobian(cb::Composed, x)
     return (rv, logjac)
 end
 
-@generated function ChangesOfVariables.with_logabsdet_jacobian(cb::Composed{T}, x) where {T<:Tuple}
+@generated function with_logabsdet_jacobian(cb::Composed{T}, x) where {T<:Tuple}
     expr = Expr(:block)
     sym_y, sym_ladj, sym_tmp_ladj = gensym(:y), gensym(:lady), gensym(:tmp_lady)
     push!(expr.args, :(($sym_y, $sym_ladj) = with_logabsdet_jacobian(cb.ts[1], x)))

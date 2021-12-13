@@ -151,7 +151,7 @@ end
 
 
 @inline (b::Permute)(x::AbstractVecOrMat) = b.A * x
-@inline InverseFunctions.inverse(b::Permute) = Permute(transpose(b.A))
+@inline inverse(b::Permute) = Permute(transpose(b.A))
 
 logabsdetjac(b::Permute, x::AbstractVector) = zero(eltype(x))
 logabsdetjac(b::Permute, x::AbstractMatrix) = zero(eltype(x), size(x, 2))

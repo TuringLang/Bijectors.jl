@@ -35,8 +35,8 @@ using MappedArrays
 using Base.Iterators: drop
 using LinearAlgebra: AbstractTriangular
 
-using ChangesOfVariables: ChangesOfVariables, with_logabsdet_jacobian
-using InverseFunctions: InverseFunctions, inverse
+import ChangesOfVariables: with_logabsdet_jacobian
+import InverseFunctions: inverse
 
 import ChainRulesCore
 import Functors
@@ -54,6 +54,8 @@ export  TransformDistribution,
         logpdf_with_trans,
         isclosedform,
         transform,
+        with_logabsdet_jacobian,
+        inverse,
         forward,
         logabsdetjac,
         logabsdetjacinv,
@@ -255,7 +257,7 @@ include("chainrules.jl")
 Base.@deprecate forward(b::AbstractBijector, x) NamedTuple{(:rv,:logabsdetjac)}(with_logabsdet_jacobian(b, x))
 
 @noinline function Base.inv(b::AbstractBijector)
-    Base.depwarn("`Base.inv(b::AbstractBijector)` is deprecated, use `InverseFunctions.inverse(b)` instead.", :inv)
+    Base.depwarn("`Base.inv(b::AbstractBijector)` is deprecated, use `inverse(b)` instead.", :inv)
     inverse(b)
 end
 
