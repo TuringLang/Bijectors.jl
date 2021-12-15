@@ -100,7 +100,7 @@ function logabsdetjac(b::CorrBijector, X::AbstractMatrix{<:Real})
     `logabsdetjac(::Inverse{CorrBijector}, y::AbstractMatrix{<:Real})`
     if possible.
     =#
-    return -logabsdetjac(inv(b), (b(X))) 
+    return -logabsdetjac(inverse(b), (b(X))) 
 end
 function logabsdetjac(b::CorrBijector, X::AbstractArray{<:AbstractMatrix{<:Real}})
     return mapvcat(X) do x

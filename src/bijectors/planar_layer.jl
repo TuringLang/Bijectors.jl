@@ -94,14 +94,14 @@ we get
 \\log |det ∂f(z)/∂z| = \\log(1 + sech²(wᵀz + b) wᵀû).
 ```
 =#
-function forward(flow::PlanarLayer, z::AbstractVecOrMat{<:Real})
+function with_logabsdet_jacobian(flow::PlanarLayer, z::AbstractVecOrMat{<:Real})
     transformed, wT_û, wT_z = _transform(flow, z)
 
     # Compute ``\\log |det ∂f(z)/∂z|`` (see above).
     b = first(flow.b)
     log_det_jacobian = log1p.(wT_û .* abs2.(sech.(_vec(wT_z) .+ b)))
 
-    return (rv = transformed, logabsdetjac = log_det_jacobian)
+    return (transformed, log_det_jacobian)
 end
 
 function (ib::Inverse{<:PlanarLayer})(y::AbstractVecOrMat{<:Real})
@@ -175,5 +175,5 @@ function find_alpha(wt_y::T, wt_u_hat::T, b::T) where {T<:Real}
     return α0
 end
 
-logabsdetjac(flow::PlanarLayer, x) = forward(flow, x).logabsdetjac
+logabsdetjac(flow::PlanarLayer, x) = last(with_logabsdet_jacobian(flow, x))
 isclosedform(b::Inverse{<:PlanarLayer}) = false

@@ -49,7 +49,7 @@ end
 (b::RadialLayer)(z::AbstractMatrix{<:Real}) = _transform(b, z).transformed
 (b::RadialLayer)(z::AbstractVector{<:Real}) = vec(_transform(b, z).transformed)
 
-function forward(flow::RadialLayer, z::AbstractVecOrMat)
+function with_logabsdet_jacobian(flow::RadialLayer, z::AbstractVecOrMat)
     transformed, α, β_hat, r = _transform(flow, z)
     # Compute log_det_jacobian
     d = size(flow.z_0, 1)
@@ -63,7 +63,7 @@ function forward(flow::RadialLayer, z::AbstractVecOrMat)
         (d - 1) * log(1 + β_hat * h_)
         + log(1 +  β_hat * h_ + β_hat * (- h_ ^ 2) * r)
     )   # from eq(14)
-    return (rv = transformed, logabsdetjac = log_det_jacobian)
+    return (transformed, log_det_jacobian)
 end
 
 function (ib::Inverse{<:RadialLayer})(y::AbstractVector{<:Real})
@@ -123,4 +123,4 @@ function compute_r(y_minus_z0::AbstractVector{<:Real}, α, α_plus_β_hat)
     return r
 end
 
-logabsdetjac(flow::RadialLayer, x::AbstractVecOrMat) = forward(flow, x).logabsdetjac
+logabsdetjac(flow::RadialLayer, x::AbstractVecOrMat) = last(with_logabsdet_jacobian(flow, x))

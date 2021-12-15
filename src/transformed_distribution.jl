@@ -35,7 +35,7 @@ transformed(d) = transformed(d, bijector(d))
 
 Returns the constrained-to-unconstrained bijector for distribution `d`.
 """
-bijector(td::TransformedDistribution) = bijector(td.dist) ∘ inv(td.transform)
+bijector(td::TransformedDistribution) = bijector(td.dist) ∘ inverse(td.transform)
 bijector(d::DiscreteUnivariateDistribution) = Identity{0}()
 bijector(d::DiscreteMultivariateDistribution) = Identity{1}()
 bijector(d::ContinuousUnivariateDistribution) = TruncatedBijector(minimum(d), maximum(d))
@@ -85,43 +85,43 @@ Base.length(td::Transformed) = length(td.dist)
 Base.size(td::Transformed) = size(td.dist)
 
 function logpdf(td::UnivariateTransformed, y::Real)
-    res = forward(inv(td.transform), y)
-    return logpdf(td.dist, res.rv) + res.logabsdetjac
+    x, logjac = with_logabsdet_jacobian(inverse(td.transform), y)
+    return logpdf(td.dist, x) + logjac
 end
 
 # TODO: implement more efficiently for flows in the case of `Matrix`
 function logpdf(td::MvTransformed, y::AbstractMatrix{<:Real})
     # batch-implementation for multivariate
-    res = forward(inv(td.transform), y)
-    return logpdf(td.dist, res.rv) + res.logabsdetjac
+    x, logjac = with_logabsdet_jacobian(inverse(td.transform), y)
+    return logpdf(td.dist, x) + logjac
 end
 
 function logpdf(td::MvTransformed{<:Dirichlet}, y::AbstractMatrix{<:Real})
     T = eltype(y)
     ϵ = _eps(T)
 
-    res = forward(inv(td.transform), y)
-    return logpdf(td.dist, mappedarray(x->x+ϵ, res.rv)) + res.logabsdetjac
+    x, logjac = with_logabsdet_jacobian(inverse(td.transform), y)
+    return logpdf(td.dist, mappedarray(x->x+ϵ, x)) + logjac
 end
 
 function _logpdf(td::MvTransformed, y::AbstractVector{<:Real})
-    res = forward(inv(td.transform), y)
-    return logpdf(td.dist, res.rv) + res.logabsdetjac
+    x, logjac = with_logabsdet_jacobian(inverse(td.transform), y)
+    return logpdf(td.dist, x) + logjac
 end
 
 function _logpdf(td::MvTransformed{<:Dirichlet}, y::AbstractVector{<:Real})
     T = eltype(y)
     ϵ = _eps(T)
 
-    res = forward(inv(td.transform), y)
-    return logpdf(td.dist, mappedarray(x->x+ϵ, res.rv)) + res.logabsdetjac
+    x, logjac = with_logabsdet_jacobian(inverse(td.transform), y)
+    return logpdf(td.dist, mappedarray(x->x+ϵ, x)) + logjac
 end
 
 # TODO: should eventually drop using `logpdf_with_trans` and replace with
-# res = forward(inv(td.transform), y)
-# logpdf(td.dist, res.rv) .- res.logabsdetjac
+# x, logjac = with_logabsdet_jacobian(inverse(td.transform), y)
+# logpdf(td.dist, x) .- logjac
 function _logpdf(td::MatrixTransformed, y::AbstractMatrix{<:Real})
-    return logpdf_with_trans(td.dist, inv(td.transform)(y), true)
+    return logpdf_with_trans(td.dist, inverse(td.transform)(y), true)
 end
 
 # rand
@@ -163,34 +163,34 @@ Makes use of the `forward` method to potentially re-use computation
 and returns a tuple `(logpdf, logabsdetjac)`.
 """
 function logpdf_with_jac(td::UnivariateTransformed, y::Real)
-    res = forward(inv(td.transform), y)
-    return (logpdf(td.dist, res.rv) + res.logabsdetjac, res.logabsdetjac)
+    x, logjac = with_logabsdet_jacobian(inverse(td.transform), y)
+    return (logpdf(td.dist, x) + logjac, logjac)
 end
 
 # TODO: implement more efficiently for flows in the case of `Matrix`
 function logpdf_with_jac(td::MvTransformed, y::AbstractVector{<:Real})
-    res = forward(inv(td.transform), y)
-    return (logpdf(td.dist, res.rv) + res.logabsdetjac, res.logabsdetjac)
+    x, logjac = with_logabsdet_jacobian(inverse(td.transform), y)
+    return (logpdf(td.dist, x) + logjac, logjac)
 end
 
 function logpdf_with_jac(td::MvTransformed, y::AbstractMatrix{<:Real})
-    res = forward(inv(td.transform), y)
-    return (logpdf(td.dist, res.rv) + res.logabsdetjac, res.logabsdetjac)
+    x, logjac = with_logabsdet_jacobian(inverse(td.transform), y)
+    return (logpdf(td.dist, x) + logjac, logjac)
 end
 
 function logpdf_with_jac(td::MvTransformed{<:Dirichlet}, y::AbstractVector{<:Real})
     T = eltype(y)
     ϵ = _eps(T)
 
-    res = forward(inv(td.transform), y)
-    lp = logpdf(td.dist, mappedarray(x->x+ϵ, res.rv)) + res.logabsdetjac
-    return (lp, res.logabsdetjac)
+    x, logjac = with_logabsdet_jacobian(inverse(td.transform), y)
+    lp = logpdf(td.dist, mappedarray(x->x+ϵ, x)) + logjac
+    return (lp, logjac)
 end
 
 # TODO: should eventually drop using `logpdf_with_trans`
 function logpdf_with_jac(td::MatrixTransformed, y::AbstractMatrix{<:Real})
-    res = forward(inv(td.transform), y)
-    return (logpdf_with_trans(td.dist, res.rv, true), res.logabsdetjac)
+    x, logjac = with_logabsdet_jacobian(inverse(td.transform), y)
+    return (logpdf_with_trans(td.dist, x, true), logjac)
 end
 
 """
@@ -218,7 +218,7 @@ end
 const GLOBAL_RNG = Distributions.GLOBAL_RNG
 
 function _forward(d::UnivariateDistribution, x)
-    y, logjac = forward(Identity{0}(), x)
+    y, logjac = with_logabsdet_jacobian(Identity{0}(), x)
     return (x = x, y = y, logabsdetjac = logjac, logpdf = logpdf.(d, x))
 end
 
@@ -227,12 +227,12 @@ function forward(rng::AbstractRNG, d::Distribution, num_samples::Int)
     return _forward(d, rand(rng, d, num_samples))
 end
 function _forward(d::Distribution, x)
-    y, logjac = forward(Identity{length(size(d))}(), x)
+    y, logjac = with_logabsdet_jacobian(Identity{length(size(d))}(), x)
     return (x = x, y = y, logabsdetjac = logjac, logpdf = logpdf(d, x))
 end
 
 function _forward(td::Transformed, x)
-    y, logjac = forward(td.transform, x)
+    y, logjac = with_logabsdet_jacobian(td.transform, x)
     return (
         x = x,
         y = y,
@@ -293,7 +293,7 @@ logabsdetjacinv(d::MultivariateDistribution, x::AbstractVector{T}) where {T<:Rea
 Computes the `logabsdetjac` of the _inverse_ transformation, since `rand(td)` returns
 the _transformed_ random variable.
 """
-logabsdetjacinv(td::UnivariateTransformed, y::Real) = logabsdetjac(inv(td.transform), y)
+logabsdetjacinv(td::UnivariateTransformed, y::Real) = logabsdetjac(inverse(td.transform), y)
 function logabsdetjacinv(td::MvTransformed, y::AbstractVector{<:Real})
-    return logabsdetjac(inv(td.transform), y)
+    return logabsdetjac(inverse(td.transform), y)
 end

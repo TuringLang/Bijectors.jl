@@ -1,6 +1,6 @@
 abstract type AbstractNamedBijector <: AbstractBijector end
 
-forward(b::AbstractNamedBijector, x) = (rv = b(x), logabsdetjac = logabsdetjac(b, x))
+with_logabsdet_jacobian(b::AbstractNamedBijector, x) = (b(x), logabsdetjac(b, x))
 
 #######################
 ### `NamedBijector` ###
@@ -55,8 +55,8 @@ names_to_bijectors(b::NamedBijector) = b.bs
     return :($(exprs...), )
 end
 
-@generated function Base.inv(b::NamedBijector{names}) where {names}
-    return :(NamedBijector(($([:($n = inv(b.bs.$n)) for n in names]...), )))
+@generated function inverse(b::NamedBijector{names}) where {names}
+    return :(NamedBijector(($([:($n = inverse(b.bs.$n)) for n in names]...), )))
 end
 
 @generated function logabsdetjac(b::NamedBijector{names}, x::NamedTuple) where {names}
@@ -78,10 +78,10 @@ See also: [`Inverse`](@ref)
 struct NamedInverse{B<:AbstractNamedBijector} <: AbstractNamedBijector
     orig::B
 end
-Base.inv(nb::AbstractNamedBijector) = NamedInverse(nb)
-Base.inv(ni::NamedInverse) = ni.orig
+inverse(nb::AbstractNamedBijector) = NamedInverse(nb)
+inverse(ni::NamedInverse) = ni.orig
 
-logabsdetjac(ni::NamedInverse, y::NamedTuple) = -logabsdetjac(inv(ni), ni(y))
+logabsdetjac(ni::NamedInverse, y::NamedTuple) = -logabsdetjac(inverse(ni), ni(y))
 
 ##########################
 ### `NamedComposition` ###
@@ -107,7 +107,7 @@ composel(bs::AbstractNamedBijector...) = NamedComposition(bs)
 composer(bs::AbstractNamedBijector...) = NamedComposition(reverse(bs))
 ∘(b1::AbstractNamedBijector, b2::AbstractNamedBijector) = composel(b2, b1)
 
-inv(ct::NamedComposition) = NamedComposition(reverse(map(inv, ct.bs)))
+inverse(ct::NamedComposition) = NamedComposition(reverse(map(inverse, ct.bs)))
 
 function (cb::NamedComposition{<:AbstractArray{<:AbstractNamedBijector}})(x)
     @assert length(cb.bs) > 0
@@ -122,11 +122,10 @@ end
 (cb::NamedComposition{<:Tuple})(x) = foldl(|>, cb.bs; init=x)
 
 function logabsdetjac(cb::NamedComposition, x)
-    y, logjac = forward(cb.bs[1], x)
+    y, logjac = with_logabsdet_jacobian(cb.bs[1], x)
     for i = 2:length(cb.bs)
-        res = forward(cb.bs[i], y)
-        y = res.rv
-        logjac += res.logabsdetjac
+        y, res_logjac = with_logabsdet_jacobian(cb.bs[i], y)
+        logjac += res_logjac
     end
 
     return logjac
@@ -136,13 +135,12 @@ end
     N = length(T.parameters)
 
     expr = Expr(:block)
-    push!(expr.args, :((y, logjac) = forward(cb.bs[1], x)))
+    push!(expr.args, :((y, logjac) = with_logabsdet_jacobian(cb.bs[1], x)))
 
     for i = 2:N - 1
-        temp = gensym(:res)
-        push!(expr.args, :($temp = forward(cb.bs[$i], y)))
-        push!(expr.args, :(y = $temp.rv))
-        push!(expr.args, :(logjac += $temp.logabsdetjac))
+        temp = gensym(:res_logjac)
+        push!(expr.args, :(y, $temp = with_logabsdet_jacobian(cb.bs[$i], y)))
+        push!(expr.args, :(logjac += $temp))
     end
     # don't need to evaluate the last bijector, only it's `logabsdetjac`
     push!(expr.args, :(logjac += logabsdetjac(cb.bs[$N], y)))
@@ -153,28 +151,30 @@ end
 end
 
 
-function forward(cb::NamedComposition, x)
-    rv, logjac = forward(cb.bs[1], x)
+function with_logabsdet_jacobian(cb::NamedComposition, x)
+    rv, logjac = with_logabsdet_jacobian(cb.bs[1], x)
     
     for t in cb.bs[2:end]
-        res = forward(t, rv)
-        rv = res.rv
-        logjac = res.logabsdetjac + logjac
+        rv, res_logjac = with_logabsdet_jacobian(t, rv)
+        logjac += res_logjac
     end
-    return (rv=rv, logabsdetjac=logjac)
+    return (rv, logjac)
 end
 
 
-@generated function forward(cb::NamedComposition{T}, x) where {T<:Tuple}
+@generated function with_logabsdet_jacobian(cb::NamedComposition{T}, x) where {T<:Tuple}
     expr = Expr(:block)
-    push!(expr.args, :((y, logjac) = forward(cb.bs[1], x)))
+
+    sym_y, sym_ladj, sym_tmp_ladj = gensym(:y), gensym(:lady), gensym(:tmp_lady)
+    push!(expr.args, :(($sym_y, $sym_ladj) = with_logabsdet_jacobian(cb.bs[1], x)))
+    sym_last_y, sym_last_ladj = sym_y, sym_ladj
     for i = 2:length(T.parameters)
-        temp = gensym(:temp)
-        push!(expr.args, :($temp = forward(cb.bs[$i], y)))
-        push!(expr.args, :(y = $temp.rv))
-        push!(expr.args, :(logjac += $temp.logabsdetjac))
+        sym_y, sym_ladj, sym_tmp_ladj = gensym(:y), gensym(:lady), gensym(:tmp_lady)
+        push!(expr.args, :(($sym_y, $sym_tmp_ladj) = with_logabsdet_jacobian(cb.bs[$i], $sym_last_y)))
+        push!(expr.args, :($sym_ladj = $sym_tmp_ladj + $sym_last_ladj))
+        sym_last_y, sym_last_ladj = sym_y, sym_ladj
     end
-    push!(expr.args, :(return (rv = y, logabsdetjac = logjac)))
+    push!(expr.args, :(return ($sym_y, $sym_ladj)))
 
     return expr
 end
@@ -232,7 +232,7 @@ end
 ) where {target, deps, F}
     return quote
         b = ni.orig.f($([:(x.$d) for d in deps]...))
-        return merge(x, ($target = inv(b)(x.$target), ))
+        return merge(x, ($target = inverse(b)(x.$target), ))
     end
 end
 

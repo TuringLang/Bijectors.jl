@@ -35,6 +35,9 @@ using MappedArrays
 using Base.Iterators: drop
 using LinearAlgebra: AbstractTriangular
 
+import ChangesOfVariables: with_logabsdet_jacobian
+import InverseFunctions: inverse
+
 import ChainRulesCore
 import Functors
 import IrrationalConstants
@@ -51,6 +54,8 @@ export  TransformDistribution,
         logpdf_with_trans,
         isclosedform,
         transform,
+        with_logabsdet_jacobian,
+        inverse,
         forward,
         logabsdetjac,
         logabsdetjacinv,
@@ -121,7 +126,7 @@ end
 # Distributions
 
 link(d::Distribution, x) = bijector(d)(x)
-invlink(d::Distribution, y) = inv(bijector(d))(y)
+invlink(d::Distribution, y) = inverse(bijector(d))(y)
 function logpdf_with_trans(d::Distribution, x, transform::Bool)
     if ispd(d)
         return pd_logpdf_with_trans(d, x, transform)
@@ -188,14 +193,14 @@ function invlink(
     y::AbstractVecOrMat{<:Real},
     ::Val{proj}=Val(true),
 ) where {proj}
-    return inv(SimplexBijector{proj}())(y)
+    return inverse(SimplexBijector{proj}())(y)
 end
 function invlink_jacobian(
     d::Dirichlet,
     y::AbstractVector{<:Real},
     ::Val{proj}=Val(true),
 ) where {proj}
-    return jacobian(inv(SimplexBijector{proj}()), y)
+    return jacobian(inverse(SimplexBijector{proj}()), y)
 end
 
 ## Matrix
@@ -248,6 +253,13 @@ end
 include("utils.jl")
 include("interface.jl")
 include("chainrules.jl")
+
+Base.@deprecate forward(b::AbstractBijector, x) NamedTuple{(:rv,:logabsdetjac)}(with_logabsdet_jacobian(b, x))
+
+@noinline function Base.inv(b::AbstractBijector)
+    Base.depwarn("`Base.inv(b::AbstractBijector)` is deprecated, use `inverse(b)` instead.", :inv)
+    inverse(b)
+end
 
 # Broadcasting here breaks Tracker for some reason
 maporbroadcast(f, x::AbstractArray{<:Any, N}...) where {N} = map(f, x...)

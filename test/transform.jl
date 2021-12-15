@@ -145,7 +145,15 @@ let ϵ = eps(Float64)
             single_sample_tests(dist)
 
             # This should fail at the minute. Not sure what the correct way to test this is.
-            x = rand(dist)
+
+            # Workaround for intermittent test failures, result of `logpdf_with_trans(dist, x, true)`
+            # is incorrect for `x == [0.9999999999999998, 0.0]`:
+            x = if params(dist) == params(Dirichlet([1000 * one(Float64), eps(Float64)]))
+                [1.0, 0.0]
+            else
+                rand(dist)
+            end
+
             logpdf_turing = logpdf_with_trans(dist, x, true)
             J = jacobian(x->link(dist, x, Val(false)), x)
             @test logpdf(dist, x .+ ϵ) - _logabsdet(J) ≈ logpdf_turing

@@ -34,9 +34,9 @@ using Bijectors:
         @test cl2(x) == cl1(x)
 
         # inversion
-        icl1 = inv(cl1)
+        icl1 = inverse(cl1)
         @test icl1(cl1(x)) == x
-        @test inv(cl2)(cl2(x)) == x
+        @test inverse(cl2)(cl2(x)) == x
 
         # This `cl2` should result in
         b = Shift(x[2:2])
@@ -44,9 +44,9 @@ using Bijectors:
         # logabsdetjac
         @test logabsdetjac(cl1, x) == logabsdetjac(b, x[1:1])
 
-        # forward
-        @test forward(cl1, x) == (rv = cl1(x), logabsdetjac = logabsdetjac(cl1, x))
-        @test forward(icl1, cl1(x)) == (rv = x, logabsdetjac = - logabsdetjac(cl1, x))
+        # with_logabsdet_jacobian
+        @test with_logabsdet_jacobian(cl1, x) == (cl1(x), logabsdetjac(cl1, x))
+        @test with_logabsdet_jacobian(icl1, cl1(x)) == (x, - logabsdetjac(cl1, x))
     end
 
     @testset "Classic" begin
