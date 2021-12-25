@@ -71,10 +71,10 @@ julia> b4([1., 2., 3.])
  1.0
  3.0
 
-julia> inv(b1)
+julia> inverse(b1)
 Permute{LinearAlgebra.Transpose{Int64,Array{Int64,2}}}([0 1 0; 1 0 0; 0 0 1])
 
-julia> inv(b1)(b1([1., 2., 3.]))
+julia> inverse(b1)(b1([1., 2., 3.]))
 3-element Array{Float64,1}:
  1.0
  2.0

@@ -48,7 +48,7 @@ function Functors.functor(::Type{<:InvertibleBatchNorm}, x)
     return (b = x.b, logs = x.logs), reconstruct_invertiblebatchnorm
 end
 
-function forward(bn::InvertibleBatchNorm, x)
+function with_logabsdet_jacobian(bn::InvertibleBatchNorm, x)
     dims = ndims(x)
     size(x, dims - 1) == length(bn.b) ||
         error("InvertibleBatchNorm expected $(length(bn.b)) channels, got $(size(x, dims - 1))")
@@ -82,11 +82,11 @@ end
 logabsdetjac(bn::InvertibleBatchNorm, x) = forward(bn, x).logabsdetjac
 transform(bn::InvertibleBatchNorm, x) = forward(bn, x).result
 
-function forward(invbn::Inverse{<:InvertibleBatchNorm}, y)
-    @assert !istraining() "`forward(::Inverse{InvertibleBatchNorm})` is only available in test mode."
+function with_logabsdet_jacobian(invbn::Inverse{<:InvertibleBatchNorm}, y)
+    @assert !istraining() "`with_logabsdet_jacobian(::Inverse{InvertibleBatchNorm})` is only available in test mode."
     dims = ndims(y)
     as = ntuple(i -> i == ndims(y) - 1 ? size(y, i) : 1, dims)
-    bn = inv(invbn)
+    bn = inverse(invbn)
     s = reshape(exp.(bn.logs), as...)
     b = reshape(bn.b, as...)
     m = reshape(bn.m, as...)

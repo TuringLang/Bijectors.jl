@@ -55,8 +55,8 @@ names_to_bijectors(b::NamedBijector) = b.bs
     return :($(exprs...), )
 end
 
-@generated function Base.inv(b::NamedBijector{names}) where {names}
-    return :(NamedBijector(($([:($n = inv(b.bs.$n)) for n in names]...), )))
+@generated function inverse(b::NamedBijector{names}) where {names}
+    return :(NamedBijector(($([:($n = inverse(b.bs.$n)) for n in names]...), )))
 end
 
 @generated function logabsdetjac(b::NamedBijector{names}, x::NamedTuple) where {names}
@@ -116,7 +116,7 @@ end
 ) where {target, deps, F}
     return quote
         b = ni.orig.f($([:(x.$d) for d in deps]...))
-        return merge(x, ($target = inv(b)(x.$target), ))
+        return merge(x, ($target = inverse(b)(x.$target), ))
     end
 end
 

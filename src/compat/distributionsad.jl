@@ -57,14 +57,14 @@ function invlink(
     y::AbstractVecOrMat{<:Real},
     ::Val{proj}=Val(true),
 ) where {proj}
-    return inv(SimplexBijector{proj}())(y)
+    return inverse(SimplexBijector{proj}())(y)
 end
 function invlink_jacobian(
     d::TuringDirichlet,
     y::AbstractVector{<:Real},
     ::Val{proj}=Val(true),
 ) where {proj}
-    return jacobian(inv(SimplexBijector{proj}()), y)
+    return jacobian(inverse(SimplexBijector{proj}()), y)
 end
 
 ispd(::TuringWishart) = true

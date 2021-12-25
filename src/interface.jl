@@ -1,4 +1,4 @@
-import Base: inv, ∘
+import Base: ∘
 
 import Random: AbstractRNG
 import Distributions: logpdf, rand, rand!, _rand!, _logpdf
@@ -104,7 +104,7 @@ logabsdetjac!(b, x, logjac) = (logjac += logabsdetjac(b, x))
     forward(b, x)
 
 Computes both `transform` and `logabsdetjac` in one forward pass, and
-returns a named tuple `(rv=b(x), logabsdetjac=logabsdetjac(b, x))`.
+returns a named tuple `(b(x), logabsdetjac(b, x))`.
 
 This defaults to the call above, but often one can re-use computation
 in the computation of the forward pass and the computation of the
@@ -190,9 +190,9 @@ logabsdetjac(ib::Inverse{<:Bijector}, y) = -logabsdetjac(ib.orig, ib(y))
 """
     logabsdetjacinv(b::Bijector, y)
 
-Just an alias for `logabsdetjac(inv(b), y)`.
+Just an alias for `logabsdetjac(inverse(b), y)`.
 """
-logabsdetjacinv(b::Bijector, y) = logabsdetjac(inv(b), y)
+logabsdetjacinv(b::Bijector, y) = logabsdetjac(inverse(b), y)
 
 ##############################
 # Example bijector: Identity #

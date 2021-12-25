@@ -82,7 +82,9 @@ function logabsdetjac(::Inverse{<:CorrBijector}, y::AbstractMatrix{<:Real})
     result = float(zero(eltype(y)))
     for j in 2:K, i in 1:(j - 1)
         @inbounds abs_y_i_j = abs(y[i, j])
-        result += (K - i + 1) * (logtwo - (abs_y_i_j + log1pexp(-2 * abs_y_i_j)))
+        result += (K - i + 1) * (
+            IrrationalConstants.logtwo - (abs_y_i_j + LogExpFunctions.log1pexp(-2 * abs_y_i_j))
+        )
     end
     
     return result
@@ -94,7 +96,7 @@ function logabsdetjac(b::CorrBijector, X::AbstractMatrix{<:Real})
     `logabsdetjac(::Inverse{CorrBijector}, y::AbstractMatrix{<:Real})`
     if possible.
     =#
-    return -logabsdetjac(inv(b), (b(X))) 
+    return -logabsdetjac(inverse(b), (b(X))) 
 end
 
 function _inv_link_chol_lkj(y)

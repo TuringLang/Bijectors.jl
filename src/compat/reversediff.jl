@@ -9,7 +9,8 @@ using ..Bijectors: Log, SimplexBijector, maphcat, simplex_link_jacobian,
     ReverseDiffAD, Inverse
 import ..Bijectors: _eps, logabsdetjac, _logabsdetjac_scale, _simplex_bijector, 
     _simplex_inv_bijector, replace_diag, jacobian, getpd, lower, 
-    _inv_link_chol_lkj, _link_chol_lkj, _transform_ordered, _transform_inverse_ordered
+    _inv_link_chol_lkj, _link_chol_lkj, _transform_ordered, _transform_inverse_ordered,
+    find_alpha
 
 import ChainRulesCore
 
@@ -187,7 +188,7 @@ function find_alpha(wt_y::T, wt_u_hat::T, b::T) where {T<:TrackedReal}
     return track(find_alpha, wt_y, wt_u_hat, b)
 end
 @grad function find_alpha(wt_y::TrackedReal, wt_u_hat::TrackedReal, b::TrackedReal)
-    α = find_alpha(data(wt_y), data(wt_u_hat), data(b))
+    α = find_alpha(value(wt_y), value(wt_u_hat), value(b))
 
     ∂wt_y = inv(1 + wt_u_hat * sech(α + b)^2)
     ∂wt_u_hat = - tanh(α + b) * ∂wt_y

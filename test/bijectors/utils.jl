@@ -9,32 +9,32 @@ function test_bijector_single(
     isequal = true,
     tol = 1e-6
 )
-    ib = @inferred inv(b)
+    ib = @inferred inverse(b)
     y = @inferred b(x_true)
     logjac = @inferred logabsdetjac(b, x_true)
     ilogjac = @inferred logabsdetjac(ib, y_true)
-    res = @inferred forward(b, x_true)
+    res = @inferred with_logabsdet_jacobian(b, x_true)
 
     # If `isequal` is false, then we use the computed `y`,
     # but if it's true, we use the true `y`.
-    ires = isequal ? @inferred(forward(inv(b), y_true)) : @inferred(forward(inv(b), y))
+    ires = isequal ? @inferred(with_logabsdet_jacobian(inverse(b), y_true)) : @inferred(with_logabsdet_jacobian(inverse(b), y))
 
     # Always want the following to hold
-    @test ires.result ≈ x_true atol=tol
-    @test ires.logabsdetjac ≈ -logjac atol=tol
+    @test ires[1] ≈ x_true atol=tol
+    @test ires[2] ≈ -logjac atol=tol
 
     if isequal
         @test y ≈ y_true atol=tol                      # forward
         @test (@inferred ib(y_true)) ≈ x_true atol=tol # inverse
         @test logjac ≈ logjac_true                     # logjac forward
-        @test res.result ≈ y_true atol=tol                 # forward using `forward`
-        @test res.logabsdetjac ≈ logjac_true atol=tol  # logjac using `forward`
+        @test res[1] ≈ y_true atol=tol                 # forward using `forward`
+        @test res[2] ≈ logjac_true atol=tol  # logjac using `forward`
     else
         @test y ≠ y_true                          # forward
         @test (@inferred ib(y)) ≈ x_true atol=tol # inverse
         @test logjac ≠ logjac_true                # logjac forward
-        @test res.result ≠ y_true                     # forward using `forward`
-        @test res.logabsdetjac ≠ logjac_true      # logjac using `forward`
+        @test res[1] ≠ y_true                     # forward using `forward`
+        @test res[2] ≠ logjac_true      # logjac using `forward`
     end
 end
 
@@ -45,37 +45,37 @@ function test_bijector_batch(
     logjacs_true;
     isequal = true,
     tol = 1e-6
-
-    ib = @inferred inv(b)
-    ys = @inferred broadcast(b, xs_true)
-    logjacs = @inferred broadcast(logabsdetjac, b, xs_true)
-    res = @inferred broadcast(forward, b, xs_true)
+)
+    ib = @inferred inverse(b)
+    ys = @inferred b(xs_true)
+    logjacs = @inferred logabsdetjac(b, xs_true)
+    res = @inferred with_logabsdet_jacobian(b, xs_true)
     # If `isequal` is false, then we use the computed `y`,
     # but if it's true, we use the true `y`.
-    ires = isequal ? @inferred(broadcast(forward, inv(b), ys_true)) : @inferred(broadcast(forward, inv(b), ys))
+    ires = isequal ? @inferred(with_logabsdet_jacobian(inverse(b), ys_true)) : @inferred(with_logabsdet_jacobian(inverse(b), ys))
 
     # always want the following to hold
-    @test ys isa AbstractBatch
-    @test logjacs isa AbstractBatch
-    @test mean(norm, ires.result - xs_true) ≤ tol
-    @test mean(norm, ires.logabsdetjac + logjacs) ≤ tol
+    @test ys isa typeof(ys_true)
+    @test logjacs isa typeof(logjacs_true)
+    @test mean(abs, ires[1] - xs_true) ≤ tol
+    @test mean(abs, ires[2] + logjacs) ≤ tol
 
     if isequal
-        @test mean(norm, ys - ys_true) ≤ tol                     # forward
-        @test mean(norm, broadcast(ib, ys_true) - xs_true) ≤ tol          # inverse
-        @test mean(abs, logjacs .- logjacs_true) ≤ tol           # logjac forward
-        @test mean(norm, res.result - ys_true) ≤ tol                 # forward using `forward`
-        @test mean(abs, res.logabsdetjac - logjacs_true) ≤ tol  # logjac `forward`
-        @test mean(abs, ires.logabsdetjac + logjacs_true) ≤ tol # inverse logjac `forward`
+        @test mean(abs, ys - ys_true) ≤ tol                     # forward
+        @test mean(abs, (ib(ys_true)) - xs_true) ≤ tol          # inverse
+        @test mean(abs, logjacs - logjacs_true) ≤ tol           # logjac forward
+        @test mean(abs, res[1] - ys_true) ≤ tol                 # forward using `forward`
+        @test mean(abs, res[2] - logjacs_true) ≤ tol  # logjac `forward`
+        @test mean(abs, ires[2] + logjacs_true) ≤ tol # inverse logjac `forward`
     else
         # Don't want the following to be equal to their "true" values
         @test mean(norm, ys - ys_true) > tol           # forward
         @test mean(abs, logjacs - logjacs_true) > tol # logjac forward
-        @test mean(norm, res.result - ys_true) > tol       # forward using `forward`
+        @test mean(abs, res[1] - ys_true) > tol       # forward using `forward`
 
         # Still want the following to be equal to the COMPUTED values
-        @test mean(norm, broadcast(ib, ys) - xs_true) ≤ tol           # inverse
-        @test mean(abs, res.logabsdetjac - logjacs) ≤ tol # logjac forward using `forward`
+        @test mean(abs, ib(ys) - xs_true) ≤ tol           # inverse
+        @test mean(abs, res[2] - logjacs) ≤ tol # logjac forward using `forward`
     end
 end
 
@@ -112,6 +112,11 @@ function test_bijector(
     logjacs_true::AbstractBatch;
     kwargs...
 )
+    ib = inverse(b)
+
+    # Batch
+    test_bijector_arrays(b, xs_true, ys_true, logjacs_true; kwargs...)
+
     # Test `logabsdetjac` against jacobians
     test_logabsdetjac(b, xs_true)
 
@@ -156,10 +161,14 @@ end
 function make_gradient_function(f, xs::ArrayBatch)
     s = size(Bijectors.value(xs))
 
-    function g(x)
-        x_batch = Bijectors.reconstruct(xs, reshape(x, s))
-        return f(x_batch)
-    end
+function test_bijector(
+    b::Bijector{1},
+    xs_true::AbstractMatrix{<:Real},
+    ys_true::AbstractMatrix{<:Real},
+    logjacs_true::AbstractVector{<:Real};
+    kwargs...
+)
+    ib = inverse(b)
 
     return g, vec(Bijectors.value(xs))
 end

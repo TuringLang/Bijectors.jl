@@ -27,7 +27,7 @@ function logabsdetjac(b::LeakyReLU, x::Real)
     return log(abs(J))
 end
 
-# We implement `forward` by hand since we can re-use the computation of
+# We implement `with_logabsdet_jacobian` by hand since we can re-use the computation of
 # the Jacobian of the transformation. This will lead to faster sampling
 # when using `rand` on a `TransformedDistribution` making use of `LeakyReLU`.
 function forward(b::LeakyReLU, x::Real)

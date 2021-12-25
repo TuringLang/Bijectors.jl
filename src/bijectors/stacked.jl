@@ -59,7 +59,7 @@ inv(sb::Stacked, ::Invertible) = Stacked(map(inv, sb.bs), sb.ranges)
 @generated function inv(sb::Stacked{A}, ::Invertible) where {A <: Tuple}
     exprs = []
     for i = 1:length(A.parameters)
-        push!(exprs, :(inv(sb.bs[$i])))
+        push!(exprs, :(inverse(sb.bs[$i])))
     end
     :(Stacked(($(exprs...), ), sb.ranges))
 end
@@ -126,23 +126,23 @@ end
 # Generates something similar to:
 #
 # quote
-#     (y_1, _logjac) = forward(b.bs[1], x[b.ranges[1]])
+#     (y_1, _logjac) = with_logabsdet_jacobian(b.bs[1], x[b.ranges[1]])
 #     logjac = sum(_logjac)
-#     (y_2, _logjac) = forward(b.bs[2], x[b.ranges[2]])
+#     (y_2, _logjac) = with_logabsdet_jacobian(b.bs[2], x[b.ranges[2]])
 #     logjac += sum(_logjac)
-#     return (result = vcat(y_1, y_2), logabsdetjac = logjac)
+#     return (vcat(y_1, y_2), logjac)
 # end
-@generated function forward(b::Stacked{<:Tuple{Vararg{<:Any, N}}, <:Tuple{Vararg{<:Any, N}}}, x::AbstractVector) where {N}
+@generated function with_logabsdet_jacobian(b::Stacked{<:Tuple{Vararg{<:Any, N}}, <:Tuple{Vararg{<:Any, N}}}, x::AbstractVector) where {N}
     expr = Expr(:block)
     y_names = []
 
-    push!(expr.args, :((y_1, _logjac) = forward(b.bs[1], x[b.ranges[1]])))
+    push!(expr.args, :((y_1, _logjac) = with_logabsdet_jacobian(b.bs[1], x[b.ranges[1]])))
     # TODO: drop the `sum` when we have dimensionality
     push!(expr.args, :(logjac = sum(_logjac)))
     push!(y_names, :y_1)
     for i = 2:N
         y_name = Symbol("y_$i")
-        push!(expr.args, :(($y_name, _logjac) = forward(b.bs[$i], x[b.ranges[$i]])))
+        push!(expr.args, :(($y_name, _logjac) = with_logabsdet_jacobian(b.bs[$i], x[b.ranges[$i]])))
 
         # TODO: drop the `sum` when we have dimensionality
         push!(expr.args, :(logjac += sum(_logjac)))
@@ -150,18 +150,18 @@ end
         push!(y_names, y_name)
     end
 
-    push!(expr.args, :(return (result = vcat($(y_names...)), logabsdetjac = logjac)))
+    push!(expr.args, :(return (vcat($(y_names...)), logjac)))
     return expr
 end
 
-function forward(sb::Stacked, x::AbstractVector)
+function with_logabsdet_jacobian(sb::Stacked, x::AbstractVector)
     N = length(sb.bs)
-    yinit, linit = forward(sb.bs[1], x[sb.ranges[1]])
+    yinit, linit = with_logabsdet_jacobian(sb.bs[1], x[sb.ranges[1]])
     logjac = sum(linit)
     ys = mapvcat(drop(sb.bs, 1), drop(sb.ranges, 1)) do b, r
-        y, l = forward(b, x[r])
+        y, l = with_logabsdet_jacobian(b, x[r])
         logjac += sum(l)
         y
     end
-    return (result = vcat(yinit, ys), logabsdetjac = logjac)
+    return (vcat(yinit, ys), logjac)
 end

@@ -17,7 +17,7 @@ A `Bijector` representing composition of bijectors. `composel` and `composer` re
 `Composed` for which application occurs from left-to-right and right-to-left, respectively.
 
 Note that all the alternative ways of constructing a `Composed` returns a `Tuple` of bijectors.
-This ensures type-stability of implementations of all relating methdos, e.g. `inv`.
+This ensures type-stability of implementations of all relating methdos, e.g. `inverse`.
 
 If you want to use an `Array` as the container instead you can do
 
@@ -41,7 +41,7 @@ Composed{Tuple{Exp{0},Exp{0}},0}((Exp{0}(), Exp{0}()))
 julia> (b ∘ b)(1.0) == exp(exp(1.0))    # evaluation
 true
 
-julia> inv(b ∘ b)(exp(exp(1.0))) == 1.0 # inversion
+julia> inverse(b ∘ b)(exp(exp(1.0))) == 1.0 # inversion
 true
 
 julia> logabsdetjac(b ∘ b, 1.0)         # determinant of jacobian
@@ -146,7 +146,7 @@ end
 ∘(::Identity, b::Transform) = b
 ∘(b::Transform, ::Identity) = b
 
-Base.inv(ct::Composed) = Composed(reverse(map(inv, ct.ts)))
+inverse(ct::Composed) = Composed(reverse(map(inverse, ct.ts)))
 
 # TODO: should arrays also be using recursive implementation instead?
 function transform(cb::Composed, x)
@@ -188,11 +188,10 @@ end
 end
 
 function logabsdetjac(cb::Composed, x)
-    y, logjac = forward(cb.ts[1], x)
+    y, logjac = with_logabsdet_jacobian(cb.ts[1], x)
     for i = 2:length(cb.ts)
-        res = forward(cb.ts[i], y)
-        y = res.result
-        logjac += res.logabsdetjac
+        y, res_logjac = with_logabsdet_jacobian(cb.ts[i], y)
+        logjac += res_logjac
     end
 
     return logjac
@@ -212,18 +211,20 @@ end
     N = length(T.parameters)
 
     expr = Expr(:block)
-    push!(expr.args, :((y, logjac) = forward(cb.ts[1], x)))
-
+    sym_y, sym_ladj, sym_tmp_ladj = gensym(:y), gensym(:lady), gensym(:tmp_lady)
+    push!(expr.args, :(($sym_y, $sym_ladj) = with_logabsdet_jacobian(cb.ts[1], x)))
+    sym_last_y, sym_last_ladj = sym_y, sym_ladj
     for i = 2:N - 1
-        temp = gensym(:res)
-        push!(expr.args, :($temp = forward(cb.ts[$i], y)))
-        push!(expr.args, :(y = $temp.result))
-        push!(expr.args, :(logjac += $temp.logabsdetjac))
+        sym_y, sym_ladj, sym_tmp_ladj = gensym(:y), gensym(:lady), gensym(:tmp_lady)
+        push!(expr.args, :(($sym_y, $sym_tmp_ladj) = with_logabsdet_jacobian(cb.ts[$i], $sym_last_y)))
+        push!(expr.args, :($sym_ladj = $sym_tmp_ladj + $sym_last_ladj))
+        sym_last_y, sym_last_ladj = sym_y, sym_ladj
     end
     # don't need to evaluate the last bijector, only it's `logabsdetjac`
-    push!(expr.args, :(logjac += logabsdetjac(cb.ts[$N], y)))
-
-    push!(expr.args, :(return logjac))
+    sym_ladj, sym_tmp_ladj = gensym(:lady), gensym(:tmp_lady)
+    push!(expr.args, :($sym_tmp_ladj = logabsdetjac(cb.ts[$N], $sym_last_y)))
+    push!(expr.args, :($sym_ladj = $sym_tmp_ladj + $sym_last_ladj))
+    push!(expr.args, :(return $sym_ladj))
 
     return expr
 end
@@ -262,56 +263,28 @@ end
 end
 
 
-function forward(cb::Composed, x)
-    result, logjac = forward(cb.ts[1], x)
+function with_logabsdet_jacobian(cb::Composed, x)
+    rv, logjac = with_logabsdet_jacobian(cb.ts[1], x)
     
     for t in cb.ts[2:end]
-        res = forward(t, result)
-        result = res.result
-        logjac = res.logabsdetjac + logjac
+        rv, res_logjac = with_logabsdet_jacobian(t, rv)
+        logjac += res_logjac
     end
-    return (result=result, logabsdetjac=logjac)
+    return (rv, logjac)
 end
 
-function forward_batch(cb::Composed, x)
-    result, logjac = forward_batch(cb.ts[1], x)
-
-    for t in cb.ts[2:end]
-        res = forward_batch(t, result)
-        result = res.result
-        logjac = res.logabsdetjac + logjac
-    end
-    return (result=result, logabsdetjac=logjac)
-end
-
-
-@generated function forward(cb::Composed{T}, x) where {T<:Tuple}
+@generated function with_logabsdet_jacobian(cb::Composed{T}, x) where {T<:Tuple}
     expr = Expr(:block)
-    push!(expr.args, :((y, logjac) = forward(cb.ts[1], x)))
+    sym_y, sym_ladj, sym_tmp_ladj = gensym(:y), gensym(:lady), gensym(:tmp_lady)
+    push!(expr.args, :(($sym_y, $sym_ladj) = with_logabsdet_jacobian(cb.ts[1], x)))
+    sym_last_y, sym_last_ladj = sym_y, sym_ladj
     for i = 2:length(T.parameters)
-        temp = gensym(:temp)
-        push!(expr.args, :($temp = forward(cb.ts[$i], y)))
-        push!(expr.args, :(y = $temp.result))
-        push!(expr.args, :(logjac += $temp.logabsdetjac))
+        sym_y, sym_ladj, sym_tmp_ladj = gensym(:y), gensym(:lady), gensym(:tmp_lady)
+        push!(expr.args, :(($sym_y, $sym_tmp_ladj) = with_logabsdet_jacobian(cb.ts[$i], $sym_last_y)))
+        push!(expr.args, :($sym_ladj = $sym_tmp_ladj + $sym_last_ladj))
+        sym_last_y, sym_last_ladj = sym_y, sym_ladj
     end
-    push!(expr.args, :(return (result = y, logabsdetjac = logjac)))
-
-    return expr
-end
-
-@generated function forward_batch(cb::Composed{T}, x) where {T<:Tuple}
-    N = length(T.parameters)
-    expr = Expr(:block)
-    push!(expr.args, :((y, logjac_1) = forward_batch(cb.ts[1], x)))
-    for i = 2:N
-        temp = gensym(:temp)
-        push!(expr.args, :($temp = forward_batch(cb.ts[$i], y)))
-        push!(expr.args, :(y = $temp.result))
-        push!(expr.args, :($(Symbol("logjac_$i")) = $temp.logabsdetjac))
-    end
-
-    sum_expr = Expr(:call, :+, [Symbol("logjac_$i") for i = 1:N]...)
-    push!(expr.args, :(return (result = y, logabsdetjac = $(sum_expr))))
+    push!(expr.args, :(return ($sym_y, $sym_ladj)))
 
     return expr
 end

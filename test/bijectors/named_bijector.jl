@@ -18,7 +18,7 @@ end
     nc2 = b ∘ b
     @test nc1 == nc2
 
-    inc2 = inv(nc2)
+    inc2 = inverse(nc2)
     @test (inc2 ∘ nc2)(x) == x
     @test logabsdetjac((inc2 ∘ nc2), x) ≈ 0.0
 end
@@ -37,18 +37,18 @@ end
 
     x = (a = 1.0, b = 0.5, c = 99999.)
     @test Bijectors.coupling(nc)(x.a) isa Logit
-    @test inv(nc)(nc(x)) == x
+    @test inverse(nc)(nc(x)) == x
 
     @test logabsdetjac(nc, x) == logabsdetjac(Logit(0., 1.), x.b)
-    @test logabsdetjac(inv(nc), nc(x)) == -logabsdetjac(nc, x)
+    @test logabsdetjac(inverse(nc), nc(x)) == -logabsdetjac(nc, x)
 
     x = (a = 0.0, b = 2.0, c = 1.0)
     nc = NamedCoupling(:c, (:a, :b), (a, b) -> Logit(a, b))
     @test nc(x).c == 0.0
-    @test inv(nc)(nc(x)) == x
+    @test inverse(nc)(nc(x)) == x
 
     x = (a = 0.0, b = 2.0, c = 1.0)
     nc = NamedCoupling(:c, (:b, ), b -> Shift(b))
     @test nc(x).c == 3.0
-    @test inv(nc)(nc(x)) == x
+    @test inverse(nc)(nc(x)) == x
 end

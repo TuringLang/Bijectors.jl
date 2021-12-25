@@ -151,7 +151,7 @@ julia> cl(x)
  2.0
  3.0
 
-julia> inv(cl)(cl(x))
+julia> inverse(cl)(cl(x))
 3-element Array{Float64,1}:
  1.0
  2.0
@@ -212,7 +212,7 @@ function transform(icl::Inverse{<:Coupling}, y::AbstractVector)
     y_1, y_2, y_3 = partition(cl.mask, y)
 
     b = cl.θ(y_2)
-    ib = inv(b)
+    ib = inverse(b)
 
     return combine(cl.mask, ib(y_1), y_2, y_3)
 end

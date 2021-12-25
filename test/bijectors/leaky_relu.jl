@@ -14,8 +14,8 @@ true_logabsdetjac(b::Bijector{1}, xs::AbstractMatrix) = mapreduce(z -> true_loga
 @testset "0-dim parameter, 0-dim input" begin
     b = LeakyReLU(0.1; dim=Val(0))
     x = 1.
-    @test inv(b)(b(x)) == x
-    @test inv(b)(b(-x)) == -x
+    @test inverse(b)(b(x)) == x
+    @test inverse(b)(b(-x)) == -x
 
     # Mixing of types
     # 1. Changes in input-type
@@ -40,13 +40,13 @@ true_logabsdetjac(b::Bijector{1}, xs::AbstractMatrix) = mapreduce(z -> true_loga
     @test logabsdetjac(b, -Float32.(xs)) == true_logabsdetjac(b, -Float32.(xs))
 
     # Forward
-    f = forward(b, xs)
-    @test f.logabsdetjac ≈ logabsdetjac(b, xs)
-    @test f.rv ≈ b(xs)
+    f = with_logabsdet_jacobian(b, xs)
+    @test f[2] ≈ logabsdetjac(b, xs)
+    @test f[1] ≈ b(xs)
 
-    f = forward(b, Float32.(xs))
-    @test f.logabsdetjac == logabsdetjac(b, Float32.(xs))
-    @test f.rv ≈ b(Float32.(xs))
+    f = with_logabsdet_jacobian(b, Float32.(xs))
+    @test f[2] == logabsdetjac(b, Float32.(xs))
+    @test f[1] ≈ b(Float32.(xs))
 end
 
 @testset "0-dim parameter, 1-dim input" begin
@@ -54,8 +54,8 @@ end
 
     b = LeakyReLU(0.1; dim=Val(1))
     x = ones(d)
-    @test inv(b)(b(x)) == x
-    @test inv(b)(b(-x)) == -x
+    @test inverse(b)(b(x)) == x
+    @test inverse(b)(b(-x)) == -x
 
     # Batch
     xs = randn(d, 10)
@@ -66,13 +66,13 @@ end
     @test logabsdetjac(b, -Float32.(xs)) == true_logabsdetjac(b, -Float32.(xs))
 
     # Forward
-    f = forward(b, xs)
-    @test f.logabsdetjac ≈ logabsdetjac(b, xs)
-    @test f.rv ≈ b(xs)
+    f = with_logabsdet_jacobian(b, xs)
+    @test f[2] ≈ logabsdetjac(b, xs)
+    @test f[1] ≈ b(xs)
 
-    f = forward(b, Float32.(xs))
-    @test f.logabsdetjac == logabsdetjac(b, Float32.(xs))
-    @test f.rv ≈ b(Float32.(xs))
+    f = with_logabsdet_jacobian(b, Float32.(xs))
+    @test f[2] == logabsdetjac(b, Float32.(xs))
+    @test f[1] ≈ b(Float32.(xs))
 
     # Mixing of types
     # 1. Changes in input-type
