@@ -150,8 +150,7 @@ function Permute(n::Int, indices::Pair{Vector{Int}, Vector{Int}}...)
 end
 
 
-@inline transform(b::Permute, x::AbstractVecOrMat) = b.A * x
-@inline inv(b::Permute) = Permute(transpose(b.A))
+transform(b::Permute, x::AbstractVecOrMat) = b.A * x
+inverse(b::Permute) = Permute(transpose(b.A))
 
 logabsdetjac(b::Permute, x::AbstractVector) = zero(eltype(x))
-logabsdetjac_batch(b::Permute, x::Batch) = zero(eltype(x), length(x))

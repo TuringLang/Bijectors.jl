@@ -178,9 +178,6 @@ end
 function transform(b::RationalQuadraticSpline{<:AbstractVector}, x::Real)
     return rqs_univariate(b.widths, b.heights, b.derivatives, x)
 end
-function transform_batch(b::RationalQuadraticSpline{<:AbstractVector}, x::ArrayBatch{1})
-    return Batch(transform.(b, value(x)))
-end
 
 # multivariate
 # TODO: Improve.
@@ -232,9 +229,6 @@ end
 
 function transform(ib::Inverse{<:RationalQuadraticSpline}, y::Real)
     return rqs_univariate_inverse(ib.orig.widths, ib.orig.heights, ib.orig.derivatives, y)
-end
-function transform_batch(ib::Inverse{<:RationalQuadraticSpline}, y::AbstractVector)
-    return Batch(transform.(ib, value(y)))
 end
 
 # TODO: Improve.
@@ -314,9 +308,7 @@ end
 function logabsdetjac(b::RationalQuadraticSpline{<:AbstractVector}, x::Real)
     return rqs_logabsdetjac(b.widths, b.heights, b.derivatives, x)
 end
-function logabsdetjac_batch(b::RationalQuadraticSpline{<:AbstractVector}, x::ArrayBatch{1})
-    return Batch(logabsdetjac.(b, value(x)))
-end
+
 # TODO: Improve.
 function logabsdetjac(b::RationalQuadraticSpline{<:AbstractMatrix}, x::AbstractVector)
     return sum([
@@ -376,6 +368,6 @@ function rqs_forward(
     return (y, logjac)
 end
 
-function with_logabsdet_jacobian(b::RationalQuadraticSpline{<:AbstractVector, 0}, x::Real)
+function with_logabsdet_jacobian(b::RationalQuadraticSpline{<:AbstractVector}, x::Real)
     return rqs_forward(b.widths, b.heights, b.derivatives, x)
 end

@@ -49,8 +49,6 @@ end
 transform(b::RadialLayer, z::AbstractVector{<:Real}) = vec(_transform(b, z).transformed)
 transform(b::RadialLayer, z::AbstractMatrix{<:Real}) = _transform(b, z).transformed
 
-transform_batch(b::RadialLayer, z::ArrayBatch{2}) = Batch(transform(b, value(z)))
-
 function with_logabsdet_jacobian(flow::RadialLayer, z::AbstractVecOrMat)
     transformed, α, β_hat, r = _transform(flow, z)
     # Compute log_det_jacobian
@@ -66,11 +64,6 @@ function with_logabsdet_jacobian(flow::RadialLayer, z::AbstractVecOrMat)
         + log(1 +  β_hat * h_ + β_hat * (- h_ ^ 2) * r)
     )   # from eq(14)
     return (result = transformed, logabsdetjac = log_det_jacobian)
-end
-
-function forward_batch(b::RadialLayer, z::ArrayBatch{2})
-    result, logjac = forward(b, value(z))
-    return (result = Batch(result), logabsdetjac = Batch(logjac))
 end
 
 function transform(ib::Inverse{<:RadialLayer}, y::AbstractVector{<:Real})
@@ -103,10 +96,6 @@ function transform(ib::Inverse{<:RadialLayer}, y::AbstractMatrix{<:Real})
     return z0 .+ γ .* y_minus_z0
 end
 
-function transform_batch(ib::Inverse{<:RadialLayer}, y::ArrayBatch{2})
-    return Batch(transform(ib, value(y)))
-end
-
 """
     compute_r(y_minus_z0::AbstractVector{<:Real}, α, α_plus_β_hat)
 
@@ -135,7 +124,3 @@ function compute_r(y_minus_z0::AbstractVector{<:Real}, α, α_plus_test)
 end
 
 logabsdetjac(flow::RadialLayer, x::AbstractVecOrMat) = forward(flow, x).logabsdetjac
-
-function logabsdetjac_batch(flow::RadialLayer, x::ArrayBatch{2})
-    return Batch(logabsdetjac(flow, value(x)))
-end

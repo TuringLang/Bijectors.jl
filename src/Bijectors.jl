@@ -36,9 +36,6 @@ using ConstructionBase
 using Base.Iterators: drop
 using LinearAlgebra: AbstractTriangular
 
-using Batching
-export batch
-
 import ChangesOfVariables: with_logabsdet_jacobian
 import InverseFunctions: inverse
 
@@ -260,7 +257,6 @@ function getlogp(d::InverseWishart, Xcf, X)
 end
 
 include("utils.jl")
-# include("batch.jl")
 include("interface.jl")
 # include("chainrules.jl")
 
@@ -270,6 +266,8 @@ Base.@deprecate forward(b::Transform, x) NamedTuple{(:rv,:logabsdetjac)}(with_lo
     Base.depwarn("`Base.inv(b::AbstractBijector)` is deprecated, use `inverse(b)` instead.", :inv)
     inverse(b)
 end
+
+Base.@deprecate NamedBijector(bs) NamedTransform(bs)
 
 # Broadcasting here breaks Tracker for some reason
 maporbroadcast(f, x::AbstractArray{<:Any, N}...) where {N} = map(f, x...)

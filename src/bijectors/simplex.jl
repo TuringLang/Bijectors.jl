@@ -35,17 +35,6 @@ function _simplex_bijector!(y, x::AbstractVector, ::SimplexBijector{proj}) where
     return y
 end
 
-function transform_batch(b::SimplexBijector, X::ArrayBatch{2})
-    Batch(_simplex_bijector(value(X), b))
-end
-function transform_batch!(
-    b::SimplexBijector,
-    Y::Batch{<:AbstractMatrix{T}},
-    X::Batch{<:AbstractMatrix{T}},
-) where {T}
-    Batch(_simplex_bijector!(value(Y), value(X), b))
-end
-
 # Matrix implementation.
 function _simplex_bijector!(Y, X::AbstractMatrix, ::SimplexBijector{proj}) where {proj}
     K, N = size(X, 1), size(X, 2)
@@ -105,16 +94,6 @@ function _simplex_inv_bijector!(x, y::AbstractVector, b::SimplexBijector{proj}) 
     end
     
     return x
-end
-
-# Batched versions.
-transform_batch(ib::Inverse{<:SimplexBijector}, Y::ArrayBatch{2}) = _simplex_inv_bijector(Y, ib.orig)
-function transform_batch!(
-    ib::Inverse{<:SimplexBijector},
-    X::Batch{<:AbstractMatrix{T}},
-    Y::Batch{<:AbstractMatrix{T}},
-) where {T<:Real}
-    return Batch(_simplex_inv_bijector!(value(X), value(Y), ib.orig))
 end
 
 function _simplex_inv_bijector!(X, Y::AbstractMatrix, b::SimplexBijector{proj}) where {proj}
@@ -191,29 +170,6 @@ function simplex_logabsdetjac_gradient(x::AbstractVector)
 	    end
     end
     return g
-end
-function logabsdetjac_batch(b::SimplexBijector, x::Batch{<:AbstractMatrix{T}}) where {T}
-    x = value(x)
-    
-    ϵ = _eps(T)
-    nlp = similar(x, T, size(x, 2))
-    nlp .= zero(T)
-
-    K = size(x, 1)
-    for col in 1:size(x, 2)
-        sum_tmp = zero(eltype(x))
-        z = x[1,col]
-        nlp[col] -= log(max(z, ϵ)) + log(max(one(T) - z, ϵ))
-        for k in 2:(K - 1)
-            sum_tmp += x[k-1,col]
-            z = x[k,col] / max(one(T) - sum_tmp, ϵ)
-            nlp[col] -= log(max(z, ϵ)) + log(max(one(T) - z, ϵ)) + log(max(one(T) - sum_tmp, ϵ))
-        end
-    end
-    return Batch(nlp)
-end
-function logabsdetjac(b::SimplexBijector, x::AbstractMatrix)
-    return sum(value(logabsdetjac(b, Batch(x))))
 end
 
 function simplex_logabsdetjac_gradient(x::AbstractMatrix)

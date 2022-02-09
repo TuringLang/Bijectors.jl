@@ -36,41 +36,11 @@ function forward(b::LeakyReLU, x::Real)
     return (result=J * x, logabsdetjac=log(abs(J)))
 end
 
-function forward_batch(b::LeakyReLU, xs::Batch{<:AbstractVector})
-    x = value(xs)
-    
-    J = let T = eltype(x), z = zero(T), o = one(T)
-        @. (x < z) * b.α + (x > z) * o
-    end
-    return (result=Batch(J .* x), logabsdetjac=Batch(log.(abs.(J))))
-end
-
 # Array inputs.
 function transform(b::LeakyReLU, x::AbstractArray)
     return let z = zero(eltype(x))
         @. (x < z) * b.α * x + (x > z) * x
     end
-end
-
-function logabsdetjac(b::LeakyReLU, x::AbstractArray)
-    return sum(value(logabsdetjac_batch(b, Batch(x))))
-end
-
-function logabsdetjac_batch(b::LeakyReLU, xs::ArrayBatch{N}) where {N}
-    x = value(xs)
-
-    # Is really diagonal of jacobian
-    J = let T = eltype(x), z = zero(T), o = one(T)
-        @. (x < z) * b.α + (x > z) * o
-    end
-    
-    logjac = if N ≤ 1
-        sum(log ∘ abs, J)
-    else
-        vec(sum(map(log ∘ abs, J); dims = 1:N - 1))
-    end
-
-    return Batch(logjac)
 end
 
 # We implement `forward` by hand since we can re-use the computation of
@@ -80,22 +50,4 @@ function forward(b::LeakyReLU, x::AbstractArray)
     y, logjac = forward_batch(b, Batch(x))
 
     return (result = value(y), logabsdetjac = sum(value(logjac)))
-end
-
-function forward_batch(b::LeakyReLU, xs::ArrayBatch{N}) where {N}
-    x = value(xs)
-    
-    # Is really diagonal of jacobian
-    J = let T = eltype(x), z = zero(T), o = one(T)
-        @. (x < z) * b.α + (x > z) * o
-    end
-
-    logjac = if N ≤ 1
-        sum(log ∘ abs, J)
-    else
-        vec(sum(map(log ∘ abs, J); dims = 1:N - 1))
-    end
-
-    y = J .* x
-    return (result=Batch(y), logabsdetjac=Batch(logjac))
 end

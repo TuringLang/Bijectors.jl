@@ -1,20 +1,18 @@
-abstract type AbstractNamedBijector <: Bijector end
-
-forward(b::AbstractNamedBijector, x) = (result = b(x), logabsdetjac = logabsdetjac(b, x))
+abstract type AbstractNamedTransform <: Transform end
 
 #######################
-### `NamedBijector` ###
+### `NamedTransform` ###
 #######################
 """
-    NamedBijector <: AbstractNamedBijector
+    NamedTransform <: AbstractNamedTransform
 
 Wraps a `NamedTuple` of key -> `Bijector` pairs, implementing evaluation, inversion, etc.
 
 # Examples
 ```julia-repl
-julia> using Bijectors: NamedBijector, Scale, Exp
+julia> using Bijectors: NamedTransform, Scale, Exp
 
-julia> b = NamedBijector((a = Scale(2.0), b = Exp()));
+julia> b = NamedTransform((a = Scale(2.0), b = Exp()));
 
 julia> x = (a = 1., b = 0., c = 42.);
 
@@ -25,21 +23,21 @@ julia> (a = 2 * x.a, b = exp(x.b), c = x.c)
 (a = 2.0, b = 1.0, c = 42.0)
 ```
 """
-struct NamedBijector{names, Bs<:NamedTuple{names}} <: AbstractNamedBijector
+struct NamedTransform{names, Bs<:NamedTuple{names}} <: AbstractNamedTransform
     bs::Bs
 end
 
 # fields contain nested numerical parameters
-function Functors.functor(::Type{<:NamedBijector{names}}, x) where names
+function Functors.functor(::Type{<:NamedTransform{names}}, x) where names
     function reconstruct_namedbijector(xs)
-        return NamedBijector{names,typeof(xs.bs)}(xs.bs)
+        return NamedTransform{names,typeof(xs.bs)}(xs.bs)
     end
     return (bs = x.bs,), reconstruct_namedbijector
 end
 
-names_to_bijectors(b::NamedBijector) = b.bs
+names_to_bijectors(b::NamedTransform) = b.bs
 
-@generated function (b::NamedBijector{names1})(
+@generated function (b::NamedTransform{names1})(
     x::NamedTuple{names2}
 ) where {names1, names2}
     exprs = []
@@ -55,11 +53,11 @@ names_to_bijectors(b::NamedBijector) = b.bs
     return :($(exprs...), )
 end
 
-@generated function inverse(b::NamedBijector{names}) where {names}
-    return :(NamedBijector(($([:($n = inverse(b.bs.$n)) for n in names]...), )))
+@generated function inverse(b::NamedTransform{names}) where {names}
+    return :(NamedTransform(($([:($n = inverse(b.bs.$n)) for n in names]...), )))
 end
 
-@generated function logabsdetjac(b::NamedBijector{names}, x::NamedTuple) where {names}
+@generated function logabsdetjac(b::NamedTransform{names}, x::NamedTuple) where {names}
     exprs = [:(logabsdetjac(b.bs.$n, x.$n)) for n in names]
     return :(+($(exprs...)))
 end
@@ -69,7 +67,7 @@ end
 ############################
 # TODO: Add ref to `Coupling` or `CouplingLayer` once that's merged.
 """
-    NamedCoupling{target, deps, F} <: AbstractNamedBijector
+    NamedCoupling{target, deps, F} <: AbstractNamedTransform
 
 Implements a coupling layer for named bijectors.
 
@@ -89,7 +87,7 @@ julia> (a = x.a, b = (x.a + x.c) * x.b, c = x.c)
 (a = 1.0, b = 8.0, c = 3.0)
 ```
 """
-struct NamedCoupling{target, deps, F} <: AbstractNamedBijector where {F, target}
+struct NamedCoupling{target, deps, F} <: AbstractNamedTransform where {F, target}
     f::F
 end
 
