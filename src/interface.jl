@@ -56,7 +56,7 @@ A subtype of `Transform` of should at least implement [`transform(b, x)`](@ref).
 
 If the `Transform` is also invertible:
 - Required:
-  - [`invertible`](@ref): should return [`Invertible`](@ref).
+  - [`invertible`](@ref): should return instance of [`Invertible`](@ref) or [`NotInvertible`](@ref).
   - _Either_ of the following:
     - `transform(::Inverse{<:MyTransform}, x)`: the `transform` for its inverse.
     - `InverseFunctions.inverse(b::MyTransform)`: returns an existing `Transform`.
