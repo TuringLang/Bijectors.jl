@@ -32,7 +32,6 @@ using Reexport, Requires
 @reexport using Distributions
 using LinearAlgebra
 using MappedArrays
-using ConstructionBase
 using Base.Iterators: drop
 using LinearAlgebra: AbstractTriangular
 
