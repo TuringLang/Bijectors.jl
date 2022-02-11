@@ -5,18 +5,12 @@ import Bijectors: OrderedBijector
 
     # Length 1
     x = randn(1)
-    y = b(x)
-    test_bijector(b, hcat(x, x), hcat(y, y), zeros(2))
+    test_bijector(b, x; test_not_identity=false)
 
     # Larger
     x = randn(5)
-    xs = hcat(x, x)
-    test_bijector(b, xs)
+    test_bijector(b, x)
 
     y = b(x)
     @test sort(y) == y
-
-    ys = b(xs)
-    @test sort(ys[:, 1]) == ys[:, 1]
-    @test sort(ys[:, 2]) == ys[:, 2]
 end

@@ -16,11 +16,10 @@ using Random, LinearAlgebra, Test
 using Bijectors: Log, Exp, Shift, Scale, Logit, SimplexBijector, PDBijector, Permute,
     PlanarLayer, RadialLayer, Stacked, TruncatedBijector, ADBijector
 
-using ChangesOfVariables: test_with_logabsdet_jacobian
-using InverseFunctions: test_inverse
+using ChangesOfVariables: ChangesOfVariables
+using InverseFunctions: InverseFunctions
 
-using DistributionsAD: TuringUniform, TuringMvNormal, TuringMvLogNormal,
-    TuringPoissonBinomial
+using DistributionsAD: TuringMvNormal, TuringMvLogNormal, TuringPoissonBinomial
 
 const GROUP = get(ENV, "GROUP", "All")
 

@@ -1,6 +1,6 @@
 using Test
 using Bijectors
-using ForwardDiff: derivative, jacobian
+using ForwardDiff: ForwardDiff
 using LinearAlgebra: logabsdet, I, norm
 using Random
 
@@ -67,21 +67,6 @@ function single_sample_tests(dist)
     @test typeof(x) == typeof(y)
 end
 
-# Standard tests for all distributions involving multiple samples. xs should be whatever
-# the appropriate repeated version of x is for the distribution in question. ie. for
-# univariate distributions, just a vector of identical values. For vector-valued
-# distributions, a matrix whose columns are identical.
-function multi_sample_tests(dist, x, xs, N)
-    ys = @inferred(link(dist, copy(xs)))
-    @test @inferred(invlink(dist, link(dist, copy(xs)))) ≈ xs atol=1e-9
-    @test @inferred(link(dist, invlink(dist, copy(ys)))) ≈ ys atol=1e-9
-    @test logpdf_with_trans(dist, xs, true) == fill(logpdf_with_trans(dist, x, true), N)
-    @test logpdf_with_trans(dist, xs, false) == fill(logpdf_with_trans(dist, x, false), N)
-
-    # This is a quirk of the current implementation, of which it would be nice to be rid.
-    @test typeof(xs) == typeof(ys)
-end
-
 # Scalar tests
 @testset "scalar" begin
 let
@@ -116,13 +101,7 @@ let
     ]
     for dist in uni_dists
 
-        single_sample_tests(dist, derivative)
-
-        # specialised multi-sample tests.
-        N = 10
-        x = rand(dist)
-        xs = fill(x, N)
-        multi_sample_tests(dist, x, xs, N)
+        single_sample_tests(dist, ForwardDiff.derivative)
     end
 end
 end
@@ -155,7 +134,7 @@ let ϵ = eps(Float64)
             end
 
             logpdf_turing = logpdf_with_trans(dist, x, true)
-            J = jacobian(x->link(dist, x, Val(false)), x)
+            J = ForwardDiff.jacobian(x->link(dist, x, Val(false)), x)
             @test logpdf(dist, x .+ ϵ) - _logabsdet(J) ≈ logpdf_turing
 
             # Issue #12
@@ -164,14 +143,8 @@ let ϵ = eps(Float64)
             x = [logpdf_with_trans(dist, invlink(dist, link(dist, rand(dist)) .+ randn(dim) .* stepsize), true) for _ in 1:1_000]
             @test !any(isinf, x) && !any(isnan, x)
         else
-            single_sample_tests(dist, jacobian)
+            single_sample_tests(dist, ForwardDiff.jacobian)
         end
-
-        # Multi-sample tests. Columns are observations due to Distributions.jl conventions.
-        N = 10
-        x = rand(dist)
-        xs = repeat(x, 1, N)
-        multi_sample_tests(dist, x, xs, N)
     end
 end
 end
@@ -191,15 +164,9 @@ let
         lowerinds = [LinearIndices(size(x))[I] for I in CartesianIndices(size(x)) if I[1] >= I[2]]
         upperinds = [LinearIndices(size(x))[I] for I in CartesianIndices(size(x)) if I[2] >= I[1]]
         logpdf_turing = logpdf_with_trans(dist, x, true)
-        J = jacobian(x->link(dist, x), x)
+        J = ForwardDiff.jacobian(x->link(dist, x), x)
         J = J[lowerinds, upperinds]
         @test logpdf(dist, x) - _logabsdet(J) ≈ logpdf_turing
-
-        # Multi-sample tests comprising vectors of matrices.
-        N = 10
-        x = rand(dist)
-        xs = [x for _ in 1:N]
-        multi_sample_tests(dist, x, xs, N)
     end
 end
 end
@@ -216,17 +183,10 @@ end
     x = d .*  x .* d'
 
     upperinds = [LinearIndices(size(x))[I] for I in CartesianIndices(size(x)) if I[2] > I[1]]
-    J = jacobian(x->link(dist, x), x)
+    J = ForwardDiff.jacobian(x->link(dist, x), x)
     J = J[upperinds, upperinds]
     logpdf_turing = logpdf_with_trans(dist, x, true)
     @test logpdf(dist, x) - _logabsdet(J) ≈ logpdf_turing
-
-    # Multi-sample tests comprising vectors of matrices.
-    N = 10
-    x = rand(dist)
-    xs = [x for _ in 1:N]
-    multi_sample_tests(dist, x, xs, N)
-
 end
 
 ################################## Miscelaneous old tests ##################################
@@ -279,10 +239,10 @@ end
         g1 = y -> invlink(dist, y, Val(true))
         g2 = y -> invlink(dist, y, Val(false))
 
-        @test @aeq jacobian(f1, x) @inferred(Bijectors.simplex_link_jacobian(x, Val(true)))
-        @test @aeq jacobian(f2, x) @inferred(Bijectors.simplex_link_jacobian(x, Val(false)))
-        @test @aeq jacobian(g1, y) @inferred(Bijectors.simplex_invlink_jacobian(y, Val(true)))
-        @test @aeq jacobian(g2, y) @inferred(Bijectors.simplex_invlink_jacobian(y, Val(false)))
+        @test @aeq ForwardDiff.jacobian(f1, x) @inferred(Bijectors.simplex_link_jacobian(x, Val(true)))
+        @test @aeq ForwardDiff.jacobian(f2, x) @inferred(Bijectors.simplex_link_jacobian(x, Val(false)))
+        @test @aeq ForwardDiff.jacobian(g1, y) @inferred(Bijectors.simplex_invlink_jacobian(y, Val(true)))
+        @test @aeq ForwardDiff.jacobian(g2, y) @inferred(Bijectors.simplex_invlink_jacobian(y, Val(false)))
         @test @aeq Bijectors.simplex_link_jacobian(x, Val(false)) * Bijectors.simplex_invlink_jacobian(y, Val(false)) I
     end
     for i in 1:4
