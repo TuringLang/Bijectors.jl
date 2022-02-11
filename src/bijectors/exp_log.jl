@@ -8,9 +8,6 @@ invertible(::Elementwise{typeof(exp)}) = Invertible()
 invertible(::typeof(log)) = Invertible()
 invertible(::Elementwise{typeof(log)}) = Invertible()
 
-transform(b::Union{typeof(exp),typeof(log)}, x::Real) = b(x)
-transform(b::Union{Elementwise{typeof(log)}, Elementwise{typeof(exp)}}, x) = b(x)
-
 transform!(b::Union{Elementwise{typeof(log)}, Elementwise{typeof(exp)}}, x, y) = broadcast!(b.x, y, x)
 
 logabsdetjac(b::typeof(exp), x::Real) = x
