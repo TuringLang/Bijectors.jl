@@ -28,11 +28,8 @@ end
     return pullback(g, f, x1, x2)
 end
 
-@adjoint function logabsdetjac(b::Log{1}, x::AbstractVector)
+@adjoint function logabsdetjac(b::Elementwise{typeof(log)}, x::AbstractVector)
     return -sum(log, x), Δ -> (nothing, -Δ ./ x)
-end
-@adjoint function logabsdetjac(b::Log{1}, x::AbstractMatrix)
-    return -vec(sum(log, x; dims = 1)), Δ -> (nothing, .- Δ' ./ x)
 end
 
 # AD implementations
@@ -119,21 +116,21 @@ end
 
 # Simplex adjoints
 
-@adjoint function _simplex_bijector(X::AbstractVector, b::SimplexBijector{1})
+@adjoint function _simplex_bijector(X::AbstractVector, b::SimplexBijector)
     return _simplex_bijector(X, b), Δ -> (simplex_link_jacobian(X)' * Δ, nothing)
 end
-@adjoint function _simplex_inv_bijector(Y::AbstractVector, b::SimplexBijector{1})
+@adjoint function _simplex_inv_bijector(Y::AbstractVector, b::SimplexBijector)
     return _simplex_inv_bijector(Y, b), Δ -> (simplex_invlink_jacobian(Y)' * Δ, nothing)
 end
 
-@adjoint function _simplex_bijector(X::AbstractMatrix, b::SimplexBijector{1})
+@adjoint function _simplex_bijector(X::AbstractMatrix, b::SimplexBijector)
     return _simplex_bijector(X, b), Δ -> begin
         maphcat(eachcol(X), eachcol(Δ)) do c1, c2
             simplex_link_jacobian(c1)' * c2
         end, nothing
     end
 end
-@adjoint function _simplex_inv_bijector(Y::AbstractMatrix, b::SimplexBijector{1})
+@adjoint function _simplex_inv_bijector(Y::AbstractMatrix, b::SimplexBijector)
     return _simplex_inv_bijector(Y, b), Δ -> begin
         maphcat(eachcol(Y), eachcol(Δ)) do c1, c2
             simplex_invlink_jacobian(c1)' * c2
@@ -141,16 +138,9 @@ end
     end
 end
 
-@adjoint function logabsdetjac(b::SimplexBijector{1}, x::AbstractVector)
+@adjoint function logabsdetjac(b::SimplexBijector, x::AbstractVector)
     return logabsdetjac(b, x), Δ -> begin
         (nothing, simplex_logabsdetjac_gradient(x) * Δ)
-    end
-end
-@adjoint function logabsdetjac(b::SimplexBijector{1}, x::AbstractMatrix)
-    return logabsdetjac(b, x), Δ -> begin
-        (nothing, maphcat(eachcol(x), Δ) do c, g
-            simplex_logabsdetjac_gradient(c) * g
-        end)
     end
 end
 
@@ -289,22 +279,4 @@ end
 
     return z, pullback_link_chol_lkj
 
-end
-
-# Otherwise Zygote complains.
-Zygote.@adjoint function Batch(x)
-    return Batch(x), function(_Δ)
-        # Sometimes `Batch` has been extraced using `value`, in which case
-        # we get back a `NamedTuple`.
-        # Other times the value was extracted by iterating over `Batch`,
-        # in which case we don't get a `NamedTuple`.
-        Δ = _Δ isa NamedTuple{(:value, )} ? _Δ.value : _Δ
-        return if Δ isa AbstractArray{<:Real}
-            (Δ, )
-        else
-            Δ_new = similar(x, eltype(Δ[1]))
-            Δ_new[:] .= vcat(Δ...)
-            (Δ_new, )
-        end
-    end
 end
