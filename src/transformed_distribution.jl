@@ -54,14 +54,14 @@ end
 
 bijector(d::Normal) = Identity()
 bijector(d::Distributions.AbstractMvNormal) = Identity()
-bijector(d::Distributions.AbstractMvLogNormal) = Log()
-bijector(d::PositiveDistribution) = Log()
+bijector(d::Distributions.AbstractMvLogNormal) = elementwise(log)
+bijector(d::PositiveDistribution) = elementwise(log)
 bijector(d::SimplexDistribution) = SimplexBijector()
 bijector(d::KSOneSided) = Logit(zero(eltype(d)), one(eltype(d)))
 
 bijector_bounded(d, a=minimum(d), b=maximum(d)) = Logit(a, b)
-bijector_lowerbounded(d, a=minimum(d)) = Log() ∘ Shift(-a)
-bijector_upperbounded(d, b=maximum(d)) = Log() ∘ Shift(b) ∘ Scale(- one(typeof(b)))
+bijector_lowerbounded(d, a=minimum(d)) = elementwise(log) ∘ Shift(-a)
+bijector_upperbounded(d, b=maximum(d)) = elementwise(log) ∘ Shift(b) ∘ Scale(- one(typeof(b)))
 
 const BoundedDistribution = Union{
     Arcsine, Biweight, Cosine, Epanechnikov, Beta, NoncentralBeta

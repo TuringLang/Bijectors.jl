@@ -1,7 +1,3 @@
-# TODO: Do we really need this?
-Exp() = elementwise(exp)
-Log() = elementwise(log)
-
 invertible(::typeof(exp)) = Invertible()
 invertible(::Elementwise{typeof(exp)}) = Invertible()
 

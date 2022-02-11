@@ -1,9 +1,9 @@
 using Test
 using Bijectors
-using Bijectors: Exp, Log, Logit, AbstractNamedTransform, NamedBijector, NamedCoupling, Shift
+using Bijectors: Exp, Log, Logit, AbstractNamedTransform, NamedTransform, NamedCoupling, Shift
 
-@testset "NamedBijector" begin
-    b = NamedBijector((a = Exp(), b = Log()))
+@testset "NamedTransform" begin
+    b = NamedTransform((a = elementwise(exp), b = elementwise(log)))
     @test b((a = 0.0, b = exp(1.0))) == (a = 1.0, b = 1.0)
 
     with_logabsdet_jacobian(b, (a = 0.0, b = exp(1.0)))

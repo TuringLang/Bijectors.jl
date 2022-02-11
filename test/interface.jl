@@ -10,7 +10,7 @@ using Tracker
 using DistributionsAD
 
 using Bijectors
-using Bijectors: Log, Exp, Shift, Scale, Logit, SimplexBijector, PDBijector, Permute, PlanarLayer, RadialLayer, Stacked, TruncatedBijector, ADBijector, RationalQuadraticSpline, LeakyReLU
+using Bijectors: Shift, Scale, Logit, SimplexBijector, PDBijector, Permute, PlanarLayer, RadialLayer, Stacked, TruncatedBijector, ADBijector, RationalQuadraticSpline, LeakyReLU
 
 Random.seed!(123)
 
@@ -309,7 +309,7 @@ end
 
     # value-test
     x = ones(3)
-    sb = @inferred stack(Bijectors.Exp(), Bijectors.Log(), Bijectors.Shift(5.0))
+    sb = @inferred stack(elementwise(exp), elementwise(log), Shift(5.0))
     res = with_logabsdet_jacobian(sb, x)
     @test sb(param(x)) isa TrackedArray
     @test sb(x) == [exp(x[1]), log(x[2]), x[3] + 5.0]
@@ -319,7 +319,7 @@ end
 
 
     # TODO: change when we have dimensionality in the type
-    sb = @inferred Stacked((Bijectors.Exp(), Bijectors.SimplexBijector()), (1:1, 2:3))
+    sb = @inferred Stacked((elementwise(exp), SimplexBijector()), (1:1, 2:3))
     x = ones(3) ./ 3.0
     res = @inferred with_logabsdet_jacobian(sb, x)
     @test sb(param(x)) isa TrackedArray
@@ -332,7 +332,7 @@ end
     @test_throws AssertionError sb(x)
 
     # Array-version
-    sb = Stacked([Bijectors.Exp(), Bijectors.SimplexBijector()], [1:1, 2:3])
+    sb = Stacked([elementwise(exp), SimplexBijector()], [1:1, 2:3])
     x = ones(3) ./ 3.0
     res = with_logabsdet_jacobian(sb, x)
     @test sb(param(x)) isa TrackedArray
@@ -346,7 +346,7 @@ end
 
     # Mixed versions
     # Tuple, Array
-    sb = Stacked([Bijectors.Exp(), Bijectors.SimplexBijector()], (1:1, 2:3))
+    sb = Stacked([elementwise(exp), SimplexBijector()], (1:1, 2:3))
     x = ones(3) ./ 3.0
     res = with_logabsdet_jacobian(sb, x)
     @test sb(param(x)) isa TrackedArray
@@ -359,7 +359,7 @@ end
     @test_throws AssertionError sb(x)
 
     # Array, Tuple
-    sb = Stacked((Bijectors.Exp(), Bijectors.SimplexBijector()), [1:1, 2:3])
+    sb = Stacked((elementwise(exp), SimplexBijector()), [1:1, 2:3])
     x = ones(3) ./ 3.0
     res = with_logabsdet_jacobian(sb, x)
     @test sb(param(x)) isa TrackedArray
@@ -501,8 +501,8 @@ end
 @testset "Equality" begin
     bs = [
         Identity(),
-        Exp(),
-        Log(),
+        elementwise(exp),
+        elementwise(log),
         Scale(2.0),
         Scale(3.0),
         Scale(rand(2,2)),
@@ -525,12 +525,12 @@ end
         RadialLayer(2),
         RadialLayer(3),
         SimplexBijector(),
-        Stacked((Exp(), Log())),
-        Stacked((Log(), Exp())),
-        Stacked([Exp(), Log()]),
-        Stacked([Log(), Exp()]),
-        Exp() ∘ Log(),
-        Log() ∘ Exp(),
+        Stacked((elementwise(exp), elementwise(log))),
+        Stacked((elementwise(log), elementwise(exp))),
+        Stacked([elementwise(exp), elementwise(log)]),
+        Stacked([elementwise(log), elementwise(exp)]),
+        elementwise(exp) ∘ elementwise(log),
+        elementwise(log) ∘ elementwise(exp),
         TruncatedBijector(1.0, 2.0),
         TruncatedBijector(1.0, 3.0),
         TruncatedBijector(0.0, 2.0),
