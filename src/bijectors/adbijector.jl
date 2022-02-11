@@ -25,3 +25,5 @@ function logabsdetjac(b::ADBijector, x::AbstractVector{<:Real})
     fact = lu(jacobian(b, x), check=false)
     return issuccess(fact) ? logabsdet(fact)[1] : throw(SingularJacobianException(b))
 end
+
+with_logabsdet_jacobian(b::ADBijector, x) = (b(x), logabsdetjac(b, x))

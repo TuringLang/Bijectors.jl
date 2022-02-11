@@ -37,7 +37,12 @@ end
 
 names_to_bijectors(b::NamedTransform) = b.bs
 
-@generated function (b::NamedTransform{names1})(
+@generated function inverse(b::NamedTransform{names}) where {names}
+    return :(NamedTransform(($([:($n = inverse(b.bs.$n)) for n in names]...), )))
+end
+
+@generated function transform(
+    b::NamedTransform{names1},
     x::NamedTuple{names2}
 ) where {names1, names2}
     exprs = []
@@ -53,13 +58,34 @@ names_to_bijectors(b::NamedTransform) = b.bs
     return :($(exprs...), )
 end
 
-@generated function inverse(b::NamedTransform{names}) where {names}
-    return :(NamedTransform(($([:($n = inverse(b.bs.$n)) for n in names]...), )))
-end
-
 @generated function logabsdetjac(b::NamedTransform{names}, x::NamedTuple) where {names}
     exprs = [:(logabsdetjac(b.bs.$n, x.$n)) for n in names]
     return :(+($(exprs...)))
+end
+
+@generated function with_logabsdet_jacobian(
+    b::NamedTransform{names1},
+    x::NamedTuple{names2}
+) where {names1, names2}
+    body_exprs = []
+    logjac_expr = Expr(:call, :+)
+    val_expr = Expr(:tuple, )
+    for n in names2
+        if n in names1
+            val_sym = Symbol("y_$n")
+            logjac_sym = Symbol("logjac_$n")
+
+            push!(body_exprs, :(($val_sym, $logjac_sym) = with_logabsdet_jacobian(b.bs.$n, x.$n)))
+            push!(logjac_expr.args, logjac_sym)
+            push!(val_expr.args, :($n = $val_sym))
+        else
+            push!(val_expr.args, :($n = x.$n))
+        end
+    end
+    return quote
+        $(body_exprs...)
+        return NamedTuple{$names2}($val_expr), $logjac_expr
+    end
 end
 
 ############################
@@ -96,31 +122,26 @@ function NamedCoupling(::Val{target}, ::Val{deps}, f::F) where {target, deps, F}
     return NamedCoupling{target, deps, F}(f)
 end
 
+invertible(::NamedCoupling) = Invertible()
+
 coupling(b::NamedCoupling) = b.f
 # For some reason trying to use the parameteric types doesn't always work
 # so we have to do this weird approach of extracting type and then index `parameters`.
 target(b::NamedCoupling{Target}) where {Target} = Target
 deps(b::NamedCoupling{<:Any, Deps}) where {Deps} = Deps
 
-@generated function (nc::NamedCoupling{target, deps, F})(x::NamedTuple) where {target, deps, F}
+@generated function with_logabsdet_jacobian(nc::NamedCoupling{target, deps, F}, x::NamedTuple) where {target, deps, F}
     return quote
         b = nc.f($([:(x.$d) for d in deps]...))
-        return merge(x, ($target = b(x.$target), ))
+        x_target, logjac = with_logabsdet_jacobian(b, x.$target)
+        return merge(x, ($target = x_target, )), logjac
     end
 end
 
-@generated function (ni::Inverse{<:NamedCoupling{target, deps, F}})(
-    x::NamedTuple
-) where {target, deps, F}
+@generated function with_logabsdet_jacobian(ni::Inverse{<:NamedCoupling{target, deps, F}}, x::NamedTuple) where {target, deps, F}
     return quote
-        b = ni.orig.f($([:(x.$d) for d in deps]...))
-        return merge(x, ($target = inverse(b)(x.$target), ))
-    end
-end
-
-@generated function logabsdetjac(nc::NamedCoupling{target, deps, F}, x::NamedTuple) where {target, deps, F}
-    return quote
-        b = nc.f($([:(x.$d) for d in deps]...))
-        return logabsdetjac(b, x.$target)
+        ib = inverse(ni.orig.f($([:(x.$d) for d in deps]...)))
+        x_target, logjac = with_logabsdet_jacobian(ib, x.$target)
+        return merge(x, ($target = x_target, )), logjac
     end
 end

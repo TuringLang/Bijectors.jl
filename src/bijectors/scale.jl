@@ -6,6 +6,8 @@ Base.:(==)(b1::Scale, b2::Scale) = b1.a == b2.a
 
 Functors.@functor Scale
 
+with_logabsdet_jacobian(b::Scale, x) = transform(b, x), logabsdetjac(b, x)
+
 transform(b::Scale, x) = b.a .* x
 transform(b::Scale{<:AbstractMatrix}, x::AbstractVecOrMat) = b.a * x
 transform(ib::Inverse{<:Scale}, y) = transform(Scale(inv(ib.orig.a)), y)

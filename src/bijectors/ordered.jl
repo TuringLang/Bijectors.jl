@@ -16,6 +16,8 @@ Return a `Distribution` whose support are ordered vectors, i.e., vectors with in
 """
 ordered(d::ContinuousMultivariateDistribution) = Bijectors.transformed(d, OrderedBijector())
 
+with_logabsdet_jacobian(b::OrderedBijector, x) = transform(b, x), logabsdetjac(b, x)
+
 transform(b::OrderedBijector, y::AbstractVecOrMat) = _transform_ordered(y)
 
 function _transform_ordered(y::AbstractVector)

@@ -195,6 +195,30 @@ function couple(cl::Coupling, x::AbstractVector)
     return b
 end
 
+function with_logabsdet_jacobian(cl::Coupling, x)
+    # partition vector using `cl.mask::PartitionMask`
+    x_1, x_2, x_3 = partition(cl.mask, x)
+
+    # construct bijector `B` using θ(x₂)
+    b = cl.θ(x_2)
+
+    y_1, logjac = with_logabsdet_jacobian(b, x_1)
+    return combine(cl.mask, y_1, x_2, x_3), logjac
+end
+
+function with_logabsdet_jacobian(icl::Inverse{<:Coupling}, y)
+    cl = icl.orig
+
+    # partition vector using `cl.mask::PartitionMask`
+    y_1, y_2, y_3 = partition(cl.mask, y)
+
+    # construct bijector `B` using θ(y₂)
+    b = cl.θ(y_2)
+
+    x_1, logjac = with_logabsdet_jacobian(inverse(b), y_1)
+    return combine(cl.mask, x_1, y_2, y_3), logjac
+end
+
 function transform(cl::Coupling, x::AbstractVector)
     # partition vector using `cl.mask::PartitionMask`
     x_1, x_2, x_3 = partition(cl.mask, x)

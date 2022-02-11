@@ -116,11 +116,11 @@ where ``γ = \\|y_minus_z0\\|_2``. For details see appendix A.2 of the reference
 D. Rezende, S. Mohamed (2015): Variational Inference with Normalizing Flows.
 arXiv:1505.05770
 """
-function compute_r(y_minus_z0::AbstractVector{<:Real}, α, α_plus_test)
+function compute_r(y_minus_z0::AbstractVector{<:Real}, α, α_plus_β_hat)
     γ = norm(y_minus_z0)
     a = α_plus_β_hat - γ
     r = (sqrt(a^2 + 4 * α * γ) - a) / 2
     return r
 end
 
-logabsdetjac(flow::RadialLayer, x::AbstractVecOrMat) = forward(flow, x).logabsdetjac
+logabsdetjac(flow::RadialLayer, x::AbstractVecOrMat) = last(with_logabsdet_jacobian(flow, x))

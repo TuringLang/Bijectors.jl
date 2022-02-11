@@ -4,6 +4,8 @@
 struct SimplexBijector{T} <: Bijector end
 SimplexBijector() = SimplexBijector{true}()
 
+with_logabsdet_jacobian(b::SimplexBijector, x) = transform(b, x), logabsdetjac(b, x)
+
 transform(b::SimplexBijector, x) = _simplex_bijector(x, b)
 transform!(b::SimplexBijector, y, x) = _simplex_bijector!(y, x, b)
 

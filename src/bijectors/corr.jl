@@ -63,6 +63,8 @@ above the "manageable expression" directly, which is also described in above doc
 """
 struct CorrBijector <: Bijector end
 
+with_logabsdet_jacobian(b::CorrBijector, x) = transform(b, x), logabsdetjac(b, x)
+
 function transform(b::CorrBijector, x::AbstractMatrix{<:Real})    
     w = cholesky(x).U  # keep LowerTriangular until here can avoid some computation
     r = _link_chol_lkj(w) 

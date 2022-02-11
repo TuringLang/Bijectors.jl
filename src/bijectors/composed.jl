@@ -9,23 +9,17 @@ function transform!(cb::ComposedFunction, x, y)
 end
 
 function logabsdetjac(cb::ComposedFunction, x)
-    y, logjac = forward(cb.inner, x)
+    y, logjac = with_logabsdet_jacobian(cb.inner, x)
     return logabsdetjac(cb.outer, y) + logjac
 end
 
 function logabsdetjac!(cb::ComposedFunction, x, logjac)
     y = similar(x)
-    forward!(cb.inner, x, y, logjac)
+    logjac = last(with_logabsdet_jacobian!(cb.inner, x, y, logjac))
     return logabdetjac!(cb.outer, y, y, logjac)
 end
 
-function forward(cb::ComposedFunction, x)
-    y1, logjac1 = forward(cb.inner, x)
-    y2, logjac2 = forward(cb.outer, y1)
-    return y2, logjac1 + logjac2
-end
-
-function forward!(cb::ComposedFunction, x, y, logjac)
-    forward!(cb.inner, x, y, logjac)
-    return forward!(cb.outer, y, y, logjac)
+function with_logabsdet_jacobian!(cb::ComposedFunction, x, y, logjac)
+    logjac = last(with_logabsdet_jacobian!(cb.inner, x, y, logjac))
+    return with_logabsdet_jacobian!(cb.outer, y, y, logjac)
 end

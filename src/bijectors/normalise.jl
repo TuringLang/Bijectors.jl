@@ -79,8 +79,8 @@ function with_logabsdet_jacobian(bn::InvertibleBatchNorm, x)
     return (result=result, logabsdetjac=logabsdetjac)
 end
 
-logabsdetjac(bn::InvertibleBatchNorm, x) = forward(bn, x).logabsdetjac
-transform(bn::InvertibleBatchNorm, x) = forward(bn, x).result
+logabsdetjac(bn::InvertibleBatchNorm, x) = last(with_logabsdet_jacobian(bn, x))
+transform(bn::InvertibleBatchNorm, x) = first(with_logabsdet_jacobian(bn, x))
 
 function with_logabsdet_jacobian(invbn::Inverse{<:InvertibleBatchNorm}, y)
     @assert !istraining() "`with_logabsdet_jacobian(::Inverse{InvertibleBatchNorm})` is only available in test mode."
@@ -96,7 +96,7 @@ function with_logabsdet_jacobian(invbn::Inverse{<:InvertibleBatchNorm}, y)
     return (result=x, logabsdetjac=-logabsdetjac(bn, x))
 end
 
-transform(bn::Inverse{<:InvertibleBatchNorm}, y) = forward(bn, y).result
+transform(bn::Inverse{<:InvertibleBatchNorm}, y) = first(with_logabsdet_jacobian(bn, y))
 
 function Base.show(io::IO, l::InvertibleBatchNorm)
     print(io, "InvertibleBatchNorm($(join(size(l.b), ", ")))")

@@ -154,3 +154,5 @@ transform(b::Permute, x::AbstractVecOrMat) = b.A * x
 inverse(b::Permute) = Permute(transpose(b.A))
 
 logabsdetjac(b::Permute, x::AbstractVector) = zero(eltype(x))
+
+with_logabsdet_jacobian(b::Permute, x) = transform(b, x), logabsdetjac(b, x)

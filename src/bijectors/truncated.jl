@@ -65,3 +65,5 @@ function truncated_logabsdetjac(x, a, b)
         return zero(x)
     end
 end
+
+with_logabsdet_jacobian(b::TruncatedBijector, x) = transform(b, x), logabsdetjac(b, x)

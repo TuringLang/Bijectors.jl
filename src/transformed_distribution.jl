@@ -1,20 +1,20 @@
 # Transformed distributions
-struct TransformedDistribution{D, B, V} <: Distribution{V, Continuous} where {D<:Distribution{V, Continuous}, B<:Bijector}
+struct TransformedDistribution{D, B, V} <: Distribution{V, Continuous} where {D<:Distribution{V, Continuous}, B}
     dist::D
     transform::B
-end
 
-TransformedDistribution(d::UnivariateDistribution, b::Bijector) = new{typeof(d), typeof(b), Univariate}(d, b)
-TransformedDistribution(d::MultivariateDistribution, b::Bijector) = new{typeof(d), typeof(b), Multivariate}(d, b)
-TransformedDistribution(d::MatrixDistribution, b::Bijector) = new{typeof(d), typeof(b), Matrixvariate}(d, b)
+    TransformedDistribution(d::UnivariateDistribution, b) = new{typeof(d), typeof(b), Univariate}(d, b)
+    TransformedDistribution(d::MultivariateDistribution, b) = new{typeof(d), typeof(b), Multivariate}(d, b)
+    TransformedDistribution(d::MatrixDistribution, b) = new{typeof(d), typeof(b), Matrixvariate}(d, b)
+end
 
 # fields may contain nested numerical parameters
 Functors.@functor TransformedDistribution
 
-const UnivariateTransformed = TransformedDistribution{<:Distribution, <:Bijector, Univariate}
-const MultivariateTransformed = TransformedDistribution{<:Distribution, <:Bijector, Multivariate}
+const UnivariateTransformed = TransformedDistribution{<:Distribution,<:Any,Univariate}
+const MultivariateTransformed = TransformedDistribution{<:Distribution,<:Any,Multivariate}
 const MvTransformed = MultivariateTransformed
-const MatrixTransformed = TransformedDistribution{<:Distribution, <:Bijector, Matrixvariate}
+const MatrixTransformed = TransformedDistribution{<:Distribution,<:Any,Matrixvariate}
 const Transformed = TransformedDistribution
 
 
@@ -27,7 +27,7 @@ Couples distribution `d` with the bijector `b` by returning a `TransformedDistri
 If no bijector is provided, i.e. `transformed(d)` is called, then 
 `transformed(d, bijector(d))` is returned.
 """
-transformed(d::Distribution, b::Bijector) = TransformedDistribution(d, b)
+transformed(d::Distribution, b) = TransformedDistribution(d, b)
 transformed(d) = transformed(d, bijector(d))
 
 """
@@ -36,8 +36,8 @@ transformed(d) = transformed(d, bijector(d))
 Returns the constrained-to-unconstrained bijector for distribution `d`.
 """
 bijector(td::TransformedDistribution) = bijector(td.dist) ∘ inverse(td.transform)
-bijector(d::DiscreteUnivariateDistribution) = Identity{0}()
-bijector(d::DiscreteMultivariateDistribution) = Identity{1}()
+bijector(d::DiscreteUnivariateDistribution) = Identity()
+bijector(d::DiscreteMultivariateDistribution) = Identity()
 bijector(d::ContinuousUnivariateDistribution) = TruncatedBijector(minimum(d), maximum(d))
 bijector(d::Product{Discrete}) = Identity()
 function bijector(d::Product{Continuous})
@@ -218,7 +218,7 @@ end
 const GLOBAL_RNG = Distributions.GLOBAL_RNG
 
 function _forward(d::UnivariateDistribution, x)
-    y, logjac = with_logabsdet_jacobian(Identity{0}(), x)
+    y, logjac = with_logabsdet_jacobian(Identity(), x)
     return (x = x, y = y, logabsdetjac = logjac, logpdf = logpdf.(d, x))
 end
 
@@ -227,7 +227,7 @@ function forward(rng::AbstractRNG, d::Distribution, num_samples::Int)
     return _forward(d, rand(rng, d, num_samples))
 end
 function _forward(d::Distribution, x)
-    y, logjac = with_logabsdet_jacobian(Identity{length(size(d))}(), x)
+    y, logjac = with_logabsdet_jacobian(Identity(), x)
     return (x = x, y = y, logabsdetjac = logjac, logpdf = logpdf(d, x))
 end
 
@@ -244,7 +244,7 @@ function forward(rng::AbstractRNG, td::Transformed)
     return _forward(td, rand(rng, td.dist))
 end
 function forward(rng::AbstractRNG, td::Transformed, num_samples::Int)
-    return _forward(td, rand(rng, td.dist, num_samples))
+    return [_forward(td, rand(rng, td.dist)) for _ = 1:num_samples]
 end
 
 """

@@ -62,11 +62,11 @@ If the `Transform` is also invertible:
     - `InverseFunctions.inverse(b::MyTransform)`: returns an existing `Transform`.
   - [`logabsdetjac`](@ref): computes the log-abs-det jacobian factor.
 - Optional:
-  - [`forward`](@ref): `transform` and `logabsdetjac` combined. Useful in cases where we
+  - [`with_logabsdet_jacobian`](@ref): `transform` and `logabsdetjac` combined. Useful in cases where we
     can exploit shared computation in the two.
 
 For the above methods, there are mutating versions which can _optionally_ be implemented:
-- [`transform!`](@ref)
+- [`with_logabsdet_jacobian!`](@ref)
 - [`logabsdetjac!`](@ref)
 - [`forward!`](@ref)
 """
@@ -81,7 +81,8 @@ Broadcast.broadcastable(b::Transform) = Ref(b)
 
 Transform `x` using `b`, treating `x` as a single input.
 """
-function transform end
+transform(f::Function, x) = f(x)
+transform(t::Transform, x) = first(with_logabsdet_jacobian(t, x))
 
 """
     transform!(b, x[, y])
@@ -98,7 +99,7 @@ transform!(b, x, y) = (y .= transform(b, x))
 
 Return `log(abs(det(J(b, x))))`, where `J(b, x)` is the jacobian of `b` at `x`.
 """
-logabsdetjac(b, x) = last(forward(b, x))
+logabsdetjac(b, x) = last(with_logabsdet_jacobian(b, x))
 
 """
     logabsdetjac!(b, x[, logjac])
@@ -108,29 +109,22 @@ Compute `log(abs(det(J(b, x))))` and store the result in `logjac`, where `J(b, x
 logabsdetjac!(b, x) = logabsdetjac!(b, x, zero(eltype(x)))
 logabsdetjac!(b, x, logjac) = (logjac += logabsdetjac(b, x))
 
-"""
-    forward(b, x)
-
-Return `(transform(b, x), logabsdetjac(b, x))` treating `x` as single input.
-
-Defaults to `ChangeOfVariables.with_logabsdet_jacobian(b, x)`.
-"""
-forward(b, x) =  with_logabsdet_jacobian(b, x)
+# with_logabsdet_jacobian(b::Transform, x) = (transform(b, x), logabsdetjac(b, x))
 
 """
-    forward!(b, x[, y, logjac])
+    with_logabsdet_jacobian!(b, x[, y, logjac])
 
 Compute `transform(b, x)` and `logabsdetjac(b, x)`, storing the result
 in `y` and `logjac`, respetively.
 
 If `y` is not provided, then `x` will be used in its place.
 
-Defaults to calling `forward(b, x)` and updating `y` and `logjac` with the result.
+Defaults to calling `with_logabsdet_jacobian(b, x)` and updating `y` and `logjac` with the result.
 """
-forward!(b, x) = forward!(b, x, x)
-forward!(b, x, y) = forward!(b, x, y, zero(eltype(x)))
-function forward!(b, x, y, logjac)
-    y_, logjac_ = forward(b, x)
+with_logabsdet_jacobian!(b, x) = with_logabsdet_jacobian!(b, x, x)
+with_logabsdet_jacobian!(b, x, y) = with_logabsdet_jacobian!(b, x, y, zero(eltype(x)))
+function with_logabsdet_jacobian!(b, x, y, logjac)
+    y_, logjac_ = with_logabsdet_jacobian(b, x)
     y .= y_
     return (y, logjac + logjac_)
 end
@@ -210,18 +204,27 @@ abstract type Bijector <: Transform end
 invertible(::Bijector) = Invertible()
 
 # Default implementation for inverse of a `Bijector`.
-logabsdetjac(ib::Inverse{<:Bijector}, y) = -logabsdetjac(ib.orig, ib(y))
+logabsdetjac(ib::Inverse{<:Transform}, y) = -logabsdetjac(ib.orig, transform(ib, y))
+
+function with_logabsdet_jacobian(ib::Inverse{<:Transform}, y)
+    x = transform(ib, y)
+    return x, -logabsdetjac(inverse(ib), x)
+end
 
 """
     logabsdetjacinv(b::Bijector, y)
 
 Just an alias for `logabsdetjac(inverse(b), y)`.
 """
-logabsdetjacinv(b::Bijector, y) = logabsdetjac(inverse(b), y)
+logabsdetjacinv(b, y) = logabsdetjac(inverse(b), y)
 
 ##############################
 # Example bijector: Identity #
 ##############################
+Identity() = identity
+
+invertible(::typeof(identity)) = Invertible()
+
 # Here we don't need to separate between batched version and non-batched, and so
 # we can just overload `transform`, etc. directly.
 transform(::typeof(identity), x) = copy(x)

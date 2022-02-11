@@ -28,6 +28,9 @@ end
 Stacked(bs::Tuple) = Stacked(bs, ntuple(i -> i:i, length(bs)))
 Stacked(bs::AbstractArray) = Stacked(bs, [i:i for i in 1:length(bs)])
 
+# Avoid mixing tuples and arrays.
+Stacked(bs::Tuple, ranges::AbstractArray) = Stacked(collect(bs), ranges)
+
 # define nested numerical parameters
 # TODO: replace with `Functors.@functor Stacked (bs,)` when
 # https://github.com/FluxML/Functors.jl/pull/7 is merged
@@ -50,13 +53,13 @@ isclosedform(b::Stacked) = all(isclosedform, b.bs)
 
 invertible(b::Stacked) = sum(map(invertible, b.bs))
 
-stack(bs::Bijector...) = Stacked(bs)
+stack(bs...) = Stacked(bs)
 
-# For some reason `inv.(sb.bs)` was unstable... This works though.
-inv(sb::Stacked, ::Invertible) = Stacked(map(inv, sb.bs), sb.ranges)
+# For some reason `inverse.(sb.bs)` was unstable... This works though.
+inverse(sb::Stacked) = Stacked(map(inverse, sb.bs), sb.ranges)
 # map is not type stable for many stacked bijectors as a large tuple
 # hence the generated function
-@generated function inv(sb::Stacked{A}, ::Invertible) where {A <: Tuple}
+@generated function inverse(sb::Stacked{A}) where {A <: Tuple}
     exprs = []
     for i = 1:length(A.parameters)
         push!(exprs, :(inverse(sb.bs[$i])))
@@ -64,18 +67,18 @@ inv(sb::Stacked, ::Invertible) = Stacked(map(inv, sb.bs), sb.ranges)
     :(Stacked(($(exprs...), ), sb.ranges))
 end
 
-@generated function _transform(x, rs::NTuple{N, UnitRange{Int}}, bs::Bijector...) where N
+@generated function _transform(x, rs::NTuple{N, UnitRange{Int}}, bs...) where N
     exprs = []
     for i = 1:N
         push!(exprs, :(bs[$i](x[rs[$i]])))
     end
     return :(vcat($(exprs...)))
 end
-function _transform(x, rs::NTuple{1, UnitRange{Int}}, b::Bijector)
+function _transform(x, rs::NTuple{1, UnitRange{Int}}, b)
     @assert rs[1] == 1:length(x)
     return b(x)
 end
-function (sb::Stacked{<:Tuple,<:Tuple})(x::AbstractVector{<:Real})
+function transform(sb::Stacked{<:Tuple,<:Tuple}, x::AbstractVector{<:Real})
     y = _transform(x, sb.ranges, sb.bs...)
     @assert size(y) == size(x) "x is size $(size(x)) but y is $(size(y))"
     return y

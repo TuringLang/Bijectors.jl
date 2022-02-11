@@ -371,3 +371,7 @@ end
 function with_logabsdet_jacobian(b::RationalQuadraticSpline{<:AbstractVector}, x::Real)
     return rqs_forward(b.widths, b.heights, b.derivatives, x)
 end
+
+function with_logabsdet_jacobian(b::RationalQuadraticSpline{<:AbstractMatrix}, x::AbstractVector)
+    return transform(b, x), logabsdetjac(b, x)
+end

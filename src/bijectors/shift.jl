@@ -20,3 +20,5 @@ end
 
 _logabsdetjac_shift(a, x) = zero(eltype(x))
 _logabsdetjac_shift_array_batch(a, x) = zeros(eltype(x), size(x, ndims(x)))
+
+with_logabsdet_jacobian(b::Shift, x) = transform(b, x), logabsdetjac(b, x)
