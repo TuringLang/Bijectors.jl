@@ -19,9 +19,6 @@ using Bijectors: Log, Exp, Shift, Scale, Logit, SimplexBijector, PDBijector, Per
 using ChangesOfVariables: test_with_logabsdet_jacobian
 using InverseFunctions: test_inverse
 
-using DistributionsAD: TuringUniform, TuringMvNormal, TuringMvLogNormal,
-    TuringPoissonBinomial
-
 const GROUP = get(ENV, "GROUP", "All")
 
 # Always include this since it can be useful for other tests.
