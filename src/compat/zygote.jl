@@ -108,11 +108,14 @@ function pd_logpdf_with_trans_zygote(
     end
     lp = getlogp(d, Xcf, X)
     if transform && isfinite(lp)
-        U = Xcf.U
-        @inbounds for i in 1:dim(d)
-            lp += (dim(d) - i + 2) * log(U[i, i])
+        UL = Xcf.UL
+        n = size(d, 1)
+        k = n + 2
+        @inbounds for i in diagind(UL)
+            k -= 1
+            lp += k * log(UL[i])
         end
-        lp += dim(d) * log(T(2))
+        lp += n * oftype(lp, IrrationalConstants.logtwo)
     end
     return lp
 end
