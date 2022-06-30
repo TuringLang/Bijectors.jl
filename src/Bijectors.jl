@@ -230,24 +230,23 @@ function pd_logpdf_with_trans(d, X::AbstractMatrix{<:Real}, transform::Bool)
     end
     lp = getlogp(d, Xcf, X)
     if transform && isfinite(lp)
-        U = Xcf.U
-        d = dim(d)
-        lp += sum((d .- (1:d) .+ 2) .* log.(diag(U)))
-        lp += d * log(T(2))
+        n = size(d, 1)
+        lp += sum(((n + 2) .- (1:n)) .* log.(diag(Xcf.factors)))
+        lp += n * oftype(lp, IrrationalConstants.logtwo)
     end
     return lp
 end
 function getlogp(d::MatrixBeta, Xcf, X)
     n1, n2 = params(d)
-    p = dim(d)
+    p = size(d, 1)
     return ((n1 - p - 1) / 2) * logdet(Xcf) + ((n2 - p - 1) / 2) * logdet(I - X) + d.logc0
 end
 function getlogp(d::Wishart, Xcf, X)
-    return 0.5 * ((d.df - (dim(d) + 1)) * logdet(Xcf) - tr(d.S \ X)) + d.logc0
+    return ((d.df - (size(d, 1) + 1)) * logdet(Xcf) - tr(d.S \ X)) / 2 + d.logc0
 end
 function getlogp(d::InverseWishart, Xcf, X)
     Ψ = Matrix(d.Ψ)
-    return -0.5 * ((d.df + dim(d) + 1) * logdet(Xcf) + tr(Xcf \ Ψ)) + d.logc0
+    return -((d.df + size(d, 1) + 1) * logdet(Xcf) + tr(Xcf \ Ψ)) / 2 + d.logc0
 end
 
 include("utils.jl")
