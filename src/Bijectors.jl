@@ -230,9 +230,8 @@ function pd_logpdf_with_trans(d, X::AbstractMatrix{<:Real}, transform::Bool)
     end
     lp = getlogp(d, Xcf, X)
     if transform && isfinite(lp)
-        UL = Xcf.UL
         n = size(d, 1)
-        lp += sum(((n + 2) .- (1:n)) .* log.(diag(UL)))
+        lp += sum(((n + 2) .- (1:n)) .* log.(diag(Xcf.factors)))
         lp += n * oftype(lp, IrrationalConstants.logtwo)
     end
     return lp

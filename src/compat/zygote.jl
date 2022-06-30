@@ -108,12 +108,12 @@ function pd_logpdf_with_trans_zygote(
     end
     lp = getlogp(d, Xcf, X)
     if transform && isfinite(lp)
-        UL = Xcf.UL
+        factors = Xcf.factors
         n = size(d, 1)
         k = n + 2
-        @inbounds for i in diagind(UL)
+        @inbounds for i in diagind(factors)
             k -= 1
-            lp += k * log(UL[i])
+            lp += k * log(factors[i])
         end
         lp += n * oftype(lp, IrrationalConstants.logtwo)
     end
