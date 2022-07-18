@@ -19,8 +19,6 @@ using Bijectors: Log, Exp, Shift, Scale, Logit, SimplexBijector, PDBijector, Per
 using ChangesOfVariables: ChangesOfVariables
 using InverseFunctions: InverseFunctions
 
-using DistributionsAD: TuringMvNormal, TuringMvLogNormal, TuringPoissonBinomial
-
 const GROUP = get(ENV, "GROUP", "All")
 
 # Always include this since it can be useful for other tests.
