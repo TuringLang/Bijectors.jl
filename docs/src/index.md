@@ -44,6 +44,9 @@ Without mutation:
 ```@docs
 transform
 logabsdetjac
+```
+
+```julia
 with_logabsdet_jacobian
 ```
 
@@ -61,7 +64,7 @@ Any callable can be made into a bijector by providing an implementation of `with
 
 You can also optionally implement [`transform`](@ref) and [`logabsdetjac`](@ref) to avoid redundant computations. This is usually only worth it if you expect `transform` or `logabsdetjac` to be used heavily without the other.
 
-Similarly with the mutable versions [`with_logabsdet_jacobian`](@ref), [`transform!`](@ref), and [`logabsdetjac!`].
+Similarly with the mutable versions [`with_logabsdet_jacobian!`](@ref), [`transform!`](@ref), and [`logabsdetjac!`](@ref).
 
 ## Working with Distributions.jl
 
@@ -76,6 +79,9 @@ Bijectors.transformed(d::Distribution, b::Bijector)
 Bijectors.elementwise
 Bijectors.isinvertible
 Bijectors.isclosedform(t::Bijectors.Transform)
+Bijectors.invertible
+Bijectors.NotInvertible
+Bijectors.Invertible
 ```
 
 ## API

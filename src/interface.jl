@@ -62,13 +62,13 @@ If the `Transform` is also invertible:
     - `InverseFunctions.inverse(b::MyTransform)`: returns an existing `Transform`.
   - [`logabsdetjac`](@ref): computes the log-abs-det jacobian factor.
 - Optional:
-  - [`with_logabsdet_jacobian`](@ref): `transform` and `logabsdetjac` combined. Useful in cases where we
+  - `with_logabsdet_jacobian`: `transform` and `logabsdetjac` combined. Useful in cases where we
     can exploit shared computation in the two.
 
 For the above methods, there are mutating versions which can _optionally_ be implemented:
 - [`with_logabsdet_jacobian!`](@ref)
 - [`logabsdetjac!`](@ref)
-- [`forward!`](@ref)
+- [`with_logabsdet_jacobian!`](@ref)
 """
 abstract type Transform end
 
@@ -143,7 +143,17 @@ requires an iterative procedure to evaluate.
 isclosedform(t::Transform) = true
 
 # Invertibility "trait".
+"""
+    Invertible
+
+Represents the trait of being, well, non-invertible.
+"""
 struct NotInvertible end
+"""
+    Invertible
+
+Represents the trait of being, well, invertible.
+"""
 struct Invertible end
 
 # Useful for checking if compositions, etc. are invertible or not.
