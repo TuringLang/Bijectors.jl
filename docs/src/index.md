@@ -91,3 +91,16 @@ Bijectors.Transform
 Bijectors.Bijector
 Bijectors.Inverse
 ```
+
+## Bijectors
+
+```@docs
+Bijectors.CorrBijector
+Bijectors.LeakyReLU
+Bijectors.Stacked
+Bijectors.RationalQuadraticSpline
+Bijectors.Coupling
+Bijectors.OrderedBijector
+Bijectors.NamedTransform
+Bijectors.NamedCoupling
+```
