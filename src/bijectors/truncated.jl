@@ -50,7 +50,7 @@ end
 
 function logabsdetjac(b::TruncatedBijector, x)
     a, b = b.lb, b.ub
-    return truncated_logabsdetjac.(_clamp.(x, a, b), a, b)
+    return sum(truncated_logabsdetjac.(_clamp.(x, a, b), a, b))
 end
 
 function truncated_logabsdetjac(x, a, b)
