@@ -60,7 +60,7 @@ with_logabsdet_jacobian!
 
 ## Implementing a transformation
 
-Any callable can be made into a bijector by providing an implementation of `with_logabsdet_jacobian(b, x)`.
+Any callable can be made into a bijector by providing an implementation of `ChangeOfVariables.with_logabsdet_jacobian(b, x)`.
 
 You can also optionally implement [`transform`](@ref) and [`logabsdetjac`](@ref) to avoid redundant computations. This is usually only worth it if you expect `transform` or `logabsdetjac` to be used heavily without the other.
 
