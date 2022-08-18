@@ -1,7 +1,3 @@
-using LinearAlgebra
-using Random
-using NNlib: softplus
-
 ################################################################################
 #                            Planar and Radial Flows                           #
 #             Ref: Variational Inference with Normalizing Flows,               #
@@ -63,8 +59,8 @@ arXiv:1505.05770
 """
 function get_u_hat(u::AbstractVector{<:Real}, w::AbstractVector{<:Real})
     wT_u = dot(w, u)
-    û = u .+ ((softplus(-wT_u) - 1) / sum(abs2, w)) .* w
-    wT_û = softplus(wT_u) - 1
+    û = u .+ ((LogExpFunctions.log1pexp(-wT_u) - 1) / sum(abs2, w)) .* w
+    wT_û = LogExpFunctions.log1pexp(wT_u) - 1
     return û, wT_û
 end
 
@@ -98,14 +94,14 @@ we get
 \\log |det ∂f(z)/∂z| = \\log(1 + sech²(wᵀz + b) wᵀû).
 ```
 =#
-function forward(flow::PlanarLayer, z::AbstractVecOrMat{<:Real})
+function with_logabsdet_jacobian(flow::PlanarLayer, z::AbstractVecOrMat{<:Real})
     transformed, wT_û, wT_z = _transform(flow, z)
 
     # Compute ``\\log |det ∂f(z)/∂z|`` (see above).
     b = first(flow.b)
     log_det_jacobian = log1p.(wT_û .* abs2.(sech.(_vec(wT_z) .+ b)))
 
-    return (rv = transformed, logabsdetjac = log_det_jacobian)
+    return (transformed, log_det_jacobian)
 end
 
 function (ib::Inverse{<:PlanarLayer})(y::AbstractVecOrMat{<:Real})
@@ -147,6 +143,9 @@ Thus
 α̂ - |wt_u_hat| - wt_y \\leq 0 \\leq α̂ + |wt_u_hat| - wt_y,
 ```
 which implies ``α̂ ∈ [wt_y - |wt_u_hat|, wt_y + |wt_u_hat|]``.
+To avoid floating point issues if ``α̂  = wt_y ± |wt_u_hat|``, we use the more conservative
+interval ``[wt_y - 2 |wt_u_hat|, wt_y + 2|wt_u_hat|]`` as initial bracket, at the cost of
+one additional iteration step.
 
 # References
 
@@ -159,19 +158,22 @@ function find_alpha(wt_y::Real, wt_u_hat::Real, b::Real)
 end
 function find_alpha(wt_y::T, wt_u_hat::T, b::T) where {T<:Real}
     # Compute the initial bracket (see above).
-    initial_bracket = (wt_y - abs(wt_u_hat), wt_y + abs(wt_u_hat))
+    Δ = 2 * abs(wt_u_hat)
+    lower = float(wt_y - Δ)
+    upper = float(wt_y + Δ)
 
-    # Try to solve the root-finding problem, i.e., compute a final bracket
-    prob = NonlinearSolve.NonlinearProblem{false}(initial_bracket) do α, _
-        α + wt_u_hat * tanh(α + b) - wt_y
-    end
-    sol = NonlinearSolve.solve(prob, NonlinearSolve.Falsi())
-    if sol.retcode === NonlinearSolve.MAXITERS_EXCEED
-        @warn "Planar layer: root finding algorithm did not converge" sol
+    # Handle empty brackets (https://github.com/TuringLang/Bijectors.jl/issues/204)
+    if lower == upper
+        return lower
     end
 
-    return sol.left
+    # Solve the root-finding problem
+    α0 = Roots.find_zero((lower, upper)) do α
+        return α + wt_u_hat * tanh(α + b) - wt_y
+    end
+
+    return α0
 end
 
-logabsdetjac(flow::PlanarLayer, x) = forward(flow, x).logabsdetjac
+logabsdetjac(flow::PlanarLayer, x) = last(with_logabsdet_jacobian(flow, x))
 isclosedform(b::Inverse{<:PlanarLayer}) = false

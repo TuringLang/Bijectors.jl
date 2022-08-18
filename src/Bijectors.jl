@@ -30,14 +30,19 @@ module Bijectors
 
 using Reexport, Requires
 @reexport using Distributions
-using StatsFuns
 using LinearAlgebra
 using MappedArrays
 using Base.Iterators: drop
 using LinearAlgebra: AbstractTriangular
-import Functors
-import NonlinearSolve
+
+import ChangesOfVariables: with_logabsdet_jacobian
+import InverseFunctions: inverse
+
 import ChainRulesCore
+import Functors
+import IrrationalConstants
+import LogExpFunctions
+import Roots
 
 export  TransformDistribution,
         PositiveDistribution,
@@ -49,6 +54,8 @@ export  TransformDistribution,
         logpdf_with_trans,
         isclosedform,
         transform,
+        with_logabsdet_jacobian,
+        inverse,
         forward,
         logabsdetjac,
         logabsdetjacinv,
@@ -119,7 +126,7 @@ end
 # Distributions
 
 link(d::Distribution, x) = bijector(d)(x)
-invlink(d::Distribution, y) = inv(bijector(d))(y)
+invlink(d::Distribution, y) = inverse(bijector(d))(y)
 function logpdf_with_trans(d::Distribution, x, transform::Bool)
     if ispd(d)
         return pd_logpdf_with_trans(d, x, transform)
@@ -186,14 +193,14 @@ function invlink(
     y::AbstractVecOrMat{<:Real},
     ::Val{proj}=Val(true),
 ) where {proj}
-    return inv(SimplexBijector{proj}())(y)
+    return inverse(SimplexBijector{proj}())(y)
 end
 function invlink_jacobian(
     d::Dirichlet,
     y::AbstractVector{<:Real},
     ::Val{proj}=Val(true),
 ) where {proj}
-    return jacobian(inv(SimplexBijector{proj}()), y)
+    return jacobian(inverse(SimplexBijector{proj}()), y)
 end
 
 ## Matrix
@@ -223,29 +230,35 @@ function pd_logpdf_with_trans(d, X::AbstractMatrix{<:Real}, transform::Bool)
     end
     lp = getlogp(d, Xcf, X)
     if transform && isfinite(lp)
-        U = Xcf.U
-        d = dim(d)
-        lp += sum((d .- (1:d) .+ 2) .* log.(diag(U)))
-        lp += d * log(T(2))
+        n = size(d, 1)
+        lp += sum(((n + 2) .- (1:n)) .* log.(diag(Xcf.factors)))
+        lp += n * oftype(lp, IrrationalConstants.logtwo)
     end
     return lp
 end
 function getlogp(d::MatrixBeta, Xcf, X)
     n1, n2 = params(d)
-    p = dim(d)
+    p = size(d, 1)
     return ((n1 - p - 1) / 2) * logdet(Xcf) + ((n2 - p - 1) / 2) * logdet(I - X) + d.logc0
 end
 function getlogp(d::Wishart, Xcf, X)
-    return 0.5 * ((d.df - (dim(d) + 1)) * logdet(Xcf) - tr(d.S \ X)) + d.logc0
+    return ((d.df - (size(d, 1) + 1)) * logdet(Xcf) - tr(d.S \ X)) / 2 + d.logc0
 end
 function getlogp(d::InverseWishart, Xcf, X)
     Ψ = Matrix(d.Ψ)
-    return -0.5 * ((d.df + dim(d) + 1) * logdet(Xcf) + tr(Xcf \ Ψ)) + d.logc0
+    return -((d.df + size(d, 1) + 1) * logdet(Xcf) + tr(Xcf \ Ψ)) / 2 + d.logc0
 end
 
 include("utils.jl")
 include("interface.jl")
 include("chainrules.jl")
+
+Base.@deprecate forward(b::AbstractBijector, x) NamedTuple{(:rv,:logabsdetjac)}(with_logabsdet_jacobian(b, x))
+
+@noinline function Base.inv(b::AbstractBijector)
+    Base.depwarn("`Base.inv(b::AbstractBijector)` is deprecated, use `inverse(b)` instead.", :inv)
+    inverse(b)
+end
 
 # Broadcasting here breaks Tracker for some reason
 maporbroadcast(f, x::AbstractArray{<:Any, N}...) where {N} = map(f, x...)

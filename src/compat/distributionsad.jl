@@ -57,22 +57,22 @@ function invlink(
     y::AbstractVecOrMat{<:Real},
     ::Val{proj}=Val(true),
 ) where {proj}
-    return inv(SimplexBijector{proj}())(y)
+    return inverse(SimplexBijector{proj}())(y)
 end
 function invlink_jacobian(
     d::TuringDirichlet,
     y::AbstractVector{<:Real},
     ::Val{proj}=Val(true),
 ) where {proj}
-    return jacobian(inv(SimplexBijector{proj}()), y)
+    return jacobian(inverse(SimplexBijector{proj}()), y)
 end
 
 ispd(::TuringWishart) = true
 ispd(::TuringInverseWishart) = true
 function getlogp(d::TuringWishart, Xcf, X)
-    return 0.5 * ((d.df - (dim(d) + 1)) * logdet(Xcf) - tr(d.chol \ X)) + d.logc0
+    return ((d.df - (size(d, 1) + 1)) * logdet(Xcf) - tr(d.chol \ X)) / 2 + d.logc0
 end
 function getlogp(d::TuringInverseWishart, Xcf, X)
     Ψ = d.S
-    return -0.5 * ((d.df + dim(d) + 1) * logdet(Xcf) + tr(Xcf \ Ψ)) + d.logc0
+    return -((d.df + size(d, 1) + 1) * logdet(Xcf) + tr(Xcf \ Ψ)) / 2 + d.logc0
 end

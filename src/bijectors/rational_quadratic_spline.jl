@@ -1,5 +1,3 @@
-using NNlib
-
 """
     RationalQuadraticSpline{T, 0} <: Bijector{0}
     RationalQuadraticSpline{T, 1} <: Bijector{1}
@@ -111,11 +109,10 @@ function RationalQuadraticSpline(
     derivatives::A,
     B::T2
 ) where {T1, T2, A <: AbstractVector{T1}}
-    # Using `NNLlinb.softax` instead of `StatsFuns.softmax` (which does inplace operations)
     return RationalQuadraticSpline(
-        (cumsum(vcat([zero(T1)], NNlib.softmax(widths))) .- 0.5) * 2 * B,
-        (cumsum(vcat([zero(T1)], NNlib.softmax(heights))) .- 0.5) * 2 * B,
-        vcat([one(T1)], softplus.(derivatives), [one(T1)])
+        (cumsum(vcat([zero(T1)], LogExpFunctions.softmax(widths))) .- 0.5) * 2 * B,
+        (cumsum(vcat([zero(T1)], LogExpFunctions.softmax(heights))) .- 0.5) * 2 * B,
+        vcat([one(T1)], LogExpFunctions.log1pexp.(derivatives), [one(T1)])
     )
 end
 
@@ -125,9 +122,9 @@ function RationalQuadraticSpline(
     derivatives::A,
     B::T2
 ) where {T1, T2, A <: AbstractMatrix{T1}}
-    ws = hcat(zeros(T1, size(widths, 1)), NNlib.softmax(widths; dims = 2))
-    hs = hcat(zeros(T1, size(widths, 1)), NNlib.softmax(heights; dims = 2))
-    ds = hcat(ones(T1, size(widths, 1)), softplus.(derivatives), ones(T1, size(widths, 1)))
+    ws = hcat(zeros(T1, size(widths, 1)), LogExpFunctions.softmax(widths; dims = 2))
+    hs = hcat(zeros(T1, size(widths, 1)), LogExpFunctions.softmax(heights; dims = 2))
+    ds = hcat(ones(T1, size(widths, 1)), LogExpFunctions.log1pexp.(derivatives), ones(T1, size(widths, 1)))
 
     return RationalQuadraticSpline(
         (2 * B) .* (cumsum(ws; dims = 2) .- 0.5),
@@ -346,7 +343,7 @@ function rqs_forward(
     T = promote_type(eltype(widths), eltype(heights), eltype(derivatives), eltype(x))
 
     if (x ≤ -widths[end]) || (x ≥ widths[end])
-        return (rv = one(T) * x, logabsdetjac = zero(T) * x)
+        return (one(T) * x, zero(T) * x)
     end
 
     # Find which bin `x` is in
@@ -379,9 +376,9 @@ function rqs_forward(
     numerator_y = Δy * (s * ξ^2 + d_k * ξ * (1 - ξ))
     y = h_k + numerator_y / denominator
 
-    return (rv = y, logabsdetjac = logjac)
+    return (y, logjac)
 end
 
-function forward(b::RationalQuadraticSpline{<:AbstractVector, 0}, x::Real)
+function with_logabsdet_jacobian(b::RationalQuadraticSpline{<:AbstractVector, 0}, x::Real)
     return rqs_forward(b.widths, b.heights, b.derivatives, x)
 end
