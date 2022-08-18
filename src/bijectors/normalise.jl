@@ -76,7 +76,7 @@ function with_logabsdet_jacobian(bn::InvertibleBatchNorm, x)
     logabsdetjac = (
         fill(sum(logs - log.(v .+ bn.eps) / 2), size(x, dims))
     )
-    return (result=result, logabsdetjac=logabsdetjac)
+    return (result, logabsdetjac)
 end
 
 logabsdetjac(bn::InvertibleBatchNorm, x) = last(with_logabsdet_jacobian(bn, x))
@@ -93,7 +93,7 @@ function with_logabsdet_jacobian(invbn::Inverse{<:InvertibleBatchNorm}, y)
     v = reshape(bn.v, as...)
 
     x = (y .- b) ./ s .* sqrt.(v .+ bn.eps) .+ m
-    return (result=x, logabsdetjac=-logabsdetjac(bn, x))
+    return (x, -logabsdetjac(bn, x))
 end
 
 transform(bn::Inverse{<:InvertibleBatchNorm}, y) = first(with_logabsdet_jacobian(bn, y))
