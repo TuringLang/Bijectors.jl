@@ -81,11 +81,6 @@ end
             @test y ≈ @inferred td.transform(x)
             @test @inferred(logpdf(td, y)) ≈ @inferred(logpdf_with_trans(dist, x, true))
 
-            # logpdf_with_jac
-            lp, logjac = logpdf_with_jac(td, y)
-            @test lp ≈ logpdf(td, y)
-            @test logjac ≈ logabsdetjacinv(td.transform, y)
-
             # multi-sample
             y = @inferred rand(td, 10)
             x = inverse(td.transform).(y)
@@ -98,14 +93,6 @@ end
             y = @inferred b(x)
             @test logpdf(d, inverse(b)(y)) + logabsdetjacinv(b, y) ≈ logpdf_with_trans(d, x, true)
             @test logpdf(d, x) - logabsdetjac(b, x) ≈ logpdf_with_trans(d, x, true)
-
-            # forward
-            f = @inferred forward(td)
-            @test f.x ≈ inverse(td.transform)(f.y)
-            @test f.y ≈ td.transform(f.x)
-            @test f.logabsdetjac ≈ logabsdetjac(td.transform, f.x)
-            @test f.logpdf ≈ logpdf_with_trans(td.dist, f.x, true)
-            @test f.logpdf ≈ logpdf(td.dist, f.x) - f.logabsdetjac
 
             # verify against AD
             d = dist
@@ -196,18 +183,6 @@ end
             @test y ≈ td.transform(x)
             @test td.transform(param(x)) isa TrackedArray
             @test logpdf(td, y) ≈ logpdf_with_trans(dist, x, true)
-
-            # logpdf_with_jac
-            lp, logjac = logpdf_with_jac(td, y)
-            @test lp ≈ logpdf(td, y)
-            @test logjac ≈ logabsdetjacinv(td.transform, y)
-
-            # forward
-            f = forward(td)
-            @test f.x ≈ inverse(td.transform)(f.y)
-            @test f.y ≈ td.transform(f.x)
-            @test f.logabsdetjac ≈ logabsdetjac(td.transform, f.x)
-            @test f.logpdf ≈ logpdf_with_trans(td.dist, f.x, true)
 
             # verify against AD
             # similar to what we do in test/transform.jl for Dirichlet
