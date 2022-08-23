@@ -155,3 +155,6 @@ function ChainRulesCore.rrule(::typeof(_transform_inverse_ordered), x::AbstractM
 
     return y, _transform_inverse_ordered_adjoint
 end
+
+# Fixes Zygote's issues with `@debug`
+ChainRulesCore.@non_differentiable _debug(::Any)
