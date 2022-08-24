@@ -38,15 +38,7 @@ function InvertibleBatchNorm(
     )
 end
 
-# define numerical parameters
-# TODO: replace with `Functors.@functor InvertibleBatchNorm (b, logs)` when
-# https://github.com/FluxML/Functors.jl/pull/7 is merged
-function Functors.functor(::Type{<:InvertibleBatchNorm}, x)
-    function reconstruct_invertiblebatchnorm(xs)
-        return InvertibleBatchNorm(xs.b, xs.logs, x.m, x.v, x.eps, x.mtm)
-    end
-    return (b = x.b, logs = x.logs), reconstruct_invertiblebatchnorm
-end
+Functors.@functor InvertibleBatchNorm (b, logs)
 
 function with_logabsdet_jacobian(bn::InvertibleBatchNorm, x)
     dims = ndims(x)

@@ -31,15 +31,7 @@ Stacked(bs::AbstractArray) = Stacked(bs, [i:i for i in 1:length(bs)])
 # Avoid mixing tuples and arrays.
 Stacked(bs::Tuple, ranges::AbstractArray) = Stacked(collect(bs), ranges)
 
-# define nested numerical parameters
-# TODO: replace with `Functors.@functor Stacked (bs,)` when
-# https://github.com/FluxML/Functors.jl/pull/7 is merged
-function Functors.functor(::Type{<:Stacked}, x)
-    function reconstruct_stacked(xs)
-        return Stacked(xs.bs, x.ranges)
-    end
-    return (bs = x.bs,), reconstruct_stacked
-end
+Functors.@functor Stacked (bs,)
 
 function Base.:(==)(b1::Stacked, b2::Stacked)
     bs1, bs2 = b1.bs, b2.bs
