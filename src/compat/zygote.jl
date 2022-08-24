@@ -1,9 +1,8 @@
-using .Zygote: Zygote, @adjoint, @nograd, pullback
+using .Zygote: Zygote, @adjoint, pullback
 
 using Compat: eachcol
 
 @adjoint istraining() = true, _ -> nothing
-@nograd Bijectors._debug
 
 @adjoint function mapvcat(f, args...)
     g(f, args...) = map(f, args...)
