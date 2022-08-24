@@ -258,13 +258,6 @@ include("utils.jl")
 include("interface.jl")
 include("chainrules.jl")
 
-Base.@deprecate forward(b::Union{Transform,Function}, x) NamedTuple{(:rv,:logabsdetjac)}(with_logabsdet_jacobian(b, x))
-
-@noinline function Base.inv(b::Transform)
-    Base.depwarn("`Base.inv(b::AbstractBijector)` is deprecated, use `inverse(b)` instead.", :inv)
-    inverse(b)
-end
-
 Base.@deprecate NamedBijector(bs) NamedTransform(bs)
 
 Base.@deprecate Exp() elementwise(exp) false
