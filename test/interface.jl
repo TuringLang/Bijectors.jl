@@ -533,6 +533,8 @@ end
     b = Bijectors.Logit(0.0, 1.0)
     x = 0.3
 
-    @test @test_deprecated(forward(b, x)) == NamedTuple{(:rv, :logabsdetjac)}(with_logabsdet_jacobian(b, x))
-    @test @test_deprecated(inv(b)) == inverse(b)
+    @test @test_deprecated(Bijectors.Exp()) == elementwise(exp)
+    @test @test_deprecated(Bijectors.Log()) == elementwise(log)
+
+    @test @test_deprecated(Bijectors.NamedBijector((x = b, ))) == Bijectors.NamedBijector((x = b, ))
 end
