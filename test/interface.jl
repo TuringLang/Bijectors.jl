@@ -188,7 +188,11 @@ end
             # similar to what we do in test/transform.jl for Dirichlet
             if dist isa Dirichlet
                 b = Bijectors.SimplexBijector{false}()
-                x = rand(dist)
+                # HACK(torfjelde): Calling `rand(dist)` will sometimes lead to `[0.999..., 0.0]`
+                # which in turn will lead to differences between `ForwardDiff.jacobian`
+                # and `logabsdetjac` due to how we handle the boundary values in `SimplexBijector`.
+                # We therefore test the realizations _on_ the boundary rather if we're near the boundary.
+                x = any(rand(dist) .> 0.9999) ? [0.0, 1.0][sortperm(rand(dist))] : rand(dist)
                 y = b(x)
                 @test b(param(x)) isa TrackedArray
                 @test log(abs(det(ForwardDiff.jacobian(b, x)))) ≈ logabsdetjac(b, x)
