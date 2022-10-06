@@ -255,6 +255,11 @@ include("chainrules.jl")
 
 Base.@deprecate forward(b::AbstractBijector, x) NamedTuple{(:rv,:logabsdetjac)}(with_logabsdet_jacobian(b, x))
 
+@noinline function Base.inv(b::AbstractBijector)
+    Base.depwarn("`Base.inv(b::AbstractBijector)` is deprecated, use `inverse(b)` instead.", :inv)
+    inverse(b)
+end
+
 # Broadcasting here breaks Tracker for some reason
 maporbroadcast(f, x::AbstractArray{<:Any, N}...) where {N} = map(f, x...)
 maporbroadcast(f, x::AbstractArray...) = f.(x...)
