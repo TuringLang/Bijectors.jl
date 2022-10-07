@@ -16,7 +16,7 @@ end
 function logabsdetjac!(cb::ComposedFunction, x, logjac)
     y = similar(x)
     logjac = last(with_logabsdet_jacobian!(cb.inner, x, y, logjac))
-    return logabdetjac!(cb.outer, y, y, logjac)
+    return logabsdetjac!(cb.outer, y, y, logjac)
 end
 
 function with_logabsdet_jacobian!(cb::ComposedFunction, x, y, logjac)
