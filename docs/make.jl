@@ -2,7 +2,7 @@ using Documenter
 using Bijectors
 
 # Doctest setup
-DocMeta.setdocmeta!(DynamicPPL, :DocTestSetup, :(using DynamicPPL); recursive=true)
+DocMeta.setdocmeta!(Bijectors, :DocTestSetup, :(using Bijectors); recursive=true)
 
 makedocs(
     sitename = "Bijectors",
