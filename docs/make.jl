@@ -1,6 +1,9 @@
 using Documenter
 using Bijectors
 
+# Doctest setup
+DocMeta.setdocmeta!(DynamicPPL, :DocTestSetup, :(using DynamicPPL); recursive=true)
+
 makedocs(
     sitename = "Bijectors",
     format = Documenter.HTML(),
