@@ -9,10 +9,10 @@ abstract type AbstractNamedTransform <: Transform end
 Wraps a `NamedTuple` of key -> `Bijector` pairs, implementing evaluation, inversion, etc.
 
 # Examples
-```julia-repl
-julia> using Bijectors: NamedTransform, Scale, Exp
+```jldoctest
+julia> using Bijectors: NamedTransform, Scale
 
-julia> b = NamedTransform((a = Scale(2.0), b = Exp()));
+julia> b = NamedTransform((a = Scale(2.0), b = exp));
 
 julia> x = (a = 1., b = 0., c = 42.);
 
@@ -98,11 +98,10 @@ end
 Implements a coupling layer for named bijectors.
 
 # Examples
-```julia-repl
+```jldoctest
 julia> using Bijectors: NamedCoupling, Scale
 
-julia> b = NamedCoupling(:b, (:a, :c), (a, c) -> Scale(a + c))
-NamedCoupling{:b,(:a, :c),var"#3#4"}(var"#3#4"())
+julia> b = NamedCoupling(:b, (:a, :c), (a, c) -> Scale(a + c));
 
 julia> x = (a = 1., b = 2., c = 3.);
 
