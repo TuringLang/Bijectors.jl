@@ -9,6 +9,8 @@ Base.:(==)(b1::Shift, b2::Shift) = b1.a == b2.a
 
 Functors.@functor Shift
 
+Base.show(io::IO, b::Shift) = print(io, "Shift($(b.a))")
+
 inverse(b::Shift) = Shift(-b.a)
 
 transform(b::Shift, x) = b.a .+ x

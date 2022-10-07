@@ -6,6 +6,8 @@ Base.:(==)(b1::Scale, b2::Scale) = b1.a == b2.a
 
 Functors.@functor Scale
 
+Base.show(io::IO, b::Scale) = print(io, "Scale($(b.a))")
+
 with_logabsdet_jacobian(b::Scale, x) = transform(b, x), logabsdetjac(b, x)
 
 transform(b::Scale, x) = b.a .* x
