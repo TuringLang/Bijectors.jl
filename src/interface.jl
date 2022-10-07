@@ -168,6 +168,7 @@ Base.:+(::Invertible, ::Invertible) = Invertible()
 Return `Invertible()` if `t` is invertible, and `NotInvertible()` otherwise.
 """
 invertible(::Transform) = NotInvertible()
+invertible(f::Elementwise) = invertible(f.x)
 
 """
     isinvertible(t)
