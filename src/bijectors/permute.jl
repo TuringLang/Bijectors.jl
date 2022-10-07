@@ -2,7 +2,7 @@ using SparseArrays
 using ArgCheck
 
 """
-    Permute{A} <: Bijector{1}
+    Permute{A} <: Bijector
 
 A bijector implementation of a permutation. The permutation is performed
 using a matrix of type `A`. There are a couple of different ways to construct `Permute`:

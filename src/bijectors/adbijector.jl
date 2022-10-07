@@ -1,5 +1,5 @@
 """
-Abstract type for a `Bijector{N}` making use of auto-differentation (AD) to
+Abstract type for a `Bijector` making use of auto-differentation (AD) to
 implement `jacobian` and, by impliciation, `logabsdetjac`.
 """
 abstract type ADBijector{AD} <: Bijector end

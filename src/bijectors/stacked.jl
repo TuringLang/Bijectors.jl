@@ -1,7 +1,7 @@
 """
     Stacked(bs)
     Stacked(bs, ranges)
-    stack(bs::Bijector{0}...) # where `0` means 0-dim `Bijector`
+    stack(bs::Bijector...) # where `0` means 0-dim `Bijector`
 
 A `Bijector` which stacks bijectors together which can then be applied to a vector
 where `bs[i]::Bijector` is applied to `x[ranges[i]]::UnitRange{Int}`.

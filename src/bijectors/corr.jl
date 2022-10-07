@@ -1,5 +1,5 @@
 """
-    CorrBijector <: Bijector{2}
+    CorrBijector <: Bijector
 
 A bijector implementation of Stan's parametrization method for Correlation matrix:
 https://mc-stan.org/docs/2_23/reference-manual/correlation-matrix-transform-section.html
