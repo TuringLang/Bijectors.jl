@@ -96,6 +96,8 @@ end
 
 Implements a coupling layer for named bijectors.
 
+See also: [`Coupling`](@ref)
+
 # Examples
 ```jldoctest
 julia> using Bijectors: NamedCoupling, Scale
