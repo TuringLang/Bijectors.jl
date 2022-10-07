@@ -35,8 +35,7 @@ function Functors.functor(::Type{<:NamedTransform{names}}, x) where names
     return (bs = x.bs,), reconstruct_namedbijector
 end
 
-names_to_bijectors(b::NamedTransform) = b.bs
-
+# TODO: Use recursion instead of `@generated`?
 @generated function inverse(b::NamedTransform{names}) where {names}
     return :(NamedTransform(($([:($n = inverse(b.bs.$n)) for n in names]...), )))
 end
