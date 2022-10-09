@@ -1,106 +1,32 @@
 # Bijectors.jl
 
-## Usage
+This package implements a set of functions for transforming constrained random variables (e.g. simplexes, intervals) to Euclidean space. The 3 main functions implemented in this package are the `link`, `invlink` and `logpdf_with_trans` for a number of distributions. The distributions supported are:
+1. `RealDistribution`: `Union{Cauchy, Gumbel, Laplace, Logistic, NoncentralT, Normal, NormalCanon, TDist}`,
+2. `PositiveDistribution`: `Union{BetaPrime, Chi, Chisq, Erlang, Exponential, FDist, Frechet, Gamma, InverseGamma, InverseGaussian, Kolmogorov, LogNormal, NoncentralChisq, NoncentralF, Rayleigh, Weibull}`,
+3. `UnitDistribution`: `Union{Beta, KSOneSided, NoncentralBeta}`,
+4. `SimplexDistribution`: `Union{Dirichlet}`,
+5. `PDMatDistribution`: `Union{InverseWishart, Wishart}`, and
+6. `TransformDistribution`: `Union{T, Truncated{T}} where T<:ContinuousUnivariateDistribution`.
 
-A very simple example of a "bijector"/diffeomorphism, i.e. a differentiable transformation with a differentiable inverse, is the `exp` function:
-- The inverse of `exp` is `log`.
-- The derivative of `exp` at an input `x` is simply `exp(x)`, hence `logabsdetjac` is simply `x`.
+All exported names from the [Distributions.jl](https://github.com/TuringLang/Bijectors.jl) package are reexported from `Bijectors`.
 
-```@repl usage
-using Bijectors
-transform(exp, 1.0)
-logabsdetjac(exp, 1.0)
-with_logabsdet_jacobian(exp, 1.0)
-```
+Bijectors.jl also provides a nice interface for working with these maps: composition, inversion, etc.
+The following table lists mathematical operations for a bijector and the corresponding code in Bijectors.jl.
 
-Some transformations is well-defined for different types of inputs, e.g. `exp` can also act elementwise on a `N`-dimensional `Array{<:Real,N}`. To specify that a transformation should be acting elementwise, we use the [`elementwise`](@ref) method:
+| Operation                          | Method          | Automatic |
+|:------------------------------------:|:-----------------:|:-----------:|
+| `b ↦ b⁻¹`                                      | `inverse(b)`                | ✓         |
+| `(b₁, b₂) ↦ (b₁ ∘ b₂)`                         | `b₁ ∘ b₂`               | ✓         |
+| `(b₁, b₂) ↦ [b₁, b₂]`                          | `stack(b₁, b₂)`         | ✓         |
+| `x ↦ b(x)`                                     | `b(x)`                  | ×         |
+| `y ↦ b⁻¹(y)`                                   | `inverse(b)(y)`             | ×         |
+| `x ↦ log｜det J(b, x)｜`                       | `logabsdetjac(b, x)`    | AD        |
+| `x ↦ b(x), log｜det J(b, x)｜`                 | `with_logabsdet_jacobian(b, x)`         | ✓         |
+| `p ↦ q := b_* p`                                | `q = transformed(p, b)` | ✓         |
+| `y ∼ q`                                        | `y = rand(q)`           | ✓         |
+| `p ↦ b` such that `support(b_* p) = ℝᵈ`               | `bijector(p)`           | ✓         |
+| `(x ∼ p, b(x), log｜det J(b, x)｜, log q(y))` | `forward(q)`            | ✓         |
 
-```@repl usage
-x = ones(2, 2)
-transform(elementwise(exp), x)
-logabsdetjac(elementwise(exp), x)
-with_logabsdet_jacobian(elementwise(exp), x)
-```
+In this table, `b` denotes a `Bijector`, `J(b, x)` denotes the Jacobian of `b` evaluated at `x`, `b_*` denotes the [push-forward](https://www.wikiwand.com/en/Pushforward_measure) of `p` by `b`, and `x ∼ p` denotes `x` sampled from the distribution with density `p`.
 
-These methods also work nicely for compositions of transformations:
-
-```@repl usage
-transform(elementwise(log ∘ exp), x)
-```
-
-Unlike `exp`, some transformations have parameters affecting the resulting transformation they represent, e.g. `Logit` has two parameters `a` and `b` representing the lower- and upper-bound, respectively, of its domain:
-
-```@repl usage
-using Bijectors: Logit
-
-f = Logit(0.0, 1.0)
-f(rand()) # takes us from `(0, 1)` to `(-∞, ∞)`
-```
-
-## User-facing methods
-
-Without mutation:
-
-```@docs
-transform
-logabsdetjac
-```
-
-```julia
-with_logabsdet_jacobian
-```
-
-With mutation:
-
-```@docs
-transform!
-logabsdetjac!
-with_logabsdet_jacobian!
-```
-
-## Implementing a transformation
-
-Any callable can be made into a bijector by providing an implementation of `ChangeOfVariables.with_logabsdet_jacobian(b, x)`.
-
-You can also optionally implement [`transform`](@ref) and [`logabsdetjac`](@ref) to avoid redundant computations. This is usually only worth it if you expect `transform` or `logabsdetjac` to be used heavily without the other.
-
-Similarly with the mutable versions [`with_logabsdet_jacobian!`](@ref), [`transform!`](@ref), and [`logabsdetjac!`](@ref).
-
-## Working with Distributions.jl
-
-```@docs
-Bijectors.bijector
-Bijectors.transformed(d::Distribution, b::Bijector)
-```
-
-## Utilities
-
-```@docs
-Bijectors.elementwise
-Bijectors.isinvertible
-Bijectors.isclosedform(t::Bijectors.Transform)
-Bijectors.invertible
-Bijectors.NotInvertible
-Bijectors.Invertible
-```
-
-## API
-
-```@docs
-Bijectors.Transform
-Bijectors.Bijector
-Bijectors.Inverse
-```
-
-## Bijectors
-
-```@docs
-Bijectors.CorrBijector
-Bijectors.LeakyReLU
-Bijectors.Stacked
-Bijectors.RationalQuadraticSpline
-Bijectors.Coupling
-Bijectors.OrderedBijector
-Bijectors.NamedTransform
-Bijectors.NamedCoupling
-```
+The "Automatic" column in the table refers to whether or not you are required to implement the feature for a custom `Bijector`. "AD" refers to the fact that it can be implemented "automatically" using automatic differentiation.

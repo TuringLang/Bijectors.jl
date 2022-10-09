@@ -7,12 +7,10 @@ DocMeta.setdocmeta!(Bijectors, :DocTestSetup, :(using Bijectors); recursive=true
 makedocs(
     sitename = "Bijectors",
     format = Documenter.HTML(),
-    modules = [Bijectors]
+    modules = [Bijectors],
+    pages = ["Home" => "index.md", "Transforms" => "transforms.md", "Distributions.jl integration" => "distributions.md"],
+    strict=false,
+    checkdocs=:exports,
 )
 
-# Documenter can also automatically deploy documentation to gh-pages.
-# See "Hosting Documentation" and deploydocs() in the Documenter manual
-# for more information.
-deploydocs(
-    repo = "github.com/TuringLang/Bijectors.jl.git",
-)
+deploydocs(repo = "github.com/TuringLang/Bijectors.jl.git", push_preview=true)
