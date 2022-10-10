@@ -6,3 +6,6 @@ Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [compat]
 Documenter = "0.27"
+Functors = "0.3"
+StableRNGs = "1"
+Zygote = "0.6"
