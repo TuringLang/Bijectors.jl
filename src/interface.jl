@@ -109,8 +109,6 @@ Compute `log(abs(det(J(b, x))))` and store the result in `logjac`, where `J(b, x
 logabsdetjac!(b, x) = logabsdetjac!(b, x, zero(eltype(x)))
 logabsdetjac!(b, x, logjac) = (logjac += logabsdetjac(b, x))
 
-# with_logabsdet_jacobian(b::Transform, x) = (transform(b, x), logabsdetjac(b, x))
-
 """
     with_logabsdet_jacobian!(b, x[, y, logjac])
 
