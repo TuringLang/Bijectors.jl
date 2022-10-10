@@ -1,4 +1,4 @@
-# Basic usage
+## Basic usage
 Other than the `logpdf_with_trans` methods, the package also provides a more composable interface through the `Bijector` types. Consider for example the one from above with `Beta(2, 2)`.
 
 ```julia
@@ -50,21 +50,3 @@ y = tdist.transform(x)
 
 logpdf(tdist, y)
 ```
-
-When computing `logpdf(tdist, y)` where `tdist` is the _transformed_ distribution corresponding to `Beta(2, 2)`, it makes more semantic sense to compute the pdf of the _transformed_ variable `y` rather than using the "un-transformed" variable `x` to do so, as we do in `logpdf_with_trans`. With that being said, we can also do
-
-```julia
-logpdf_forward(tdist, x)
-```
-
-We can of course also sample from `tdist`:
-
-```julia
-julia> y = rand(td)              # ∈ ℝ
-0.999166054552483
-
-julia> x = inverse(td.transform)(y)  # transform back to interval [0, 1]
-0.7308945834125756
-```
-
-
