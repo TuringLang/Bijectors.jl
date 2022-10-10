@@ -8,7 +8,7 @@ makedocs(
     sitename = "Bijectors",
     format = Documenter.HTML(),
     modules = [Bijectors],
-    pages = ["Home" => "index.md", "Transforms" => "transforms.md", "Distributions.jl integration" => "distributions.md"],
+    pages = ["Home" => "index.md", "Transforms" => "transforms.md", "Distributions.jl integration" => "distributions.md", "Examples" => "examples.md"],
     strict=false,
     checkdocs=:exports,
 )
