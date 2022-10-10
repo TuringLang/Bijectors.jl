@@ -1,7 +1,7 @@
 """
     Stacked(bs)
     Stacked(bs, ranges)
-    stack(bs::Bijector...) # where `0` means 0-dim `Bijector`
+    stack(bs::Bijector...)
 
 A `Bijector` which stacks bijectors together which can then be applied to a vector
 where `bs[i]::Bijector` is applied to `x[ranges[i]]::UnitRange{Int}`.
@@ -16,7 +16,7 @@ where `bs[i]::Bijector` is applied to `x[ranges[i]]::UnitRange{Int}`.
 # Examples
 ```
 b1 = Logit(0.0, 1.0)
-b2 = Identity{0}()
+b2 = Identity()
 b = stack(b1, b2)
 b([0.0, 1.0]) == [b1(0.0), 1.0]  # => true
 ```
@@ -32,6 +32,8 @@ Stacked(bs::AbstractArray) = Stacked(bs, [i:i for i in 1:length(bs)])
 Stacked(bs::Tuple, ranges::AbstractArray) = Stacked(collect(bs), ranges)
 
 Functors.@functor Stacked (bs,)
+
+Base.show(io::IO, b::Stacked) = print(io, "Stacked($(b.bs), $(b.ranges))")
 
 function Base.:(==)(b1::Stacked, b2::Stacked)
     bs1, bs2 = b1.bs, b2.bs

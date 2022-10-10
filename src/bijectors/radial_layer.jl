@@ -27,6 +27,8 @@ end
 # all fields are numerical parameters
 Functors.@functor RadialLayer
 
+Base.show(io::IO, b::RadialLayer) = print(io, "RadialLayer(α_ = $(b.α_), β = $(b.β), z_0 = $(b.z_0))")
+
 h(α, r) = 1 ./ (α .+ r)     # for radial flow from eq(14)
 #dh(α, r) = .- (1 ./ (α .+ r)) .^ 2   # for radial flow; derivative of h()
 

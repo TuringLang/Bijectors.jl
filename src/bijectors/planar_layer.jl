@@ -29,6 +29,8 @@ end
 # all fields are numerical parameters
 Functors.@functor PlanarLayer
 
+Base.show(io::IO, b::PlanarLayer) = print(io, "PlanarLayer(w = $(b.w), u = $(b.u), b = $(b.b))")
+
 """
     get_u_hat(u::AbstractVector{<:Real}, w::AbstractVector{<:Real})
 
