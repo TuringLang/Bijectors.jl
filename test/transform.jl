@@ -63,8 +63,6 @@ function single_sample_tests(dist)
         @test logpdf(dist, x) == logpdf_with_trans(dist, x, false)
         @test all(isfinite, logpdf.(Ref(dist), [invlink(dist, _rand_real(x)) for _ in 1:100]))
     end
-    # This is a quirk of the current implementation, of which it would be nice to be rid.
-    @test typeof(x) == typeof(y)
 end
 
 # Scalar tests
