@@ -3,6 +3,7 @@ using Bijectors
 using ChainRulesTestUtils
 using Combinatorics
 using DistributionsAD
+using Enzyme
 using FiniteDifferences
 using ForwardDiff
 using Functors
