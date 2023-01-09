@@ -12,6 +12,7 @@ struct ForwardDiffAD <: ADBackend end
 struct ReverseDiffAD <: ADBackend end
 struct TrackerAD <: ADBackend end
 struct ZygoteAD <: ADBackend end
+struct EnzymeAD <: ADBackend end
 
 const ADBACKEND = Ref(:forwarddiff)
 setadbackend(backend_sym::Symbol) = setadbackend(Val(backend_sym))
@@ -19,6 +20,7 @@ setadbackend(::Val{:forwarddiff}) = ADBACKEND[] = :forwarddiff
 setadbackend(::Val{:reversediff}) = ADBACKEND[] = :reversediff
 setadbackend(::Val{:tracker}) = ADBACKEND[] = :tracker
 setadbackend(::Val{:zygote}) = ADBACKEND[] = :zygote
+setadbackend(::Val{:enzyme}) = ADBACKEND[] = :enzyme
 
 ADBackend() = ADBackend(ADBACKEND[])
 ADBackend(T::Symbol) = ADBackend(Val(T))
@@ -26,6 +28,7 @@ ADBackend(::Val{:forwarddiff}) = ForwardDiffAD
 ADBackend(::Val{:reversediff}) = ReverseDiffAD
 ADBackend(::Val{:tracker}) = TrackerAD
 ADBackend(::Val{:zygote}) = ZygoteAD
+setadbackend(::Val{:enzyme}) = EnzymeAD
 ADBackend(::Val) = error("The requested AD backend is not available. Make sure to load all required packages.")
 
 ######################
