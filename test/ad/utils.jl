@@ -36,7 +36,7 @@ function test_ad(f, x, broken = (); rtol = 1e-6, atol = 1e-6)
         end
     end
 
-    if AD == "All" || All == "Enzyme"
+    if AD == "All" || AD == "Enzyme"
         # `broken` keyword to `@test` requires Julia >= 1.7 
         if :EnzymeReverse in broken
             @test Enzyme.gradient(Enzyme.Forward, f, z) ≈ finitediff rtol=rtol atol=atol
