@@ -51,5 +51,5 @@ function test_ad(f, x, broken = (); rtol = 1e-6, atol = 1e-6)
             @test Enzyme.gradient(Enzyme.Forward, f, z) ≈ finitediff rtol=rtol atol=atol
             @test Enzyme.gradient(Enzyme.Reverse, f, z) ≈ finitediff rtol=rtol atol=atol
         end
-    return
+    end
 end
