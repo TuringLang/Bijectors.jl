@@ -14,7 +14,12 @@ struct OrderedBijector <: Bijector{1} end
 
 Return a `Distribution` whose support are ordered vectors, i.e., vectors with increasingly ordered elements.
 """
-ordered(d::ContinuousMultivariateDistribution) = Bijectors.transformed(d, OrderedBijector())
+function ordered(d::ContinuousMultivariateDistribution)
+    if !isa(bijector(d), Identity)
+        throw(ArgumentError("ordered transform is currently only supported for unconstrained distributions."))
+    end
+    return Bijectors.transformed(d, OrderedBijector())
+end
 
 (b::OrderedBijector)(y::AbstractVecOrMat) = _transform_ordered(y)
 
