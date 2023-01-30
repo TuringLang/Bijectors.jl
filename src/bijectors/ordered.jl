@@ -13,6 +13,8 @@ struct OrderedBijector <: Bijector{1} end
     ordered(d::Distribution)
 
 Return a `Distribution` whose support are ordered vectors, i.e., vectors with increasingly ordered elements.
+
+This transformation is currently only supported for otherwise unconstrained distributions.
 """
 function ordered(d::ContinuousMultivariateDistribution)
     if !isa(bijector(d), Identity)
