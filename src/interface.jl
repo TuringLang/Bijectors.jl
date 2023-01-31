@@ -3,31 +3,6 @@ import Base: ∘
 import Random: AbstractRNG
 import Distributions: logpdf, rand, rand!, _rand!, _logpdf
 
-#######################################
-# AD stuff "extracted" from Turing.jl #
-#######################################
-
-abstract type ADBackend end
-struct ForwardDiffAD <: ADBackend end
-struct ReverseDiffAD <: ADBackend end
-struct TrackerAD <: ADBackend end
-struct ZygoteAD <: ADBackend end
-
-const ADBACKEND = Ref(:forwarddiff)
-setadbackend(backend_sym::Symbol) = setadbackend(Val(backend_sym))
-setadbackend(::Val{:forwarddiff}) = ADBACKEND[] = :forwarddiff
-setadbackend(::Val{:reversediff}) = ADBACKEND[] = :reversediff
-setadbackend(::Val{:tracker}) = ADBACKEND[] = :tracker
-setadbackend(::Val{:zygote}) = ADBACKEND[] = :zygote
-
-ADBackend() = ADBackend(ADBACKEND[])
-ADBackend(T::Symbol) = ADBackend(Val(T))
-ADBackend(::Val{:forwarddiff}) = ForwardDiffAD
-ADBackend(::Val{:reversediff}) = ReverseDiffAD
-ADBackend(::Val{:tracker}) = TrackerAD
-ADBackend(::Val{:zygote}) = ZygoteAD
-ADBackend(::Val) = error("The requested AD backend is not available. Make sure to load all required packages.")
-
 ######################
 # Bijector interface #
 ######################
