@@ -32,7 +32,7 @@ The following table lists mathematical operations for a bijector and the corresp
 
 In this table, `b` denotes a `Bijector`, `J(b, x)` denotes the Jacobian of `b` evaluated at `x`, `b_*` denotes the [push-forward](https://www.wikiwand.com/en/Pushforward_measure) of `p` by `b`, and `x ∼ p` denotes `x` sampled from the distribution with density `p`.
 
-The "Automatic" column in the table refers to whether or not you are required to implement the feature for a custom `Bijector`. "AD" refers to the fact that it can be implemented "automatically" using automatic differentiation, i.e. `ADBijector`.
+The "Automatic" column in the table refers to whether or not you are required to implement the feature for a custom `Bijector`. "AD" refers to the fact that this can be implemented "automatically" using automatic differentiation, e.g. ForwardDiff.jl.
 
 ## Functions
 
@@ -495,7 +495,7 @@ This method is for example useful when computing quantities such as the _expecte
 
 
 ## Implementing your own `Bijector`
-There's mainly two ways you can implement your own `Bijector`, and which way you choose mainly depends on the following question: are you bothered enough to manually implement `logabsdetjac`? If the answer is "Yup!", then you subtype from `Bijector`, if "Naaaah" then you subtype `ADBijector`.
+There's mainly two ways you can implement your own `Bijector`, and which way you choose mainly depends on the following question: are you bothered enough to manually implement `logabsdetjac`? If the answer is "Yup!", then you subtype from `Bijector`, if "Naaaah" then you can just use one of the available AD frameworks in Julia to define it.
 
 ### `<:Bijector`
 Here's a simple example taken from the source code, the `Identity`:
@@ -628,7 +628,6 @@ If anything is lacking or not clear in docstrings, feel free to open an issue or
 The following are the bijectors available:
 - Abstract:
   - `Bijector`: super-type of all bijectors. 
-  - `ADBijector{AD} <: Bijector`: subtypes of this only require the user to implement `(b::UserBijector)(x)` and `(ib::Inverse{<:UserBijector})(y)`. Automatic differentation will be used to compute the `jacobian(b, x)` and thus `logabsdetjac(b, x).
 - Concrete:
   - `Composed`: represents a composition of bijectors.
   - `Stacked`: stacks univariate and multivariate bijectors

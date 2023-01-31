@@ -14,7 +14,7 @@ using Zygote
 using Random, LinearAlgebra, Test
 
 using Bijectors: Log, Exp, Shift, Scale, Logit, SimplexBijector, PDBijector, Permute,
-    PlanarLayer, RadialLayer, Stacked, TruncatedBijector, ADBijector
+    PlanarLayer, RadialLayer, Stacked, TruncatedBijector
 
 using ChangesOfVariables: test_with_logabsdet_jacobian
 using InverseFunctions: test_inverse

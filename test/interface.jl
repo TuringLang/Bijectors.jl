@@ -7,7 +7,7 @@ using Tracker
 using DistributionsAD
 
 using Bijectors
-using Bijectors: Log, Exp, Shift, Scale, Logit, SimplexBijector, PDBijector, Permute, PlanarLayer, RadialLayer, Stacked, TruncatedBijector, ADBijector, RationalQuadraticSpline, LeakyReLU
+using Bijectors: Log, Exp, Shift, Scale, Logit, SimplexBijector, PDBijector, Permute, PlanarLayer, RadialLayer, Stacked, TruncatedBijector, RationalQuadraticSpline, LeakyReLU
 
 Random.seed!(123)
 
@@ -93,32 +93,6 @@ contains(predicate::Function, b::Stacked) = any(contains.(predicate, b.bs))
             # so we use a slightly higher `atol` than default.
             @test log(abs(ForwardDiff.derivative(b, x))) ≈ logabsdetjac(b, x) atol=1e-6
             @test log(abs(ForwardDiff.derivative(inverse(b), y))) ≈ logabsdetjac(inverse(b), y) atol=1e-6
-        end
-
-        @testset "$dist: ForwardDiff AD" begin
-            x = rand(dist)
-            b = MyADBijector{Bijectors.ADBackend(:forwarddiff)}(dist)
-            
-            @test abs(det(Bijectors.jacobian(b, x))) > 0
-            @test logabsdetjac(b, x) ≠ Inf
-
-            y = b(x)
-            b⁻¹ = inverse(b)
-            @test abs(det(Bijectors.jacobian(b⁻¹, y))) > 0
-            @test logabsdetjac(b⁻¹, y) ≠ Inf
-        end
-
-        @testset "$dist: Tracker AD" begin
-            x = rand(dist)
-            b = MyADBijector{Bijectors.ADBackend(:reversediff)}(dist)
-            
-            @test abs(det(Bijectors.jacobian(b, x))) > 0
-            @test logabsdetjac(b, x) ≠ Inf
-
-            y = b(x)
-            b⁻¹ = inverse(b)
-            @test abs(det(Bijectors.jacobian(b⁻¹, y))) > 0
-            @test logabsdetjac(b⁻¹, y) ≠ Inf
         end
     end
 end
@@ -507,13 +481,6 @@ end
     x = rand(d)
     b = inverse(bijector(d))
     @test logabsdetjac(b ∘ b, x) ≈ logabsdetjac(b, b(x)) + logabsdetjac(b, x)
-
-    # order of composed evaluation
-    b1 = MyADBijector(d)
-    b2 = MyADBijector(Gamma())
-
-    cb = inverse(b1) ∘ b2
-    @test cb(x) ≈ inverse(b1)(b2(x))
 
     # contrived example
     b = bijector(d)
