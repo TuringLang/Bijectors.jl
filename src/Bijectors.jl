@@ -126,6 +126,19 @@ end
 
 link(d::Distribution, x) = bijector(d)(x)
 invlink(d::Distribution, y) = inverse(bijector(d))(y)
+
+# To still allow `logpdf_with_trans` to work with "batches" in a similar way
+# as `logpdf` can.
+_logabsdetjac_dist(d::UnivariateDistribution, x::Real) = logabsdetjac(bijector(d), x)
+_logabsdetjac_dist(d::UnivariateDistribution, x::AbstractArray) = logabsdetjac.((bijector(d),), x)
+
+_logabsdetjac_dist(d::MultivariateDistribution, x::AbstractVector) = logabsdetjac(bijector(d), x)
+_logabsdetjac_dist(d::MultivariateDistribution, x::AbstractMatrix) = logabsdetjac.((bijector(d),), eachcol(x))
+
+_logabsdetjac_dist(d::MatrixDistribution, x::AbstractMatrix) = logabsdetjac(bijector(d), x)
+_logabsdetjac_dist(d::MatrixDistribution, x::AbstractVector{<:AbstractMatrix}) = logabsdetjac.((bijector(d),), x)
+
+
 function logpdf_with_trans(d::Distribution, x, transform::Bool)
     if ispd(d)
         return pd_logpdf_with_trans(d, x, transform)
@@ -135,7 +148,7 @@ function logpdf_with_trans(d::Distribution, x, transform::Bool)
         l = logpdf(d, x)
     end
     if transform
-        return l - logabsdetjac(bijector(d), x)
+        return l - _logabsdetjac_dist(d, x)
     else
         return l
     end
