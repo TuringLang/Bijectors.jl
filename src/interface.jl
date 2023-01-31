@@ -116,7 +116,6 @@ const ZeroOrOneDimBijector = Union{Bijector{0}, Bijector{1}}
 # Bijectors includes #
 ######################
 # General
-include("bijectors/adbijector.jl")
 include("bijectors/composed.jl")
 include("bijectors/stacked.jl")
 
