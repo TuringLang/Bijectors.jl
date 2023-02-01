@@ -80,7 +80,7 @@ Broadcast.broadcastable(b::Transform) = Ref(b)
 
 Transform `x` using `b`, treating `x` as a single input.
 """
-transform(f::Function, x) = f(x)
+transform(f::F, x) where {F<:Function} = f(x)
 transform(t::Transform, x) = first(with_logabsdet_jacobian(t, x))
 
 """
