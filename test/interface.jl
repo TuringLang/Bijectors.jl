@@ -531,14 +531,3 @@ end
     InverseFunctions.test_inverse(b, x)
     ChangesOfVariables.test_with_logabsdet_jacobian(b, x, (f::Bijectors.Scale, x) -> f.a)
 end
-
-
-@testset "deprecations" begin
-    b = Bijectors.Logit(0.0, 1.0)
-    x = 0.3
-
-    @test @test_deprecated(Bijectors.Exp()) == elementwise(exp)
-    @test @test_deprecated(Bijectors.Log()) == elementwise(log)
-
-    @test @test_deprecated(Bijectors.NamedBijector((x = b, ))) == Bijectors.NamedBijector((x = b, ))
-end

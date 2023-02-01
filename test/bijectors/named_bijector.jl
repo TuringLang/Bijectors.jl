@@ -1,6 +1,6 @@
 using Test
 using Bijectors
-using Bijectors: Exp, Log, Logit, AbstractNamedTransform, NamedTransform, NamedCoupling, Shift
+using Bijectors: Logit, AbstractNamedTransform, NamedTransform, NamedCoupling, Shift
 
 @testset "NamedTransform" begin
     b = NamedTransform((a = elementwise(exp), b = elementwise(log)))
