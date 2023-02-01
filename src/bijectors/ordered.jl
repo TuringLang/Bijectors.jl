@@ -47,7 +47,7 @@ function _transform_ordered(y::AbstractMatrix)
     return x
 end
 
-transform(ib::Inverse{<:OrderedBijector}, x::AbstractVecOrMat) = _transform_inverse_ordered(x)
+transform(ib::Inverse{OrderedBijector}, x::AbstractVecOrMat) = _transform_inverse_ordered(x)
 function _transform_inverse_ordered(x::AbstractVector)
     y = similar(x)
     @assert !isempty(y)

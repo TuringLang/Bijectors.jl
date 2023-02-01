@@ -11,7 +11,8 @@ logabsdetjac(exp, 1.0)
 with_logabsdet_jacobian(exp, 1.0)
 ```
 
-Some transformations is well-defined for different types of inputs, e.g. `exp` can also act elementwise on a `N`-dimensional `Array{<:Real,N}`. To specify that a transformation should be acting elementwise, we use the [`elementwise`](@ref) method:
+Some transformations are well-defined for different types of inputs, e.g. `exp` can also act elementwise on an `N`-dimensional `Array{<:Real,N}`.
+To specify that a transformation should act elementwise, we use the [`elementwise`](@ref) method:
 
 ```@repl usage
 x = ones(2, 2)

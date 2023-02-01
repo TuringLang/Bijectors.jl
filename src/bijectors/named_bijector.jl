@@ -36,9 +36,7 @@ function Functors.functor(::Type{<:NamedTransform{names}}, x) where names
 end
 
 # TODO: Use recursion instead of `@generated`?
-@generated function inverse(b::NamedTransform{names}) where {names}
-    return :(NamedTransform(($([:($n = inverse(b.bs.$n)) for n in names]...), )))
-end
+inverse(t::NamedTransform) = NamedTransform(map(inverse, t.bs))
 
 @generated function transform(
     b::NamedTransform{names1},

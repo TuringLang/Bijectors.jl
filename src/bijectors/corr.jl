@@ -73,12 +73,12 @@ function transform(b::CorrBijector, x::AbstractMatrix{<:Real})
     # https://github.com/TuringLang/Bijectors.jl/blob/b0aaa98f90958a167a0b86c8e8eca9b95502c42d/test/transform.jl#L67
 end
 
-function transform(ib::Inverse{<:CorrBijector}, y::AbstractMatrix{<:Real})
+function transform(ib::Inverse{CorrBijector}, y::AbstractMatrix{<:Real})
     w = _inv_link_chol_lkj(y)
     return w' * w
 end
 
-function logabsdetjac(::Inverse{<:CorrBijector}, y::AbstractMatrix{<:Real})
+function logabsdetjac(::Inverse{CorrBijector}, y::AbstractMatrix{<:Real})
     K = LinearAlgebra.checksquare(y)
     
     result = float(zero(eltype(y)))

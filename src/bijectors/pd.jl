@@ -14,7 +14,7 @@ function pd_link(X)
 end
 lower(A::AbstractMatrix) = convert(typeof(A), LowerTriangular(A))
 
-function transform(ib::Inverse{<:PDBijector}, Y::AbstractMatrix{<:Real})
+function transform(ib::Inverse{PDBijector}, Y::AbstractMatrix{<:Real})
     X = replace_diag(exp, Y)
     return getpd(X)
 end

@@ -92,7 +92,7 @@ Transform `x` using `b`, storing the result in `y`.
 If `y` is not provided, `x` is used as the output.
 """
 transform!(b, x) = transform!(b, x, x)
-transform!(b, x, y) = (y .= transform(b, x))
+transform!(b, x, y) = copyto!(y, transform(b, x))
 
 """
     logabsdetjac(b, x)
