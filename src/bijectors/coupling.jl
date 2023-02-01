@@ -134,25 +134,23 @@ Partitions `x` into 3 disjoint subvectors.
 Implements a coupling-layer as defined in [1].
 
 # Examples
-```julia-repl
-julia> m = PartitionMask(3, [1], [2]) # <= going to use x[2] to parameterize transform of x[1]
-PartitionMask{SparseArrays.SparseMatrixCSC{Float64,Int64}}(
-  [1, 1]  =  1.0, 
-  [2, 1]  =  1.0, 
-  [3, 1]  =  1.0)
+```jldoctest
+julia> using Bijectors: Shift, Coupling, PartitionMask, coupling, couple
 
-julia> cl = Coupling(θ -> Shift(θ[1]), m) # <= will do `y[1:1] = x[1:1] + x[2:2]`;
+julia> m = PartitionMask(3, [1], [2]); # <= going to use x[2] to parameterize transform of x[1]
+
+julia> cl = Coupling(Shift, m); # <= will do `y[1:1] = x[1:1] + x[2:2]`;
 
 julia> x = [1., 2., 3.];
 
 julia> cl(x)
-3-element Array{Float64,1}:
+3-element Vector{Float64}:
  3.0
  2.0
  3.0
 
 julia> inverse(cl)(cl(x))
-3-element Array{Float64,1}:
+3-element Vector{Float64}:
  1.0
  2.0
  3.0
@@ -161,13 +159,16 @@ julia> coupling(cl) # get the `Bijector` map `θ -> b(⋅, θ)`
 Shift
 
 julia> couple(cl, x) # get the `Bijector` resulting from `x`
-Shift{Array{Float64,1},1}([2.0])
+Shift([2.0])
+
+julia> with_logabsdet_jacobian(cl, x)
+([3.0, 2.0, 3.0], 0.0)
 ```
 
 # References
 [1] Kobyzev, I., Prince, S., & Brubaker, M. A., Normalizing flows: introduction and ideas, CoRR, (),  (2019). 
 """
-struct Coupling{F, M} <: Bijector{1} where {F, M <: PartitionMask}
+struct Coupling{F, M} <: Bijector where {F, M <: PartitionMask}
     θ::F
     mask::M
 end
@@ -195,7 +196,31 @@ function couple(cl::Coupling, x::AbstractVector)
     return b
 end
 
-function (cl::Coupling)(x::AbstractVector)
+function with_logabsdet_jacobian(cl::Coupling, x)
+    # partition vector using `cl.mask::PartitionMask`
+    x_1, x_2, x_3 = partition(cl.mask, x)
+
+    # construct bijector `B` using θ(x₂)
+    b = cl.θ(x_2)
+
+    y_1, logjac = with_logabsdet_jacobian(b, x_1)
+    return combine(cl.mask, y_1, x_2, x_3), logjac
+end
+
+function with_logabsdet_jacobian(icl::Inverse{<:Coupling}, y)
+    cl = icl.orig
+
+    # partition vector using `cl.mask::PartitionMask`
+    y_1, y_2, y_3 = partition(cl.mask, y)
+
+    # construct bijector `B` using θ(y₂)
+    b = cl.θ(y_2)
+
+    x_1, logjac = with_logabsdet_jacobian(inverse(b), y_1)
+    return combine(cl.mask, x_1, y_2, y_3), logjac
+end
+
+function transform(cl::Coupling, x::AbstractVector)
     # partition vector using `cl.mask::PartitionMask`
     x_1, x_2, x_3 = partition(cl.mask, x)
 
@@ -205,10 +230,8 @@ function (cl::Coupling)(x::AbstractVector)
     # recombine the vector again using the `PartitionMask`
     return combine(cl.mask, b(x_1), x_2, x_3)
 end
-(cl::Coupling)(x::AbstractMatrix) = eachcolmaphcat(cl, x)
 
-
-function (icl::Inverse{<:Coupling})(y::AbstractVector)
+function transform(icl::Inverse{<:Coupling}, y::AbstractVector)
     cl = icl.orig
     
     y_1, y_2, y_3 = partition(cl.mask, y)
@@ -218,7 +241,6 @@ function (icl::Inverse{<:Coupling})(y::AbstractVector)
 
     return combine(cl.mask, ib(y_1), y_2, y_3)
 end
-(icl::Inverse{<:Coupling})(y::AbstractMatrix) = eachcolmaphcat(icl, y)
 
 function logabsdetjac(cl::Coupling, x::AbstractVector)
     x_1, x_2, x_3 = partition(cl.mask, x)
@@ -227,8 +249,4 @@ function logabsdetjac(cl::Coupling, x::AbstractVector)
     # `B` might be 0-dim in which case it will treat `x_1` as a batch
     # therefore we sum to ensure such a thing does not happen
     return sum(logabsdetjac(b, x_1))
-end
-
-function logabsdetjac(cl::Coupling, x::AbstractMatrix)
-    return [logabsdetjac(cl, view(x, :, i)) for i in axes(x, 2)]
 end

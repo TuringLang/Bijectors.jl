@@ -2,7 +2,7 @@ using SparseArrays
 using ArgCheck
 
 """
-    Permute{A} <: Bijector{1}
+    Permute{A} <: Bijector
 
 A bijector implementation of a permutation. The permutation is performed
 using a matrix of type `A`. There are a couple of different ways to construct `Permute`:
@@ -81,7 +81,7 @@ julia> inverse(b1)(b1([1., 2., 3.]))
  3.0
 ```
 """
-struct Permute{A} <: Bijector{1}
+struct Permute{A} <: Bijector
     A::A
 end
 
@@ -150,8 +150,9 @@ function Permute(n::Int, indices::Pair{Vector{Int}, Vector{Int}}...)
 end
 
 
-@inline (b::Permute)(x::AbstractVecOrMat) = b.A * x
-@inline inverse(b::Permute) = Permute(transpose(b.A))
+transform(b::Permute, x::AbstractVecOrMat) = b.A * x
+inverse(b::Permute) = Permute(transpose(b.A))
 
 logabsdetjac(b::Permute, x::AbstractVector) = zero(eltype(x))
-logabsdetjac(b::Permute, x::AbstractMatrix) = zero(eltype(x), size(x, 2))
+
+with_logabsdet_jacobian(b::Permute, x) = transform(b, x), logabsdetjac(b, x)

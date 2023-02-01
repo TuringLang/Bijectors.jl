@@ -38,23 +38,23 @@ using Bijectors: RationalQuadraticSpline
 
         # Inside of domain
         x = 0.5
-        test_bijector(b, [-x, x])
+        test_bijector(b, -x)
+        test_bijector(b, x)
 
         # Outside of domain
-        x = 5.
-        test_bijector(b, [-x, x], [-x, x], [0., 0.])
+        x = 5.0
+        test_bijector(b, -x; y=-x, logjac=0)
+        test_bijector(b, x; y=x, logjac=0)
 
         # multivariate
         b = b_mv
 
         # Inside of domain
         x = [-0.5, 0.5]
-        x = hcat(x, -x, x) # batch
         test_bijector(b, x)
 
         # Outside of domain
         x = [-5., 5.]
-        x = hcat(x, -x, x) # batch
-        test_bijector(b, x, x, zeros(size(x, 2)))
+        test_bijector(b, x; y=x, logjac=zero(eltype(x)))
     end
 end

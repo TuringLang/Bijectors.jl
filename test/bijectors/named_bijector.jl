@@ -1,26 +1,12 @@
 using Test
 using Bijectors
-using Bijectors: Exp, Log, Logit, AbstractNamedBijector, NamedBijector, NamedInverse, NamedCoupling, NamedComposition, Shift
+using Bijectors: Logit, AbstractNamedTransform, NamedTransform, NamedCoupling, Shift
 
-@testset "NamedBijector" begin
-    b = NamedBijector((a = Exp(), b = Log()))
+@testset "NamedTransform" begin
+    b = NamedTransform((a = elementwise(exp), b = elementwise(log)))
     @test b((a = 0.0, b = exp(1.0))) == (a = 1.0, b = 1.0)
-end
 
-@testset "NamedComposition" begin
-    b = NamedBijector((a = Exp(), ))
-    x = (a = 0., b = 1.)
-
-    nc1 = NamedComposition((b, b))
-    @test nc1(x) == b(b(x))
-    @test logabsdetjac(nc1, x) ≈ logabsdetjac(b, x) + logabsdetjac(b, b(x))
-
-    nc2 = b ∘ b
-    @test nc1 == nc2
-
-    inc2 = inverse(nc2)
-    @test (inc2 ∘ nc2)(x) == x
-    @test logabsdetjac((inc2 ∘ nc2), x) ≈ 0.0
+    with_logabsdet_jacobian(b, (a = 0.0, b = exp(1.0)))
 end
 
 @testset "NamedCoupling" begin

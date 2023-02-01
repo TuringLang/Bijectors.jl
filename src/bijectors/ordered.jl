@@ -7,7 +7,7 @@ A bijector mapping ordered vectors in ℝᵈ to unordered vectors in ℝᵈ.
 - [Stan's documentation](https://mc-stan.org/docs/2_27/reference-manual/ordered-vector.html)
   - Note that this transformation and its inverse are the _opposite_ of in this reference.
 """
-struct OrderedBijector <: Bijector{1} end
+struct OrderedBijector <: Bijector end
 
 """
     ordered(d::Distribution)
@@ -16,7 +16,9 @@ Return a `Distribution` whose support are ordered vectors, i.e., vectors with in
 """
 ordered(d::ContinuousMultivariateDistribution) = Bijectors.transformed(d, OrderedBijector())
 
-(b::OrderedBijector)(y::AbstractVecOrMat) = _transform_ordered(y)
+with_logabsdet_jacobian(b::OrderedBijector, x) = transform(b, x), logabsdetjac(b, x)
+
+transform(b::OrderedBijector, y::AbstractVecOrMat) = _transform_ordered(y)
 
 function _transform_ordered(y::AbstractVector)
     x = similar(y)
@@ -45,8 +47,7 @@ function _transform_ordered(y::AbstractMatrix)
     return x
 end
 
-(ib::Inverse{<:OrderedBijector})(x::AbstractVecOrMat) = _transform_inverse_ordered(x)
-
+transform(ib::Inverse{OrderedBijector}, x::AbstractVecOrMat) = _transform_inverse_ordered(x)
 function _transform_inverse_ordered(x::AbstractVector)
     y = similar(x)
     @assert !isempty(y)

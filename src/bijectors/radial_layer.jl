@@ -8,7 +8,7 @@
 # RadialLayer #
 ###############
 
-mutable struct RadialLayer{T1<:Union{Real, AbstractVector{<:Real}}, T2<:AbstractVector{<:Real}} <: Bijector{1}
+mutable struct RadialLayer{T1<:Union{Real, AbstractVector{<:Real}}, T2<:AbstractVector{<:Real}} <: Bijector
     α_::T1
     β::T1
     z_0::T2
@@ -26,6 +26,8 @@ end
 
 # all fields are numerical parameters
 Functors.@functor RadialLayer
+
+Base.show(io::IO, b::RadialLayer) = print(io, "RadialLayer(α_ = $(b.α_), β = $(b.β), z_0 = $(b.z_0))")
 
 h(α, r) = 1 ./ (α .+ r)     # for radial flow from eq(14)
 #dh(α, r) = .- (1 ./ (α .+ r)) .^ 2   # for radial flow; derivative of h()
@@ -46,8 +48,8 @@ function _radial_transform(α_, β, z_0, z)
     return (transformed = transformed, α = α, β_hat = β_hat, r = r)
 end
 
-(b::RadialLayer)(z::AbstractMatrix{<:Real}) = _transform(b, z).transformed
-(b::RadialLayer)(z::AbstractVector{<:Real}) = vec(_transform(b, z).transformed)
+transform(b::RadialLayer, z::AbstractVector{<:Real}) = vec(_transform(b, z).transformed)
+transform(b::RadialLayer, z::AbstractMatrix{<:Real}) = _transform(b, z).transformed
 
 function with_logabsdet_jacobian(flow::RadialLayer, z::AbstractVecOrMat)
     transformed, α, β_hat, r = _transform(flow, z)
@@ -63,10 +65,10 @@ function with_logabsdet_jacobian(flow::RadialLayer, z::AbstractVecOrMat)
         (d - 1) * log(1 + β_hat * h_)
         + log(1 +  β_hat * h_ + β_hat * (- h_ ^ 2) * r)
     )   # from eq(14)
-    return (transformed, log_det_jacobian)
+    return (result = transformed, logabsdetjac = log_det_jacobian)
 end
 
-function (ib::Inverse{<:RadialLayer})(y::AbstractVector{<:Real})
+function transform(ib::Inverse{<:RadialLayer}, y::AbstractVector{<:Real})
     flow = ib.orig
     z0 = flow.z_0
     α = LogExpFunctions.log1pexp(first(flow.α_))            # from A.2
@@ -80,7 +82,7 @@ function (ib::Inverse{<:RadialLayer})(y::AbstractVector{<:Real})
     return z0 .+ γ .* y_minus_z0
 end
 
-function (ib::Inverse{<:RadialLayer})(y::AbstractMatrix{<:Real})
+function transform(ib::Inverse{<:RadialLayer}, y::AbstractMatrix{<:Real})
     flow = ib.orig
     z0 = flow.z_0
     α = LogExpFunctions.log1pexp(first(flow.α_))            # from A.2
