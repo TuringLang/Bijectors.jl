@@ -267,11 +267,6 @@ include("utils.jl")
 include("interface.jl")
 include("chainrules.jl")
 
-Base.@deprecate NamedBijector(bs) NamedTransform(bs)
-
-Base.@deprecate Exp() elementwise(exp) false
-Base.@deprecate Log() elementwise(log) false
-
 # Broadcasting here breaks Tracker for some reason
 maporbroadcast(f, x::AbstractArray{<:Any, N}...) where {N} = map(f, x...)
 maporbroadcast(f, x::AbstractArray...) = f.(x...)
