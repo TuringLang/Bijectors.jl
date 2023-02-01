@@ -1,4 +1,5 @@
 abstract type AbstractNamedTransform <: Transform end
+abstract type AbstractNamedBijector <: Transform end
 
 #######################
 ### `NamedTransform` ###
@@ -37,6 +38,9 @@ end
 
 # TODO: Use recursion instead of `@generated`?
 inverse(t::NamedTransform) = NamedTransform(map(inverse, t.bs))
+# NOTE: Need explicit definition, since `inverse(::NamedTransform)` will
+# end up wrapping a potential `NoInverse` in `NamedTransform`.
+isinvertible(t::NamedTransform) = all(isinvertible, t.bs)
 
 @generated function transform(
     b::NamedTransform{names1},
@@ -111,7 +115,7 @@ julia> (a = x.a, b = (x.a + x.c) * x.b, c = x.c)
 (a = 1.0, b = 8.0, c = 3.0)
 ```
 """
-struct NamedCoupling{target, deps, F} <: AbstractNamedTransform where {F, target}
+struct NamedCoupling{target, deps, F} <: AbstractNamedBijector where {F, target}
     f::F
 end
 
@@ -120,7 +124,7 @@ function NamedCoupling(::Val{target}, ::Val{deps}, f::F) where {target, deps, F}
     return NamedCoupling{target, deps, F}(f)
 end
 
-invertible(::NamedCoupling) = Invertible()
+isinvertible(::NamedCoupling) = true
 
 coupling(b::NamedCoupling) = b.f
 # For some reason trying to use the parameteric types doesn't always work

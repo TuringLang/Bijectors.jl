@@ -45,7 +45,7 @@ end
 
 isclosedform(b::Stacked) = all(isclosedform, b.bs)
 
-invertible(b::Stacked) = sum(map(invertible, b.bs))
+isinvertible(b::Stacked) = all(isinvertible, b.bs)
 
 stack(bs...) = Stacked(bs)
 

@@ -78,9 +78,6 @@ Bijectors.transformed(d::Distribution, b::Bijector)
 Bijectors.elementwise
 Bijectors.isinvertible
 Bijectors.isclosedform(t::Bijectors.Transform)
-Bijectors.invertible
-Bijectors.NotInvertible
-Bijectors.Invertible
 ```
 
 ## API

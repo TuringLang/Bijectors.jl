@@ -1,4 +1,4 @@
-invertible(cb::ComposedFunction) = invertible(cb.inner) + invertible(cb.outer)
+isinvertible(cb::ComposedFunction) = isinvertible(cb.inner) && isinvertible(cb.outer)
 isclosedform(cb::ComposedFunction) = isclosedform(cb.inner) && isclosedform(cb.outer)
 
 transform(cb::ComposedFunction, x) = transform(cb.outer, transform(cb.inner, x))

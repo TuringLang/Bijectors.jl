@@ -56,7 +56,6 @@ A subtype of `Transform` of should at least implement [`transform(b, x)`](@ref).
 
 If the `Transform` is also invertible:
 - Required:
-  - [`invertible`](@ref): should return instance of [`Invertible`](@ref) or [`NotInvertible`](@ref).
   - _Either_ of the following:
     - `transform(::Inverse{<:MyTransform}, x)`: the `transform` for its inverse.
     - `InverseFunctions.inverse(b::MyTransform)`: returns an existing `Transform`.
@@ -140,40 +139,12 @@ requires an iterative procedure to evaluate.
 """
 isclosedform(t::Transform) = true
 
-# Invertibility "trait".
-"""
-    Invertible
-
-Represents the trait of being, well, non-invertible.
-"""
-struct NotInvertible end
-"""
-    Invertible
-
-Represents the trait of being, well, invertible.
-"""
-struct Invertible end
-
-# Useful for checking if compositions, etc. are invertible or not.
-Base.:+(::NotInvertible, ::Invertible) = NotInvertible()
-Base.:+(::Invertible, ::NotInvertible) = NotInvertible()
-Base.:+(::NotInvertible, ::NotInvertible) = NotInvertible()
-Base.:+(::Invertible, ::Invertible) = Invertible()
-
-"""
-    invertible(t)
-
-Return `Invertible()` if `t` is invertible, and `NotInvertible()` otherwise.
-"""
-invertible(::Transform) = NotInvertible()
-invertible(f::Elementwise) = invertible(f.x)
-
 """
     isinvertible(t)
 
 Return `true` if `t` is invertible, and `false` otherwise.
 """
-isinvertible(t::Transform) = invertible(t) isa Invertible
+isinvertible(t) = inverse(t) !== InverseFunctions.NoInverse()
 
 """
     inverse(b::Transform)
@@ -196,21 +167,19 @@ end
 Functors.@functor Inverse
 
 """
-    inverse(t::Transform[, ::Invertible])
+    inverse(t::Transform)
 
 Returns the inverse of transform `t`.
 """
 inverse(t::Transform) = Inverse(t)
 inverse(ib::Inverse) = ib.orig
 
-invertible(ib::Inverse) = Invertible()
-
 Base.:(==)(b1::Inverse, b2::Inverse) = b1.orig == b2.orig
 
 "Abstract type of a bijector, i.e. differentiable bijection with differentiable inverse."
 abstract type Bijector <: Transform end
 
-invertible(::Bijector) = Invertible()
+isinvertible(::Bijector) = true
 
 # Default implementation for inverse of a `Bijector`.
 logabsdetjac(ib::Inverse{<:Transform}, y) = -logabsdetjac(ib.orig, transform(ib, y))
@@ -221,7 +190,7 @@ function with_logabsdet_jacobian(ib::Inverse{<:Transform}, y)
 end
 
 """
-    logabsdetjacinv(b::Bijector, y)
+    logabsdetjacinv(b, y)
 
 Just an alias for `logabsdetjac(inverse(b), y)`.
 """
@@ -231,8 +200,6 @@ logabsdetjacinv(b, y) = logabsdetjac(inverse(b), y)
 # Example bijector: Identity #
 ##############################
 Identity() = identity
-
-invertible(::typeof(identity)) = Invertible()
 
 # Here we don't need to separate between batched version and non-batched, and so
 # we can just overload `transform`, etc. directly.
