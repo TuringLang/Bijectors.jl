@@ -1,5 +1,5 @@
 """
-    CorrBijector <: Bijector{2}
+    CorrBijector <: Bijector
 
 A bijector implementation of Stan's parametrization method for Correlation matrix:
 https://mc-stan.org/docs/2_23/reference-manual/correlation-matrix-transform-section.html
@@ -61,9 +61,11 @@ Note: The implementation doesn't follow their "manageable expression" directly,
 because their equation seems wrong (7/30/2020). Insteadly it follows definition 
 above the "manageable expression" directly, which is also described in above doc.
 """
-struct CorrBijector <: Bijector{2} end
+struct CorrBijector <: Bijector end
 
-function (b::CorrBijector)(x::AbstractMatrix{<:Real})    
+with_logabsdet_jacobian(b::CorrBijector, x) = transform(b, x), logabsdetjac(b, x)
+
+function transform(b::CorrBijector, x::AbstractMatrix{<:Real})
     w = cholesky(x).U  # keep LowerTriangular until here can avoid some computation
     r = _link_chol_lkj(w) 
     return r + zero(x) 
@@ -71,14 +73,10 @@ function (b::CorrBijector)(x::AbstractMatrix{<:Real})
     # https://github.com/TuringLang/Bijectors.jl/blob/b0aaa98f90958a167a0b86c8e8eca9b95502c42d/test/transform.jl#L67
 end
 
-(b::CorrBijector)(X::AbstractArray{<:AbstractMatrix{<:Real}}) = map(b, X)
-
-function (ib::Inverse{<:CorrBijector})(y::AbstractMatrix{<:Real})
+function transform(ib::Inverse{CorrBijector}, y::AbstractMatrix{<:Real})
     w = _inv_link_chol_lkj(y)
     return w' * w
 end
-(ib::Inverse{<:CorrBijector})(Y::AbstractArray{<:AbstractMatrix{<:Real}}) = map(ib, Y)
-
 
 function logabsdetjac(::Inverse{CorrBijector}, y::AbstractMatrix{<:Real})
     K = LinearAlgebra.checksquare(y)
@@ -102,12 +100,6 @@ function logabsdetjac(b::CorrBijector, X::AbstractMatrix{<:Real})
     =#
     return -logabsdetjac(inverse(b), (b(X))) 
 end
-function logabsdetjac(b::CorrBijector, X::AbstractArray{<:AbstractMatrix{<:Real}})
-    return mapvcat(X) do x
-        logabsdetjac(b, x)
-    end
-end
-
 
 function _inv_link_chol_lkj(y)
     K = LinearAlgebra.checksquare(y)

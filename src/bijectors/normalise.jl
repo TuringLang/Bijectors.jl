@@ -6,7 +6,7 @@ using Statistics: mean
 
 istraining() = false
 
-mutable struct InvertibleBatchNorm{T1,T2,T3} <: Bijector{1}
+mutable struct InvertibleBatchNorm{T1,T2,T3} <: Bijector
     b       ::  T1  # bias
     logs    ::  T1  # log-scale
     m       ::  T2  # moving mean
@@ -38,15 +38,7 @@ function InvertibleBatchNorm(
     )
 end
 
-# define numerical parameters
-# TODO: replace with `Functors.@functor InvertibleBatchNorm (b, logs)` when
-# https://github.com/FluxML/Functors.jl/pull/7 is merged
-function Functors.functor(::Type{<:InvertibleBatchNorm}, x)
-    function reconstruct_invertiblebatchnorm(xs)
-        return InvertibleBatchNorm(xs.b, xs.logs, x.m, x.v, x.eps, x.mtm)
-    end
-    return (b = x.b, logs = x.logs), reconstruct_invertiblebatchnorm
-end
+Functors.@functor InvertibleBatchNorm (b, logs)
 
 function with_logabsdet_jacobian(bn::InvertibleBatchNorm, x)
     dims = ndims(x)
@@ -72,16 +64,15 @@ function with_logabsdet_jacobian(bn::InvertibleBatchNorm, x)
         v = reshape(bn.v, as...)
     end
 
-    rv = s .* (x .- m) ./ sqrt.(v .+ bn.eps) .+ b
+    result = s .* (x .- m) ./ sqrt.(v .+ bn.eps) .+ b
     logabsdetjac = (
         fill(sum(logs - log.(v .+ bn.eps) / 2), size(x, dims))
     )
-    return (rv, logabsdetjac)
+    return (result, logabsdetjac)
 end
 
 logabsdetjac(bn::InvertibleBatchNorm, x) = last(with_logabsdet_jacobian(bn, x))
-
-(bn::InvertibleBatchNorm)(x) = first(with_logabsdet_jacobian(bn, x))
+transform(bn::InvertibleBatchNorm, x) = first(with_logabsdet_jacobian(bn, x))
 
 function with_logabsdet_jacobian(invbn::Inverse{<:InvertibleBatchNorm}, y)
     @assert !istraining() "`with_logabsdet_jacobian(::Inverse{InvertibleBatchNorm})` is only available in test mode."
@@ -97,7 +88,7 @@ function with_logabsdet_jacobian(invbn::Inverse{<:InvertibleBatchNorm}, y)
     return (x, -logabsdetjac(bn, x))
 end
 
-(bn::Inverse{<:InvertibleBatchNorm})(y) = first(with_logabsdet_jacobian(bn, y))
+transform(bn::Inverse{<:InvertibleBatchNorm}, y) = first(with_logabsdet_jacobian(bn, y))
 
 function Base.show(io::IO, l::InvertibleBatchNorm)
     print(io, "InvertibleBatchNorm($(join(size(l.b), ", ")))")
