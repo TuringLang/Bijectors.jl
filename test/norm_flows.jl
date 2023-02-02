@@ -103,7 +103,7 @@ end
     x = rand(d)
     y = flow.transform(x)
     res = with_logabsdet_jacobian(flow.transform, x)
-    lp = logpdf_forward(flow, x, res[2])
+    lp = logpdf(d, x) - res[2]
 
     @test res[1] ≈ y
     @test logpdf(flow, y) ≈ lp rtol=0.1

@@ -8,7 +8,9 @@ function test_ad(f, x, broken = (); rtol = 1e-6, atol = 1e-6)
         if :Tracker in broken
             @test_broken Tracker.data(Tracker.gradient(f, x)[1]) ≈ finitediff rtol=rtol atol=atol
         else
-            @test Tracker.data(Tracker.gradient(f, x)[1]) ≈ finitediff rtol=rtol atol=atol
+            ∇tracker = Tracker.gradient(f, x)[1]
+            @test Tracker.data(∇tracker) ≈ finitediff rtol=rtol atol=atol
+            @test Tracker.istracked(∇tracker)
         end
     end
 
@@ -24,7 +26,8 @@ function test_ad(f, x, broken = (); rtol = 1e-6, atol = 1e-6)
         if :Zygote in broken
             @test_broken Zygote.gradient(f, x)[1] ≈ finitediff rtol=rtol atol=atol
         else
-            @test Zygote.gradient(f, x)[1] ≈ finitediff rtol=rtol atol=atol
+            ∇zygote = Zygote.gradient(f, x)[1]
+            @test (all(finitediff .== 0) && ∇zygote === nothing) || isapprox(∇zygote, finitediff, rtol=rtol, atol=atol)
         end
     end
 

@@ -1,8 +1,8 @@
 """
-Abstract type for a `Bijector{N}` making use of auto-differentation (AD) to
+Abstract type for a `Bijector` making use of auto-differentation (AD) to
 implement `jacobian` and, by impliciation, `logabsdetjac`.
 """
-abstract type ADBijector{AD, N} <: Bijector{N} end
+abstract type ADBijector{AD} <: Bijector end
 
 struct SingularJacobianException{B<:Bijector} <: Exception
     b::B
@@ -25,3 +25,5 @@ function logabsdetjac(b::ADBijector, x::AbstractVector{<:Real})
     fact = lu(jacobian(b, x), check=false)
     return issuccess(fact) ? logabsdet(fact)[1] : throw(SingularJacobianException(b))
 end
+
+with_logabsdet_jacobian(b::ADBijector, x) = (b(x), logabsdetjac(b, x))
