@@ -1,20 +1,20 @@
 # Transformed distributions
-struct TransformedDistribution{D, B, V} <: Distribution{V, Continuous} where {D<:Distribution{V, Continuous}, B<:Bijector}
+struct TransformedDistribution{D, B, V} <: Distribution{V, Continuous} where {D<:Distribution{V, Continuous}, B}
     dist::D
     transform::B
 
-    TransformedDistribution(d::UnivariateDistribution, b::Bijector{0}) = new{typeof(d), typeof(b), Univariate}(d, b)
-    TransformedDistribution(d::MultivariateDistribution, b::Bijector{1}) = new{typeof(d), typeof(b), Multivariate}(d, b)
-    TransformedDistribution(d::MatrixDistribution, b::Bijector{2}) = new{typeof(d), typeof(b), Matrixvariate}(d, b)
+    TransformedDistribution(d::UnivariateDistribution, b) = new{typeof(d), typeof(b), Univariate}(d, b)
+    TransformedDistribution(d::MultivariateDistribution, b) = new{typeof(d), typeof(b), Multivariate}(d, b)
+    TransformedDistribution(d::MatrixDistribution, b) = new{typeof(d), typeof(b), Matrixvariate}(d, b)
 end
 
 # fields may contain nested numerical parameters
 Functors.@functor TransformedDistribution
 
-const UnivariateTransformed = TransformedDistribution{<:Distribution, <:Bijector, Univariate}
-const MultivariateTransformed = TransformedDistribution{<:Distribution, <:Bijector, Multivariate}
+const UnivariateTransformed = TransformedDistribution{<:Distribution,<:Any,Univariate}
+const MultivariateTransformed = TransformedDistribution{<:Distribution,<:Any,Multivariate}
 const MvTransformed = MultivariateTransformed
-const MatrixTransformed = TransformedDistribution{<:Distribution, <:Bijector, Matrixvariate}
+const MatrixTransformed = TransformedDistribution{<:Distribution,<:Any,Matrixvariate}
 const Transformed = TransformedDistribution
 
 
@@ -27,7 +27,7 @@ Couples distribution `d` with the bijector `b` by returning a `TransformedDistri
 If no bijector is provided, i.e. `transformed(d)` is called, then 
 `transformed(d, bijector(d))` is returned.
 """
-transformed(d::Distribution, b::Bijector) = TransformedDistribution(d, b)
+transformed(d::Distribution, b) = TransformedDistribution(d, b)
 transformed(d) = transformed(d, bijector(d))
 
 """
@@ -36,12 +36,12 @@ transformed(d) = transformed(d, bijector(d))
 Returns the constrained-to-unconstrained bijector for distribution `d`.
 """
 bijector(td::TransformedDistribution) = bijector(td.dist) ∘ inverse(td.transform)
-bijector(d::DiscreteUnivariateDistribution) = Identity{0}()
-bijector(d::DiscreteMultivariateDistribution) = Identity{1}()
+bijector(d::DiscreteUnivariateDistribution) = Identity()
+bijector(d::DiscreteMultivariateDistribution) = Identity()
 bijector(d::ContinuousUnivariateDistribution) = TruncatedBijector(minimum(d), maximum(d))
-bijector(d::Product{Discrete}) = Identity{1}()
+bijector(d::Product{Discrete}) = Identity()
 function bijector(d::Product{Continuous})
-    return TruncatedBijector{1}(_minmax(d.v)...)
+    return TruncatedBijector(_minmax(d.v)...)
 end
 @generated function _minmax(d::AbstractArray{T}) where {T}
     try
@@ -52,16 +52,16 @@ end
     end
 end
 
-bijector(d::Normal) = Identity{0}()
-bijector(d::Distributions.AbstractMvNormal) = Identity{1}()
-bijector(d::Distributions.AbstractMvLogNormal) = Log{1}()
-bijector(d::PositiveDistribution) = Log{0}()
-bijector(d::SimplexDistribution) = SimplexBijector{1}()
+bijector(d::Normal) = Identity()
+bijector(d::Distributions.AbstractMvNormal) = Identity()
+bijector(d::Distributions.AbstractMvLogNormal) = elementwise(log)
+bijector(d::PositiveDistribution) = elementwise(log)
+bijector(d::SimplexDistribution) = SimplexBijector()
 bijector(d::KSOneSided) = Logit(zero(eltype(d)), one(eltype(d)))
 
 bijector_bounded(d, a=minimum(d), b=maximum(d)) = Logit(a, b)
-bijector_lowerbounded(d, a=minimum(d)) = Log() ∘ Shift(-a)
-bijector_upperbounded(d, b=maximum(d)) = Log() ∘ Shift(b) ∘ Scale(- one(typeof(b)))
+bijector_lowerbounded(d, a=minimum(d)) = elementwise(log) ∘ Shift(-a)
+bijector_upperbounded(d, b=maximum(d)) = elementwise(log) ∘ Shift(b) ∘ Scale(- one(typeof(b)))
 
 const BoundedDistribution = Union{
     Arcsine, Biweight, Cosine, Epanechnikov, Beta, NoncentralBeta
@@ -151,123 +151,6 @@ function _rand!(rng::AbstractRNG, td::MatrixTransformed, x::DenseMatrix{<:Real})
     x .= td.transform(x)
 end
 
-#############################################################
-# Additional useful functions for `TransformedDistribution` #
-#############################################################
-"""
-    logpdf_with_jac(td::UnivariateTransformed, y::Real)
-    logpdf_with_jac(td::MvTransformed, y::AbstractVector{<:Real})
-    logpdf_with_jac(td::MatrixTransformed, y::AbstractMatrix{<:Real})
-
-Makes use of the `forward` method to potentially re-use computation
-and returns a tuple `(logpdf, logabsdetjac)`.
-"""
-function logpdf_with_jac(td::UnivariateTransformed, y::Real)
-    x, logjac = with_logabsdet_jacobian(inverse(td.transform), y)
-    return (logpdf(td.dist, x) + logjac, logjac)
-end
-
-# TODO: implement more efficiently for flows in the case of `Matrix`
-function logpdf_with_jac(td::MvTransformed, y::AbstractVector{<:Real})
-    x, logjac = with_logabsdet_jacobian(inverse(td.transform), y)
-    return (logpdf(td.dist, x) + logjac, logjac)
-end
-
-function logpdf_with_jac(td::MvTransformed, y::AbstractMatrix{<:Real})
-    x, logjac = with_logabsdet_jacobian(inverse(td.transform), y)
-    return (logpdf(td.dist, x) + logjac, logjac)
-end
-
-function logpdf_with_jac(td::MvTransformed{<:Dirichlet}, y::AbstractVector{<:Real})
-    T = eltype(y)
-    ϵ = _eps(T)
-
-    x, logjac = with_logabsdet_jacobian(inverse(td.transform), y)
-    lp = logpdf(td.dist, mappedarray(x->x+ϵ, x)) + logjac
-    return (lp, logjac)
-end
-
-# TODO: should eventually drop using `logpdf_with_trans`
-function logpdf_with_jac(td::MatrixTransformed, y::AbstractMatrix{<:Real})
-    x, logjac = with_logabsdet_jacobian(inverse(td.transform), y)
-    return (logpdf_with_trans(td.dist, x, true), logjac)
-end
-
-"""
-    logpdf_forward(td::Transformed, x)
-    logpdf_forward(td::Transformed, x, logjac)
-
-Computes the `logpdf` using the forward pass of the bijector rather than using
-the inverse transform to compute the necessary `logabsdetjac`.
-
-This is similar to `logpdf_with_trans`.
-"""
-# TODO: implement more efficiently for flows in the case of `Matrix`
-logpdf_forward(td::Transformed, x, logjac) = logpdf(td.dist, x) - logjac
-logpdf_forward(td::Transformed, x) = logpdf_forward(td, x, logabsdetjac(td.transform, x))
-
-function logpdf_forward(td::MvTransformed{<:Dirichlet}, x, logjac)
-    T = eltype(x)
-    ϵ = _eps(T)
-
-    return logpdf(td.dist, mappedarray(z->z+ϵ, x)) - logjac
-end
-
-
-# forward function
-const GLOBAL_RNG = Distributions.GLOBAL_RNG
-
-function _forward(d::UnivariateDistribution, x)
-    y, logjac = with_logabsdet_jacobian(Identity{0}(), x)
-    return (x = x, y = y, logabsdetjac = logjac, logpdf = logpdf.(d, x))
-end
-
-forward(rng::AbstractRNG, d::Distribution) = _forward(d, rand(rng, d))
-function forward(rng::AbstractRNG, d::Distribution, num_samples::Int)
-    return _forward(d, rand(rng, d, num_samples))
-end
-function _forward(d::Distribution, x)
-    y, logjac = with_logabsdet_jacobian(Identity{length(size(d))}(), x)
-    return (x = x, y = y, logabsdetjac = logjac, logpdf = logpdf(d, x))
-end
-
-function _forward(td::Transformed, x)
-    y, logjac = with_logabsdet_jacobian(td.transform, x)
-    return (
-        x = x,
-        y = y,
-        logabsdetjac = logjac,
-        logpdf = logpdf_forward(td, x, logjac)
-    )
-end
-function forward(rng::AbstractRNG, td::Transformed)
-    return _forward(td, rand(rng, td.dist))
-end
-function forward(rng::AbstractRNG, td::Transformed, num_samples::Int)
-    return _forward(td, rand(rng, td.dist, num_samples))
-end
-
-"""
-    forward(d::Distribution)
-    forward(d::Distribution, num_samples::Int)
-
-Returns a `NamedTuple` with fields `x`, `y`, `logabsdetjac` and `logpdf`.
-
-In the case where `d isa TransformedDistribution`, this means
-- `x = rand(d.dist)`
-- `y = d.transform(x)`
-- `logabsdetjac` is the logabsdetjac of the "forward" transform.
-- `logpdf` is the logpdf of `y`, not `x`
-
-In the case where `d isa Distribution`, this means
-- `x = rand(d)`
-- `y = x`
-- `logabsdetjac = 0.0`
-- `logpdf` is logpdf of `x`
-"""
-forward(d::Distribution) = forward(GLOBAL_RNG, d)
-forward(d::Distribution, num_samples::Int) = forward(GLOBAL_RNG, d, num_samples)
-
 # utility stuff
 Distributions.params(td::Transformed) = Distributions.params(td.dist)
 function Base.maximum(td::UnivariateTransformed)
@@ -281,19 +164,3 @@ function Base.minimum(td::UnivariateTransformed)
     return max < min ? max : min
 end
 
-# logabsdetjac for distributions
-logabsdetjacinv(d::UnivariateDistribution, x::T) where T <: Real = zero(T)
-logabsdetjacinv(d::MultivariateDistribution, x::AbstractVector{T}) where {T<:Real} = zero(T)
-
-
-"""
-    logabsdetjacinv(td::UnivariateTransformed, y::Real)
-    logabsdetjacinv(td::MultivariateTransformed, y::AbstractVector{<:Real})
-
-Computes the `logabsdetjac` of the _inverse_ transformation, since `rand(td)` returns
-the _transformed_ random variable.
-"""
-logabsdetjacinv(td::UnivariateTransformed, y::Real) = logabsdetjac(inverse(td.transform), y)
-function logabsdetjacinv(td::MvTransformed, y::AbstractVector{<:Real})
-    return logabsdetjac(inverse(td.transform), y)
-end

@@ -35,6 +35,8 @@ using MappedArrays
 using Base.Iterators: drop
 using LinearAlgebra: AbstractTriangular
 
+using InverseFunctions: InverseFunctions
+
 import ChangesOfVariables: with_logabsdet_jacobian
 import InverseFunctions: inverse
 
@@ -54,16 +56,16 @@ export  TransformDistribution,
         logpdf_with_trans,
         isclosedform,
         transform,
+        transform!,
         with_logabsdet_jacobian,
+        with_logabsdet_jacobian!,
         inverse,
-        forward,
         logabsdetjac,
+        logabsdetjac!,
         logabsdetjacinv,
         Bijector,
         ADBijector,
         Inverse,
-        Composed,
-        compose,
         Stacked,
         stack,
         Identity,
@@ -71,12 +73,11 @@ export  TransformDistribution,
         transformed,
         UnivariateTransformed,
         MultivariateTransformed,
-        logpdf_with_jac,
-        logpdf_forward,
         PlanarLayer,
         RadialLayer,
-        CouplingLayer,
-        InvertibleBatchNorm
+        Coupling,
+        InvertibleBatchNorm,
+        elementwise
 
 if VERSION < v"1.1"
     using Compat: eachcol
@@ -127,6 +128,19 @@ end
 
 link(d::Distribution, x) = bijector(d)(x)
 invlink(d::Distribution, y) = inverse(bijector(d))(y)
+
+# To still allow `logpdf_with_trans` to work with "batches" in a similar way
+# as `logpdf` can.
+_logabsdetjac_dist(d::UnivariateDistribution, x::Real) = logabsdetjac(bijector(d), x)
+_logabsdetjac_dist(d::UnivariateDistribution, x::AbstractArray) = logabsdetjac.((bijector(d),), x)
+
+_logabsdetjac_dist(d::MultivariateDistribution, x::AbstractVector) = logabsdetjac(bijector(d), x)
+_logabsdetjac_dist(d::MultivariateDistribution, x::AbstractMatrix) = logabsdetjac.((bijector(d),), eachcol(x))
+
+_logabsdetjac_dist(d::MatrixDistribution, x::AbstractMatrix) = logabsdetjac(bijector(d), x)
+_logabsdetjac_dist(d::MatrixDistribution, x::AbstractVector{<:AbstractMatrix}) = logabsdetjac.((bijector(d),), x)
+
+
 function logpdf_with_trans(d::Distribution, x, transform::Bool)
     if ispd(d)
         return pd_logpdf_with_trans(d, x, transform)
@@ -136,7 +150,7 @@ function logpdf_with_trans(d::Distribution, x, transform::Bool)
         l = logpdf(d, x)
     end
     if transform
-        return l - logabsdetjac(bijector(d), x)
+        return l - _logabsdetjac_dist(d, x)
     else
         return l
     end
@@ -252,13 +266,6 @@ end
 include("utils.jl")
 include("interface.jl")
 include("chainrules.jl")
-
-Base.@deprecate forward(b::AbstractBijector, x) NamedTuple{(:rv,:logabsdetjac)}(with_logabsdet_jacobian(b, x))
-
-@noinline function Base.inv(b::AbstractBijector)
-    Base.depwarn("`Base.inv(b::AbstractBijector)` is deprecated, use `inverse(b)` instead.", :inv)
-    inverse(b)
-end
 
 # Broadcasting here breaks Tracker for some reason
 maporbroadcast(f, x::AbstractArray{<:Any, N}...) where {N} = map(f, x...)

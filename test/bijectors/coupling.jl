@@ -54,8 +54,12 @@ using Bijectors:
 
         # With `Scale`
         cl = Coupling(x -> Scale(x[1]), m)
-        x = hcat([-1., -2., -3.], [1., 2., 3.])
-        y = hcat([2., -2., -3.], [2., 2., 3.])
-        test_bijector(cl, x, y, log.([2., 2.]))
+        x = [-1., -2., -3.]
+        y = [2., -2., -3.]
+        test_bijector(cl, x; y=y, logjac=log(2))
+
+        x = [1., 2., 3.]
+        y = [2., 2., 3.]
+        test_bijector(cl, x; y=y, logjac=log(2))
     end
 end
