@@ -13,8 +13,15 @@ struct OrderedBijector <: Bijector end
     ordered(d::Distribution)
 
 Return a `Distribution` whose support are ordered vectors, i.e., vectors with increasingly ordered elements.
+
+This transformation is currently only supported for otherwise unconstrained distributions.
 """
-ordered(d::ContinuousMultivariateDistribution) = Bijectors.transformed(d, OrderedBijector())
+function ordered(d::ContinuousMultivariateDistribution)
+    if !isa(bijector(d), Identity)
+        throw(ArgumentError("ordered transform is currently only supported for unconstrained distributions."))
+    end
+    return Bijectors.transformed(d, OrderedBijector())
+end
 
 with_logabsdet_jacobian(b::OrderedBijector, x) = transform(b, x), logabsdetjac(b, x)
 
