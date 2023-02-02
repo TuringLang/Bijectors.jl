@@ -3,6 +3,21 @@ import Base: ∘
 import Random: AbstractRNG
 import Distributions: logpdf, rand, rand!, _rand!, _logpdf
 
+const Elementwise{F} = Base.Fix1{<:Union{typeof(map),typeof(broadcast)}, F}
+"""
+    elementwise(f)
+
+Alias for `Base.Fix1(broadcast, f)`.
+
+In the case where `f::ComposedFunction`, the result is
+`Base.Fix1(broadcast, f.outer) ∘ Base.Fix1(broadcast, f.inner)` rather than
+`Base.Fix1(broadcast, f)`.
+"""
+elementwise(f) = Base.Fix1(broadcast, f)
+# TODO: This is makes dispatching quite a bit easier, but uncertain if this is really
+# the way to go.
+elementwise(f::ComposedFunction) = ComposedFunction(elementwise(f.outer), elementwise(f.inner))
+
 #######################################
 # AD stuff "extracted" from Turing.jl #
 #######################################
@@ -31,111 +46,168 @@ ADBackend(::Val) = error("The requested AD backend is not available. Make sure t
 ######################
 # Bijector interface #
 ######################
-"Abstract type for a bijector."
-abstract type AbstractBijector end
+"""
 
-"Abstract type of bijectors with fixed dimensionality."
-abstract type Bijector{N} <: AbstractBijector end
+Abstract type for a transformation.
 
-dimension(b::Bijector{N}) where {N} = N
-dimension(b::Type{<:Bijector{N}}) where {N} = N
+# Implementing
 
-Broadcast.broadcastable(b::Bijector) = Ref(b)
+A subtype of `Transform` of should at least implement [`transform(b, x)`](@ref).
+
+If the `Transform` is also invertible:
+- Required:
+  - _Either_ of the following:
+    - `transform(::Inverse{<:MyTransform}, x)`: the `transform` for its inverse.
+    - `InverseFunctions.inverse(b::MyTransform)`: returns an existing `Transform`.
+  - [`logabsdetjac`](@ref): computes the log-abs-det jacobian factor.
+- Optional:
+  - `with_logabsdet_jacobian`: `transform` and `logabsdetjac` combined. Useful in cases where we
+    can exploit shared computation in the two.
+
+For the above methods, there are mutating versions which can _optionally_ be implemented:
+- [`with_logabsdet_jacobian!`](@ref)
+- [`logabsdetjac!`](@ref)
+- [`with_logabsdet_jacobian!`](@ref)
+"""
+abstract type Transform end
+
+(t::Transform)(x) = transform(t, x)
+
+Broadcast.broadcastable(b::Transform) = Ref(b)
 
 """
-    isclosedform(b::Bijector)::bool
-    isclosedform(b⁻¹::Inverse{<:Bijector})::bool
+    transform(b, x)
+
+Transform `x` using `b`, treating `x` as a single input.
+"""
+transform(f::F, x) where {F<:Function} = f(x)
+transform(t::Transform, x) = first(with_logabsdet_jacobian(t, x))
+
+"""
+    transform!(b, x[, y])
+
+Transform `x` using `b`, storing the result in `y`.
+
+If `y` is not provided, `x` is used as the output.
+"""
+transform!(b, x) = transform!(b, x, x)
+transform!(b, x, y) = copyto!(y, transform(b, x))
+
+"""
+    logabsdetjac(b, x)
+
+Return `log(abs(det(J(b, x))))`, where `J(b, x)` is the jacobian of `b` at `x`.
+"""
+logabsdetjac(b, x) = last(with_logabsdet_jacobian(b, x))
+
+"""
+    logabsdetjac!(b, x[, logjac])
+
+Compute `log(abs(det(J(b, x))))` and store the result in `logjac`, where `J(b, x)` is the jacobian of `b` at `x`.
+"""
+logabsdetjac!(b, x) = logabsdetjac!(b, x, zero(eltype(x)))
+logabsdetjac!(b, x, logjac) = (logjac += logabsdetjac(b, x))
+
+"""
+    with_logabsdet_jacobian!(b, x[, y, logjac])
+
+Compute `transform(b, x)` and `logabsdetjac(b, x)`, storing the result
+in `y` and `logjac`, respetively.
+
+If `y` is not provided, then `x` will be used in its place.
+
+Defaults to calling `with_logabsdet_jacobian(b, x)` and updating `y` and `logjac` with the result.
+"""
+with_logabsdet_jacobian!(b, x) = with_logabsdet_jacobian!(b, x, x)
+with_logabsdet_jacobian!(b, x, y) = with_logabsdet_jacobian!(b, x, y, zero(eltype(x)))
+function with_logabsdet_jacobian!(b, x, y, logjac)
+    y_, logjac_ = with_logabsdet_jacobian(b, x)
+    y .= y_
+    return (y, logjac + logjac_)
+end
+
+"""
+    isclosedform(b::Transform)::bool
+    isclosedform(b⁻¹::Inverse{<:Transform})::bool
 
 Returns `true` or `false` depending on whether or not evaluation of `b`
 has a closed-form implementation.
 
-Most bijectors have closed-form evaluations, but there are cases where
+Most transformations have closed-form evaluations, but there are cases where
 this is not the case. For example the *inverse* evaluation of `PlanarLayer`
 requires an iterative procedure to evaluate.
 """
-isclosedform(b::Bijector) = true
+isclosedform(t::Transform) = true
 
 """
-    inverse(b::Bijector)
-    Inverse(b::Bijector)
+    isinvertible(t)
 
-A `Bijector` representing the inverse transform of `b`.
+Return `true` if `t` is invertible, and `false` otherwise.
 """
-struct Inverse{B <: Bijector, N} <: Bijector{N}
-    orig::B
+isinvertible(t) = inverse(t) !== InverseFunctions.NoInverse()
 
-    Inverse(b::B) where {N, B<:Bijector{N}} = new{B, N}(b)
+"""
+    inverse(b::Transform)
+    Inverse(b::Transform)
+
+A `Transform` representing the inverse transform of `b`.
+"""
+struct Inverse{T<:Transform} <: Transform
+    orig::T
+
+    function Inverse(orig::Transform)
+        if !isinvertible(orig)
+            error("$(orig) is not invertible")
+        end
+
+        return new{typeof(orig)}(orig)
+    end
 end
 
-# field contains nested numerical parameters
 Functors.@functor Inverse
 
-up1(b::Inverse) = Inverse(up1(b.orig))
+"""
+    inverse(t::Transform)
 
-inverse(b::Bijector) = Inverse(b)
-inverse(ib::Inverse{<:Bijector}) = ib.orig
-Base.:(==)(b1::Inverse{<:Bijector}, b2::Inverse{<:Bijector}) = b1.orig == b2.orig
+Returns the inverse of transform `t`.
+"""
+inverse(t::Transform) = Inverse(t)
+inverse(ib::Inverse) = ib.orig
+
+Base.:(==)(b1::Inverse, b2::Inverse) = b1.orig == b2.orig
+
+"Abstract type of a bijector, i.e. differentiable bijection with differentiable inverse."
+abstract type Bijector <: Transform end
+
+isinvertible(::Bijector) = true
+
+# Default implementation for inverse of a `Bijector`.
+logabsdetjac(ib::Inverse{<:Transform}, y) = -logabsdetjac(ib.orig, transform(ib, y))
+
+function with_logabsdet_jacobian(ib::Inverse{<:Transform}, y)
+    x = transform(ib, y)
+    return x, -logabsdetjac(inverse(ib), x)
+end
 
 """
-    logabsdetjac(b::Bijector, x)
-    logabsdetjac(ib::Inverse{<:Bijector}, y)
-
-Computes the log(abs(det(J(b(x))))) where J is the jacobian of the transform.
-Similarily for the inverse-transform.
-
-Default implementation for `Inverse{<:Bijector}` is implemented as
-`- logabsdetjac` of original `Bijector`.
-"""
-logabsdetjac(ib::Inverse{<:Bijector}, y) = - logabsdetjac(ib.orig, ib(y))
-
-"""
-    with_logabsdet_jacobian(b::Bijector, x)
-
-Computes both `transform` and `logabsdetjac` in one forward pass, and
-returns a named tuple `(b(x), logabsdetjac(b, x))`.
-
-This defaults to the call above, but often one can re-use computation
-in the computation of the forward pass and the computation of the
-`logabsdetjac`. `forward` allows the user to take advantange of such
-efficiencies, if they exist.
-"""
-with_logabsdet_jacobian(b::Bijector, x) = (b(x), logabsdetjac(b, x))
-
-"""
-    logabsdetjacinv(b::Bijector, y)
+    logabsdetjacinv(b, y)
 
 Just an alias for `logabsdetjac(inverse(b), y)`.
 """
-logabsdetjacinv(b::Bijector, y) = logabsdetjac(inverse(b), y)
+logabsdetjacinv(b, y) = logabsdetjac(inverse(b), y)
 
 ##############################
 # Example bijector: Identity #
 ##############################
+Identity() = identity
 
-struct Identity{N} <: Bijector{N} end
-(::Identity)(x) = copy(x)
-inverse(b::Identity) = b
-up1(::Identity{N}) where {N} = Identity{N + 1}()
+# Here we don't need to separate between batched version and non-batched, and so
+# we can just overload `transform`, etc. directly.
+transform(::typeof(identity), x) = copy(x)
+transform!(::typeof(identity), x, y) = copy!(y, x)
 
-logabsdetjac(::Identity{0}, x::Real) = zero(eltype(x))
-@generated function logabsdetjac(
-    b::Identity{N1},
-    x::AbstractArray{T2, N2}
-) where {N1, T2, N2}
-    if N1 == N2
-        return :(zero(eltype(x)))
-    elseif N1 + 1 == N2
-        return :(zeros(eltype(x), size(x, $N2)))
-    else
-        return :(throw(MethodError(logabsdetjac, (b, x))))
-    end
-end
-logabsdetjac(::Identity{2}, x::AbstractArray{<:AbstractMatrix}) = zeros(eltype(x[1]), size(x))
-
-########################
-# Convenient constants #
-########################
-const ZeroOrOneDimBijector = Union{Bijector{0}, Bijector{1}}
+logabsdetjac(::typeof(identity), x) = zero(eltype(x))
+logabsdetjac!(::typeof(identity), x, logjac) = logjac
 
 ######################
 # Bijectors includes #

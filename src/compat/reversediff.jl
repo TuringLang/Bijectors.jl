@@ -4,7 +4,7 @@ using ..ReverseDiff: ReverseDiff, @grad, value, track, TrackedReal, TrackedVecto
     TrackedMatrix
 using Requires, LinearAlgebra
 
-using ..Bijectors: Log, SimplexBijector, maphcat, simplex_link_jacobian, 
+using ..Bijectors: Elementwise, SimplexBijector, maphcat, simplex_link_jacobian, 
     simplex_invlink_jacobian, simplex_logabsdetjac_gradient, ADBijector, 
     ReverseDiffAD, Inverse
 import ..Bijectors: _eps, logabsdetjac, _logabsdetjac_scale, _simplex_bijector, 
@@ -49,12 +49,9 @@ function Base.maximum(d::LocationScale{<:TrackedReal})
     end
 end
 
-logabsdetjac(b::Log{1}, x::Union{TrackedVector, TrackedMatrix}) = track(logabsdetjac, b, x)
-@grad function logabsdetjac(b::Log{1}, x::AbstractVector)
+logabsdetjac(b::Elementwise{typeof(log)}, x::Union{TrackedVector, TrackedMatrix}) = track(logabsdetjac, b, x)
+@grad function logabsdetjac(b::Elementwise{typeof(log)}, x::AbstractVector)
     return -sum(log, value(x)), Δ -> (nothing, -Δ ./ value(x))
-end
-@grad function logabsdetjac(b::Log{1}, x::AbstractMatrix)
-    return -vec(sum(log, value(x); dims = 1)), Δ -> (nothing, .- Δ' ./ value(x))
 end
 function _logabsdetjac_scale(a::TrackedReal, x::Real, ::Val{0})
     return track(_logabsdetjac_scale, a, value(x), Val(0))
@@ -100,30 +97,22 @@ end
     Jᵀ = repeat(inv.(da), 1, size(x, 2))
     return _logabsdetjac_scale(da, value(x), Val(1)), Δ -> (Jᵀ * Δ, nothing, nothing)
 end
-function _simplex_bijector(X::Union{TrackedVector, TrackedMatrix}, b::SimplexBijector{1})
+function _simplex_bijector(X::Union{TrackedVector, TrackedMatrix}, b::SimplexBijector)
     return track(_simplex_bijector, X, b)
 end
-@grad function _simplex_bijector(Y::AbstractVector, b::SimplexBijector{1})
+@grad function _simplex_bijector(Y::AbstractVector, b::SimplexBijector)
     Yd = value(Y)
     return _simplex_bijector(Yd, b), Δ -> (simplex_link_jacobian(Yd)' * Δ, nothing)
 end
-@grad function _simplex_bijector(Y::AbstractMatrix, b::SimplexBijector{1})
-    Yd = value(Y)
-    return _simplex_bijector(Yd, b), Δ -> begin
-        maphcat(eachcol(Yd), eachcol(Δ)) do c1, c2
-            simplex_link_jacobian(c1)' * c2
-        end, nothing
-    end
-end
 
-function _simplex_inv_bijector(X::Union{TrackedVector, TrackedMatrix}, b::SimplexBijector{1})
+function _simplex_inv_bijector(X::Union{TrackedVector, TrackedMatrix}, b::SimplexBijector)
     return track(_simplex_inv_bijector, X, b)
 end
-@grad function _simplex_inv_bijector(Y::AbstractVector, b::SimplexBijector{1})
+@grad function _simplex_inv_bijector(Y::AbstractVector, b::SimplexBijector)
     Yd = value(Y)
     return _simplex_inv_bijector(Yd, b), Δ -> (simplex_invlink_jacobian(Yd)' * Δ, nothing)
 end
-@grad function _simplex_inv_bijector(Y::AbstractMatrix, b::SimplexBijector{1})
+@grad function _simplex_inv_bijector(Y::AbstractMatrix, b::SimplexBijector)
     Yd = value(Y)
     return _simplex_inv_bijector(Yd, b), Δ -> begin
         maphcat(eachcol(Yd), eachcol(Δ)) do c1, c2
@@ -154,19 +143,11 @@ replace_diag(::typeof(exp), X::TrackedMatrix) = track(replace_diag, exp, X)
     end
 end
 
-logabsdetjac(b::SimplexBijector{1}, x::Union{TrackedVector, TrackedMatrix}) = track(logabsdetjac, b, x)
-@grad function logabsdetjac(b::SimplexBijector{1}, x::AbstractVector)
+logabsdetjac(b::SimplexBijector, x::Union{TrackedVector, TrackedMatrix}) = track(logabsdetjac, b, x)
+@grad function logabsdetjac(b::SimplexBijector, x::AbstractVector)
     xd = value(x)
     return logabsdetjac(b, xd), Δ -> begin
         (nothing, simplex_logabsdetjac_gradient(xd) * Δ)
-    end
-end
-@grad function logabsdetjac(b::SimplexBijector{1}, x::AbstractMatrix)
-    xd = value(x)
-    return logabsdetjac(b, xd), Δ -> begin
-        (nothing, maphcat(eachcol(xd), Δ) do c, g
-            simplex_logabsdetjac_gradient(c) * g
-        end)
     end
 end
 

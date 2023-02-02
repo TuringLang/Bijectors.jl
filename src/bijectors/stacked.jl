@@ -1,7 +1,7 @@
 """
     Stacked(bs)
     Stacked(bs, ranges)
-    stack(bs::Bijector{0}...) # where `0` means 0-dim `Bijector`
+    stack(bs::Bijector...)
 
 A `Bijector` which stacks bijectors together which can then be applied to a vector
 where `bs[i]::Bijector` is applied to `x[ranges[i]]::UnitRange{Int}`.
@@ -16,27 +16,24 @@ where `bs[i]::Bijector` is applied to `x[ranges[i]]::UnitRange{Int}`.
 # Examples
 ```
 b1 = Logit(0.0, 1.0)
-b2 = Identity{0}()
+b2 = Identity()
 b = stack(b1, b2)
 b([0.0, 1.0]) == [b1(0.0), 1.0]  # => true
 ```
 """
-struct Stacked{Bs, Rs} <: Bijector{1}
+struct Stacked{Bs, Rs} <: Transform
     bs::Bs
     ranges::Rs
 end
 Stacked(bs::Tuple) = Stacked(bs, ntuple(i -> i:i, length(bs)))
 Stacked(bs::AbstractArray) = Stacked(bs, [i:i for i in 1:length(bs)])
 
-# define nested numerical parameters
-# TODO: replace with `Functors.@functor Stacked (bs,)` when
-# https://github.com/FluxML/Functors.jl/pull/7 is merged
-function Functors.functor(::Type{<:Stacked}, x)
-    function reconstruct_stacked(xs)
-        return Stacked(xs.bs, x.ranges)
-    end
-    return (bs = x.bs,), reconstruct_stacked
-end
+# Avoid mixing tuples and arrays.
+Stacked(bs::Tuple, ranges::AbstractArray) = Stacked(collect(bs), ranges)
+
+Functors.@functor Stacked (bs,)
+
+Base.show(io::IO, b::Stacked) = print(io, "Stacked($(b.bs), $(b.ranges))")
 
 function Base.:(==)(b1::Stacked, b2::Stacked)
     bs1, bs2 = b1.bs, b2.bs
@@ -48,7 +45,9 @@ end
 
 isclosedform(b::Stacked) = all(isclosedform, b.bs)
 
-stack(bs::Bijector{0}...) = Stacked(bs)
+isinvertible(b::Stacked) = all(isinvertible, b.bs)
+
+stack(bs...) = Stacked(bs)
 
 # For some reason `inverse.(sb.bs)` was unstable... This works though.
 inverse(sb::Stacked) = Stacked(map(inverse, sb.bs), sb.ranges)
@@ -62,24 +61,24 @@ inverse(sb::Stacked) = Stacked(map(inverse, sb.bs), sb.ranges)
     :(Stacked(($(exprs...), ), sb.ranges))
 end
 
-@generated function _transform(x, rs::NTuple{N, UnitRange{Int}}, bs::Bijector...) where N
+@generated function _transform(x, rs::NTuple{N, UnitRange{Int}}, bs...) where N
     exprs = []
     for i = 1:N
         push!(exprs, :(bs[$i](x[rs[$i]])))
     end
     return :(vcat($(exprs...)))
 end
-function _transform(x, rs::NTuple{1, UnitRange{Int}}, b::Bijector)
+function _transform(x, rs::NTuple{1, UnitRange{Int}}, b)
     @assert rs[1] == 1:length(x)
     return b(x)
 end
-function (sb::Stacked{<:Tuple,<:Tuple})(x::AbstractVector{<:Real})
+function transform(sb::Stacked{<:Tuple,<:Tuple}, x::AbstractVector{<:Real})
     y = _transform(x, sb.ranges, sb.bs...)
     @assert size(y) == size(x) "x is size $(size(x)) but y is $(size(y))"
     return y
 end
 # The Stacked{<:AbstractArray} version is not TrackedArray friendly
-function (sb::Stacked)(x::AbstractVector{<:Real})
+function transform(sb::Stacked{<:AbstractArray}, x::AbstractVector{<:Real})
     N = length(sb.bs)
     N == 1 && return sb.bs[1](x[sb.ranges[1]])
 
@@ -89,8 +88,6 @@ function (sb::Stacked)(x::AbstractVector{<:Real})
     @assert size(y) == size(x) "x is size $(size(x)) but y is $(size(y))"
     return y
 end
-
-(sb::Stacked)(x::AbstractMatrix{<:Real}) = eachcolmaphcat(sb, x)
 
 function logabsdetjac(
     b::Stacked,
@@ -120,12 +117,6 @@ function logabsdetjac(
         init + sum(2:N) do i
             sum(logabsdetjac(b.bs[i], x[b.ranges[i]]))
         end
-    end
-end
-
-function logabsdetjac(b::Stacked, x::AbstractMatrix{<:Real})
-    return map(eachcol(x)) do c
-        logabsdetjac(b, c)
     end
 end
 
