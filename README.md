@@ -33,7 +33,7 @@ The following table lists mathematical operations for a bijector and the corresp
 
 In this table, `b` denotes a `Bijector`, `J(b, x)` denotes the Jacobian of `b` evaluated at `x`, `b_*` denotes the [push-forward](https://www.wikiwand.com/en/Pushforward_measure) of `p` by `b`, and `x ∼ p` denotes `x` sampled from the distribution with density `p`.
 
-The "Automatic" column in the table refers to whether or not you are required to implement the feature for a custom `Bijector`. "AD" refers to the fact that it can be implemented "automatically" using automatic differentiation, i.e. `ADBijector`.
+The "Automatic" column in the table refers to whether or not you are required to implement the feature for a custom `Bijector`. "AD" refers to the fact that this can be implemented "automatically" using automatic differentiation, e.g. ForwardDiff.jl.
 
 ## Functions
 

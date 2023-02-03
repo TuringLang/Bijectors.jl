@@ -12,8 +12,7 @@ using ..Tracker: Tracker,
                  param
 
 import ..Bijectors
-using ..Bijectors: Elementwise, SimplexBijector, ADBijector,
-    TrackerAD, Inverse, Stacked
+using ..Bijectors: Elementwise, SimplexBijector, Inverse, Stacked
 
 import ChainRulesCore
 import LogExpFunctions
@@ -47,21 +46,6 @@ function Base.maximum(d::LocationScale{<:TrackedReal})
     else
         return m
     end
-end
-
-# AD implementations
-function Bijectors.jacobian(
-    b::Union{<:ADBijector{<:TrackerAD}, Inverse{<:ADBijector{<:TrackerAD}}},
-    x::Real
-)
-    return data(Tracker.gradient(b, x)[1])
-end
-function Bijectors.jacobian(
-    b::Union{<:ADBijector{<:TrackerAD}, Inverse{<:ADBijector{<:TrackerAD}}},
-    x::AbstractVector{<:Real}
-)
-    # We extract `data` so that we don't return a `Tracked` type
-    return data(Tracker.jacobian(b, x))
 end
 
 # implementations for Shift bijector

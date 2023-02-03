@@ -9,22 +9,22 @@ using Distributions: AbstractMvLogNormal
 bijector(::TuringDirichlet) = SimplexBijector()
 bijector(::TuringWishart) = PDBijector()
 bijector(::TuringInverseWishart) = PDBijector()
-bijector(::TuringScalMvNormal) = Identity()
-bijector(::TuringDiagMvNormal) = Identity()
-bijector(::TuringDenseMvNormal) = Identity()
+bijector(::TuringScalMvNormal) = identity
+bijector(::TuringDiagMvNormal) = identity
+bijector(::TuringDenseMvNormal) = identity
 
 bijector(d::FillVectorOfUnivariate{Continuous}) = bijector(d.v.value)
 bijector(d::FillMatrixOfUnivariate{Continuous}) = up1(bijector(d.dists.value))
-bijector(d::MatrixOfUnivariate{Discrete}) = Identity()
+bijector(d::MatrixOfUnivariate{Discrete}) = identity
 bijector(d::MatrixOfUnivariate{Continuous}) = TruncatedBijector(_minmax(d.dists)...)
-bijector(d::VectorOfMultivariate{Discrete}) = Identity()
+bijector(d::VectorOfMultivariate{Discrete}) = identity
 for T in (:VectorOfMultivariate, :FillVectorOfMultivariate)
     @eval begin
-        bijector(d::$T{Continuous, <:MvNormal}) = Identity()
-        bijector(d::$T{Continuous, <:TuringScalMvNormal}) = Identity()
-        bijector(d::$T{Continuous, <:TuringDiagMvNormal}) = Identity()
-        bijector(d::$T{Continuous, <:TuringDenseMvNormal}) = Identity()
-        bijector(d::$T{Continuous, <:MvNormalCanon}) = Identity()
+        bijector(d::$T{Continuous, <:MvNormal}) = identity
+        bijector(d::$T{Continuous, <:TuringScalMvNormal}) = identity
+        bijector(d::$T{Continuous, <:TuringDiagMvNormal}) = identity
+        bijector(d::$T{Continuous, <:TuringDenseMvNormal}) = identity
+        bijector(d::$T{Continuous, <:MvNormalCanon}) = identity
         bijector(d::$T{Continuous, <:AbstractMvLogNormal}) = Log()
         bijector(d::$T{Continuous, <:SimplexDistribution}) = SimplexBijector()
         bijector(d::$T{Continuous, <:TuringDirichlet}) = SimplexBijector()

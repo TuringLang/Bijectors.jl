@@ -35,11 +35,14 @@ transformed(d) = transformed(d, bijector(d))
 
 Returns the constrained-to-unconstrained bijector for distribution `d`.
 """
-bijector(td::TransformedDistribution) = bijector(td.dist) ∘ inverse(td.transform)
-bijector(d::DiscreteUnivariateDistribution) = Identity()
-bijector(d::DiscreteMultivariateDistribution) = Identity()
+function bijector(td::TransformedDistribution)
+    b = bijector(td.dist)
+    return b === identity ? inverse(td.transform) : b ∘ inverse(td.transform)
+end
+bijector(d::DiscreteUnivariateDistribution) = identity
+bijector(d::DiscreteMultivariateDistribution) = identity
 bijector(d::ContinuousUnivariateDistribution) = TruncatedBijector(minimum(d), maximum(d))
-bijector(d::Product{Discrete}) = Identity()
+bijector(d::Product{Discrete}) = identity
 function bijector(d::Product{Continuous})
     return TruncatedBijector(_minmax(d.v)...)
 end
@@ -52,8 +55,8 @@ end
     end
 end
 
-bijector(d::Normal) = Identity()
-bijector(d::Distributions.AbstractMvNormal) = Identity()
+bijector(d::Normal) = identity
+bijector(d::Distributions.AbstractMvNormal) = identity
 bijector(d::Distributions.AbstractMvLogNormal) = elementwise(log)
 bijector(d::PositiveDistribution) = elementwise(log)
 bijector(d::SimplexDistribution) = SimplexBijector()

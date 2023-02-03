@@ -10,33 +10,13 @@ using Tracker
 using DistributionsAD
 
 using Bijectors
-using Bijectors: Shift, Scale, Logit, SimplexBijector, PDBijector, Permute, PlanarLayer, RadialLayer, Stacked, TruncatedBijector, ADBijector, RationalQuadraticSpline, LeakyReLU
+using Bijectors: Shift, Scale, Logit, SimplexBijector, PDBijector, Permute, PlanarLayer, RadialLayer, Stacked, TruncatedBijector, RationalQuadraticSpline, LeakyReLU
 
 Random.seed!(123)
-
-struct MyADBijector{AD,B} <: ADBijector{AD}
-    b::B
-end
-MyADBijector(d::Distribution) = MyADBijector{Bijectors.ADBackend()}(d)
-MyADBijector{AD}(d::Distribution) where {AD} = MyADBijector{AD}(bijector(d))
-MyADBijector{AD}(b) where {AD} = MyADBijector{AD, typeof(b)}(b)
-(b::MyADBijector)(x) = b.b(x)
-Bijectors.transform(b::MyADBijector, x) = b.b(x)
-Bijectors.transform(b::Inverse{<:MyADBijector}, x) = inverse(b.orig.b)(x)
-
-struct NonInvertibleBijector{AD} <: ADBijector{AD} end
 
 contains(predicate::Function, b::Bijector) = predicate(b)
 contains(predicate::Function, b::ComposedFunction) = any(contains.(predicate, b.ts))
 contains(predicate::Function, b::Stacked) = any(contains.(predicate, b.bs))
-
-# Scalar tests
-@testset "<: ADBijector{AD}" begin
-    (b::NonInvertibleBijector)(x) = clamp.(x, 0, 1)
-
-    b = NonInvertibleBijector{Bijectors.ADBackend()}()
-    @test_throws Bijectors.SingularJacobianException logabsdetjac(b, [1.0, 10.0])
-end
 
 @testset "Univariate" begin
     # Tests with scalar-valued distributions.
@@ -103,32 +83,6 @@ end
             # so we use a slightly higher `atol` than default.
             @test log(abs(ForwardDiff.derivative(b, x))) ≈ logabsdetjac(b, x) atol=1e-6
             @test log(abs(ForwardDiff.derivative(inverse(b), y))) ≈ logabsdetjac(inverse(b), y) atol=1e-6
-        end
-
-        @testset "$dist: ForwardDiff AD" begin
-            x = rand(dist)
-            b = MyADBijector{Bijectors.ADBackend(:forwarddiff)}(dist)
-            
-            @test abs(det(Bijectors.jacobian(b, x))) > 0
-            @test logabsdetjac(b, x) ≠ Inf
-
-            y = b(x)
-            b⁻¹ = inverse(b)
-            @test abs(det(Bijectors.jacobian(b⁻¹, y))) > 0
-            @test logabsdetjac(b⁻¹, y) ≠ Inf
-        end
-
-        @testset "$dist: Tracker AD" begin
-            x = rand(dist)
-            b = MyADBijector{Bijectors.ADBackend(:reversediff)}(dist)
-            
-            @test abs(det(Bijectors.jacobian(b, x))) > 0
-            @test logabsdetjac(b, x) ≠ Inf
-
-            y = b(x)
-            b⁻¹ = inverse(b)
-            @test abs(det(Bijectors.jacobian(b⁻¹, y))) > 0
-            @test logabsdetjac(b⁻¹, y) ≠ Inf
         end
     end
 end
@@ -263,26 +217,6 @@ end
     @test sb2(param([x, x, y, y])) isa TrackedArray
 
     @test sb2([x, x, y, y]) ≈ res2[1]
-    @test logabsdetjac(sb2, [x, x, y, y]) ≈ 0.0 atol=1e-12
-    @test res2[2] ≈ 0.0 atol=1e-12
-
-    # `logabsdetjac` with AD
-    b = MyADBijector(d)
-    y = b(x)
-    
-    sb1 = stack(b, b, inverse(b), inverse(b))             # <= Tuple
-    res1 = with_logabsdet_jacobian(sb1, [x, x, y, y])
-    @test sb1(param([x, x, y, y])) isa TrackedArray
-
-    @test sb1([x, x, y, y]) == res1[1]
-    @test logabsdetjac(sb1, [x, x, y, y]) ≈ 0 atol=1e-12
-    @test res1[2] ≈ 0.0 atol=1e-12
-
-    sb2 = Stacked([b, b, inverse(b), inverse(b)])        # <= Array
-    res2 = with_logabsdet_jacobian(sb2, [x, x, y, y])
-    @test sb2(param([x, x, y, y])) isa TrackedArray
-
-    @test sb2([x, x, y, y]) == res2[1]
     @test logabsdetjac(sb2, [x, x, y, y]) ≈ 0.0 atol=1e-12
     @test res2[2] ≈ 0.0 atol=1e-12
 
@@ -479,7 +413,7 @@ end
 
 @testset "Equality" begin
     bs = [
-        Identity(),
+        identity,
         elementwise(exp),
         elementwise(log),
         Scale(2.0),

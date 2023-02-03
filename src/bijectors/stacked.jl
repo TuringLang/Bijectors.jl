@@ -16,7 +16,7 @@ where `bs[i]::Bijector` is applied to `x[ranges[i]]::UnitRange{Int}`.
 # Examples
 ```
 b1 = Logit(0.0, 1.0)
-b2 = Identity()
+b2 = identity
 b = stack(b1, b2)
 b([0.0, 1.0]) == [b1(0.0), 1.0]  # => true
 ```

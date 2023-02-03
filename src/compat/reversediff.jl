@@ -5,8 +5,7 @@ using ..ReverseDiff: ReverseDiff, @grad, value, track, TrackedReal, TrackedVecto
 using Requires, LinearAlgebra
 
 using ..Bijectors: Elementwise, SimplexBijector, maphcat, simplex_link_jacobian, 
-    simplex_invlink_jacobian, simplex_logabsdetjac_gradient, ADBijector, 
-    ReverseDiffAD, Inverse
+    simplex_invlink_jacobian, simplex_logabsdetjac_gradient, Inverse
 import ..Bijectors: _eps, logabsdetjac, _logabsdetjac_scale, _simplex_bijector, 
     _simplex_inv_bijector, replace_diag, jacobian, getpd, lower, 
     _inv_link_chol_lkj, _link_chol_lkj, _transform_ordered, _transform_inverse_ordered,
@@ -16,20 +15,6 @@ import ChainRulesCore
 
 using Compat: eachcol
 using Distributions: LocationScale
-
-# AD implementations
-function jacobian(
-    b::Union{<:ADBijector{<:ReverseDiffAD}, Inverse{<:ADBijector{<:ReverseDiffAD}}},
-    x::Real
-)
-    return ReverseDiff.gradient(x -> b(x[1]), [x])[1]
-end
-function jacobian(
-    b::Union{<:ADBijector{<:ReverseDiffAD}, Inverse{<:ADBijector{<:ReverseDiffAD}}},
-    x::AbstractVector{<:Real}
-)
-    return ReverseDiff.jacobian(b, x)
-end
 
 _eps(::Type{<:TrackedReal{T}}) where {T} = _eps(T)
 function Base.minimum(d::LocationScale{<:TrackedReal})

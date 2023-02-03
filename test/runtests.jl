@@ -14,7 +14,7 @@ using Zygote
 using Random, LinearAlgebra, Test
 
 using Bijectors: Shift, Scale, Logit, SimplexBijector, PDBijector, Permute,
-    PlanarLayer, RadialLayer, Stacked, TruncatedBijector, ADBijector
+    PlanarLayer, RadialLayer, Stacked, TruncatedBijector
 
 using ChangesOfVariables: ChangesOfVariables
 using InverseFunctions: InverseFunctions

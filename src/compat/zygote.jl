@@ -32,18 +32,6 @@ end
 end
 
 # AD implementations
-function jacobian(
-    b::Union{<:ADBijector{<:ZygoteAD}, Inverse{<:ADBijector{<:ZygoteAD}}},
-    x::Real
-)
-    return Zygote.gradient(b, x)[1]
-end
-function jacobian(
-    b::Union{<:ADBijector{<:ZygoteAD}, Inverse{<:ADBijector{<:ZygoteAD}}},
-    x::AbstractVector{<:Real}
-)
-    return Zygote.jacobian(b, x)
-end
 @adjoint function _logabsdetjac_scale(a::Real, x::Real, ::Val{0})
     return _logabsdetjac_scale(a, x, Val(0)), Δ -> (inv(a) .* Δ, nothing, nothing)
 end

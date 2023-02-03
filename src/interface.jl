@@ -18,31 +18,6 @@ elementwise(f) = Base.Fix1(broadcast, f)
 # the way to go.
 elementwise(f::ComposedFunction) = ComposedFunction(elementwise(f.outer), elementwise(f.inner))
 
-#######################################
-# AD stuff "extracted" from Turing.jl #
-#######################################
-
-abstract type ADBackend end
-struct ForwardDiffAD <: ADBackend end
-struct ReverseDiffAD <: ADBackend end
-struct TrackerAD <: ADBackend end
-struct ZygoteAD <: ADBackend end
-
-const ADBACKEND = Ref(:forwarddiff)
-setadbackend(backend_sym::Symbol) = setadbackend(Val(backend_sym))
-setadbackend(::Val{:forwarddiff}) = ADBACKEND[] = :forwarddiff
-setadbackend(::Val{:reversediff}) = ADBACKEND[] = :reversediff
-setadbackend(::Val{:tracker}) = ADBACKEND[] = :tracker
-setadbackend(::Val{:zygote}) = ADBACKEND[] = :zygote
-
-ADBackend() = ADBackend(ADBACKEND[])
-ADBackend(T::Symbol) = ADBackend(Val(T))
-ADBackend(::Val{:forwarddiff}) = ForwardDiffAD
-ADBackend(::Val{:reversediff}) = ReverseDiffAD
-ADBackend(::Val{:tracker}) = TrackerAD
-ADBackend(::Val{:zygote}) = ZygoteAD
-ADBackend(::Val) = error("The requested AD backend is not available. Make sure to load all required packages.")
-
 ######################
 # Bijector interface #
 ######################
@@ -197,12 +172,8 @@ Just an alias for `logabsdetjac(inverse(b), y)`.
 logabsdetjacinv(b, y) = logabsdetjac(inverse(b), y)
 
 ##############################
-# Example bijector: Identity #
+# Example bijector: identity #
 ##############################
-Identity() = identity
-
-# Here we don't need to separate between batched version and non-batched, and so
-# we can just overload `transform`, etc. directly.
 transform(::typeof(identity), x) = copy(x)
 transform!(::typeof(identity), x, y) = copy!(y, x)
 
@@ -213,7 +184,6 @@ logabsdetjac!(::typeof(identity), x, logjac) = logjac
 # Bijectors includes #
 ######################
 # General
-include("bijectors/adbijector.jl")
 include("bijectors/composed.jl")
 include("bijectors/stacked.jl")
 
