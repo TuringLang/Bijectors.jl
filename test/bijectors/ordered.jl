@@ -23,7 +23,7 @@ end
     @test d_ordered.dist === d
     @test d_ordered.transform isa OrderedBijector
     y = randn(5)
-    x = inv(bijector(d_ordered))(y)
+    x = inverse(bijector(d_ordered))(y)
     @test issorted(x)
 
     d = Product(fill(Normal(), 5))

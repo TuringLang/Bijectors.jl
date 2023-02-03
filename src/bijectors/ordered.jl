@@ -20,7 +20,7 @@ function ordered(d::ContinuousMultivariateDistribution)
     if bijector(d) !== identity
         throw(ArgumentError("ordered transform is currently only supported for unconstrained distributions."))
     end
-    return Bijectors.transformed(d, OrderedBijector())
+    return transformed(d, OrderedBijector())
 end
 
 with_logabsdet_jacobian(b::OrderedBijector, x) = transform(b, x), logabsdetjac(b, x)

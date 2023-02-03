@@ -172,12 +172,8 @@ Just an alias for `logabsdetjac(inverse(b), y)`.
 logabsdetjacinv(b, y) = logabsdetjac(inverse(b), y)
 
 ##############################
-# Example bijector: Identity #
+# Example bijector: identity #
 ##############################
-Identity() = identity
-
-# Here we don't need to separate between batched version and non-batched, and so
-# we can just overload `transform`, etc. directly.
 transform(::typeof(identity), x) = copy(x)
 transform!(::typeof(identity), x, y) = copy!(y, x)
 

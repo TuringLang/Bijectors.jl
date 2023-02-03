@@ -413,7 +413,7 @@ end
 
 @testset "Equality" begin
     bs = [
-        Identity(),
+        identity,
         elementwise(exp),
         elementwise(log),
         Scale(2.0),
