@@ -1,6 +1,6 @@
 name = "Bijectors"
 uuid = "76274a88-744f-5084-9051-94815aaf08c4"
-version = "0.11.0"
+version = "0.11.1"
 
 [deps]
 ArgCheck = "dce04be8-c92d-5529-be00-80e4d2c0e197"
@@ -27,7 +27,7 @@ ChainRulesCore = "0.10.11, 1"
 ChangesOfVariables = "0.1"
 Compat = "3, 4"
 Distributions = "0.23.3, 0.24, 0.25"
-Functors = "0.1, 0.2, 0.3"
+Functors = "0.1, 0.2, 0.3, 0.4"
 InverseFunctions = "0.1"
 IrrationalConstants = "0.1"
 LogExpFunctions = "0.3.3"

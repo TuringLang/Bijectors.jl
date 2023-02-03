@@ -12,8 +12,7 @@ using ..Tracker: Tracker,
                  param
 
 import ..Bijectors
-using ..Bijectors: Log, SimplexBijector,
-    TrackerAD, Inverse, Stacked, Exp
+using ..Bijectors: Elementwise, SimplexBijector, Inverse, Stacked
 
 import ChainRulesCore
 import LogExpFunctions
@@ -76,13 +75,10 @@ end
 
 # Log bijector
 
-@grad function Bijectors.logabsdetjac(b::Log{1}, x::AbstractVector)
+@grad function Bijectors.logabsdetjac(b::Elementwise{typeof(log)}, x::AbstractVector)
     return -sum(log, data(x)), Δ -> (nothing, -Δ ./ data(x))
 end
-@grad function Bijectors.logabsdetjac(b::Log{1}, x::AbstractMatrix)
-    return -vec(sum(log, data(x); dims = 1)), Δ -> (nothing, .- Δ' ./ data(x))
-end
-@grad function Bijectors.logabsdetjac(b::Log{2}, x::AbstractMatrix)
+@grad function Bijectors.logabsdetjac(b::Elementwise{typeof(log)}, x::AbstractMatrix)
     return -sum(log, data(x)), Δ -> (nothing, -Δ ./ data(x))
 end
 
@@ -139,47 +135,21 @@ end
 # @grad function _logabsdetjac_scale(a::TrackedMatrix, x::AbstractVector, ::Val{1})
 #     throw
 # end
-# implementations for Stacked bijector
-function Bijectors.logabsdetjac(b::Stacked, x::TrackedMatrix{<:Real})
-    return map(eachcol(x)) do c
-        Bijectors.logabsdetjac(b, c)
-    end
-end
-# TODO: implement custom adjoint since we can exploit block-diagonal nature of `Stacked`
-function (sb::Stacked)(x::TrackedMatrix{<:Real})
-    return Bijectors.eachcolmaphcat(sb, x)
-end
+
 # Simplex adjoints
-function Bijectors._simplex_bijector(X::TrackedVecOrMat, b::SimplexBijector{1})
+function Bijectors._simplex_bijector(X::TrackedVecOrMat, b::SimplexBijector)
     return track(Bijectors._simplex_bijector, X, b)
 end
-function Bijectors._simplex_inv_bijector(Y::TrackedVecOrMat, b::SimplexBijector{1})
+function Bijectors._simplex_inv_bijector(Y::TrackedVecOrMat, b::SimplexBijector)
     return track(Bijectors._simplex_inv_bijector, Y, b)
 end
-@grad function Bijectors._simplex_bijector(X::AbstractVector, b::SimplexBijector{1})
+@grad function Bijectors._simplex_bijector(X::AbstractVector, b::SimplexBijector)
     Xd = data(X)
     return Bijectors._simplex_bijector(Xd, b), Δ -> (Bijectors.simplex_link_jacobian(Xd)' * Δ, nothing)
 end
-@grad function Bijectors._simplex_inv_bijector(Y::AbstractVector, b::SimplexBijector{1})
+@grad function Bijectors._simplex_inv_bijector(Y::AbstractVector, b::SimplexBijector)
     Yd = data(Y)
     return Bijectors._simplex_inv_bijector(Yd, b), Δ -> (Bijectors.simplex_invlink_jacobian(Yd)' * Δ, nothing)
-end
-
-@grad function Bijectors._simplex_bijector(X::AbstractMatrix, b::SimplexBijector{1})
-    Xd = data(X)
-    return Bijectors._simplex_bijector(Xd, b), Δ -> begin
-        Bijectors.maphcat(eachcol(Xd), eachcol(Δ)) do c1, c2
-            Bijectors.simplex_link_jacobian(c1)' * c2
-        end, nothing
-    end
-end
-@grad function Bijectors._simplex_inv_bijector(Y::AbstractMatrix, b::SimplexBijector{1})
-    Yd = data(Y)
-    return Bijectors._simplex_inv_bijector(Yd, b), Δ -> begin
-        Bijectors.maphcat(eachcol(Yd), eachcol(Δ)) do c1, c2
-            Bijectors.simplex_invlink_jacobian(c1)' * c2
-        end, nothing
-    end
 end
 
 Bijectors.replace_diag(::typeof(log), X::TrackedMatrix) = track(Bijectors.replace_diag, log, X)
@@ -204,19 +174,11 @@ Bijectors.replace_diag(::typeof(exp), X::TrackedMatrix) = track(Bijectors.replac
     end
 end
 
-Bijectors.logabsdetjac(b::SimplexBijector{1}, x::TrackedVecOrMat) = track(Bijectors.logabsdetjac, b, x)
-@grad function Bijectors.logabsdetjac(b::SimplexBijector{1}, x::AbstractVector)
+Bijectors.logabsdetjac(b::SimplexBijector, x::TrackedVecOrMat) = track(Bijectors.logabsdetjac, b, x)
+@grad function Bijectors.logabsdetjac(b::SimplexBijector, x::AbstractVector)
     xd = data(x)
     return Bijectors.logabsdetjac(b, xd), Δ -> begin
         (nothing, Bijectors.simplex_logabsdetjac_gradient(xd) * Δ)
-    end
-end
-@grad function Bijectors.logabsdetjac(b::SimplexBijector{1}, x::AbstractMatrix)
-    xd = data(x)
-    return Bijectors.logabsdetjac(b, xd), Δ -> begin
-        (nothing, Bijectors.maphcat(eachcol(xd), Δ) do c, g
-            Bijectors.simplex_logabsdetjac_gradient(c) * g
-        end)
     end
 end
 
@@ -312,18 +274,12 @@ function vectorof(::Type{TrackedReal{T}}) where {T<:Real}
     return TrackedArray{T,1,Vector{T}}
 end
 
-(b::Exp{0})(x::TrackedVector) = exp.(x)::vectorof(float(eltype(x)))
-(b::Exp{1})(x::TrackedVector) = exp.(x)::vectorof(float(eltype(x)))
-(b::Exp{1})(x::TrackedMatrix) = exp.(x)::matrixof(float(eltype(x)))
-(b::Exp{2})(x::TrackedMatrix) = exp.(x)::matrixof(float(eltype(x)))
+(b::Elementwise{typeof(exp)})(x::TrackedVector) = exp.(x)::vectorof(float(eltype(x)))
+(b::Elementwise{typeof(exp)})(x::TrackedVector) = exp.(x)::vectorof(float(eltype(x)))
+(b::Elementwise{typeof(exp)})(x::TrackedMatrix) = exp.(x)::matrixof(float(eltype(x)))
 
-(b::Log{0})(x::TrackedVector) = log.(x)::vectorof(float(eltype(x)))
-(b::Log{1})(x::TrackedVector) = log.(x)::vectorof(float(eltype(x)))
-(b::Log{1})(x::TrackedMatrix) = log.(x)::matrixof(float(eltype(x)))
-(b::Log{2})(x::TrackedMatrix) = log.(x)::matrixof(float(eltype(x)))
-
-Bijectors.logabsdetjac(b::Log{0}, x::TrackedVector) = .-log.(x)::vectorof(float(eltype(x)))
-Bijectors.logabsdetjac(b::Log{1}, x::TrackedMatrix) = - vec(sum(log.(x); dims = 1))
+(b::Elementwise{typeof(log)})(x::TrackedVector) = log.(x)::vectorof(float(eltype(x)))
+(b::Elementwise{typeof(log)})(x::TrackedMatrix) = log.(x)::matrixof(float(eltype(x)))
 
 Bijectors.getpd(X::TrackedMatrix) = track(Bijectors.getpd, X)
 @grad function Bijectors.getpd(X::AbstractMatrix)

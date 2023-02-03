@@ -1,5 +1,5 @@
 """
-    LeakyReLU{T, N}(α::T) <: Bijector{N}
+    LeakyReLU{T}(α::T) <: Bijector
 
 Defines the invertible mapping
 
@@ -7,95 +7,23 @@ Defines the invertible mapping
 
 where α > 0.
 """
-struct LeakyReLU{T, N} <: Bijector{N}
+struct LeakyReLU{T} <: Bijector
     α::T
 end
 
-LeakyReLU(α::T; dim::Val{N} = Val(0)) where {T<:Real, N} = LeakyReLU{T, N}(α)
-LeakyReLU(α::T; dim::Val{N} = Val(D)) where {D, T<:AbstractArray{<:Real, D}, N} = LeakyReLU{T, N}(α)
+Functors.@functor LeakyReLU
 
-# field is a numerical parameter
-function Functors.functor(::Type{LeakyReLU{<:Any,N}}, x) where N
-    function reconstruct_leakyrelu(xs)
-        return LeakyReLU{typeof(xs.α),N}(xs.α)
-    end
-    return (α = x.α,), reconstruct_leakyrelu
-end
+inverse(b::LeakyReLU) = LeakyReLU(inv.(b.α))
 
-up1(b::LeakyReLU{T, N}) where {T, N} = LeakyReLU{T, N + 1}(b.α)
-
-# (N=0) Univariate case
-function (b::LeakyReLU{<:Any, 0})(x::Real)
+function with_logabsdet_jacobian(b::LeakyReLU, x::Real)
     mask = x < zero(x)
-    return mask * b.α * x + !mask * x
-end
-(b::LeakyReLU{<:Any, 0})(x::AbstractVector{<:Real}) = map(b, x)
-
-function inverse(b::LeakyReLU{<:Any,N}) where N
-    invα = inv.(b.α)
-    return LeakyReLU{typeof(invα),N}(invα)
+    J = mask * b.α + !mask
+    return J * x, log(abs(J))
 end
 
-function logabsdetjac(b::LeakyReLU{<:Any, 0}, x::Real)
-    mask = x < zero(x)
-    J = mask * b.α + (1 - mask) * one(x)
-    return log(abs(J))
-end
-logabsdetjac(b::LeakyReLU{<:Real, 0}, x::AbstractVector{<:Real}) = map(x -> logabsdetjac(b, x), x)
-
-
-# We implement `with_logabsdet_jacobian` by hand since we can re-use the computation of
-# the Jacobian of the transformation. This will lead to faster sampling
-# when using `rand` on a `TransformedDistribution` making use of `LeakyReLU`.
-function with_logabsdet_jacobian(b::LeakyReLU{<:Any, 0}, x::Real)
-    mask = x < zero(x)
-    J = mask * b.α + !mask * one(x)
-    return (J * x, log(abs(J)))
-end
-
-# Batched version
-function with_logabsdet_jacobian(b::LeakyReLU{<:Any, 0}, x::AbstractVector)
-    J = let T = eltype(x), z = zero(T), o = one(T)
-        @. (x < z) * b.α + (x > z) * o
-    end
-    return (J .* x, log.(abs.(J)))
-end
-
-# (N=1) Multivariate case
-function (b::LeakyReLU{<:Any, 1})(x::AbstractVecOrMat)
-    return let z = zero(eltype(x))
-        @. (x < z) * b.α * x + (x > z) * x
-    end
-end
-
-function logabsdetjac(b::LeakyReLU{<:Any, 1}, x::AbstractVecOrMat)
-    # Is really diagonal of jacobian
-    J = let T = eltype(x), z = zero(T), o = one(T)
-        @. (x < z) * b.α + (x > z) * o
-    end
-
-    if x isa AbstractVector
-        return sum(log.(abs.(J)))
-    elseif x isa AbstractMatrix
-        return vec(sum(log.(abs.(J)); dims = 1))  # sum along column
-    end
-end
-
-# We implement `forward` by hand since we can re-use the computation of
-# the Jacobian of the transformation. This will lead to faster sampling
-# when using `rand` on a `TransformedDistribution` making use of `LeakyReLU`.
-function with_logabsdet_jacobian(b::LeakyReLU{<:Any, 1}, x::AbstractVecOrMat)
-    # Is really diagonal of jacobian
-    J = let T = eltype(x), z = zero(T), o = one(T)
-        @. (x < z) * b.α + (x > z) * o
-    end
-
-    if x isa AbstractVector
-        logjac = sum(log.(abs.(J)))
-    elseif x isa AbstractMatrix
-        logjac = vec(sum(log.(abs.(J)); dims = 1))  # sum along column
-    end
-
-    y = J .* x
-    return (y, logjac)
+# Array inputs.
+function with_logabsdet_jacobian(b::LeakyReLU, x::AbstractArray)
+    mask = x .< zero(eltype(x))
+    J = mask .* b.α .+ (!).(mask)
+    return J .* x, sum(log.(abs.(J)))
 end
