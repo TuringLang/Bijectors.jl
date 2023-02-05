@@ -58,7 +58,7 @@ Transform `x` using `b`, treating `x` as a single input.
 transform(f::F, x) where {F<:Function} = f(x)
 function transform(t::Transform, x)
     res = with_logabsdet_jacobian(t, x)
-    if res === ChangesOfVariables.NoLogAbsDetJacobian()
+    if res isa ChangesOfVariables.NoLogAbsDetJacobian
         error("`transform` not implemented for $(typeof(b)); implement `transform` and/or `with_logabsdet_jacobian`.")
     end
 
@@ -82,7 +82,7 @@ Return `log(abs(det(J(b, x))))`, where `J(b, x)` is the jacobian of `b` at `x`.
 """
 function logabsdetjac(b, x)
     res = with_logabsdet_jacobian(b, x)
-    if res === ChangesOfVariables.NoLogAbsDetJacobian()
+    if res isa ChangesOfVariables.NoLogAbsDetJacobian
         error("`logabsdetjac` not implemented for $(typeof(b)); implement `logabsdetjac` and/or `with_logabsdet_jacobian`.")
     end
 
