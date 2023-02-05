@@ -26,12 +26,19 @@ function logabsdetjac(b::PDBijector, X::AbstractMatrix{<:Real})
     if !issuccess(Xcf)
         Xcf = cholesky(X + max(eps(T), eps(T) * norm(X)) * I)
     end
-    return logabsdetjac(b, Xcf)
+    return logabsdetjac_pdbijector_chol(Xcf)
 end
 
-function logabsdetjac(b::PDBijector, Xcf::Cholesky)
-    U = Xcf.U
-    T = eltype(U)
-    d = size(U, 1)
-    return - sum((d .- (1:d) .+ 2) .* log.(diag(U))) - d * log(T(2))
+function logabsdetjac_pdbijector_chol(Xcf::Cholesky)
+    # NOTE: Use `UpperTriangular` here because we only need `diag(U)`
+    # and `UL` is by default already constructed in `Cholesky`.
+    UL = Xcf.UL
+    d = size(UL, 1)
+    z = sum(((d + 1):(-1):2) .* log.(diag(UL)))
+    return - (z + d * oftype(z, IrrationalConstants.logtwo))
+end
+
+# TODO: Implement explicitly.
+function with_logabsdet_jacobian(b::PDBijector, X)
+    return transform(b, X), logabsdetjac(b, X)
 end

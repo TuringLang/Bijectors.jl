@@ -35,6 +35,7 @@ if GROUP == "All" || GROUP == "Interface"
     include("bijectors/leaky_relu.jl")
     include("bijectors/coupling.jl")
     include("bijectors/ordered.jl")
+    include("bijectors/pd.jl")
 end
 
 if GROUP == "All" || GROUP == "AD"

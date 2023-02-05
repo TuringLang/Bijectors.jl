@@ -37,7 +37,7 @@ using LinearAlgebra: AbstractTriangular
 
 using InverseFunctions: InverseFunctions
 
-import ChangesOfVariables: with_logabsdet_jacobian
+import ChangesOfVariables: ChangesOfVariables, with_logabsdet_jacobian
 import InverseFunctions: inverse
 
 import ChainRulesCore
