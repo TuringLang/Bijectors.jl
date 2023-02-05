@@ -35,7 +35,7 @@ function logabsdetjac_pdbijector_chol(Xcf::Cholesky)
     UL = Xcf.UL
     d = size(UL, 1)
     z = sum(((d + 1):(-1):2) .* log.(diag(UL)))
-    return - (z + d * oftype(z, logtwo))
+    return - (z + d * oftype(z, IrrationalConstants.logtwo))
 end
 
 # TODO: Implement explicitly.
