@@ -9,9 +9,10 @@ function replace_diag(f, X)
 end
 transform(b::PDBijector, X::AbstractMatrix{<:Real}) = pd_link(X)
 function pd_link(X)
-    Y = cholesky(X; check = true).L
+    Y = lower(parent(cholesky(X; check = true).L))
     return replace_diag(log, Y)
 end
+lower(A::AbstractMatrix) = convert(typeof(A), LowerTriangular(A))
 
 function transform(ib::Inverse{PDBijector}, Y::AbstractMatrix{<:Real})
     X = replace_diag(exp, Y)
