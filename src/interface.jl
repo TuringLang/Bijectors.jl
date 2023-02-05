@@ -56,7 +56,14 @@ Broadcast.broadcastable(b::Transform) = Ref(b)
 Transform `x` using `b`, treating `x` as a single input.
 """
 transform(f::F, x) where {F<:Function} = f(x)
-transform(t::Transform, x) = first(with_logabsdet_jacobian(t, x))
+function transform(t::Transform, x)
+    res = with_logabsdet_jacobian(t, x)
+    if res === ChangesOfVariables.NoLogAbsDetJacobian()
+        error("`transform` not implemented for $(typeof(b)); implement `transform` and/or `with_logabsdet_jacobian`.")
+    end
+
+    return first(res)
+end
 
 """
     transform!(b, x[, y])
@@ -73,7 +80,14 @@ transform!(b, x, y) = copyto!(y, transform(b, x))
 
 Return `log(abs(det(J(b, x))))`, where `J(b, x)` is the jacobian of `b` at `x`.
 """
-logabsdetjac(b, x) = last(with_logabsdet_jacobian(b, x))
+function logabsdetjac(b, x)
+    res = with_logabsdet_jacobian(b, x)
+    if res === ChangesOfVariables.NoLogAbsDetJacobian()
+        error("`logabsdetjac` not implemented for $(typeof(b)); implement `logabsdetjac` and/or `with_logabsdet_jacobian`.")
+    end
+
+    return last(res)
+end
 
 """
     logabsdetjac!(b, x[, logjac])
