@@ -30,11 +30,12 @@ end
 
 function logabsdetjac_pdbijector_chol(Xcf::Cholesky)
     # NOTE: Use `UpperTriangular` here because we only need `diag(U)`
-    # and `U` is by default already constructed in `Cholesky`.
-    U = Xcf.U
+    # and `UL` is by default already constructed in `Cholesky`.
+    UL = Xcf.UL
     T = eltype(U)
-    d = size(U, 1)
-    return - sum((d .- (1:d) .+ 2) .* log.(diag(U))) - d * log(T(2))
+    d = size(UL, 1)
+    z = sum((d + 1):(-1):2 .* log.(diag(UL)))
+    return - (z + d * oftype(z, logtwo))
 end
 
 # TODO: Implement explicitly.
