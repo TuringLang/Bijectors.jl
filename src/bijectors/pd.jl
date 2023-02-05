@@ -32,7 +32,6 @@ function logabsdetjac_pdbijector_chol(Xcf::Cholesky)
     # NOTE: Use `UpperTriangular` here because we only need `diag(U)`
     # and `UL` is by default already constructed in `Cholesky`.
     UL = Xcf.UL
-    T = eltype(U)
     d = size(UL, 1)
     z = sum((d + 1):(-1):2 .* log.(diag(UL)))
     return - (z + d * oftype(z, logtwo))
