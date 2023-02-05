@@ -9,10 +9,9 @@ function replace_diag(f, X)
 end
 transform(b::PDBijector, X::AbstractMatrix{<:Real}) = pd_link(X)
 function pd_link(X)
-    Y = lower(parent(cholesky(X; check = true).L))
+    Y = cholesky(X; check = true).L
     return replace_diag(log, Y)
 end
-lower(A::AbstractMatrix) = convert(typeof(A), LowerTriangular(A))
 
 function transform(ib::Inverse{PDBijector}, Y::AbstractMatrix{<:Real})
     X = replace_diag(exp, Y)
@@ -26,12 +25,19 @@ function logabsdetjac(b::PDBijector, X::AbstractMatrix{<:Real})
     if !issuccess(Xcf)
         Xcf = cholesky(X + max(eps(T), eps(T) * norm(X)) * I)
     end
-    return logabsdetjac(b, Xcf)
+    return logabsdetjac_pdbijector_chol(Xcf)
 end
 
-function logabsdetjac(b::PDBijector, Xcf::Cholesky)
+function logabsdetjac_pdbijector_chol(Xcf::Cholesky)
+    # NOTE: Use `UpperTriangular` here because we only need `diag(U)`
+    # and `U` is by default already constructed in `Cholesky`.
     U = Xcf.U
     T = eltype(U)
     d = size(U, 1)
     return - sum((d .- (1:d) .+ 2) .* log.(diag(U))) - d * log(T(2))
+end
+
+# TODO: Implement explicitly.
+function with_logabsdet_jacobian(b::PDBijector, X)
+    return transform(b, X), logabsdetjac(b, X)
 end

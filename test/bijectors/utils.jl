@@ -12,6 +12,8 @@ function test_bijector(
     logjac=nothing,
     test_not_identity=isnothing(y) && isnothing(logjac),
     test_types=false,
+    changes_of_variables_test=true,
+    inverse_functions_test=true,
     compare=isapprox,
     kwargs...
 )
@@ -29,12 +31,22 @@ function test_bijector(
     end
 
     # ChangesOfVariables.jl
-    ChangesOfVariables.test_with_logabsdet_jacobian(b, x, getjacobian; compare=compare, kwargs...)
-    ChangesOfVariables.test_with_logabsdet_jacobian(ib, isnothing(y) ? y_test : y, getjacobian; compare=compare, kwargs...)
+    # For non-bijective transformations, these tests always fail since determinant of
+    # the Jacobian is zero. Hence we allow the caller to disable them if necessary.
+    if changes_of_variables_test
+        ChangesOfVariables.test_with_logabsdet_jacobian(b, x, getjacobian; compare=compare, kwargs...)
+        ChangesOfVariables.test_with_logabsdet_jacobian(
+            ib, isnothing(y) ? y_test : y, getjacobian;
+            compare=compare,
+            kwargs...
+        )
+    end
 
     # InverseFunctions.jl
-    InverseFunctions.test_inverse(b, x; compare, kwargs...)
-    InverseFunctions.test_inverse(ib, isnothing(y) ? y_test : y; compare=compare, kwargs...)
+    if inverse_functions_test
+        InverseFunctions.test_inverse(b, x; compare, kwargs...)
+        InverseFunctions.test_inverse(ib, isnothing(y) ? y_test : y; compare=compare, kwargs...)
+    end
 
     # Always want the following to hold
     @test compare(ires[1], x; kwargs...)
