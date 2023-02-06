@@ -78,19 +78,7 @@ function transform(ib::Inverse{CorrBijector}, y::AbstractMatrix{<:Real})
     return w' * w
 end
 
-function logabsdetjac(::Inverse{CorrBijector}, y::AbstractMatrix{<:Real})
-    K = LinearAlgebra.checksquare(y)
-    
-    result = float(zero(eltype(y)))
-    for j in 2:K, i in 1:(j - 1)
-        @inbounds abs_y_i_j = abs(y[i, j])
-        result += (K - i + 1) * (
-            IrrationalConstants.logtwo - (abs_y_i_j + LogExpFunctions.log1pexp(-2 * abs_y_i_j))
-        )
-    end
-    
-    return result
-end
+logabsdetjac(::Inverse{CorrBijector}, Y::AbstractMatrix{<:Real}) = _logabsdetjac_chol_lkj(Y)
 function logabsdetjac(b::CorrBijector, X::AbstractMatrix{<:Real})
     #=
     It may be more efficient if we can use un-contraint value to prevent call of b
@@ -98,28 +86,159 @@ function logabsdetjac(b::CorrBijector, X::AbstractMatrix{<:Real})
     `logabsdetjac(::Inverse{CorrBijector}, y::AbstractMatrix{<:Real})`
     if possible.
     =#
-    return -logabsdetjac(inverse(b), (b(X))) 
+    return -logabsdetjac(inverse(b), (b(X)))
 end
 
-function _inv_link_chol_lkj(y)
-    K = LinearAlgebra.checksquare(y)
+"""
+    VecCorrBijector <: Bijector
 
-    w = similar(y)
+Similar to `CorrBijector`, but transforms a vector representing the Cholesky
+to a correlation matrix, and its inverse transforms correlation matrix to vector
+representing Cholesky.
+
+See also: [`CorrBijector`](@ref)
+
+# Example
+
+```jldoctest
+julia> using LinearAlgebra
+
+julia> using StableRNGs; rng = StableRNG(42);
+
+julia> b = Bijectors.VecCorrBijector();
+
+julia> X = rand(rng, LKJ(3, 1))  # Sample a correlation matrix.
+3×3 Matrix{Float64}:
+  1.0       -0.705273   -0.348638
+ -0.705273   1.0         0.0534538
+ -0.348638   0.0534538   1.0
+
+julia> # Get the cholesky and convert to a vector.
+       u = Bijectors.triu1_to_vec(cholesky(X).U)
+
+julia> y = b(X)  # Transform to unconstrained vector representation.
+3-element Vector{Float64}:
+ -0.8777149781928181
+ -0.3638927608636788
+ -0.29813769428942216
+
+julia> inverse(b)(y) ≈ u  # (✓) Round-trip through `b` and its inverse.
+true
+"""
+struct VecCorrBijector <: Bijector end
+with_logabsdet_jacobian(b::VecCorrBijector, x) = transform(b, x), logabsdetjac(b, x)
+
+function triu_mask(X::AbstractMatrix, k::Int)
+    # Ensure that we're working with a square matrix.
+    LinearAlgebra.checksquare(X)
     
-    @inbounds for j in 1:K
-        w[1, j] = 1
-        for i in 2:j
-            z = tanh(y[i-1, j])
-            tmp = w[i-1, j]
-            w[i-1, j] = z * tmp
-            w[i, j] = tmp * sqrt(1 - z^2)
-        end
-        for i in (j+1):K
-            w[i, j] = 0
+    # Using `similar` allows us to respect device of array, etc., e.g. `CuArray`.
+    m = similar(X, Bool)
+    return triu(.~m .| m, k)
+end
+
+triu_to_vec(X::AbstractMatrix{<:Real}, k::Int) = X[triu_mask(X, k)]
+
+function update_triu_from_vec!(
+    vals::AbstractVector{<:Real},
+    k::Int,
+    X::AbstractMatrix{<:Real}
+)
+    # Ensure that we're working with one-based indexing.
+    # `triu` requires this too.
+    LinearAlgebra.require_one_based_indexing(X)
+
+    # Set the values.
+    idx = 1
+    m, n = size(X)
+    for j = 1:n
+        for i = 1:min(j - k, m)
+            X[i, j] = vals[idx]
+            idx += 1
         end
     end
-    
-    return w
+
+    return X
+end
+
+function update_triu_from_vec(vals::AbstractVector{<:Real}, k::Int, dim::Int)
+    X = similar(vals, dim, dim)
+    # TODO: Do we need this?
+    X .= 0
+    return update_triu_from_vec!(vals, k, X)
+end
+
+function ChainRulesCore.rrule(::typeof(update_triu_from_vec), x::AbstractVector{<:Real}, k::Int, dim::Int)
+    function update_triu_from_vec_pullback(ΔX)
+        return (
+            ChainRulesCore.NoTangent(),
+            triu_to_vec(ChainRulesCore.unthunk(ΔX), k),
+            ChainRulesCore.NoTangent(),
+            ChainRulesCore.NoTangent()
+        )
+    end
+    return update_triu_from_vec(x, k, dim), update_triu_from_vec_pullback
+end
+
+"""
+    triu1_to_vec(X::AbstractMatrix{<:Real})
+
+Extracts elements from upper triangle of `X` with offset `1` and returns them as a vector.
+"""
+triu1_to_vec(X::AbstractMatrix) = triu_to_vec(X, 1)
+
+inverse(::typeof(triu1_to_vec)) = vec_to_triu1
+
+"""
+    vec_to_triu1(x::AbstractVector{<:Real})
+
+Constructs a matrix from a vector `x` by filling the upper triangle with offset `1`.
+"""
+function vec_to_triu1(x::AbstractVector)
+    n = _triu1_dim_from_length(length(x))
+    X = update_triu_from_vec(x, 1, n)
+    return UpperTriangular(X)
+end
+
+inverse(::typeof(vec_to_triu1)) = triu1_to_vec
+
+#      n * (n - 1) / 2 = d
+# ⟺       n^2 - n - 2d = 0
+# ⟹                  n = (1 + sqrt(1 + 8d)) / 2
+_triu1_dim_from_length(d) = Int((1 + sqrt(1 + 8d)) / 2)
+
+function transform(::VecCorrBijector, X::AbstractMatrix{<:Real})
+    w = cholesky(X).U  # keep LowerTriangular until here can avoid some computation
+    r = _link_chol_lkj(w)
+
+    # Extract only the upper triangle of `r`.
+    return triu1_to_vec(r)
+end
+
+# NOTE: The `logabsdetjac` is NOT the correcet on for this `transform`.
+# The `logabsdetjac` implementation also includes the `logabsdetjac` of the
+# cholesky decomposition, which is only valid if we're working on the space of
+# postitive-definite matrices.
+function transform(::VecCorrBijector, chol_vec::AbstractVector{<:Real})
+    r = _link_chol_lkj(vec_to_triu1(chol_vec))
+
+    # Extract only the upper triangle of `r`.
+    return triu1_to_vec(r)
+end
+
+
+function transform(::Inverse{VecCorrBijector}, y::AbstractVector{<:Real})
+    Y = vec_to_triu1(y)
+    w = _inv_link_chol_lkj(Y)
+    # TODO: Should we just return `w` instead?
+    return triu1_to_vec(w)
+end
+
+function logabsdetjac(b::VecCorrBijector, x)
+    return -logabsdetjac(inverse(b), b(x))
+end
+function logabsdetjac(::Inverse{VecCorrBijector}, y::AbstractVector{<:Real})
+    return _logabsdetjac_chol_lkj(vec_to_triu1(y))
 end
 
 """
@@ -163,16 +282,55 @@ function _link_chol_lkj(w)
     # This block can't be integrated with loop below, because w[1,1] != 0.
     @inbounds z[1, 1] = 0
 
-    @inbounds for j=2:K
+    @inbounds for j = 2:K
         z[1, j] = atanh(w[1, j])
         tmp = sqrt(1 - w[1, j]^2)
-        for i in 2:(j - 1)
+        for i in 2:(j-1)
             p = w[i, j] / tmp
             tmp *= sqrt(1 - p^2)
             z[i, j] = atanh(p)
         end
         z[j, j] = 0
     end
-    
+
     return z
+end
+
+"""
+    _inv_link_chol_lkj(y)
+
+Inverse link function for cholesky factor.
+"""
+function _inv_link_chol_lkj(y)
+    K = LinearAlgebra.checksquare(y)
+
+    w = similar(y)
+
+    @inbounds for j in 1:K
+        w[1, j] = 1
+        for i in 2:j
+            z = tanh(y[i-1, j])
+            tmp = w[i-1, j]
+            w[i-1, j] = z * tmp
+            w[i, j] = tmp * sqrt(1 - z^2)
+        end
+        for i in (j+1):K
+            w[i, j] = 0
+        end
+    end
+
+    return w
+end
+
+function _logabsdetjac_chol_lkj(Y::AbstractMatrix)
+    K = LinearAlgebra.checksquare(Y)
+
+    result = float(zero(eltype(Y)))
+    for j in 2:K, i in 1:(j-1)
+        @inbounds abs_y_i_j = abs(Y[i, j])
+        result += (K - i + 1) * (
+            IrrationalConstants.logtwo - (abs_y_i_j + LogExpFunctions.log1pexp(-2 * abs_y_i_j))
+        )
+    end
+    return result
 end
