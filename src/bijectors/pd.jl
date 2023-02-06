@@ -18,6 +18,8 @@ function transform(ib::Inverse{PDBijector}, Y::AbstractMatrix{<:Real})
     X = replace_diag(exp, Y)
     return getpd(X)
 end
+
+# TODO: AFAIK this is used because of AD-related issues; can we remove?
 getpd(X) = LowerTriangular(X) * LowerTriangular(X)'
 
 function logabsdetjac(b::PDBijector, X::AbstractMatrix{<:Real})
