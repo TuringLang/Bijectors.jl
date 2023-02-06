@@ -201,7 +201,7 @@ inverse(::typeof(vec_to_triu1)) = triu1_to_vec
 #      n * (n - 1) / 2 = d
 # ⟺       n^2 - n - 2d = 0
 # ⟹                  n = (1 + sqrt(1 + 8d)) / 2
-_triu1_dim_from_length(d) = Int((1 + sqrt(1 + 8d)) / 2)
+_triu1_dim_from_length(d) = (1 + isqrt(1 + 8d)) ÷ 2
 
 function transform(::VecCorrBijector, X::AbstractMatrix{<:Real})
     w = cholesky(X).U  # keep LowerTriangular until here can avoid some computation
