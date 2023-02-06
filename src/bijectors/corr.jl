@@ -92,9 +92,8 @@ end
 """
     VecCorrBijector <: Bijector
 
-Similar to `CorrBijector`, but transforms a vector representing the Cholesky
-to a correlation matrix, and its inverse transforms correlation matrix to vector
-representing Cholesky.
+Similar to `CorrBijector`, but correlation matrix to a vector,
+and its inverse transforms vector to a correlation matrix.
 
 See also: [`CorrBijector`](@ref)
 
@@ -113,16 +112,13 @@ julia> X = rand(rng, LKJ(3, 1))  # Sample a correlation matrix.
  -0.705273   1.0         0.0534538
  -0.348638   0.0534538   1.0
 
-julia> # Get the cholesky and convert to a vector.
-       u = Bijectors.triu1_to_vec(cholesky(X).U)
-
 julia> y = b(X)  # Transform to unconstrained vector representation.
 3-element Vector{Float64}:
  -0.8777149781928181
  -0.3638927608636788
  -0.29813769428942216
 
-julia> inverse(b)(y) ≈ u  # (✓) Round-trip through `b` and its inverse.
+julia> inverse(b)(y) ≈ X  # (✓) Round-trip through `b` and its inverse.
 true
 """
 struct VecCorrBijector <: Bijector end
@@ -215,23 +211,10 @@ function transform(::VecCorrBijector, X::AbstractMatrix{<:Real})
     return triu1_to_vec(r)
 end
 
-# NOTE: The `logabsdetjac` is NOT the correcet on for this `transform`.
-# The `logabsdetjac` implementation also includes the `logabsdetjac` of the
-# cholesky decomposition, which is only valid if we're working on the space of
-# postitive-definite matrices.
-function transform(::VecCorrBijector, chol_vec::AbstractVector{<:Real})
-    r = _link_chol_lkj(vec_to_triu1(chol_vec))
-
-    # Extract only the upper triangle of `r`.
-    return triu1_to_vec(r)
-end
-
-
 function transform(::Inverse{VecCorrBijector}, y::AbstractVector{<:Real})
     Y = vec_to_triu1(y)
     w = _inv_link_chol_lkj(Y)
-    # TODO: Should we just return `w` instead?
-    return triu1_to_vec(w)
+    return w' * w
 end
 
 function logabsdetjac(b::VecCorrBijector, x)
