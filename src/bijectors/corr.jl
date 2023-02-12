@@ -90,40 +90,10 @@ function logabsdetjac(b::CorrBijector, X::AbstractMatrix{<:Real})
 end
 
 """
-    VecCorrBijector <: Bijector
+    triu_mask(X::AbstractMatrix, k::Int)
 
-Similar to `CorrBijector`, but correlation matrix to a vector,
-and its inverse transforms vector to a correlation matrix.
-
-See also: [`CorrBijector`](@ref)
-
-# Example
-
-```jldoctest
-julia> using LinearAlgebra
-
-julia> using StableRNGs; rng = StableRNG(42);
-
-julia> b = Bijectors.VecCorrBijector();
-
-julia> X = rand(rng, LKJ(3, 1))  # Sample a correlation matrix.
-3×3 Matrix{Float64}:
-  1.0       -0.705273   -0.348638
- -0.705273   1.0         0.0534538
- -0.348638   0.0534538   1.0
-
-julia> y = b(X)  # Transform to unconstrained vector representation.
-3-element Vector{Float64}:
- -0.8777149781928181
- -0.3638927608636788
- -0.29813769428942216
-
-julia> inverse(b)(y) ≈ X  # (✓) Round-trip through `b` and its inverse.
-true
+Return a mask for elements of `X` above the `k`th diagonal.
 """
-struct VecCorrBijector <: Bijector end
-with_logabsdet_jacobian(b::VecCorrBijector, x) = transform(b, x), logabsdetjac(b, x)
-
 function triu_mask(X::AbstractMatrix, k::Int)
     # Ensure that we're working with a square matrix.
     LinearAlgebra.checksquare(X)
@@ -176,6 +146,11 @@ function ChainRulesCore.rrule(::typeof(update_triu_from_vec), x::AbstractVector{
     return update_triu_from_vec(x, k, dim), update_triu_from_vec_pullback
 end
 
+#      n * (n - 1) / 2 = d
+# ⟺       n^2 - n - 2d = 0
+# ⟹                  n = (1 + sqrt(1 + 8d)) / 2
+_triu1_dim_from_length(d) = (1 + isqrt(1 + 8d)) ÷ 2
+
 """
     triu1_to_vec(X::AbstractMatrix{<:Real})
 
@@ -198,10 +173,40 @@ end
 
 inverse(::typeof(vec_to_triu1)) = triu1_to_vec
 
-#      n * (n - 1) / 2 = d
-# ⟺       n^2 - n - 2d = 0
-# ⟹                  n = (1 + sqrt(1 + 8d)) / 2
-_triu1_dim_from_length(d) = (1 + isqrt(1 + 8d)) ÷ 2
+"""
+    VecCorrBijector <: Bijector
+
+Similar to `CorrBijector`, but correlation matrix to a vector,
+and its inverse transforms vector to a correlation matrix.
+
+See also: [`CorrBijector`](@ref)
+
+# Example
+
+```jldoctest
+julia> using LinearAlgebra
+
+julia> using StableRNGs; rng = StableRNG(42);
+
+julia> b = Bijectors.VecCorrBijector();
+
+julia> X = rand(rng, LKJ(3, 1))  # Sample a correlation matrix.
+3×3 Matrix{Float64}:
+  1.0       -0.705273   -0.348638
+ -0.705273   1.0         0.0534538
+ -0.348638   0.0534538   1.0
+
+julia> y = b(X)  # Transform to unconstrained vector representation.
+3-element Vector{Float64}:
+ -0.8777149781928181
+ -0.3638927608636788
+ -0.29813769428942216
+
+julia> inverse(b)(y) ≈ X  # (✓) Round-trip through `b` and its inverse.
+true
+"""
+struct VecCorrBijector <: Bijector end
+with_logabsdet_jacobian(b::VecCorrBijector, x) = transform(b, x), logabsdetjac(b, x)
 
 function transform(::VecCorrBijector, X::AbstractMatrix{<:Real})
     w = cholesky(X).U  # keep LowerTriangular until here can avoid some computation
@@ -240,7 +245,7 @@ end
 But this implementation will not work when w[i-1, j] = 0.
 Though it is a zero measure set, unit matrix initialization will not work.
 
-For equivelence, following explanations is given by @torfjelde:
+For equivalence, following explanations is given by @torfjelde:
 
 For `(i, j)` in the loop below, we define
 
