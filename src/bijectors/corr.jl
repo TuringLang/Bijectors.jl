@@ -262,6 +262,7 @@ and so
 which is the above implementation.
 """
 function _link_chol_lkj(w)
+    # TODO: Implement adjoint to support reverse-mode AD backends properly.
     K = LinearAlgebra.checksquare(w)
 
     z = similar(w) # z is also UpperTriangular. 
@@ -290,6 +291,7 @@ end
 Inverse link function for cholesky factor.
 """
 function _inv_link_chol_lkj(y)
+    # TODO: Implement adjoint to support reverse-mode AD backends properly.
     K = LinearAlgebra.checksquare(y)
 
     w = similar(y)
