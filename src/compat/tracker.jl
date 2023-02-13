@@ -281,8 +281,8 @@ end
 (b::Elementwise{typeof(log)})(x::TrackedVector) = log.(x)::vectorof(float(eltype(x)))
 (b::Elementwise{typeof(log)})(x::TrackedMatrix) = log.(x)::matrixof(float(eltype(x)))
 
-Bijectors.getpd(X::TrackedMatrix) = track(Bijectors.getpd, X)
-@grad function Bijectors.getpd(X::AbstractMatrix)
+Bijectors.pd_from_lower(X::TrackedMatrix) = track(Bijectors.pd_from_lower, X)
+@grad function Bijectors.pd_from_lower(X::AbstractMatrix)
     Xd = data(X)
     return Bijectors.LowerTriangular(Xd) * Bijectors.LowerTriangular(Xd)', Δ -> begin
         Xl = Bijectors.LowerTriangular(Xd)
@@ -290,10 +290,10 @@ Bijectors.getpd(X::TrackedMatrix) = track(Bijectors.getpd, X)
     end
 end
 
-Bijectors.lower(A::TrackedMatrix) = track(Bijectors.lower, A)
-@grad function Bijectors.lower(A::AbstractMatrix)
+Bijectors.lower_triangular(A::TrackedMatrix) = track(Bijectors.lower_triangular, A)
+@grad function Bijectors.lower_triangular(A::AbstractMatrix)
     Ad = data(A)
-    return Bijectors.lower(Ad), Δ -> (Bijectors.lower(Δ),)
+    return Bijectors.lower_triangular(Ad), Δ -> (Bijectors.lower_triangular(Δ),)
 end
 
 Bijectors._inv_link_chol_lkj(y::TrackedMatrix) = track(Bijectors._inv_link_chol_lkj, y)
