@@ -1,7 +1,7 @@
 using Bijectors, DistributionsAD, LinearAlgebra, Test
 using Bijectors: VecCorrBijector, CorrBijector
 
-@testset "PDBijector" begin
+@testset "CorrBijector & VecCorrBijector" begin
     for d ∈ [1, 2, 5]
         b = CorrBijector()
         bvec = VecCorrBijector()

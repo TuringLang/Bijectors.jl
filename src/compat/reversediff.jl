@@ -1,7 +1,7 @@
 module ReverseDiffCompat
 
 using ..ReverseDiff: ReverseDiff, @grad, value, track, TrackedReal, TrackedVector, 
-    TrackedMatrix
+    TrackedMatrix, @grad_from_chainrules
 using Requires, LinearAlgebra
 
 using ..Bijectors: Elementwise, SimplexBijector, maphcat, simplex_link_jacobian, 
@@ -180,6 +180,8 @@ end
     y, dy = ChainRulesCore.rrule(_transform_inverse_ordered, value(x))
     return y, (wrap_chainrules_output ∘ Base.tail ∘ dy)
 end
+
+@grad_from_chainrules update_triu_from_vec(vals::TrackedVector{<:Real}, k::Int, dim::Int)
 
 # NOTE: Probably doesn't work in complete generality.
 wrap_chainrules_output(x) = x
