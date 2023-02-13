@@ -66,7 +66,7 @@ struct CorrBijector <: Bijector end
 with_logabsdet_jacobian(b::CorrBijector, x) = transform(b, x), logabsdetjac(b, x)
 
 function transform(b::CorrBijector, x::AbstractMatrix{<:Real})
-    w = cholesky(x).U  # keep LowerTriangular until here can avoid some computation
+    w = upper_triangular(parent(cholesky(x).U))  # keep LowerTriangular until here can avoid some computation
     r = _link_chol_lkj(w) 
     return r + zero(x) 
     # This dense format itself is required by a test, though I can't get the point.
@@ -75,7 +75,7 @@ end
 
 function transform(ib::Inverse{CorrBijector}, y::AbstractMatrix{<:Real})
     w = _inv_link_chol_lkj(y)
-    return w' * w
+    return pd_from_upper(w)
 end
 
 logabsdetjac(::Inverse{CorrBijector}, Y::AbstractMatrix{<:Real}) = _logabsdetjac_chol_lkj(Y)
@@ -168,7 +168,7 @@ Constructs a matrix from a vector `x` by filling the upper triangle with offset 
 function vec_to_triu1(x::AbstractVector)
     n = _triu1_dim_from_length(length(x))
     X = update_triu_from_vec(x, 1, n)
-    return UpperTriangular(X)
+    return upper_triangular(X)
 end
 
 inverse(::typeof(vec_to_triu1)) = triu1_to_vec
@@ -209,7 +209,7 @@ struct VecCorrBijector <: Bijector end
 with_logabsdet_jacobian(b::VecCorrBijector, x) = transform(b, x), logabsdetjac(b, x)
 
 function transform(::VecCorrBijector, X::AbstractMatrix{<:Real})
-    w = cholesky(X).U  # keep LowerTriangular until here can avoid some computation
+    w = upper_triangular(parent(cholesky(X).U))
     r = _link_chol_lkj(w)
 
     # Extract only the upper triangle of `r`.
@@ -219,7 +219,7 @@ end
 function transform(::Inverse{VecCorrBijector}, y::AbstractVector{<:Real})
     Y = vec_to_triu1(y)
     w = _inv_link_chol_lkj(Y)
-    return w' * w
+    return pd_from_upper(w)
 end
 
 function logabsdetjac(b::VecCorrBijector, x)

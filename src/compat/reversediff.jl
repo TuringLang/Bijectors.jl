@@ -7,7 +7,8 @@ using Requires, LinearAlgebra
 using ..Bijectors: Elementwise, SimplexBijector, maphcat, simplex_link_jacobian, 
     simplex_invlink_jacobian, simplex_logabsdetjac_gradient, Inverse
 import ..Bijectors: _eps, logabsdetjac, _logabsdetjac_scale, _simplex_bijector, 
-    _simplex_inv_bijector, replace_diag, jacobian, getpd, lower, 
+    _simplex_inv_bijector, replace_diag, jacobian, pd_from_lower, pd_from_upper,
+    lower_triangular, upper_triangular,
     _inv_link_chol_lkj, _link_chol_lkj, _transform_ordered, _transform_inverse_ordered,
     find_alpha
 
@@ -136,18 +137,34 @@ logabsdetjac(b::SimplexBijector, x::Union{TrackedVector, TrackedMatrix}) = track
     end
 end
 
-getpd(X::TrackedMatrix) = track(getpd, X)
-@grad function getpd(X::AbstractMatrix)
+pd_from_lower(X::TrackedMatrix) = track(pd_from_lower, X)
+@grad function pd_from_lower(X::AbstractMatrix)
     Xd = value(X)
     return LowerTriangular(Xd) * LowerTriangular(Xd)', Δ -> begin
         Xl = LowerTriangular(Xd)
         return (LowerTriangular(Δ' * Xl + Δ * Xl),)
     end
 end
-lower(A::TrackedMatrix) = track(lower, A)
-@grad function lower(A::AbstractMatrix)
+
+pd_from_upper(X::TrackedMatrix) = track(pd_from_upper, X)
+@grad function pd_from_upper(X::AbstractMatrix)
+    Xd = value(X)
+    return UpperTriangular(Xd)' * UpperTriangular(Xd), Δ -> begin
+        Xu = UpperTriangular(Xd)
+        return (UpperTriangular(Δ * Xu + Δ' * Xu),)
+    end
+end
+
+lower_triangular(A::TrackedMatrix) = track(lower_triangular, A)
+@grad function lower_triangular(A::AbstractMatrix)
     Ad = value(A)
-    return lower(Ad), Δ -> (lower(Δ),)
+    return lower_triangular(Ad), Δ -> (lower_triangular(Δ),)
+end
+
+upper_triangular(A::TrackedMatrix) = track(upper_triangular, A)
+@grad function upper_triangular(A::AbstractMatrix)
+    Ad = value(A)
+    return upper_triangular(Ad), Δ -> (upper_triangular(Δ),)
 end
 
 function find_alpha(wt_y::T, wt_u_hat::T, b::T) where {T<:TrackedReal}
