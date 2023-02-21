@@ -215,8 +215,6 @@ end
 
 
 # forward function
-const GLOBAL_RNG = Distributions.GLOBAL_RNG
-
 function _forward(d::UnivariateDistribution, x)
     y, logjac = with_logabsdet_jacobian(Identity{0}(), x)
     return (x = x, y = y, logabsdetjac = logjac, logpdf = logpdf.(d, x))
@@ -265,8 +263,8 @@ In the case where `d isa Distribution`, this means
 - `logabsdetjac = 0.0`
 - `logpdf` is logpdf of `x`
 """
-forward(d::Distribution) = forward(GLOBAL_RNG, d)
-forward(d::Distribution, num_samples::Int) = forward(GLOBAL_RNG, d, num_samples)
+forward(d::Distribution) = forward(Random.default_rng(), d)
+forward(d::Distribution, num_samples::Int) = forward(Random.default_rng(), d, num_samples)
 
 # utility stuff
 Distributions.params(td::Transformed) = Distributions.params(td.dist)
