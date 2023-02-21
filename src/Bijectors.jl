@@ -44,6 +44,8 @@ import IrrationalConstants
 import LogExpFunctions
 import Roots
 
+import Random
+
 export  TransformDistribution,
         PositiveDistribution,
         UnitDistribution,
