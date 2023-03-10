@@ -1,6 +1,6 @@
 name = "Bijectors"
 uuid = "76274a88-744f-5084-9051-94815aaf08c4"
-version = "0.12.1"
+version = "0.12.2"
 
 [deps]
 ArgCheck = "dce04be8-c92d-5529-be00-80e4d2c0e197"
