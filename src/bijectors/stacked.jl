@@ -106,7 +106,7 @@ function logabsdetjac(
 end
 
 function logabsdetjac(
-    b::Stacked{<:Tuple{Vararg{<:Any, N}}, <:Tuple{Vararg{<:Any, N}}},
+    b::Stacked{<:NTuple{N, Any}, <:NTuple{N, Any}},
     x::AbstractVector{<:Real}
 ) where {N}
     init = sum(logabsdetjac(b.bs[1], x[b.ranges[1]]))
@@ -129,7 +129,7 @@ end
 #     logjac += sum(_logjac)
 #     return (vcat(y_1, y_2), logjac)
 # end
-@generated function with_logabsdet_jacobian(b::Stacked{<:Tuple{Vararg{<:Any, N}}, <:Tuple{Vararg{<:Any, N}}}, x::AbstractVector) where {N}
+@generated function with_logabsdet_jacobian(b::Stacked{<:NTuple{N, Any}, <:NTuple{N, Any}}, x::AbstractVector) where {N}
     expr = Expr(:block)
     y_names = []
 
