@@ -1,6 +1,6 @@
 name = "Bijectors"
 uuid = "76274a88-744f-5084-9051-94815aaf08c4"
-version = "0.10.7"
+version = "0.10.8"
 
 [deps]
 ArgCheck = "dce04be8-c92d-5529-be00-80e4d2c0e197"
@@ -29,7 +29,7 @@ Compat = "3, 4"
 Distributions = "0.23.3, 0.24, 0.25"
 Functors = "0.1, 0.2, 0.3"
 InverseFunctions = "0.1"
-IrrationalConstants = "0.1"
+IrrationalConstants = "0.1, 0.2"
 LogExpFunctions = "0.3.3"
 MappedArrays = "0.2.2, 0.3, 0.4"
 Reexport = "0.2, 1"
