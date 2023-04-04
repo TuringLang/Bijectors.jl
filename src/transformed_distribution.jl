@@ -77,7 +77,8 @@ bijector(d::LowerboundedDistribution) = bijector_lowerbounded(d)
 bijector(d::PDMatDistribution) = PDBijector()
 bijector(d::MatrixBeta) = PDBijector()
 
-bijector(d::LKJ) = CorrBijector()
+bijector(d::LKJ) = VecCorrBijector()
+bijector(d::LKJCholesky) = d.uplo === 'L' ? VecTrilBijector() : VecTriuBijector()
 
 function bijector(d::Distributions.ReshapedDistribution)
     inner_dims = size(d.dist)
