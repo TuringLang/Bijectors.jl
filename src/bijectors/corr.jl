@@ -180,6 +180,16 @@ function vec_to_triu1_row_index(idx)
     return idx - (M*(M-1) ÷ 2)
 end
 
+abstract type AbstractVecCorrBijector <: Bijector end
+
+with_logabsdet_jacobian(b::AbstractVecCorrBijector, x) = transform(b, x), logabsdetjac(b, x)
+
+transform(::AbstractVecCorrBijector, X) = (_link_chol_lkj ∘ cholesky_factor)(X)
+
+function logabsdetjac(b::AbstractVecCorrBijector, x)
+    return -logabsdetjac(inverse(b), b(x))
+end
+
 """
     VecCorrBijector <: Bijector
 
@@ -212,29 +222,21 @@ julia> y = b(X)  # Transform to unconstrained vector representation.
 julia> inverse(b)(y) ≈ X  # (✓) Round-trip through `b` and its inverse.
 true
 """
-struct VecCorrBijector <: Bijector end
-with_logabsdet_jacobian(b::VecCorrBijector, x) = transform(b, x), logabsdetjac(b, x)
+struct VecCorrBijector <: AbstractVecCorrBijector end
+transform(::Inverse{VecCorrBijector}, y::AbstractVector{<:Real}) = (pd_from_upper ∘ _inv_link_chol_lkj)(y)
 
-function transform(::VecCorrBijector, X::AbstractMatrix{<:Real})
-    w = upper_triangular(parent(cholesky(X).U))
-    r = _link_chol_lkj(w)
+logabsdetjac(::Inverse{VecCorrBijector}, y::AbstractVector{<:Real}) = _logabsdetjac_inv_corr(y)
 
-    # Extract only the upper triangle of `r`.
-    return triu1_to_vec(r)
-end
+struct VecTriuBijector <: AbstractVecCorrBijector end
+transform(::Inverse{VecTriuBijector}, y::AbstractVector{<:Real}) = (Cholesky ∘ UpperTriangular ∘ _inv_link_chol_lkj)(y)
 
-function transform(::Inverse{VecCorrBijector}, y::AbstractVector{<:Real})
-    Y = vec_to_triu1(y)
-    w = _inv_link_chol_lkj(Y)
-    return pd_from_upper(w)
-end
+logabsdetjac(::Inverse{VecTriuBijector}, y::AbstractVector{<:Real}) = _logabsdetjac_inv_chol(y)
 
-function logabsdetjac(b::VecCorrBijector, x)
-    return -logabsdetjac(inverse(b), b(x))
-end
-function logabsdetjac(::Inverse{VecCorrBijector}, y::AbstractVector{<:Real})
-    return _logabsdetjac_chol_lkj(vec_to_triu1(y))
-end
+struct VecTrilBijector <: AbstractVecCorrBijector end
+transform(::Inverse{VecTrilBijector}, y::AbstractVector{<:Real}) = (Cholesky ∘ LowerTriangular ∘ transpose ∘ _inv_link_chol_lkj)(y)
+
+logabsdetjac(::Inverse{VecTrilBijector}, y::AbstractVector{<:Real}) = _logabsdetjac_inv_chol(y)
+
 
 """
     function _link_chol_lkj(w)
