@@ -345,22 +345,28 @@ end
 
 Inverse link function for cholesky factor.
 """
-function _inv_link_chol_lkj(y)
+function _inv_link_chol_lkj(Y::AbstractMatrix)
     # TODO: Implement adjoint to support reverse-mode AD backends properly.
-    K = LinearAlgebra.checksquare(y)
+    K = LinearAlgebra.checksquare(Y)
 
-    w = similar(y)
+    W = similar(Y)
 
     @inbounds for j in 1:K
-        w[1, j] = 1
+        W[1, j] = 1
         for i in 2:j
-            z = tanh(y[i-1, j])
-            tmp = w[i-1, j]
-            w[i-1, j] = z * tmp
-            w[i, j] = tmp * sqrt(1 - z^2)
+            z = tanh(Y[i-1, j])
+            tmp = W[i-1, j]
+            W[i-1, j] = z * tmp
+            W[i, j] = tmp * sqrt(1 - z^2)
         end
         for i in (j+1):K
-            w[i, j] = 0
+            W[i, j] = 0
+        end
+    end
+
+    return W
+end
+
         end
     end
 
