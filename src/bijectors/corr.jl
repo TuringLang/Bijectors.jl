@@ -270,21 +270,21 @@ and so
 
 which is the above implementation.
 """
-function _link_chol_lkj(w)
+function _link_chol_lkj(W::AbstractMatrix)
     # TODO: Implement adjoint to support reverse-mode AD backends properly.
-    K = LinearAlgebra.checksquare(w)
+    K = LinearAlgebra.checksquare(W)
 
-    z = similar(w) # z is also UpperTriangular. 
+    z = similar(W) # z is also UpperTriangular. 
     # Some zero filling can be avoided. Though diagnoal is still needed to be filled with zero.
 
-    # This block can't be integrated with loop below, because w[1,1] != 0.
+    # This block can't be integrated with loop below, because W[1,1] != 0.
     @inbounds z[1, 1] = 0
 
     @inbounds for j = 2:K
-        z[1, j] = atanh(w[1, j])
-        tmp = sqrt(1 - w[1, j]^2)
+        z[1, j] = atanh(W[1, j])
+        tmp = sqrt(1 - W[1, j]^2)
         for i in 2:(j-1)
-            p = w[i, j] / tmp
+            p = W[i, j] / tmp
             tmp *= sqrt(1 - p^2)
             z[i, j] = atanh(p)
         end
