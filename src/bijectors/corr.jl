@@ -294,6 +294,30 @@ function _link_chol_lkj(W::AbstractMatrix)
     return z
 end
 
+function _link_chol_lkj(W::UpperTriangular)
+    K = LinearAlgebra.checksquare(W)
+    N = ((K-1)*K) ÷ 2   # {K \choose 2} free parameters
+
+    z = zeros(eltype(W), N)
+
+    # This block can't be integrated with loop below, because w[1,1] != 0.
+    idx = 1
+    @inbounds for j = 2:K
+        z[idx] = atanh(W[1, j])
+        idx += 1
+        tmp = sqrt(1 - W[1, j]^2)
+        for i in 2:(j-1)
+            p = W[i, j] / tmp
+            tmp *= sqrt(1 - p^2)
+            z[idx] = atanh(p)
+            idx += 1
+        end
+    end
+
+    return z
+end
+
+function _link_chol_lkj(W::LowerTriangular)
 """
     _inv_link_chol_lkj(y)
 
