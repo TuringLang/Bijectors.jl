@@ -78,7 +78,7 @@ function transform(ib::Inverse{CorrBijector}, y::AbstractMatrix{<:Real})
     return pd_from_upper(w)
 end
 
-logabsdetjac(::Inverse{CorrBijector}, Y::AbstractMatrix{<:Real}) = _logabsdetjac_chol_lkj(Y)
+logabsdetjac(::Inverse{CorrBijector}, Y::AbstractMatrix{<:Real}) = _logabsdetjac_inv_corr(Y)
 function logabsdetjac(b::CorrBijector, X::AbstractMatrix{<:Real})
     #=
     It may be more efficient if we can use un-contraint value to prevent call of b
@@ -389,7 +389,7 @@ function _inv_link_chol_lkj(y::AbstractVector)
     return W
 end
 
-function _logabsdetjac_chol_lkj(Y::AbstractMatrix)
+function _logabsdetjac_inv_corr(Y::AbstractMatrix)
     K = LinearAlgebra.checksquare(Y)
 
     result = float(zero(eltype(Y)))
