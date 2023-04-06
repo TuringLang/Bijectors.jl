@@ -161,6 +161,10 @@ function _rand!(rng::AbstractRNG, td::MatrixTransformed, x::DenseMatrix{<:Real})
     x .= td.transform(x)
 end
 
+function rand(rng::AbstractRNG, td::TransformedDistribution{T}) where {T <: Union{LKJ, LKJCholesky}}
+    return td.transform(rand(rng, td.dist))
+end
+
 # utility stuff
 Distributions.params(td::Transformed) = Distributions.params(td.dist)
 function Base.maximum(td::UnivariateTransformed)
