@@ -318,6 +318,28 @@ function _link_chol_lkj(W::UpperTriangular)
 end
 
 function _link_chol_lkj(W::LowerTriangular)
+    K = LinearAlgebra.checksquare(W)
+    N = div((K-1)*K, 2)   # {K \choose 2} free parameters
+
+    z = zeros(eltype(W), N)
+
+    # This block can't be integrated with loop below, because w[1,1] != 0.
+    idx = 1
+    @inbounds for i = 2:K
+        z[idx] = atanh(W[i, 1])
+        idx += 1
+        tmp = sqrt(1 - W[i, 1]^2)
+        for j in 2:(i-1)
+            p = W[i, j] / tmp
+            tmp *= sqrt(1 - p^2)
+            z[idx] = atanh(p)
+            idx += 1
+        end
+    end
+
+    return z
+end
+
 """
     _inv_link_chol_lkj(y)
 
