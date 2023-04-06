@@ -401,3 +401,18 @@ function _logabsdetjac_inv_corr(Y::AbstractMatrix)
     end
     return result
 end
+
+function _logabsdetjac_inv_corr(y::AbstractVector)
+    K = _triu1_dim_from_length(length(y))
+
+    result = float(zero(eltype(y)))
+    for (i, y_i) in enumerate(y)
+        abs_y_i = abs(y_i)
+        row_idx = vec_to_triu1_row_index(i)
+        result += (K - row_idx + 1) * (
+            IrrationalConstants.logtwo - (abs_y_i + LogExpFunctions.log1pexp(-2 * abs_y_i))
+        )
+    end
+    return result
+end
+
