@@ -173,6 +173,13 @@ end
 
 inverse(::typeof(vec_to_triu1)) = triu1_to_vec
 
+function vec_to_triu1_row_index(idx)
+    # Assumes that vector was saved in a column-major order
+    # and that vector is one-based indexed.
+    M = _triu1_dim_from_length(idx - 1)
+    return idx - (M*(M-1) ÷ 2)
+end
+
 """
     VecCorrBijector <: Bijector
 
