@@ -116,6 +116,11 @@ function logpdf(td::MvTransformed{<:Dirichlet}, y::AbstractMatrix{<:Real})
     return logpdf(td.dist, mappedarray(x->x+ϵ, x)) + logjac
 end
 
+function logpdf(td::TransformedDistribution{T}, y::AbstractVector{<:Real}) where {T <: Union{LKJ, LKJCholesky}}
+    x, logjac = with_logabsdet_jacobian(inverse(td.transform), y)
+    return logpdf(td.dist, x) + logjac
+end
+
 function _logpdf(td::MvTransformed, y::AbstractVector{<:Real})
     x, logjac = with_logabsdet_jacobian(inverse(td.transform), y)
     return logpdf(td.dist, x) + logjac
