@@ -6,6 +6,7 @@ struct TransformedDistribution{D, B, V} <: Distribution{V, Continuous} where {D<
     TransformedDistribution(d::UnivariateDistribution, b) = new{typeof(d), typeof(b), Univariate}(d, b)
     TransformedDistribution(d::MultivariateDistribution, b) = new{typeof(d), typeof(b), Multivariate}(d, b)
     TransformedDistribution(d::MatrixDistribution, b) = new{typeof(d), typeof(b), Matrixvariate}(d, b)
+    TransformedDistribution(d::Distribution{CholeskyVariate}, b) = new{typeof(d), typeof(b), CholeskyVariate}(d, b)
 end
 
 # fields may contain nested numerical parameters
