@@ -416,3 +416,21 @@ function _logabsdetjac_inv_corr(y::AbstractVector)
     return result
 end
 
+function _logabsdetjac_inv_chol(y::AbstractVector)
+    K = _triu1_dim_from_length(length(y))
+
+    result = float(zero(eltype(y)))
+    idx = 1
+    @inbounds for j in 2:K
+        tmp = zero(result)
+        for _ in 1:(j-1)
+            z = tanh(y[idx])
+            logz = log(1 - z^2)
+            tmp += logz
+            result += logz + (tmp / 2)
+            idx += 1
+        end
+    end
+
+    return result
+end
