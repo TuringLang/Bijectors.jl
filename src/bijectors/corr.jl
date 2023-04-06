@@ -65,10 +65,10 @@ struct CorrBijector <: Bijector end
 
 with_logabsdet_jacobian(b::CorrBijector, x) = transform(b, x), logabsdetjac(b, x)
 
-function transform(b::CorrBijector, x::AbstractMatrix{<:Real})
-    w = upper_triangular(parent(cholesky(x).U))  # keep LowerTriangular until here can avoid some computation
+function transform(b::CorrBijector, X::AbstractMatrix{<:Real})
+    w = upper_triangular(parent(cholesky(X).U))  # keep LowerTriangular until here can avoid some computation
     r = _link_chol_lkj(w) 
-    return r + zero(x) 
+    return r + zero(X) 
     # This dense format itself is required by a test, though I can't get the point.
     # https://github.com/TuringLang/Bijectors.jl/blob/b0aaa98f90958a167a0b86c8e8eca9b95502c42d/test/transform.jl#L67
 end
