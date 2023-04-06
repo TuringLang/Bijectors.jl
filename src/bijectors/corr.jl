@@ -65,10 +65,10 @@ struct CorrBijector <: Bijector end
 
 with_logabsdet_jacobian(b::CorrBijector, x) = transform(b, x), logabsdetjac(b, x)
 
-function transform(b::CorrBijector, x::AbstractMatrix{<:Real})
-    w = upper_triangular(parent(cholesky(x).U))  # keep LowerTriangular until here can avoid some computation
+function transform(b::CorrBijector, X::AbstractMatrix{<:Real})
+    w = upper_triangular(parent(cholesky(X).U))  # keep LowerTriangular until here can avoid some computation
     r = _link_chol_lkj(w) 
-    return r + zero(x) 
+    return r + zero(X) 
     # This dense format itself is required by a test, though I can't get the point.
     # https://github.com/TuringLang/Bijectors.jl/blob/b0aaa98f90958a167a0b86c8e8eca9b95502c42d/test/transform.jl#L67
 end
@@ -78,7 +78,7 @@ function transform(ib::Inverse{CorrBijector}, y::AbstractMatrix{<:Real})
     return pd_from_upper(w)
 end
 
-logabsdetjac(::Inverse{CorrBijector}, Y::AbstractMatrix{<:Real}) = _logabsdetjac_chol_lkj(Y)
+logabsdetjac(::Inverse{CorrBijector}, Y::AbstractMatrix{<:Real}) = _logabsdetjac_inv_corr(Y)
 function logabsdetjac(b::CorrBijector, X::AbstractMatrix{<:Real})
     #=
     It may be more efficient if we can use un-contraint value to prevent call of b
@@ -173,6 +173,23 @@ end
 
 inverse(::typeof(vec_to_triu1)) = triu1_to_vec
 
+function vec_to_triu1_row_index(idx)
+    # Assumes that vector was saved in a column-major order
+    # and that vector is one-based indexed.
+    M = _triu1_dim_from_length(idx - 1)
+    return idx - (M*(M-1) ÷ 2)
+end
+
+abstract type AbstractVecCorrBijector <: Bijector end
+
+with_logabsdet_jacobian(b::AbstractVecCorrBijector, x) = transform(b, x), logabsdetjac(b, x)
+
+transform(::AbstractVecCorrBijector, X) = (_link_chol_lkj ∘ cholesky_factor)(X)
+
+function logabsdetjac(b::AbstractVecCorrBijector, x)
+    return -logabsdetjac(inverse(b), b(x))
+end
+
 """
     VecCorrBijector <: Bijector
 
@@ -205,29 +222,21 @@ julia> y = b(X)  # Transform to unconstrained vector representation.
 julia> inverse(b)(y) ≈ X  # (✓) Round-trip through `b` and its inverse.
 true
 """
-struct VecCorrBijector <: Bijector end
-with_logabsdet_jacobian(b::VecCorrBijector, x) = transform(b, x), logabsdetjac(b, x)
+struct VecCorrBijector <: AbstractVecCorrBijector end
+transform(::Inverse{VecCorrBijector}, y::AbstractVector{<:Real}) = (pd_from_upper ∘ _inv_link_chol_lkj)(y)
 
-function transform(::VecCorrBijector, X::AbstractMatrix{<:Real})
-    w = upper_triangular(parent(cholesky(X).U))
-    r = _link_chol_lkj(w)
+logabsdetjac(::Inverse{VecCorrBijector}, y::AbstractVector{<:Real}) = _logabsdetjac_inv_corr(y)
 
-    # Extract only the upper triangle of `r`.
-    return triu1_to_vec(r)
-end
+struct VecTriuBijector <: AbstractVecCorrBijector end
+transform(::Inverse{VecTriuBijector}, y::AbstractVector{<:Real}) = (Cholesky ∘ UpperTriangular ∘ _inv_link_chol_lkj)(y)
 
-function transform(::Inverse{VecCorrBijector}, y::AbstractVector{<:Real})
-    Y = vec_to_triu1(y)
-    w = _inv_link_chol_lkj(Y)
-    return pd_from_upper(w)
-end
+logabsdetjac(::Inverse{VecTriuBijector}, y::AbstractVector{<:Real}) = _logabsdetjac_inv_chol(y)
 
-function logabsdetjac(b::VecCorrBijector, x)
-    return -logabsdetjac(inverse(b), b(x))
-end
-function logabsdetjac(::Inverse{VecCorrBijector}, y::AbstractVector{<:Real})
-    return _logabsdetjac_chol_lkj(vec_to_triu1(y))
-end
+struct VecTrilBijector <: AbstractVecCorrBijector end
+transform(::Inverse{VecTrilBijector}, y::AbstractVector{<:Real}) = (Cholesky ∘ LowerTriangular ∘ transpose ∘ _inv_link_chol_lkj)(y)
+
+logabsdetjac(::Inverse{VecTrilBijector}, y::AbstractVector{<:Real}) = _logabsdetjac_inv_chol(y)
+
 
 """
     function _link_chol_lkj(w)
@@ -261,25 +270,71 @@ and so
 
 which is the above implementation.
 """
-function _link_chol_lkj(w)
+function _link_chol_lkj(W::AbstractMatrix)
     # TODO: Implement adjoint to support reverse-mode AD backends properly.
-    K = LinearAlgebra.checksquare(w)
+    K = LinearAlgebra.checksquare(W)
 
-    z = similar(w) # z is also UpperTriangular. 
+    z = similar(W) # z is also UpperTriangular. 
     # Some zero filling can be avoided. Though diagnoal is still needed to be filled with zero.
 
-    # This block can't be integrated with loop below, because w[1,1] != 0.
+    # This block can't be integrated with loop below, because W[1,1] != 0.
     @inbounds z[1, 1] = 0
 
     @inbounds for j = 2:K
-        z[1, j] = atanh(w[1, j])
-        tmp = sqrt(1 - w[1, j]^2)
+        z[1, j] = atanh(W[1, j])
+        tmp = sqrt(1 - W[1, j]^2)
         for i in 2:(j-1)
-            p = w[i, j] / tmp
+            p = W[i, j] / tmp
             tmp *= sqrt(1 - p^2)
             z[i, j] = atanh(p)
         end
         z[j, j] = 0
+    end
+
+    return z
+end
+
+function _link_chol_lkj(W::UpperTriangular)
+    K = LinearAlgebra.checksquare(W)
+    N = ((K-1)*K) ÷ 2   # {K \choose 2} free parameters
+
+    z = zeros(eltype(W), N)
+
+    # This block can't be integrated with loop below, because w[1,1] != 0.
+    idx = 1
+    @inbounds for j = 2:K
+        z[idx] = atanh(W[1, j])
+        idx += 1
+        tmp = sqrt(1 - W[1, j]^2)
+        for i in 2:(j-1)
+            p = W[i, j] / tmp
+            tmp *= sqrt(1 - p^2)
+            z[idx] = atanh(p)
+            idx += 1
+        end
+    end
+
+    return z
+end
+
+function _link_chol_lkj(W::LowerTriangular)
+    K = LinearAlgebra.checksquare(W)
+    N = div((K-1)*K, 2)   # {K \choose 2} free parameters
+
+    z = zeros(eltype(W), N)
+
+    # This block can't be integrated with loop below, because w[1,1] != 0.
+    idx = 1
+    @inbounds for i = 2:K
+        z[idx] = atanh(W[i, 1])
+        idx += 1
+        tmp = sqrt(1 - W[i, 1]^2)
+        for j in 2:(i-1)
+            p = W[i, j] / tmp
+            tmp *= sqrt(1 - p^2)
+            z[idx] = atanh(p)
+            idx += 1
+        end
     end
 
     return z
@@ -290,28 +345,51 @@ end
 
 Inverse link function for cholesky factor.
 """
-function _inv_link_chol_lkj(y)
-    K = LinearAlgebra.checksquare(y)
+function _inv_link_chol_lkj(Y::AbstractMatrix)
+    # TODO: Implement adjoint to support reverse-mode AD backends properly.
+    K = LinearAlgebra.checksquare(Y)
 
-    w = similar(y)
+    W = similar(Y)
 
     @inbounds for j in 1:K
-        w[1, j] = 1
+        W[1, j] = 1
         for i in 2:j
-            z = tanh(y[i-1, j])
-            tmp = w[i-1, j]
-            w[i-1, j] = z * tmp
-            w[i, j] = tmp * sqrt(1 - z^2)
+            z = tanh(Y[i-1, j])
+            tmp = W[i-1, j]
+            W[i-1, j] = z * tmp
+            W[i, j] = tmp * sqrt(1 - z^2)
         end
         for i in (j+1):K
-            w[i, j] = 0
+            W[i, j] = 0
         end
     end
 
-    return w
+    return W
 end
 
-function _logabsdetjac_chol_lkj(Y::AbstractMatrix)
+function _inv_link_chol_lkj(y::AbstractVector)
+    # TODO: Implement adjoint to support reverse-mode AD backends properly.
+    K = _triu1_dim_from_length(length(y))
+
+    W = similar(y, K, K)
+    W .= zeros(eltype(y))
+
+    idx = 1
+    @inbounds for j in 1:K
+        W[1, j] = 1
+        for i in 2:j
+            z = tanh(y[idx])
+            idx += 1
+            tmp = W[i-1, j]
+            W[i-1, j] = z * tmp
+            W[i, j] = tmp * sqrt(1 - z^2)
+        end
+    end
+
+    return W
+end
+
+function _logabsdetjac_inv_corr(Y::AbstractMatrix)
     K = LinearAlgebra.checksquare(Y)
 
     result = float(zero(eltype(Y)))
@@ -321,5 +399,38 @@ function _logabsdetjac_chol_lkj(Y::AbstractMatrix)
             IrrationalConstants.logtwo - (abs_y_i_j + LogExpFunctions.log1pexp(-2 * abs_y_i_j))
         )
     end
+    return result
+end
+
+function _logabsdetjac_inv_corr(y::AbstractVector)
+    K = _triu1_dim_from_length(length(y))
+
+    result = float(zero(eltype(y)))
+    for (i, y_i) in enumerate(y)
+        abs_y_i = abs(y_i)
+        row_idx = vec_to_triu1_row_index(i)
+        result += (K - row_idx + 1) * (
+            IrrationalConstants.logtwo - (abs_y_i + LogExpFunctions.log1pexp(-2 * abs_y_i))
+        )
+    end
+    return result
+end
+
+function _logabsdetjac_inv_chol(y::AbstractVector)
+    K = _triu1_dim_from_length(length(y))
+
+    result = float(zero(eltype(y)))
+    idx = 1
+    @inbounds for j in 2:K
+        tmp = zero(result)
+        for _ in 1:(j-1)
+            z = tanh(y[idx])
+            logz = log(1 - z^2)
+            tmp += logz
+            result += logz + (tmp / 2)
+            idx += 1
+        end
+    end
+
     return result
 end

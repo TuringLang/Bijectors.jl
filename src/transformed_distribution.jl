@@ -6,6 +6,7 @@ struct TransformedDistribution{D, B, V} <: Distribution{V, Continuous} where {D<
     TransformedDistribution(d::UnivariateDistribution, b) = new{typeof(d), typeof(b), Univariate}(d, b)
     TransformedDistribution(d::MultivariateDistribution, b) = new{typeof(d), typeof(b), Multivariate}(d, b)
     TransformedDistribution(d::MatrixDistribution, b) = new{typeof(d), typeof(b), Matrixvariate}(d, b)
+    TransformedDistribution(d::Distribution{CholeskyVariate}, b) = new{typeof(d), typeof(b), CholeskyVariate}(d, b)
 end
 
 # fields may contain nested numerical parameters
@@ -77,7 +78,8 @@ bijector(d::LowerboundedDistribution) = bijector_lowerbounded(d)
 bijector(d::PDMatDistribution) = PDBijector()
 bijector(d::MatrixBeta) = PDBijector()
 
-bijector(d::LKJ) = CorrBijector()
+bijector(d::LKJ) = VecCorrBijector()
+bijector(d::LKJCholesky) = d.uplo === 'L' ? VecTrilBijector() : VecTriuBijector()
 
 ##############################
 # Distributions.jl interface #
@@ -105,6 +107,11 @@ function logpdf(td::MvTransformed{<:Dirichlet}, y::AbstractMatrix{<:Real})
 
     x, logjac = with_logabsdet_jacobian(inverse(td.transform), y)
     return logpdf(td.dist, mappedarray(x->x+ϵ, x)) + logjac
+end
+
+function logpdf(td::TransformedDistribution{T}, y::AbstractVector{<:Real}) where {T <: Union{LKJ, LKJCholesky}}
+    x, logjac = with_logabsdet_jacobian(inverse(td.transform), y)
+    return logpdf(td.dist, x) + logjac
 end
 
 function _logpdf(td::MvTransformed, y::AbstractVector{<:Real})
@@ -152,6 +159,10 @@ end
 function _rand!(rng::AbstractRNG, td::MatrixTransformed, x::DenseMatrix{<:Real})
     rand!(rng, td.dist, x)
     x .= td.transform(x)
+end
+
+function rand(rng::AbstractRNG, td::TransformedDistribution{T}) where {T <: Union{LKJ, LKJCholesky}}
+    return td.transform(rand(rng, td.dist))
 end
 
 # utility stuff

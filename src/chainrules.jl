@@ -156,5 +156,59 @@ function ChainRulesCore.rrule(::typeof(_transform_inverse_ordered), x::AbstractM
     return y, _transform_inverse_ordered_adjoint
 end
 
+function ChainRulesCore.rrule(::typeof(_link_chol_lkj), W::UpperTriangular)
+    project_W = ChainRulesCore.ProjectTo(W)
+
+    K = LinearAlgebra.checksquare(W)
+    N = ((K-1)*K) ÷ 2 
+
+    z = zeros(eltype(W), N)
+    tmp_vec = similar(z)
+
+    idx = 1
+    @inbounds for j = 2:K
+        z[idx] = atanh(W[1, j])
+        tmp = sqrt(1 - W[1, j]^2)
+        tmp_vec[idx] = tmp
+        idx += 1
+        for i in 2:(j-1)
+            p = W[i, j] / tmp
+            tmp *= sqrt(1 - p^2)
+            tmp_vec[idx] = tmp
+            z[idx] = atanh(p)
+            idx += 1
+        end
+    end
+
+    function pullback_link_chol_lkj(Δz_thunked)
+        Δz = ChainRulesCore.unthunk(Δz_thunked)
+        
+        ΔW = similar(W)
+
+        @inbounds ΔW[1,1] = zero(eltype(Δz))
+        @inbounds for j=2:K
+            idx_up_to_prev_column = ((j-1)*(j-2) ÷ 2)
+            ΔW[j, j] = zero(eltype(Δz))
+            Δtmp = zero(eltype(Δz))
+            for i in (j-1):-1:2
+                tmp = tmp_vec[idx_up_to_prev_column + i - 1]
+                p = W[i, j] / tmp
+                ftmp = sqrt(1 - p^2)
+                d_ftmp_p = -p / ftmp
+                d_p_tmp = -W[i,j] / tmp^2
+
+                Δp = Δz[i,j] / (1-p^2) + Δtmp * tmp * d_ftmp_p
+                ΔW[i, j] = Δp / tmp
+                Δtmp = Δp * d_p_tmp + Δtmp * ftmp # update to "previous" Δtmp
+            end
+            ΔW[1, j] = Δz[1, j] / (1-W[1,j]^2) - Δtmp / sqrt(1 - W[1,j]^2) * W[1,j]
+        end
+
+        return ChainRulesCore.NoTangent(), project_W(ΔW)
+    end
+
+    return z, pullback_link_chol_lkj
+end
+
 # Fixes Zygote's issues with `@debug`
 ChainRulesCore.@non_differentiable _debug(::Any)
