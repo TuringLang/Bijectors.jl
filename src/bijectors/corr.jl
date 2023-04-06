@@ -367,10 +367,26 @@ function _inv_link_chol_lkj(Y::AbstractMatrix)
     return W
 end
 
+function _inv_link_chol_lkj(y::AbstractVector)
+    # TODO: Implement adjoint to support reverse-mode AD backends properly.
+    K = _triu1_dim_from_length(length(y))
+
+    W = similar(y, K, K)
+    W .= zeros(eltype(y))
+
+    idx = 1
+    @inbounds for j in 1:K
+        W[1, j] = 1
+        for i in 2:j
+            z = tanh(y[idx])
+            idx += 1
+            tmp = W[i-1, j]
+            W[i-1, j] = z * tmp
+            W[i, j] = tmp * sqrt(1 - z^2)
         end
     end
 
-    return w
+    return W
 end
 
 function _logabsdetjac_chol_lkj(Y::AbstractMatrix)
