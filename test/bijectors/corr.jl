@@ -1,5 +1,5 @@
 using Bijectors, DistributionsAD, LinearAlgebra, Test
-using Bijectors: VecCorrBijector, CorrBijector
+using Bijectors: VecCorrBijector, CorrBijector, VecTriuBijector, VecTrilBijector
 
 @testset "CorrBijector & VecCorrBijector" begin
     for d ∈ [1, 2, 5]
@@ -31,5 +31,31 @@ using Bijectors: VecCorrBijector, CorrBijector
         # Hence, we disable those tests.
         test_bijector(b, x; test_not_identity=d != 1, changes_of_variables_test=false)
         test_bijector(bvec, x; test_not_identity=d != 1, changes_of_variables_test=false)
+    end
+end
+
+@testset "VecTriuBijector & VecTrilBijector" begin
+    for d ∈ [2, 5]
+        for dist in [LKJCholesky(d, 1, 'U'), LKJCholesky(d, 1, 'L')]
+            b = bijector(dist)
+
+            b_lkj = VecCorrBijector()
+            x = rand(dist)
+            y = b(x)
+            y_lkj = b_lkj(x)
+
+            @test y ≈ y_lkj
+
+            binv = inverse(b)
+            xinv = binv(y)
+            binv_lkj = inverse(b_lkj)
+            xinv_lkj = binv_lkj(y_lkj)
+
+            @test xinv.U ≈ cholesky(xinv_lkj).U
+
+            # test_bijector is commented out for now, 
+            # as isapprox is not defined for ::Cholesky types (the domain of LKJCholesky)
+            # test_bijector(b, x; test_not_identity=d != 1, changes_of_variables_test=false)
+        end
     end
 end
