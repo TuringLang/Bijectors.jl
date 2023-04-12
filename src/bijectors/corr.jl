@@ -184,7 +184,7 @@ abstract type AbstractVecCorrBijector <: Bijector end
 
 with_logabsdet_jacobian(b::AbstractVecCorrBijector, x) = transform(b, x), logabsdetjac(b, x)
 
-transform(::AbstractVecCorrBijector, X) = (_link_chol_lkj ∘ cholesky_factor)(X)
+transform(::AbstractVecCorrBijector, X) = _link_chol_lkj(cholesky_factor(X))
 
 function logabsdetjac(b::AbstractVecCorrBijector, x)
     return -logabsdetjac(inverse(b), b(x))
