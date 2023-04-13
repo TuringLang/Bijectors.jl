@@ -38,8 +38,13 @@ function single_sample_tests(dist)
 
     # Check that invlink is inverse of link.
     x = rand(dist)
-    @test @inferred(invlink(dist, link(dist, copy(x)))) ≈ x atol=1e-9
 
+    if dist isa LKJCholesky
+        x_inv = @inferred(invlink(dist, link(dist, copy(x))))
+        @test x_inv.UL ≈ x.UL atol=1e-9
+    else
+        @test @inferred(invlink(dist, link(dist, copy(x)))) ≈ x atol=1e-9
+    end
     # Check that link is inverse of invlink. Hopefully this just holds given the above...
     y = @inferred(link(dist, x))
     if dist isa Dirichlet
@@ -169,9 +174,9 @@ let
 end
 end
 
-@testset "correlation matrix" begin
+@testset "LKJ" begin
 
-    dist = LKJ(2, 1)
+    dist = LKJ(3, 1)
 
     single_sample_tests(dist)
 
@@ -182,6 +187,22 @@ end
 
     upperinds = [LinearIndices(size(x))[I] for I in CartesianIndices(size(x)) if I[2] > I[1]]
     J = ForwardDiff.jacobian(x->link(dist, x), x)
+    J = J[:, upperinds]
+    logpdf_turing = logpdf_with_trans(dist, x, true)
+    @test logpdf(dist, x) - _logabsdet(J) ≈ logpdf_turing
+end
+
+
+@testset "LKJCholesky" begin
+
+    dist = LKJCholesky(3, 1)
+
+    single_sample_tests(dist)
+
+    x = rand(dist)
+
+    upperinds = [LinearIndices(size(x))[I] for I in CartesianIndices(size(x)) if I[2] > I[1]]
+    J = ForwardDiff.jacobian(x->link(dist, x), x.U)
     J = J[:, upperinds]
     logpdf_turing = logpdf_with_trans(dist, x, true)
     @test logpdf(dist, x) - _logabsdet(J) ≈ logpdf_turing
