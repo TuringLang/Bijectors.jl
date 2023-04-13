@@ -61,7 +61,7 @@ function single_sample_tests(dist)
     else
         # This should probably be exact.
         @test logpdf(dist, x) == logpdf_with_trans(dist, x, false)
-        @test all(isfinite, logpdf.(Ref(dist), [invlink(dist, _rand_real(x)) for _ in 1:100]))
+        @test all(isfinite, logpdf.(Ref(dist), [invlink(dist, _rand_real(y)) for _ in 1:100]))
     end
 end
 
