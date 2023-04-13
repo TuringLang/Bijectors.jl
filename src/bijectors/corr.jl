@@ -223,17 +223,17 @@ julia> inverse(b)(y) ≈ X  # (✓) Round-trip through `b` and its inverse.
 true
 """
 struct VecCorrBijector <: AbstractVecCorrBijector end
-transform(::Inverse{VecCorrBijector}, y::AbstractVector{<:Real}) = (pd_from_upper ∘ _inv_link_chol_lkj)(y)
+transform(::Inverse{VecCorrBijector}, y::AbstractVector{<:Real}) = pd_from_upper(_inv_link_chol_lkj(y))
 
 logabsdetjac(::Inverse{VecCorrBijector}, y::AbstractVector{<:Real}) = _logabsdetjac_inv_corr(y)
 
 struct VecTriuBijector <: AbstractVecCorrBijector end
-transform(::Inverse{VecTriuBijector}, y::AbstractVector{<:Real}) = (Cholesky ∘ UpperTriangular ∘ _inv_link_chol_lkj)(y)
+transform(::Inverse{VecTriuBijector}, y::AbstractVector{<:Real}) = Cholesky(UpperTriangular(_inv_link_chol_lkj(y)))
 
 logabsdetjac(::Inverse{VecTriuBijector}, y::AbstractVector{<:Real}) = _logabsdetjac_inv_chol(y)
 
 struct VecTrilBijector <: AbstractVecCorrBijector end
-transform(::Inverse{VecTrilBijector}, y::AbstractVector{<:Real}) = (Cholesky ∘ LowerTriangular ∘ transpose ∘ _inv_link_chol_lkj)(y)
+transform(::Inverse{VecTrilBijector}, y::AbstractVector{<:Real}) = Cholesky(LowerTriangular(_transpose_matrix(_inv_link_chol_lkj(y))))
 
 logabsdetjac(::Inverse{VecTrilBijector}, y::AbstractVector{<:Real}) = _logabsdetjac_inv_chol(y)
 
@@ -317,7 +317,7 @@ function _link_chol_lkj(W::UpperTriangular)
     return z
 end
 
-_link_chol_lkj(W::LowerTriangular) = (_link_chol_lkj ∘ transpose)(W)
+_link_chol_lkj(W::LowerTriangular) = _link_chol_lkj(transpose(W))
 
 """
     _inv_link_chol_lkj(y)
