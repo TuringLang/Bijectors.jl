@@ -228,12 +228,24 @@ transform(::Inverse{VecCorrBijector}, y::AbstractVector{<:Real}) = pd_from_upper
 logabsdetjac(::Inverse{VecCorrBijector}, y::AbstractVector{<:Real}) = _logabsdetjac_inv_corr(y)
 
 struct VecTriuBijector <: AbstractVecCorrBijector end
-transform(::Inverse{VecTriuBijector}, y::AbstractVector{<:Real}) = Cholesky(UpperTriangular(_inv_link_chol_lkj(y)))
+
+function transform(::Inverse{VecTriuBijector}, y::AbstractVector{<:Real})
+    # This constructor is compatible with Julia v1.6
+    # for later versions Cholesky(::UpperTriangular) works
+    U = UpperTriangular(_inv_link_chol_lkj(y))
+    return Cholesky(U.data, 'U', 0)
+end
 
 logabsdetjac(::Inverse{VecTriuBijector}, y::AbstractVector{<:Real}) = _logabsdetjac_inv_chol(y)
 
 struct VecTrilBijector <: AbstractVecCorrBijector end
-transform(::Inverse{VecTrilBijector}, y::AbstractVector{<:Real}) = Cholesky(LowerTriangular(_transpose_matrix(_inv_link_chol_lkj(y))))
+
+function transform(::Inverse{VecTrilBijector}, y::AbstractVector{<:Real})
+    # This constructor is compatible with Julia v1.6
+    # for later versions Cholesky(::LowerTriangular) works
+    L = LowerTriangular(_transpose_matrix(_inv_link_chol_lkj(y)))
+    return Cholesky(L.data, 'L', 0)
+end
 
 logabsdetjac(::Inverse{VecTrilBijector}, y::AbstractVector{<:Real}) = _logabsdetjac_inv_chol(y)
 
