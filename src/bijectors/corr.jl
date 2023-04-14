@@ -405,8 +405,8 @@ function _logabsdetjac_inv_chol(y::AbstractVector)
         for _ in 1:(j-1)
             z = tanh(y[idx])
             logz = log(1 - z^2)
-            tmp += logz
             result += logz + (tmp / 2)
+            tmp += logz
             idx += 1
         end
     end
