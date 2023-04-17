@@ -157,7 +157,6 @@ function ChainRulesCore.rrule(::typeof(_transform_inverse_ordered), x::AbstractM
 end
 
 function ChainRulesCore.rrule(::typeof(_link_chol_lkj), W::UpperTriangular)
-    project_W = ChainRulesCore.ProjectTo(W)
 
     K = LinearAlgebra.checksquare(W)
     N = ((K-1)*K) ÷ 2 
@@ -186,9 +185,10 @@ function ChainRulesCore.rrule(::typeof(_link_chol_lkj), W::UpperTriangular)
         ΔW = similar(W)
 
         @inbounds ΔW[1,1] = zero(eltype(Δz))
+
         @inbounds for j=2:K
             idx_up_to_prev_column = ((j-1)*(j-2) ÷ 2)
-            ΔW[j, j] = zero(eltype(Δz))
+            ΔW[j, j] = 0
             Δtmp = zero(eltype(Δz))
             for i in (j-1):-1:2
                 tmp = tmp_vec[idx_up_to_prev_column + i - 1]
@@ -197,14 +197,14 @@ function ChainRulesCore.rrule(::typeof(_link_chol_lkj), W::UpperTriangular)
                 d_ftmp_p = -p / ftmp
                 d_p_tmp = -W[i,j] / tmp^2
 
-                Δp = Δz[i,j] / (1-p^2) + Δtmp * tmp * d_ftmp_p
+                Δp = Δz[idx_up_to_prev_column + i] / (1-p^2) + Δtmp * tmp * d_ftmp_p
                 ΔW[i, j] = Δp / tmp
-                Δtmp = Δp * d_p_tmp + Δtmp * ftmp # update to "previous" Δtmp
+                Δtmp = Δp * d_p_tmp + Δtmp * ftmp 
             end
-            ΔW[1, j] = Δz[1, j] / (1-W[1,j]^2) - Δtmp / sqrt(1 - W[1,j]^2) * W[1,j]
+            ΔW[1, j] = Δz[idx_up_to_prev_column + 1] / (1-W[1,j]^2) - Δtmp / sqrt(1 - W[1,j]^2) * W[1,j]
         end
 
-        return ChainRulesCore.NoTangent(), project_W(ΔW)
+        return ChainRulesCore.NoTangent(), ΔW
     end
 
     return z, pullback_link_chol_lkj
