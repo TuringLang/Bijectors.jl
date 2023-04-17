@@ -13,4 +13,9 @@
     test_rrule(Bijectors._transform_ordered, randn(5, 2))
     test_rrule(Bijectors._transform_inverse_ordered, b(rand(5)))
     test_rrule(Bijectors._transform_inverse_ordered, b(rand(5, 2)))
+
+    # LKJ and LKJCholesky bijector
+    dist = LKJCholesky(3, 1)
+    x = rand(dist)
+    test_rrule(Bijectors._link_chol_lkj, x.U)
 end
