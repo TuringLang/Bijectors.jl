@@ -210,5 +210,56 @@ function ChainRulesCore.rrule(::typeof(_link_chol_lkj), W::UpperTriangular)
     return z, pullback_link_chol_lkj
 end
 
+function ChainRulesCore.rrule(::typeof(_inv_link_chol_lkj), y::AbstractVector)
+
+    K = _triu1_dim_from_length(length(y))
+
+    W = similar(y, K, K)
+    W .= zeros(eltype(y))
+
+    z_vec = similar(y)
+    tmp_vec = similar(y)
+
+    idx = 1
+    @inbounds for j in 1:K
+        W[1, j] = 1
+        for i in 2:j
+            z = tanh(y[idx])
+            tmp = W[i-1, j]
+
+            z_vec[idx] = z
+            tmp_vec[idx] = tmp
+            idx += 1
+
+            W[i-1, j] = z * tmp
+            W[i, j] = tmp * sqrt(1 - z^2)
+        end
+    end
+
+    function pullback_inv_link_chol_lkj(ΔW_thunked)
+        ΔW = ChainRulesCore.unthunk(ΔW_thunked)
+        
+        Δy = zero(y)
+
+        @inbounds for j in 1:K
+            idx_up_to_prev_column = ((j-1)*(j-2) ÷ 2)
+            Δtmp = ΔW[j,j]
+            for i in j:-1:2
+                idx = idx_up_to_prev_column + i - 1
+                tmp = tmp_vec[idx]
+                z = z_vec[idx]
+
+                Δz = ΔW[i-1, j] * tmp - Δtmp * tmp / sqrt(1 - z^2) * z
+                Δy[idx] = Δz / cosh(y[idx])^2
+                Δtmp = ΔW[i-1, j] * z + Δtmp * sqrt(1 - z^2)
+            end
+        end
+
+        return ChainRulesCore.NoTangent(), Δy
+    end
+
+    return W, pullback_inv_link_chol_lkj
+end
+
 # Fixes Zygote's issues with `@debug`
 ChainRulesCore.@non_differentiable _debug(::Any)
