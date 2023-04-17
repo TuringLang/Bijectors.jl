@@ -10,6 +10,7 @@ _vec(x::Real) = x
 # # Because `ReverseDiff` does not play well with structural matrices.
 lower_triangular(A::AbstractMatrix) = convert(typeof(A), LowerTriangular(A))
 upper_triangular(A::AbstractMatrix) = convert(typeof(A), UpperTriangular(A))
+
 _transpose_matrix(A::AbstractMatrix) = Matrix(transpose(A))
 
 pd_from_lower(X) = LowerTriangular(X) * LowerTriangular(X)'
