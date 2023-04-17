@@ -243,7 +243,9 @@ struct VecTrilBijector <: AbstractVecCorrBijector end
 function transform(::Inverse{VecTrilBijector}, y::AbstractVector{<:Real})
     # This constructor is compatible with Julia v1.6
     # for later versions Cholesky(::LowerTriangular) works
-    L = LowerTriangular(_transpose_matrix(_inv_link_chol_lkj(y)))
+    # HACK: Need to make materialize the transposed matrix to avoid numerical instabilities.
+    # If we don't, the return-type can be both `Matrix` and `Transposed`.
+    L = LowerTriangular(Matrix(transpose(_inv_link_chol_lkj(y))))
     return Cholesky(L.data, 'L', 0)
 end
 
