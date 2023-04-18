@@ -180,17 +180,6 @@ function vec_to_triu1_row_index(idx)
     return idx - (M*(M-1) ÷ 2)
 end
 
-abstract type AbstractVecCorrBijector <: Bijector end
-
-# TODO: Implement directly to make use of shared computations.
-with_logabsdet_jacobian(b::AbstractVecCorrBijector, x) = transform(b, x), logabsdetjac(b, x)
-
-transform(::AbstractVecCorrBijector, X) = _link_chol_lkj(cholesky_factor(X))
-
-function logabsdetjac(b::AbstractVecCorrBijector, x)
-    return -logabsdetjac(inverse(b), b(x))
-end
-
 """
     VecCorrBijector <: Bijector
 
@@ -223,25 +212,33 @@ julia> y = b(X)  # Transform to unconstrained vector representation.
 julia> inverse(b)(y) ≈ X  # (✓) Round-trip through `b` and its inverse.
 true
 """
-struct VecCorrBijector <: AbstractVecCorrBijector end
-transform(::Inverse{VecCorrBijector}, y::AbstractVector{<:Real}) = pd_from_upper(_inv_link_chol_lkj(y))
+struct VecCorrBijector{T} <: Bijector 
+    uplo::Symbol
+    function VecCorrBijector(uplo)
+        s = Symbol(uplo)
+        new{Val{s}}(s)
+    end
+end
 
-logabsdetjac(::Inverse{VecCorrBijector}, y::AbstractVector{<:Real}) = _logabsdetjac_inv_corr(y)
+# TODO: Implement directly to make use of shared computations.
+with_logabsdet_jacobian(b::VecCorrBijector, x) = transform(b, x), logabsdetjac(b, x)
 
-struct VecTriuBijector <: AbstractVecCorrBijector end
+transform(::VecCorrBijector, X) = _link_chol_lkj(cholesky_factor(X))
 
-function transform(::Inverse{VecTriuBijector}, y::AbstractVector{<:Real})
+function logabsdetjac(b::VecCorrBijector, x)
+    return -logabsdetjac(inverse(b), b(x))
+end
+
+transform(::Inverse{VecCorrBijector{Val{:C}}}, y::AbstractVector{<:Real}) = pd_from_upper(_inv_link_chol_lkj(y))
+
+function transform(::Inverse{VecCorrBijector{Val{:U}}}, y::AbstractVector{<:Real})
     U = UpperTriangular(_inv_link_chol_lkj(y))
     # This Cholesky constructor is compatible with Julia v1.6
     # for later versions Cholesky(::UpperTriangular) works
     return Cholesky(U.data, 'U', 0)
 end
 
-logabsdetjac(::Inverse{VecTriuBijector}, y::AbstractVector{<:Real}) = _logabsdetjac_inv_chol(y)
-
-struct VecTrilBijector <: AbstractVecCorrBijector end
-
-function transform(::Inverse{VecTrilBijector}, y::AbstractVector{<:Real})
+function transform(::Inverse{VecCorrBijector{Val{:L}}}, y::AbstractVector{<:Real})
     # HACK: Need to make materialize the transposed matrix to avoid numerical instabilities.
     # If we don't, the return-type can be both `Matrix` and `Transposed`.
     L = LowerTriangular(Matrix(transpose(_inv_link_chol_lkj(y))))
@@ -250,7 +247,9 @@ function transform(::Inverse{VecTrilBijector}, y::AbstractVector{<:Real})
     return Cholesky(L.data, 'L', 0)
 end
 
-logabsdetjac(::Inverse{VecTrilBijector}, y::AbstractVector{<:Real}) = _logabsdetjac_inv_chol(y)
+logabsdetjac(::Inverse{VecCorrBijector{Val{:C}}}, y::AbstractVector{<:Real}) = _logabsdetjac_inv_corr(y)
+logabsdetjac(::Inverse{VecCorrBijector{Val{:U}}}, y::AbstractVector{<:Real}) = _logabsdetjac_inv_chol(y)
+logabsdetjac(::Inverse{VecCorrBijector{Val{:L}}}, y::AbstractVector{<:Real}) = _logabsdetjac_inv_chol(y)
 
 
 """
