@@ -1,5 +1,5 @@
 using Bijectors, DistributionsAD, LinearAlgebra, Test
-using Bijectors: VecCorrBijector, CorrBijector, VecTriuBijector, VecTrilBijector
+using Bijectors: VecCorrBijector, CorrBijector
 
 @testset "CorrBijector & VecCorrBijector" begin
     for d ∈ [1, 2, 5]
@@ -34,12 +34,12 @@ using Bijectors: VecCorrBijector, CorrBijector, VecTriuBijector, VecTrilBijector
     end
 end
 
-@testset "VecTriuBijector & VecTrilBijector" begin
+@testset "VecCorrBijector on LKJCholesky" begin
     for d ∈ [2, 5]
         for dist in [LKJCholesky(d, 1, 'U'), LKJCholesky(d, 1, 'L')]
             b = bijector(dist)
 
-            b_lkj = VecCorrBijector()
+            b_lkj = VecCorrBijector('C')
             x = rand(dist)
             y = b(x)
             y_lkj = b_lkj(x)
