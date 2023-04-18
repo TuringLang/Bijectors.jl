@@ -210,6 +210,59 @@ function ChainRulesCore.rrule(::typeof(_link_chol_lkj), W::UpperTriangular)
     return z, pullback_link_chol_lkj
 end
 
+function ChainRulesCore.rrule(::typeof(_link_chol_lkj), W::LowerTriangular)
+    K = LinearAlgebra.checksquare(W)
+    N = ((K-1)*K) ÷ 2 
+
+    z = zeros(eltype(W), N)
+    tmp_vec = similar(z)
+
+    idx = 1
+    @inbounds for i = 2:K
+        z[idx] = atanh(W[i, 1])
+        tmp = sqrt(1 - W[i, 1]^2)
+        tmp_vec[idx] = tmp
+        idx += 1
+        for j in 2:(i-1)
+            p = W[i, j] / tmp
+            tmp *= sqrt(1 - p^2)
+            tmp_vec[idx] = tmp
+            z[idx] = atanh(p)
+            idx += 1
+        end
+    end
+
+    function pullback_link_chol_lkj(Δz_thunked)
+        Δz = ChainRulesCore.unthunk(Δz_thunked)
+        
+        ΔW = similar(W)
+
+        @inbounds ΔW[1,1] = zero(eltype(Δz))
+
+        @inbounds for i=2:K
+            idx_up_to_prev_row = ((i-1)*(i-2) ÷ 2)
+            ΔW[i, i] = 0
+            Δtmp = zero(eltype(Δz))
+            for j in (i-1):-1:2
+                tmp = tmp_vec[idx_up_to_prev_row + j - 1]
+                p = W[i, j] / tmp
+                ftmp = sqrt(1 - p^2)
+                d_ftmp_p = -p / ftmp
+                d_p_tmp = -W[i,j] / tmp^2
+
+                Δp = Δz[idx_up_to_prev_row + j] / (1-p^2) + Δtmp * tmp * d_ftmp_p
+                ΔW[i, j] = Δp / tmp
+                Δtmp = Δp * d_p_tmp + Δtmp * ftmp 
+            end
+            ΔW[i, 1] = Δz[idx_up_to_prev_row + 1] / (1-W[i,1]^2) - Δtmp / sqrt(1 - W[i,1]^2) * W[i,1]
+        end
+
+        return ChainRulesCore.NoTangent(), ΔW
+    end
+
+    return z, pullback_link_chol_lkj
+end
+
 function ChainRulesCore.rrule(::typeof(_inv_link_chol_lkj), y::AbstractVector)
 
     K = _triu1_dim_from_length(length(y))
