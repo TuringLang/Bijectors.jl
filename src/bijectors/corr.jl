@@ -315,7 +315,6 @@ function _link_chol_lkj(W::UpperTriangular)
 
     z = similar(W, N)
 
-    # This block can't be integrated with loop below, because w[1,1] != 0.
     idx = 1
     @inbounds for j = 2:K
         z[idx] = atanh(W[1, j])
