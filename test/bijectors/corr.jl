@@ -4,7 +4,7 @@ using Bijectors: VecCorrBijector, CorrBijector
 @testset "CorrBijector & VecCorrBijector" begin
     for d ∈ [1, 2, 5]
         b = CorrBijector()
-        bvec = VecCorrBijector()
+        bvec = VecCorrBijector('C')
 
         dist = LKJ(d, 1)
         x = rand(dist)
@@ -31,6 +31,8 @@ using Bijectors: VecCorrBijector, CorrBijector
         # Hence, we disable those tests.
         test_bijector(b, x; test_not_identity=d != 1, changes_of_variables_test=false)
         test_bijector(bvec, x; test_not_identity=d != 1, changes_of_variables_test=false)
+
+        test_ad(x -> sum(transform(inverse(b), x)), y, (:Tracker,))
     end
 end
 
