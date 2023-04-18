@@ -174,7 +174,7 @@ end
     end
 end
 
-@adjoint function _inv_link_chol_lkj(y)
+@adjoint function _inv_link_chol_lkj(y::AbstractMatrix)
     K = LinearAlgebra.checksquare(y)
 
     w = similar(y)
@@ -219,7 +219,7 @@ end
     return w, pullback_inv_link_chol_lkj
 end
 
-@adjoint function _link_chol_lkj(w)
+@adjoint function _link_chol_lkj(w::AbstractMatrix)
     K = LinearAlgebra.checksquare(w)
     
     z = similar(w)
