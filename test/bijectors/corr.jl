@@ -32,7 +32,7 @@ using Bijectors: VecCorrBijector, CorrBijector
         test_bijector(b, x; test_not_identity=d != 1, changes_of_variables_test=false)
         test_bijector(bvec, x; test_not_identity=d != 1, changes_of_variables_test=false)
 
-        test_ad(x -> sum(transform(inverse(b), x)), y)
+        test_ad(x -> sum(bvec(bvecinv(x))), yvec, (:Tracker,))
     end
 end
 
@@ -54,6 +54,8 @@ end
             xinv_lkj = binv_lkj(y_lkj)
 
             @test xinv.U ≈ cholesky(xinv_lkj).U
+
+            test_ad(x -> sum(b(binv(x))), y, (:Tracker,))
 
             # test_bijector is commented out for now, 
             # as isapprox is not defined for ::Cholesky types (the domain of LKJCholesky)
