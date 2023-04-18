@@ -183,8 +183,20 @@ end
 """
     VecCorrBijector <: Bijector
 
-Similar to `CorrBijector`, but correlation matrix to a vector,
-and its inverse transforms vector to a correlation matrix.
+A bijector to transform either a correlation matrix or a Cholesky factor of a correlation matrix
+to an unconstrained vector. 
+
+# Fields
+- mode :`Symbol`. Controls the inverse tranformation :
+    - if `mode === :C` returns a correlation matrix
+    - if `mode === :U` returns a `LinearAlgebra.Cholesky` holding the `UpperTriangular` factor
+    - if `mode === :L` returns a `LinearAlgebra.Cholesky` holding the `LowerTriangular` factor
+
+# Reference
+- Transforming a orrelation matrix :
+https://mc-stan.org/docs/reference-manual/correlation-matrix-transform.html#absolute-jacobian-determinant-of-the-correlation-matrix-inverse-transform
+- Transforming a Cholesky factor of a correlation matrix :
+https://mc-stan.org/docs/reference-manual/cholesky-factors-of-correlation-matrices-1
 
 See also: [`CorrBijector`](@ref)
 
