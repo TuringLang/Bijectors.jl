@@ -11,8 +11,6 @@ _vec(x::Real) = x
 lower_triangular(A::AbstractMatrix) = convert(typeof(A), LowerTriangular(A))
 upper_triangular(A::AbstractMatrix) = convert(typeof(A), UpperTriangular(A))
 
-_transpose_matrix(A::AbstractMatrix) = Matrix(transpose(A))
-
 pd_from_lower(X) = LowerTriangular(X) * LowerTriangular(X)'
 pd_from_upper(X) = UpperTriangular(X)' * UpperTriangular(X)
 
