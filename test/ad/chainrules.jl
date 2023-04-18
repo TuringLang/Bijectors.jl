@@ -18,6 +18,7 @@
     dist = LKJCholesky(3, 1)
     x = rand(dist)
     test_rrule(Bijectors._link_chol_lkj, x.U)
+    test_rrule(Bijectors._link_chol_lkj, x.L)
 
     b = bijector(dist)
     y = b(x)
