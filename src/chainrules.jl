@@ -157,10 +157,9 @@ function ChainRulesCore.rrule(::typeof(_transform_inverse_ordered), x::AbstractM
 end
 
 function ChainRulesCore.rrule(::typeof(_link_chol_lkj), W::UpperTriangular)
-
     K = LinearAlgebra.checksquare(W)
     N = ((K-1)*K) ÷ 2 
-
+    
     z = zeros(eltype(W), N)
     tmp_vec = similar(z)
 
@@ -264,7 +263,6 @@ function ChainRulesCore.rrule(::typeof(_link_chol_lkj), W::LowerTriangular)
 end
 
 function ChainRulesCore.rrule(::typeof(_inv_link_chol_lkj), y::AbstractVector)
-
     K = _triu1_dim_from_length(length(y))
 
     W = similar(y, K, K)
