@@ -214,7 +214,14 @@ true
 """
 struct VecCorrBijector <: Bijector 
     mode::Symbol
-    VecCorrBijector(uplo) = new(Symbol(uplo))
+    function VecCorrBijector(uplo_or_corr)
+        s = Symbol(uplo_or_corr)
+        if (s === :U) || (s === :L) || (s === :C)
+            new(s)
+        else
+            throw(ArgumentError("mode must be :U (upper), :L (lower) or :C (correlation matrix)"))
+        end
+    end
 end
 
 # TODO: Implement directly to make use of shared computations.
