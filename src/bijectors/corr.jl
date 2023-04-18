@@ -212,12 +212,9 @@ julia> y = b(X)  # Transform to unconstrained vector representation.
 julia> inverse(b)(y) ≈ X  # (✓) Round-trip through `b` and its inverse.
 true
 """
-struct VecCorrBijector{T} <: Bijector 
-    uplo::Symbol
-    function VecCorrBijector(uplo)
-        s = Symbol(uplo)
-        new{Val{s}}(s)
-    end
+struct VecCorrBijector <: Bijector 
+    mode::Symbol
+    VecCorrBijector(uplo) = new(Symbol(uplo))
 end
 
 # TODO: Implement directly to make use of shared computations.
@@ -229,28 +226,31 @@ function logabsdetjac(b::VecCorrBijector, x)
     return -logabsdetjac(inverse(b), b(x))
 end
 
-transform(::Inverse{VecCorrBijector{Val{:C}}}, y::AbstractVector{<:Real}) = pd_from_upper(_inv_link_chol_lkj(y))
-
-function transform(::Inverse{VecCorrBijector{Val{:U}}}, y::AbstractVector{<:Real})
-    U = UpperTriangular(_inv_link_chol_lkj(y))
-    # This Cholesky constructor is compatible with Julia v1.6
-    # for later versions Cholesky(::UpperTriangular) works
-    return Cholesky(U.data, 'U', 0)
+function transform(b::Inverse{VecCorrBijector}, y::AbstractVector{<:Real})
+    if b.orig.mode === :U
+        U = UpperTriangular(_inv_link_chol_lkj(y))
+        # This Cholesky constructor is compatible with Julia v1.6
+        # for later versions Cholesky(::UpperTriangular) works
+        return Cholesky(U.data, 'U', 0)
+    elseif b.orig.mode === :L
+        # HACK: Need to make materialize the transposed matrix to avoid numerical instabilities.
+        # If we don't, the return-type can be both `Matrix` and `Transposed`.
+        L = LowerTriangular(Matrix(transpose(_inv_link_chol_lkj(y))))
+        # This Cholesky constructor is compatible with Julia v1.6
+        # for later versions Cholesky(::LowerTriangular) works
+        return Cholesky(L.data, 'L', 0)
+    else
+        return pd_from_upper(_inv_link_chol_lkj(y))
+    end
 end
 
-function transform(::Inverse{VecCorrBijector{Val{:L}}}, y::AbstractVector{<:Real})
-    # HACK: Need to make materialize the transposed matrix to avoid numerical instabilities.
-    # If we don't, the return-type can be both `Matrix` and `Transposed`.
-    L = LowerTriangular(Matrix(transpose(_inv_link_chol_lkj(y))))
-    # This Cholesky constructor is compatible with Julia v1.6
-    # for later versions Cholesky(::LowerTriangular) works
-    return Cholesky(L.data, 'L', 0)
+function logabsdetjac(b::Inverse{VecCorrBijector}, y::AbstractVector{<:Real})
+    if (b.orig.mode === :U) || (b.orig.mode === :L)
+        return _logabsdetjac_inv_chol(y)
+    else
+        return _logabsdetjac_inv_corr(y)
+    end
 end
-
-logabsdetjac(::Inverse{VecCorrBijector{Val{:C}}}, y::AbstractVector{<:Real}) = _logabsdetjac_inv_corr(y)
-logabsdetjac(::Inverse{VecCorrBijector{Val{:U}}}, y::AbstractVector{<:Real}) = _logabsdetjac_inv_chol(y)
-logabsdetjac(::Inverse{VecCorrBijector{Val{:L}}}, y::AbstractVector{<:Real}) = _logabsdetjac_inv_chol(y)
-
 
 """
     function _link_chol_lkj(w)
