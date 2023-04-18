@@ -182,7 +182,7 @@ end
 
 abstract type AbstractVecCorrBijector <: Bijector end
 
-TODO: Implement directly to make use of shared computations.
+# TODO: Implement directly to make use of shared computations.
 with_logabsdet_jacobian(b::AbstractVecCorrBijector, x) = transform(b, x), logabsdetjac(b, x)
 
 transform(::AbstractVecCorrBijector, X) = _link_chol_lkj(cholesky_factor(X))
@@ -231,9 +231,9 @@ logabsdetjac(::Inverse{VecCorrBijector}, y::AbstractVector{<:Real}) = _logabsdet
 struct VecTriuBijector <: AbstractVecCorrBijector end
 
 function transform(::Inverse{VecTriuBijector}, y::AbstractVector{<:Real})
-    # This constructor is compatible with Julia v1.6
-    # for later versions Cholesky(::UpperTriangular) works
     U = UpperTriangular(_inv_link_chol_lkj(y))
+    # This Cholesky constructor is compatible with Julia v1.6
+    # for later versions Cholesky(::UpperTriangular) works
     return Cholesky(U.data, 'U', 0)
 end
 
@@ -242,11 +242,11 @@ logabsdetjac(::Inverse{VecTriuBijector}, y::AbstractVector{<:Real}) = _logabsdet
 struct VecTrilBijector <: AbstractVecCorrBijector end
 
 function transform(::Inverse{VecTrilBijector}, y::AbstractVector{<:Real})
-    # This constructor is compatible with Julia v1.6
-    # for later versions Cholesky(::LowerTriangular) works
     # HACK: Need to make materialize the transposed matrix to avoid numerical instabilities.
     # If we don't, the return-type can be both `Matrix` and `Transposed`.
     L = LowerTriangular(Matrix(transpose(_inv_link_chol_lkj(y))))
+    # This Cholesky constructor is compatible with Julia v1.6
+    # for later versions Cholesky(::LowerTriangular) works
     return Cholesky(L.data, 'L', 0)
 end
 
