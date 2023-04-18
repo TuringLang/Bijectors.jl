@@ -1,3 +1,5 @@
+using Bijectors: VecCorrBijector
+
 # Allows us to run `ChangesOfVariables.test_with_logabsdet_jacobian`
 include(joinpath(dirname(pathof(ChangesOfVariables)), "..", "test", "getjacobian.jl"))
 
