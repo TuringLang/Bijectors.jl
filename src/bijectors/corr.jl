@@ -364,7 +364,6 @@ function _inv_link_chol_lkj(y::AbstractVector)
     K = _triu1_dim_from_length(length(y))
 
     W = similar(y, K, K)
-    W .= zeros(eltype(y))
 
     idx = 1
     @inbounds for j in 1:K
@@ -375,6 +374,9 @@ function _inv_link_chol_lkj(y::AbstractVector)
             tmp = W[i-1, j]
             W[i-1, j] = z * tmp
             W[i, j] = tmp * sqrt(1 - z^2)
+        end
+        for i in (j+1):K
+            W[i, j] = 0
         end
     end
 
