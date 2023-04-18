@@ -182,6 +182,7 @@ end
 
 abstract type AbstractVecCorrBijector <: Bijector end
 
+TODO: Implement directly to make use of shared computations.
 with_logabsdet_jacobian(b::AbstractVecCorrBijector, x) = transform(b, x), logabsdetjac(b, x)
 
 transform(::AbstractVecCorrBijector, X) = _link_chol_lkj(cholesky_factor(X))
