@@ -39,9 +39,14 @@ function single_sample_tests(dist)
     # Check that invlink is inverse of link.
     x = rand(dist)
 
+    # LKJCholesky and LKJ use the same VecCorrBijector.
+    # The return type of Inverse{VecCorrBijector} depends on the distribution.
     if dist isa LKJCholesky
-        x_inv = @inferred(invlink(dist, link(dist, copy(x))))
+        x_inv = @inferred Union{Cholesky{Float64, Matrix{Float64}}, Matrix{Float64}} invlink(dist, link(dist, copy(x)))
         @test x_inv.UL ≈ x.UL atol=1e-9
+    elseif dist isa LKJ
+        x_inv = @inferred Union{Cholesky{Float64, Matrix{Float64}}, Matrix{Float64}} invlink(dist, link(dist, copy(x)))
+        @test x_inv ≈ x atol=1e-9
     else
         @test @inferred(invlink(dist, link(dist, copy(x)))) ≈ x atol=1e-9
     end
