@@ -200,6 +200,9 @@ end
 
 @grad_from_chainrules update_triu_from_vec(vals::TrackedVector{<:Real}, k::Int, dim::Int)
 
+@grad_from_chainrules _link_chol_lkj(x::TrackedMatrix)
+@grad_from_chainrules _inv_link_chol_lkj(x::TrackedVector)
+
 # NOTE: Probably doesn't work in complete generality.
 wrap_chainrules_output(x) = x
 wrap_chainrules_output(x::ChainRulesCore.AbstractZero) = nothing
