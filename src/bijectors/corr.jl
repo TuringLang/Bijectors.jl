@@ -313,7 +313,7 @@ function _link_chol_lkj(W::UpperTriangular)
     K = LinearAlgebra.checksquare(W)
     N = ((K-1)*K) ÷ 2   # {K \choose 2} free parameters
 
-    z = zeros(eltype(W), N)
+    z = similar(W, N)
 
     # This block can't be integrated with loop below, because w[1,1] != 0.
     idx = 1
