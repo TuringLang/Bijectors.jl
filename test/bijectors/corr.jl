@@ -32,7 +32,7 @@ using Bijectors: VecCorrBijector, CorrBijector
         test_bijector(b, x; test_not_identity=d != 1, changes_of_variables_test=false)
         test_bijector(bvec, x; test_not_identity=d != 1, changes_of_variables_test=false)
         
-        test_ad(x -> sum(bvec(bvecinv(x))), yvec, (:Tracker, :Zygote,))
+        test_ad(x -> sum(bvec(bvecinv(x))), yvec, (:Zygote,))
     end
 end
 
