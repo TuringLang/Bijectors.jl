@@ -146,14 +146,7 @@ pd_from_lower(X::TrackedMatrix) = track(pd_from_lower, X)
     end
 end
 
-pd_from_upper(X::TrackedMatrix) = track(pd_from_upper, X)
-@grad function pd_from_upper(X::AbstractMatrix)
-    Xd = value(X)
-    return UpperTriangular(Xd)' * UpperTriangular(Xd), Δ -> begin
-        Xu = UpperTriangular(Xd)
-        return (UpperTriangular(Δ * Xu + Δ' * Xu),)
-    end
-end
+@grad_from_chainrules pd_from_upper(X::TrackedMatrix)
 
 lower_triangular(A::TrackedMatrix) = track(lower_triangular, A)
 @grad function lower_triangular(A::AbstractMatrix)
