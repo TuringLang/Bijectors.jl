@@ -264,7 +264,7 @@ end
 
 function ChainRulesCore.rrule(::typeof(_inv_link_chol_lkj), y::AbstractVector)
     K = _triu1_dim_from_length(length(y))
-
+    
     W = similar(y, K, K)
 
     z_vec = similar(y)
@@ -312,6 +312,13 @@ function ChainRulesCore.rrule(::typeof(_inv_link_chol_lkj), y::AbstractVector)
     end
 
     return W, pullback_inv_link_chol_lkj
+end
+
+function ChainRulesCore.rrule(::typeof(pd_from_upper), X::AbstractMatrix)
+    return UpperTriangular(X)' * UpperTriangular(X), Δ -> begin
+        Xu = UpperTriangular(X)
+        return ChainRulesCore.NoTangent(), UpperTriangular(Xu * Δ + Xu * Δ')
+    end
 end
 
 # Fixes Zygote's issues with `@debug`
