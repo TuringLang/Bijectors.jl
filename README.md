@@ -158,7 +158,7 @@ true
 ```
 
 #### `logpdf` of `TransformedDistribution`
-This far we've seen that we can replicate the functionality provided by `link` and `invlink`. To replicate `logpdf_with_trans` we instead provide a `TransformedDistribution <: Distribution` implementing the `Distribution` interface from Distributions.jl:
+Thus far, we've seen that we can replicate the functionality provided by `link` and `invlink`. To replicate `logpdf_with_trans` we instead provide a `TransformedDistribution <: Distribution` implementing the `Distribution` interface from Distributions.jl:
 
 ```julia
 julia> using Bijectors: TransformedDistribution
