@@ -302,7 +302,6 @@ Bijectors._inv_link_chol_lkj(y::TrackedVector) = track(Bijectors._inv_link_chol_
     K = _triu1_dim_from_length(length(y))
 
     W = similar(y, K, K)
-    W .= zeros(eltype(y))
     
     z_vec = similar(y)
     tmp_vec = similar(y)
@@ -320,6 +319,9 @@ Bijectors._inv_link_chol_lkj(y::TrackedVector) = track(Bijectors._inv_link_chol_
 
             W[i-1, j] = z * tmp
             W[i, j] = tmp * sqrt(1 - z^2)
+        end
+        for i in (j+1):K
+            W[i, j] = 0
         end
     end
 
