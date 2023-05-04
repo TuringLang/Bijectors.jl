@@ -247,17 +247,13 @@ end
 
 function transform(b::Inverse{VecCorrBijector}, y::AbstractVector{<:Real})
     if b.orig.mode === :U
-        U = _inv_link_chol_lkj(y)
         # This Cholesky constructor is compatible with Julia v1.6
         # for later versions Cholesky(::UpperTriangular) works
-        return Cholesky(U, 'U', 0)
+        return Cholesky(_inv_link_chol_lkj(y), 'U', 0)
     elseif b.orig.mode === :L
         # HACK: Need to make materialize the transposed matrix to avoid numerical instabilities.
         # If we don't, the return-type can be both `Matrix` and `Transposed`.
-        L = Matrix(transpose(_inv_link_chol_lkj(y)))
-        # This Cholesky constructor is compatible with Julia v1.6
-        # for later versions Cholesky(::LowerTriangular) works
-        return Cholesky(L, 'L', 0)
+        return Cholesky(Matrix(transpose(_inv_link_chol_lkj(y))), 'L', 0)
     else
         return pd_from_upper(_inv_link_chol_lkj(y))
     end
