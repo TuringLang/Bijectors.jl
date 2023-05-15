@@ -24,5 +24,4 @@ end
 
 inverse(b::Reshape) = Reshape(b.out_shape, b.in_shape)
 
-logabsdetajc(::Reshape, x) = zero(eltype(x))
-transform(b::Reshape, x) = reshape(x, b.out_shape)
+with_logabsdet_jacobian(::Reshape, x) = reshape(x, b.out_shape), zero(eltype(x))
