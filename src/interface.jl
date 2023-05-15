@@ -200,6 +200,7 @@ logabsdetjac!(::typeof(identity), x, logjac) = logjac
 # General
 include("bijectors/composed.jl")
 include("bijectors/stacked.jl")
+include("bijectors/reshape.jl")
 
 # Specific
 include("bijectors/exp_log.jl")

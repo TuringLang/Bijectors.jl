@@ -79,6 +79,13 @@ bijector(d::MatrixBeta) = PDBijector()
 
 bijector(d::LKJ) = CorrBijector()
 
+function bijector(d::Distributions.ReshapedDistribution)
+    inner_dims = size(d.dist)
+    outer_dims = d.dims
+    b = Reshape(outer_dims, inner_dims)
+    return inverse(b) ∘ bijector(d.dist) ∘ b
+end
+
 ##############################
 # Distributions.jl interface #
 ##############################
