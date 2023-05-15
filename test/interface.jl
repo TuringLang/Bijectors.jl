@@ -177,7 +177,7 @@ end
         TuringWishart(v,S),
         TuringInverseWishart(v,S),
         LKJ(3, 1.),
-        transformed(reshape(MvNormal(zeros(6), I), 2, 3)),
+        reshape(MvNormal(zeros(6), I), 2, 3),
     ]
 
     for dist in matrix_dists
