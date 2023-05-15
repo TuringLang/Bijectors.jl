@@ -47,7 +47,9 @@ isclosedform(b::Stacked) = all(isclosedform, b.bs)
 
 isinvertible(b::Stacked) = all(isinvertible, b.bs)
 
-stack(bs...) = Stacked(bs)
+
+@deprecate stack stack_transforms
+stack_transforms(bs...) = Stacked(bs)
 
 # For some reason `inverse.(sb.bs)` was unstable... This works though.
 inverse(sb::Stacked) = Stacked(map(inverse, sb.bs), sb.ranges)

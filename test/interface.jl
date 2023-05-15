@@ -1,6 +1,3 @@
-# using Pkg; Pkg.activate("..")
-# using TestEnv; TestEnv.activate()
-
 using Test
 using Random
 using LinearAlgebra
@@ -123,7 +120,8 @@ end
         Dirichlet([1000 * one(Float64), eps(Float64)]), 
         Dirichlet([eps(Float64), 1000 * one(Float64)]),
         transformed(MvNormal(randn(10), Diagonal(exp.(randn(10))))),
-        transformed(MvLogNormal(MvNormal(randn(10), Diagonal(exp.(randn(10))))))
+        transformed(MvLogNormal(MvNormal(randn(10), Diagonal(exp.(randn(10)))))),
+        transformed(reshape(product_distribution(fill(InverseGamma(2, 3), 6)), 2, 3)),
     ]
 
     for dist in vector_dists
@@ -175,7 +173,8 @@ end
         InverseWishart(v,S),
         TuringWishart(v,S),
         TuringInverseWishart(v,S),
-        LKJ(3, 1.)
+        LKJ(3, 1.),
+        transformed(reshape(MvNormal(zeros(6), I), 2, 3)),
     ]
 
     for dist in matrix_dists
@@ -204,7 +203,7 @@ end
     x = rand(d)
     y = b(x)
 
-    sb1 = @inferred stack(b, b, inverse(b), inverse(b))             # <= Tuple
+    sb1 = @inferred stack_transforms(b, b, inverse(b), inverse(b))             # <= Tuple
     res1 = with_logabsdet_jacobian(sb1, [x, x, y, y])
     @test sb1(param([x, x, y, y])) isa TrackedArray
 
@@ -222,7 +221,7 @@ end
 
     # value-test
     x = ones(3)
-    sb = @inferred stack(elementwise(exp), elementwise(log), Shift(5.0))
+    sb = @inferred stack_transforms(elementwise(exp), elementwise(log), Shift(5.0))
     res = with_logabsdet_jacobian(sb, x)
     @test sb(param(x)) isa TrackedArray
     @test sb(x) == [exp(x[1]), log(x[2]), x[3] + 5.0]
