@@ -17,9 +17,9 @@ julia> Array(transform(b, reshape(1:6, 2, 3)))
  2  5
  3  6
 """
-struct Reshape{S1,S2} <: Bijector
-    in_shape::S1
-    out_shape::S2
+struct Reshape{N1,N2} <: Bijector
+    in_shape::NTuple{N1,Int}
+    out_shape::NTuple{N2,Int}
 end
 
 inverse(b::Reshape) = Reshape(b.out_shape, b.in_shape)
