@@ -201,7 +201,7 @@ end
     x = rand(d)
     y = b(x)
 
-    sb1 = @inferred stack_transforms(b, b, inverse(b), inverse(b))             # <= Tuple
+    sb1 = @inferred Stacked(b, b, inverse(b), inverse(b))             # <= Tuple
     res1 = with_logabsdet_jacobian(sb1, [x, x, y, y])
     @test sb1(param([x, x, y, y])) isa TrackedArray
 
@@ -219,7 +219,7 @@ end
 
     # value-test
     x = ones(3)
-    sb = @inferred stack_transforms(elementwise(exp), elementwise(log), Shift(5.0))
+    sb = @inferred Stacked(elementwise(exp), elementwise(log), Shift(5.0))
     res = with_logabsdet_jacobian(sb, x)
     @test sb(param(x)) isa TrackedArray
     @test sb(x) == [exp(x[1]), log(x[2]), x[3] + 5.0]
