@@ -78,8 +78,8 @@ bijector(d::LowerboundedDistribution) = bijector_lowerbounded(d)
 bijector(d::PDMatDistribution) = PDBijector()
 bijector(d::MatrixBeta) = PDBijector()
 
-bijector(d::LKJ) = VecCorrBijector('C')
-bijector(d::LKJCholesky) = VecCorrBijector(d.uplo)
+bijector(d::LKJ) = VecCorrBijector()
+bijector(d::LKJCholesky) = VecCholeskyBijector(d.uplo)
 
 ##############################
 # Distributions.jl interface #
