@@ -27,6 +27,7 @@ struct Stacked{Bs, Rs} <: Transform
 end
 Stacked(bs::Tuple) = Stacked(bs, ntuple(i -> i:i, length(bs)))
 Stacked(bs::AbstractArray) = Stacked(bs, [i:i for i in 1:length(bs)])
+Stacked(bs...) = Stacked(bs, ntuple(i -> i:i, length(bs)))
 
 # Avoid mixing tuples and arrays.
 Stacked(bs::Tuple, ranges::AbstractArray) = Stacked(collect(bs), ranges)
