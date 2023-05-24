@@ -183,22 +183,12 @@ end
 """
     VecCorrBijector <: Bijector
 
-A bijector to transform either a correlation matrix or a Cholesky factor of a correlation matrix
-to an unconstrained vector. 
-
-# Fields
-- mode :`Symbol`. Controls the inverse tranformation :
-    - if `mode === :C` returns a correlation matrix
-    - if `mode === :U` returns a `LinearAlgebra.Cholesky` holding the `UpperTriangular` factor
-    - if `mode === :L` returns a `LinearAlgebra.Cholesky` holding the `LowerTriangular` factor
+A bijector to transform a correlation matrix to an unconstrained vector. 
 
 # Reference
-- Transforming a orrelation matrix :
-https://mc-stan.org/docs/reference-manual/correlation-matrix-transform.html#absolute-jacobian-determinant-of-the-correlation-matrix-inverse-transform
-- Transforming a Cholesky factor of a correlation matrix :
-https://mc-stan.org/docs/reference-manual/cholesky-factors-of-correlation-matrices-1
+https://mc-stan.org/docs/reference-manual/correlation-matrix-transform.html
 
-See also: [`CorrBijector`](@ref)
+See also: [`CorrBijector`](@ref) and ['VecCholeskyBijector'](@ref)
 
 # Example
 
@@ -224,19 +214,8 @@ julia> y = b(X)  # Transform to unconstrained vector representation.
 julia> inverse(b)(y) ≈ X  # (✓) Round-trip through `b` and its inverse.
 true
 """
-struct VecCorrBijector <: Bijector 
-    mode::Symbol
-    function VecCorrBijector(uplo_or_corr)
-        s = Symbol(uplo_or_corr)
-        if (s === :U) || (s === :L) || (s === :C)
-            new(s)
-        else
-            throw(ArgumentError("mode must be :U (upper), :L (lower) or :C (correlation matrix)"))
-        end
-    end
-end
+struct VecCorrBijector <: Bijector end
 
-# TODO: Implement directly to make use of shared computations.
 with_logabsdet_jacobian(b::VecCorrBijector, x) = transform(b, x), logabsdetjac(b, x)
 
 transform(::VecCorrBijector, X) = _link_chol_lkj(cholesky_factor(X))
@@ -245,27 +224,88 @@ function logabsdetjac(b::VecCorrBijector, x)
     return -logabsdetjac(inverse(b), b(x))
 end
 
-function transform(b::Inverse{VecCorrBijector}, y::AbstractVector{<:Real})
+transform(::Inverse{VecCorrBijector}, y::AbstractVector{<:Real}) = pd_from_upper(_inv_link_chol_lkj(y))
+
+logabsdetjac(::Inverse{VecCorrBijector}, y::AbstractVector{<:Real}) = _logabsdetjac_inv_corr(y)
+
+"""
+    VecCholeskyBijector <: Bijector
+
+A bijector to transform a Cholesky factor of a correlation matrix to an unconstrained vector. 
+
+# Fields
+- mode :`Symbol`. Controls the inverse tranformation :
+    - if `mode === :U` returns a `LinearAlgebra.Cholesky` holding the `UpperTriangular` factor
+    - if `mode === :L` returns a `LinearAlgebra.Cholesky` holding the `LowerTriangular` factor
+
+# Reference
+https://mc-stan.org/docs/reference-manual/cholesky-factors-of-correlation-matrices-1
+
+See also: [`VecCorrBijector`](@ref)
+
+# Example
+
+```jldoctest
+julia> using LinearAlgebra
+
+julia> using StableRNGs; rng = StableRNG(42);
+
+julia> b = Bijectors.VecCholeskyBijector(:U);
+
+julia> X = rand(rng, LKJCholesky(3, 1, :U))  # Sample a correlation matrix.
+Cholesky{Float64, Matrix{Float64}}
+U factor:
+3×3 UpperTriangular{Float64, Matrix{Float64}}:
+ 1.0  0.937494   0.865891
+  ⋅   0.348002  -0.320442
+  ⋅    ⋅         0.384122
+
+julia> y = b(X)  # Transform to unconstrained vector representation.
+3-element Vector{Float64}:
+ -0.8777149781928181
+ -0.3638927608636788
+ -0.29813769428942216
+
+julia> X_inv = inverse(b)(y); 
+julia> X_inv.U ≈ X.U  # (✓) Round-trip through `b` and its inverse.
+true
+julia> X_inv.L ≈ X.L  # (✓) Also works for the lower triangular factor.
+true
+"""
+struct VecCholeskyBijector <: Bijector 
+    mode::Symbol
+    function VecCholeskyBijector(uplo)
+        s = Symbol(uplo)
+        if (s === :U) || (s === :L)
+            new(s)
+        else
+            throw(ArgumentError("mode must be either :U (upper triangular) or :L (lower triangular)"))
+        end
+    end
+end
+
+# TODO: Implement directly to make use of shared computations.
+with_logabsdet_jacobian(b::VecCholeskyBijector, x) = transform(b, x), logabsdetjac(b, x)
+
+transform(::VecCholeskyBijector, X) = _link_chol_lkj(cholesky_factor(X))
+
+function logabsdetjac(b::VecCholeskyBijector, x)
+    return -logabsdetjac(inverse(b), b(x))
+end
+
+function transform(b::Inverse{VecCholeskyBijector}, y::AbstractVector{<:Real})
     if b.orig.mode === :U
         # This Cholesky constructor is compatible with Julia v1.6
         # for later versions Cholesky(::UpperTriangular) works
         return Cholesky(_inv_link_chol_lkj(y), 'U', 0)
-    elseif b.orig.mode === :L
+    else # No need to check for === :L, as it is checked in the VecCholeskyBijector constructor.
         # HACK: Need to make materialize the transposed matrix to avoid numerical instabilities.
         # If we don't, the return-type can be both `Matrix` and `Transposed`.
         return Cholesky(Matrix(transpose(_inv_link_chol_lkj(y))), 'L', 0)
-    else
-        return pd_from_upper(_inv_link_chol_lkj(y))
     end
 end
 
-function logabsdetjac(b::Inverse{VecCorrBijector}, y::AbstractVector{<:Real})
-    if (b.orig.mode === :U) || (b.orig.mode === :L)
-        return _logabsdetjac_inv_chol(y)
-    else
-        return _logabsdetjac_inv_corr(y)
-    end
-end
+logabsdetjac(::Inverse{VecCholeskyBijector}, y::AbstractVector{<:Real}) = _logabsdetjac_inv_chol(y)
 
 """
     function _link_chol_lkj(w)
