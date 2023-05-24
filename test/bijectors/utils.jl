@@ -1,5 +1,3 @@
-using Bijectors: VecCorrBijector
-
 # Allows us to run `ChangesOfVariables.test_with_logabsdet_jacobian`
 include(joinpath(dirname(pathof(ChangesOfVariables)), "..", "test", "getjacobian.jl"))
 
@@ -27,19 +25,9 @@ function test_bijector(
     y_test = @inferred b(x)
     ilogjac_test = !isnothing(y) ? @inferred(logabsdetjac(ib, y)) : @inferred(logabsdetjac(ib, y_test))
     ires = if !isnothing(y)
-        if b isa VecCorrBijector
-            # Inverse{VecCorrBijector} returns a ::Cholesky{...} in the case of a LKJCholesky distribution
-            # and a ::Matrix{Float64} in the case of a LKJ distribution.
-            @inferred Tuple{Union{Cholesky{Float64, Matrix{Float64}}, Matrix{Float64}}, Float64} with_logabsdet_jacobian(inverse(b), y)
-        else
             @inferred(with_logabsdet_jacobian(inverse(b), y))
-        end
     else
-        if b isa VecCorrBijector
-            @inferred Tuple{Union{Cholesky{Float64, Matrix{Float64}}, Matrix{Float64}}, Float64} with_logabsdet_jacobian(inverse(b), y_test)
-        else
             @inferred(with_logabsdet_jacobian(inverse(b), y_test))
-        end
     end
 
     # ChangesOfVariables.jl
