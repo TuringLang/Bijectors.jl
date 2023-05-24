@@ -21,7 +21,7 @@ b = stack(b1, b2)
 b([0.0, 1.0]) == [b1(0.0), 1.0]  # => true
 ```
 """
-struct Stacked{Bs, Rs} <: Transform
+struct Stacked{Bs, Rs<:Union{Tuple,AbstractArray}} <: Transform
     bs::Bs
     ranges::Rs
 end
