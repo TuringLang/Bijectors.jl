@@ -21,12 +21,13 @@ b = stack(b1, b2)
 b([0.0, 1.0]) == [b1(0.0), 1.0]  # => true
 ```
 """
-struct Stacked{Bs, Rs} <: Transform
+struct Stacked{Bs, Rs<:Union{Tuple,AbstractArray}} <: Transform
     bs::Bs
     ranges::Rs
 end
 Stacked(bs::Tuple) = Stacked(bs, ntuple(i -> i:i, length(bs)))
 Stacked(bs::AbstractArray) = Stacked(bs, [i:i for i in 1:length(bs)])
+Stacked(bs...) = Stacked(bs, ntuple(i -> i:i, length(bs)))
 
 # Avoid mixing tuples and arrays.
 Stacked(bs::Tuple, ranges::AbstractArray) = Stacked(collect(bs), ranges)
@@ -47,7 +48,6 @@ isclosedform(b::Stacked) = all(isclosedform, b.bs)
 
 isinvertible(b::Stacked) = all(isinvertible, b.bs)
 
-stack(bs...) = Stacked(bs)
 
 # For some reason `inverse.(sb.bs)` was unstable... This works though.
 inverse(sb::Stacked) = Stacked(map(inverse, sb.bs), sb.ranges)
