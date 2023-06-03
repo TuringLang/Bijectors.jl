@@ -13,8 +13,8 @@ bijector(::TuringScalMvNormal) = identity
 bijector(::TuringDiagMvNormal) = identity
 bijector(::TuringDenseMvNormal) = identity
 
-bijector(d::FillVectorOfUnivariate{Continuous}) = bijector(d.v.value)
-bijector(d::FillMatrixOfUnivariate{Continuous}) = up1(bijector(d.dists.value))
+bijector(d::FillVectorOfUnivariate{Continuous}) = elementwise(bijector(d.v.value))
+bijector(d::FillMatrixOfUnivariate{Continuous}) = elementwise(bijector(d.dists.value))
 bijector(d::MatrixOfUnivariate{Discrete}) = identity
 bijector(d::MatrixOfUnivariate{Continuous}) = TruncatedBijector(_minmax(d.dists)...)
 bijector(d::VectorOfMultivariate{Discrete}) = identity
@@ -30,7 +30,7 @@ for T in (:VectorOfMultivariate, :FillVectorOfMultivariate)
         bijector(d::$T{Continuous, <:TuringDirichlet}) = SimplexBijector()
     end
 end
-bijector(d::FillVectorOfMultivariate{Continuous}) = bijector(d.dists.value)
+bijector(d::FillVectorOfMultivariate{Continuous}) = columnwise(bijector(d.dists.value))
 
 isdirichlet(::VectorOfMultivariate{Continuous, <:Dirichlet}) = true
 isdirichlet(::VectorOfMultivariate{Continuous, <:TuringDirichlet}) = true
