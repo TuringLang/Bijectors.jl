@@ -1,7 +1,7 @@
 #######################################################
 # Constrained to unconstrained distribution bijectors #
 #######################################################
-struct TruncatedBijector{T1, T2} <: Bijector
+struct TruncatedBijector{T1,T2} <: Bijector
     lb::T1
     ub::T2
 end
@@ -15,7 +15,7 @@ end
 function transform(b::TruncatedBijector, x)
     a, b = b.lb, b.ub
     return truncated_link.(_clamp.(x, a, b), a, b)
-end 
+end
 
 function truncated_link(x::Real, a, b)
     lowerbounded, upperbounded = isfinite(a), isfinite(b)
@@ -56,11 +56,11 @@ end
 function truncated_logabsdetjac(x, a, b)
     lowerbounded, upperbounded = isfinite(a), isfinite(b)
     if lowerbounded && upperbounded
-        return - log((x - a) * (b - x) / (b - a))
+        return -log((x - a) * (b - x) / (b - a))
     elseif lowerbounded
-        return - log(x - a)
+        return -log(x - a)
     elseif upperbounded
-        return - log(b - x)
+        return -log(b - x)
     else
         return zero(x)
     end

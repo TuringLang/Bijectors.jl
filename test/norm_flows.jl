@@ -11,14 +11,15 @@ seed!(1)
     @test inverse(inverse(bn)) == bn
     @test inverse(bn)(bn(x)) ≈ x
     @test (inverse(bn) ∘ bn)(x) ≈ x
-    @test_throws ErrorException with_logabsdet_jacobian(bn, randn(10,2))
-    @test logabsdetjac(inverse(bn), bn(x)) ≈ - logabsdetjac(bn, x)
+    @test_throws ErrorException with_logabsdet_jacobian(bn, randn(10, 2))
+    @test logabsdetjac(inverse(bn), bn(x)) ≈ -logabsdetjac(bn, x)
 
     y, ladj = with_logabsdet_jacobian(bn, x)
     @test log(abs(det(ForwardDiff.jacobian(bn, x)))) ≈ sum(ladj)
-    @test log(abs(det(ForwardDiff.jacobian(inverse(bn), y)))) ≈ sum(logabsdetjac(inverse(bn), y))
+    @test log(abs(det(ForwardDiff.jacobian(inverse(bn), y)))) ≈
+        sum(logabsdetjac(inverse(bn), y))
 
-    test_functor(bn, (b = bn.b, logs = bn.logs))
+    test_functor(bn, (b=bn.b, logs=bn.logs))
 end
 
 @testset "PlanarLayer" begin
@@ -40,8 +41,8 @@ end
     z = ones(10, 100)
     @test inverse(flow)(flow(z)) ≈ z
 
-    test_functor(flow, (w = w, u = u, b = b))
-    test_functor(inverse(flow), (orig = flow,))
+    test_functor(flow, (w=w, u=u, b=b))
+    test_functor(inverse(flow), (orig=flow,))
 
     @testset "find_alpha" begin
         for wt_y in (-20.3, -3, -3//2, 0.0, 5, 29//4, 12.3)
@@ -55,7 +56,8 @@ end
 
                     # check if α is an approximate solution to the considered equation
                     # have to set atol if wt_y is zero (otherwise only equality is checked)
-                    @test wt_y ≈ α + wt_u_hat * tanh(α + b) atol=iszero(wt_y) ? 1e-14 : 0.0
+                    @test wt_y ≈ α + wt_u_hat * tanh(α + b) atol =
+                        iszero(wt_y) ? 1e-14 : 0.0
                 end
             end
         end
@@ -77,8 +79,8 @@ end
         our_method = sum(with_logabsdet_jacobian(flow, z)[2])
 
         @test our_method ≈ forward_diff
-        @test inverse(flow)(flow(z)) ≈ z rtol=0.2
-        @test (inverse(flow) ∘ flow)(z) ≈ z rtol=0.2
+        @test inverse(flow)(flow(z)) ≈ z rtol = 0.2
+        @test (inverse(flow) ∘ flow)(z) ≈ z rtol = 0.2
     end
 
     α_ = 1.0
@@ -88,8 +90,8 @@ end
     flow = RadialLayer(α_, β, z_0)
     @test inverse(flow)(flow(z)) ≈ z
 
-    test_functor(flow, (α_ = α_, β = β, z_0 = z_0))
-    test_functor(inverse(flow), (orig = flow,))
+    test_functor(flow, (α_=α_, β=β, z_0=z_0))
+    test_functor(inverse(flow), (orig=flow,))
 end
 
 @testset "Flows" begin
@@ -106,7 +108,7 @@ end
     lp = logpdf(d, x) - res[2]
 
     @test res[1] ≈ y
-    @test logpdf(flow, y) ≈ lp rtol=0.1
+    @test logpdf(flow, y) ≈ lp rtol = 0.1
 
     # flow with unconstrained-to-constrained
     d1 = Beta()

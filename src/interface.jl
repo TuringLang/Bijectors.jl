@@ -3,7 +3,7 @@ import Base: ∘
 import Random: AbstractRNG
 import Distributions: logpdf, rand, rand!, _rand!, _logpdf
 
-const Elementwise{F} = Base.Fix1{<:Union{typeof(map),typeof(broadcast)}, F}
+const Elementwise{F} = Base.Fix1{<:Union{typeof(map),typeof(broadcast)},F}
 """
     elementwise(f)
 
@@ -16,7 +16,9 @@ In the case where `f::ComposedFunction`, the result is
 elementwise(f) = Base.Fix1(broadcast, f)
 # TODO: This is makes dispatching quite a bit easier, but uncertain if this is really
 # the way to go.
-elementwise(f::ComposedFunction) = ComposedFunction(elementwise(f.outer), elementwise(f.inner))
+function elementwise(f::ComposedFunction)
+    return ComposedFunction(elementwise(f.outer), elementwise(f.inner))
+end
 
 ######################
 # Bijector interface #
@@ -59,7 +61,9 @@ transform(f::F, x) where {F<:Function} = f(x)
 function transform(t::Transform, x)
     res = with_logabsdet_jacobian(t, x)
     if res isa ChangesOfVariables.NoLogAbsDetJacobian
-        error("`transform` not implemented for $(typeof(b)); implement `transform` and/or `with_logabsdet_jacobian`.")
+        error(
+            "`transform` not implemented for $(typeof(b)); implement `transform` and/or `with_logabsdet_jacobian`.",
+        )
     end
 
     return first(res)
@@ -83,7 +87,9 @@ Return `log(abs(det(J(b, x))))`, where `J(b, x)` is the jacobian of `b` at `x`.
 function logabsdetjac(b, x)
     res = with_logabsdet_jacobian(b, x)
     if res isa ChangesOfVariables.NoLogAbsDetJacobian
-        error("`logabsdetjac` not implemented for $(typeof(b)); implement `logabsdetjac` and/or `with_logabsdet_jacobian`.")
+        error(
+            "`logabsdetjac` not implemented for $(typeof(b)); implement `logabsdetjac` and/or `with_logabsdet_jacobian`.",
+        )
     end
 
     return last(res)

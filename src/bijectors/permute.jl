@@ -99,7 +99,7 @@ function Permute(indices::AbstractVector{Int})
     return Permute(A)
 end
 
-function Permute(n::Int, indices::Pair{Int, Int}...)
+function Permute(n::Int, indices::Pair{Int,Int}...)
     A = spdiagm(0 => ones(n))
 
     dests = Set{Int}()
@@ -111,7 +111,7 @@ function Permute(n::Int, indices::Pair{Int, Int}...)
 
         push!(dests, dst)
         push!(sources, src)
-        
+
         A[dst, src] = 1.0
         A[src, src] = 0.0  # <= remove `src => src`
     end
@@ -122,7 +122,7 @@ function Permute(n::Int, indices::Pair{Int, Int}...)
     return Permute(A)
 end
 
-function Permute(n::Int, indices::Pair{Vector{Int}, Vector{Int}}...)
+function Permute(n::Int, indices::Pair{Vector{Int},Vector{Int}}...)
     A = spdiagm(0 => ones(n))
 
     dests = Set{Int}()
@@ -130,14 +130,14 @@ function Permute(n::Int, indices::Pair{Vector{Int}, Vector{Int}}...)
 
     for (srcs, dsts) in indices
         @argcheck length(srcs) == length(dsts) "$srcs => $dsts is not bijective"
-        
+
         for (src, dst) in zip(srcs, dsts)
             @argcheck dst ∉ dests "$dst used more than once"
             @argcheck src ∉ sources "$src used more than once"
 
             push!(dests, dst)
             push!(sources, src)
-            
+
             A[dst, src] = 1.0
             A[src, src] = 0.0  # <= remove `src => src`
         end
@@ -148,7 +148,6 @@ function Permute(n::Int, indices::Pair{Vector{Int}, Vector{Int}}...)
     dropzeros!(A)
     return Permute(A)
 end
-
 
 transform(b::Permute, x::AbstractVecOrMat) = b.A * x
 inverse(b::Permute) = Permute(transpose(b.A))
