@@ -17,6 +17,21 @@ elementwise(f) = Base.Fix1(broadcast, f)
 # TODO: This is makes dispatching quite a bit easier, but uncertain if this is really
 # the way to go.
 elementwise(f::ComposedFunction) = ComposedFunction(elementwise(f.outer), elementwise(f.inner))
+const Columnwise{F} = Base.Fix1{typeof(eachcolmaphcat),F}
+"""
+
+Alias for `Base.Fix1(eachcolmaphcat, f)`.
+
+Represents a function `f` which is applied to each column of an input.
+"""
+columnwise(f) = Base.Fix1(eachcolmaphcat, f)
+inverse(f::Columnwise) = columnwise(inverse(f.x))
+
+transform(f::Columnwise, x::AbstractMatrix) = f(x)
+function logabsdetjac(f::Columnwise, x::AbstractMatrix)
+    return sum(Base.Fix1(logabsdetjac, f.x), eachcol(x))
+end
+with_logabsdet_jacobian(f::Columnwise, x::AbstractMatrix) = (f(x), logabsdetjac(f, x))
 
 ######################
 # Bijector interface #
