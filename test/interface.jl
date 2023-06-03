@@ -196,6 +196,22 @@ end
     end
 end
 
+@testset "DistributionsAD" begin
+    @testset "$dist" for dist in [
+        filldist(Normal(), 2),
+        filldist(Normal(), 2, 3),
+        filldist(Exponential(), 2),
+        filldist(Exponential(), 2, 3),
+        filldist(filldist(Exponential(), 2), 3),
+    ]
+        x = rand(dist)
+        b = bijector(dist)
+        y = b(x)
+        td = transformed(dist)
+        @test logpdf(dist, x) - logabsdetjac(b, x) ≈ logpdf(td, y)
+    end
+end
+
 @testset "Stacked <: Bijector" begin
     # `logabsdetjac` withOUT AD
     d = Beta()
