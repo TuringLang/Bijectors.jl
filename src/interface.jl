@@ -25,6 +25,7 @@ Alias for `Base.Fix1(eachcolmaphcat, f)`.
 Represents a function `f` which is applied to each column of an input.
 """
 columnwise(f) = Base.Fix1(eachcolmaphcat, f)
+inverse(f::Columnwise) = columnwise(inverse(f.x))
 
 transform(f::Columnwise, x::AbstractMatrix) = f(x)
 function logabsdetjac(f::Columnwise, x::AbstractMatrix)
