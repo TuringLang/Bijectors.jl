@@ -139,7 +139,7 @@ end
             # verify against AD
             # similar to what we do in test/transform.jl for Dirichlet
             if dist isa Dirichlet
-                b = Bijectors.SimplexBijector{false}()
+                b = Bijectors.SimplexBijector()
                 # HACK(torfjelde): Calling `rand(dist)` will sometimes lead to `[0.999..., 0.0]`
                 # which in turn will lead to differences between `ForwardDiff.jacobian`
                 # and `logabsdetjac` due to how we handle the boundary values in `SimplexBijector`.
