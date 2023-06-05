@@ -200,13 +200,10 @@ function simplex_logabsdetjac_gradient(x::AbstractMatrix)
     return g
 end
 
-function simplex_link_jacobian(
-    x::AbstractVector{T},
-    ::Val{proj}=Val(true),
-) where {T<:Real, proj}
+function simplex_link_jacobian(x::AbstractVector{T}) where {T<:Real}
     K = length(x)
     @assert K > 1 "x needs to be of length greater than 1"
-    dydxt = similar(x, length(x), length(x))
+    dydxt = similar(x, K, K - 1)
     @inbounds dydxt .= 0
     ϵ = _eps(T)
     sum_tmp = zero(T)
@@ -223,16 +220,10 @@ function simplex_link_jacobian(
             dydxt[i,k] = (1/z + 1/(1-z)) * (x[k] + ϵ)*(one(T) - 2ϵ)/((one(T) + ϵ) - sum_tmp)^2
         end
     end
-    @inbounds sum_tmp += x[K - 1]
-    @inbounds if !proj
-        @simd for i in 1:K
-            dydxt[i,K] = -1
-        end
-    end
-    return UpperTriangular(dydxt)'
+    return dydxt'
 end
-function jacobian(b::SimplexBijector{proj}, x::AbstractVector{T}) where {proj, T}
-    return simplex_link_jacobian(x, Val(proj))
+function jacobian(b::SimplexBijector, x::AbstractVector{T}) where {T}
+    return simplex_link_jacobian(x)
 end
 
 #=
@@ -301,13 +292,10 @@ function add_simplex_link_adjoint!(
 end
 =#
 
-function simplex_invlink_jacobian(
-    y::AbstractVector{T},
-    ::Val{proj}=Val(true),
-) where {T<:Real, proj}
-    K = length(y)
+function simplex_invlink_jacobian(y::AbstractVector{T}) where {T<:Real}
+    K = length(y) + 1
     @assert K > 1 "x needs to be of length greater than 1"
-    dxdy = similar(y, length(y), length(y))
+    dxdy = similar(y, K, K - 1)
     @inbounds dxdy .= 0
 
     ϵ = _eps(T)
@@ -333,16 +321,8 @@ function simplex_invlink_jacobian(
         end
     end
     @inbounds sum_tmp += clamped_x
-    @inbounds if proj
-    	unclamped_x = one(T) - sum_tmp
-        clamped_x = _clamp(unclamped_x, 0, 1)
-    else
-    	unclamped_x = one(T) - sum_tmp - y[K]
-        clamped_x = _clamp(unclamped_x, 0, 1)
-        if unclamped_x == clamped_x
-            dxdy[K,K] = -1
-        end
-    end
+    unclamped_x = one(T) - sum_tmp
+    clamped_x = _clamp(unclamped_x, 0, 1)
     @inbounds if unclamped_x == clamped_x
         for i in 1:K-1
             @simd for j in i:K-1
@@ -350,11 +330,11 @@ function simplex_invlink_jacobian(
             end
         end
     end
-    return LowerTriangular(dxdy)
+    return dxdy
 end
 # jacobian
-function jacobian(ib::Inverse{<:SimplexBijector{proj}}, y::AbstractVector{T}) where {proj, T}
-    return simplex_invlink_jacobian(y, Val(proj))
+function jacobian(ib::Inverse{<:SimplexBijector}, y::AbstractVector{T}) where {T}
+    return simplex_invlink_jacobian(y)
 end
 
 #=
