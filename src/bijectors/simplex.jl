@@ -1,8 +1,7 @@
 ####################
 # Simplex bijector #
 ####################
-struct SimplexBijector{T} <: Bijector end
-SimplexBijector() = SimplexBijector{true}()
+struct SimplexBijector <: Bijector end
 
 with_logabsdet_jacobian(b::SimplexBijector, x) = transform(b, x), logabsdetjac(b, x)
 
