@@ -147,8 +147,8 @@ end
                 x = any(rand(dist) .> 0.9999) ? [0.0, 1.0][sortperm(rand(dist))] : rand(dist)
                 y = b(x)
                 @test b(param(x)) isa TrackedArray
-                @test log(abs(det(ForwardDiff.jacobian(b, x)))) ≈ logabsdetjac(b, x)
-                @test log(abs(det(ForwardDiff.jacobian(inverse(b), y)))) ≈ logabsdetjac(inverse(b), y)
+                @test log(abs(det(ForwardDiff.jacobian(b, x)[1:end,1:end-1]))) ≈ logabsdetjac(b, x)
+                @test log(abs(det(ForwardDiff.jacobian(inverse(b), y)[1:end-1,1:end]))) ≈ logabsdetjac(inverse(b), y)
             else
                 b = bijector(dist)
                 x = rand(dist)
