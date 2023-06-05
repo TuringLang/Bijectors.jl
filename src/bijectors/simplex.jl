@@ -8,10 +8,16 @@ with_logabsdet_jacobian(b::SimplexBijector, x) = transform(b, x), logabsdetjac(b
 transform(b::SimplexBijector, x) = _simplex_bijector(x, b)
 transform!(b::SimplexBijector, y, x) = _simplex_bijector!(y, x, b)
 
-_simplex_bijector(x::AbstractArray, b::SimplexBijector) = _simplex_bijector!(similar(x), x, b)
+function _simplex_bijector(x::AbstractArray, b::SimplexBijector)
+    sz = size(x)
+    K = size(x, 1)
+    y = similar(x, Base.setindex(sz, K - 1, 1))
+    _simplex_bijector!(y, x, b)
+    return y
+end
 
 # Vector implementation.
-function _simplex_bijector!(y, x::AbstractVector, ::SimplexBijector{proj}) where {proj}
+function _simplex_bijector!(y, x::AbstractVector, ::SimplexBijector)
     K = length(x)
     @assert K > 1 "x needs to be of length greater than 1"
     T = eltype(x)
@@ -26,18 +32,11 @@ function _simplex_bijector!(y, x::AbstractVector, ::SimplexBijector{proj}) where
         z = (x[k] + ϵ)*(one(T) - 2ϵ)/((one(T) + ϵ) - sum_tmp)
         y[k] = LogExpFunctions.logit(z) + log(T(K - k))
     end
-    @inbounds sum_tmp += x[K - 1]
-    @inbounds if proj
-        y[K] = zero(T)
-    else
-        y[K] = one(T) - sum_tmp - x[K]
-    end
-
     return y
 end
 
 # Matrix implementation.
-function _simplex_bijector!(Y, X::AbstractMatrix, ::SimplexBijector{proj}) where {proj}
+function _simplex_bijector!(Y, X::AbstractMatrix, ::SimplexBijector)
     K, N = size(X, 1), size(X, 2)
     @assert K > 1 "x needs to be of length greater than 1"
     T = eltype(X)
@@ -50,12 +49,6 @@ function _simplex_bijector!(Y, X::AbstractMatrix, ::SimplexBijector{proj}) where
             sum_tmp += X[k - 1, n]
             z = (X[k, n] + ϵ)*(one(T) - 2ϵ)/((one(T) + ϵ) - sum_tmp)
             Y[k, n] = LogExpFunctions.logit(z) + log(T(K - k))
-        end
-        sum_tmp += X[K-1, n]
-        if proj
-            Y[K, n] = zero(T)
-        else
-            Y[K, n] = one(T) - sum_tmp - X[K, n]
         end
     end
 
@@ -72,10 +65,16 @@ function transform!(
     return _simplex_inv_bijector!(x, y, ib.orig)
 end
 
-_simplex_inv_bijector(y, b) = _simplex_inv_bijector!(similar(y), y, b)
+function _simplex_inv_bijector(y, b)
+    sz = size(y)
+    K = sz[1] + 1
+    x = similar(y, Base.setindex(sz, K, 1))
+    _simplex_inv_bijector!(x, y, b)
+    return x
+end
 
-function _simplex_inv_bijector!(x, y::AbstractVector, b::SimplexBijector{proj}) where {proj}
-    K = length(y)
+function _simplex_inv_bijector!(x, y::AbstractVector, b::SimplexBijector)
+    K = length(y) + 1
     @assert K > 1 "x needs to be of length greater than 1"
     T = eltype(y)
     ϵ = _eps(T)
@@ -88,17 +87,12 @@ function _simplex_inv_bijector!(x, y::AbstractVector, b::SimplexBijector{proj}) 
         x[k] = _clamp(((one(T) + ϵ) - sum_tmp) / (one(T) - 2ϵ) * z - ϵ, 0, 1)
     end
     @inbounds sum_tmp += x[K - 1]
-    @inbounds if proj
-        x[K] = _clamp(one(T) - sum_tmp, 0, 1)
-    else
-        x[K] = _clamp(one(T) - sum_tmp - y[K], 0, 1)
-    end
-    
+    x[K] = _clamp(one(T) - sum_tmp, 0, 1)
     return x
 end
 
-function _simplex_inv_bijector!(X, Y::AbstractMatrix, b::SimplexBijector{proj}) where {proj}
-    K, N = size(Y, 1), size(Y, 2)
+function _simplex_inv_bijector!(X, Y::AbstractMatrix, b::SimplexBijector)
+    K, N = size(Y, 1) + 1, size(Y, 2)
     @assert K > 1 "x needs to be of length greater than 1"
     T = eltype(Y)
     ϵ = _eps(T)
@@ -111,11 +105,7 @@ function _simplex_inv_bijector!(X, Y::AbstractMatrix, b::SimplexBijector{proj}) 
             X[k, n] = _clamp(((one(T) + ϵ) - sum_tmp) / (one(T) - 2ϵ) * z - ϵ, 0, 1)
         end
         sum_tmp += X[K - 1, n]
-        if proj
-            X[K, n] = _clamp(one(T) - sum_tmp, 0, 1)
-        else
-            X[K, n] = _clamp(one(T) - sum_tmp - Y[K, n], 0, 1)
-        end
+        X[K, n] = _clamp(one(T) - sum_tmp, 0, 1)
     end
 
     return X
