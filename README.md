@@ -8,6 +8,8 @@
 
 Bijectors.jl implements both an interface for transforming distributions from Distributions.jl and many transformations needed in this context. This package is used heavily in the probabiistic programing language Turing.jl.
 
+See the [documentation](https://turinglang.github.io/Bijectors.jl) for more.
+
 ## Do you want to contribute?
 
 If you feel you have some relevant skills and are interested in contributing, please get in touch! You can find us in the #turing channel on the [Julia Slack](https://julialang.org/slack/) or [Discourse](discourse.julialang.org). If you're having any problems, please open a Github issue, even if the problem seems small (like help figuring out an error message). Every issue you open helps us to improve the library!
