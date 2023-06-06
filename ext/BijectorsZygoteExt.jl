@@ -31,6 +31,9 @@ if isdefined(Base, :get_extension)
         eachcolmaphcat,
         sumeachcol,
         pd_link
+
+    using Bijectors.LinearAlgebra
+    using Bijectors.Compat: eachcol
 else
     using ..Zygote: Zygote, @adjoint, pullback
     using ..Bijectors:
@@ -62,10 +65,10 @@ else
         eachcolmaphcat,
         sumeachcol,
         pd_link
-end
 
-using LinearAlgebra, Distributions
-using Compat: eachcol
+    using ..Bijectors.LinearAlgebra
+    using ..Bijectors.Compat: eachcol
+end
 
 @adjoint istraining() = true, _ -> nothing
 
