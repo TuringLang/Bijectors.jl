@@ -2,6 +2,8 @@ module BijectorsDistributionsADExt
 
 if isdefined(Base, :get_extension)
     using Bijectors
+    using Bijectors: LinearAlgebra
+    using Bijectors.Distributions: AbstractMvLogNormal
     using DistributionsAD:
         TuringDirichlet,
         TuringWishart,
@@ -16,6 +18,8 @@ if isdefined(Base, :get_extension)
         TuringDenseMvNormal
 else
     using ..Bijectors
+    using ..Bijectors: LinearAlgebra
+    using ..Bijectors.Distributions: AbstractMvLogNormal
     using ..DistributionsAD:
         TuringDirichlet,
         TuringWishart,
@@ -29,9 +33,6 @@ else
         TuringDiagMvNormal,
         TuringDenseMvNormal
 end
-
-using LinearAlgebra
-using Distributions: AbstractMvLogNormal
 
 # Bijectors
 
@@ -104,11 +105,13 @@ end
 Bijectors.ispd(::TuringWishart) = true
 Bijectors.ispd(::TuringInverseWishart) = true
 function Bijectors.getlogp(d::TuringWishart, Xcf, X)
-    return ((d.df - (size(d, 1) + 1)) * logdet(Xcf) - tr(d.chol \ X)) / 2 + d.logc0
+    return ((d.df - (size(d, 1) + 1)) * LinearAlgebra.logdet(Xcf) - tr(d.chol \ X)) / 2 +
+           d.logc0
 end
 function Bijectors.getlogp(d::TuringInverseWishart, Xcf, X)
     Ψ = d.S
-    return -((d.df + size(d, 1) + 1) * logdet(Xcf) + tr(Xcf \ Ψ)) / 2 + d.logc0
+    return -((d.df + size(d, 1) + 1) * LinearAlgebra.logdet(Xcf) + tr(Xcf \ Ψ)) / 2 +
+           d.logc0
 end
 
 end
