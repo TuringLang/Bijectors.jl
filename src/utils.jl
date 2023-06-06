@@ -14,7 +14,7 @@ upper_triangular(A::AbstractMatrix) = convert(typeof(A), UpperTriangular(A))
 pd_from_lower(X) = LowerTriangular(X) * LowerTriangular(X)'
 pd_from_upper(X) = UpperTriangular(X)' * UpperTriangular(X)
 
-cholesky_factor(X::AbstractMatrix) = cholesky_factor(cholesky(X))
+cholesky_factor(X::AbstractMatrix) = cholesky_factor(cholesky(Hermitian(X)))
 cholesky_factor(X::Cholesky) = X.U
 cholesky_factor(X::UpperTriangular) = X
 cholesky_factor(X::LowerTriangular) = X

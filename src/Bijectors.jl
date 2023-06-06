@@ -33,7 +33,7 @@ using Reexport, Requires
 using LinearAlgebra
 using MappedArrays
 using Base.Iterators: drop
-using LinearAlgebra: AbstractTriangular
+using LinearAlgebra: AbstractTriangular, Hermitian
 
 using InverseFunctions: InverseFunctions
 
