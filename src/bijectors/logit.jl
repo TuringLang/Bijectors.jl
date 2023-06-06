@@ -25,4 +25,6 @@ logit_logabsdetjac(x, a, b) = -log((x - a) * (b - x) / (b - a))
 logabsdetjac(b::Logit, x) = sum(logit_logabsdetjac.(x, b.a, b.b))
 
 # `with_logabsdet_jacobian`
-with_logabsdet_jacobian(b::Logit, x) = _logit.(x, b.a, b.b), sum(logit_logabsdetjac.(x, b.a, b.b))
+function with_logabsdet_jacobian(b::Logit, x)
+    return _logit.(x, b.a, b.b), sum(logit_logabsdetjac.(x, b.a, b.b))
+end

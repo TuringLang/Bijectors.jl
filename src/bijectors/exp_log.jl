@@ -1,4 +1,6 @@
-transform!(b::Union{Elementwise{typeof(log)}, Elementwise{typeof(exp)}}, x, y) = broadcast!(b.x, y, x)
+function transform!(b::Union{Elementwise{typeof(log)},Elementwise{typeof(exp)}}, x, y)
+    return broadcast!(b.x, y, x)
+end
 
 logabsdetjac(b::typeof(exp), x::Real) = x
 logabsdetjac(b::Elementwise{typeof(exp)}, x) = sum(x)

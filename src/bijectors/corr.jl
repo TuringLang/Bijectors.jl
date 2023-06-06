@@ -67,8 +67,8 @@ with_logabsdet_jacobian(b::CorrBijector, x) = transform(b, x), logabsdetjac(b, x
 
 function transform(b::CorrBijector, X::AbstractMatrix{<:Real})
     w = upper_triangular(parent(cholesky(X).U))  # keep LowerTriangular until here can avoid some computation
-    r = _link_chol_lkj(w) 
-    return r + zero(X) 
+    r = _link_chol_lkj(w)
+    return r + zero(X)
     # This dense format itself is required by a test, though I can't get the point.
     # https://github.com/TuringLang/Bijectors.jl/blob/b0aaa98f90958a167a0b86c8e8eca9b95502c42d/test/transform.jl#L67
 end
@@ -97,7 +97,7 @@ Return a mask for elements of `X` above the `k`th diagonal.
 function triu_mask(X::AbstractMatrix, k::Int)
     # Ensure that we're working with a square matrix.
     LinearAlgebra.checksquare(X)
-    
+
     # Using `similar` allows us to respect device of array, etc., e.g. `CuArray`.
     m = similar(X, Bool)
     return triu(.~m .| m, k)
@@ -106,9 +106,7 @@ end
 triu_to_vec(X::AbstractMatrix{<:Real}, k::Int) = X[triu_mask(X, k)]
 
 function update_triu_from_vec!(
-    vals::AbstractVector{<:Real},
-    k::Int,
-    X::AbstractMatrix{<:Real}
+    vals::AbstractVector{<:Real}, k::Int, X::AbstractMatrix{<:Real}
 )
     # Ensure that we're working with one-based indexing.
     # `triu` requires this too.
@@ -117,8 +115,8 @@ function update_triu_from_vec!(
     # Set the values.
     idx = 1
     m, n = size(X)
-    for j = 1:n
-        for i = 1:min(j - k, m)
+    for j in 1:n
+        for i in 1:min(j - k, m)
             X[i, j] = vals[idx]
             idx += 1
         end
@@ -134,13 +132,15 @@ function update_triu_from_vec(vals::AbstractVector{<:Real}, k::Int, dim::Int)
     return update_triu_from_vec!(vals, k, X)
 end
 
-function ChainRulesCore.rrule(::typeof(update_triu_from_vec), x::AbstractVector{<:Real}, k::Int, dim::Int)
+function ChainRulesCore.rrule(
+    ::typeof(update_triu_from_vec), x::AbstractVector{<:Real}, k::Int, dim::Int
+)
     function update_triu_from_vec_pullback(ΔX)
         return (
             ChainRulesCore.NoTangent(),
             triu_to_vec(ChainRulesCore.unthunk(ΔX), k),
             ChainRulesCore.NoTangent(),
-            ChainRulesCore.NoTangent()
+            ChainRulesCore.NoTangent(),
         )
     end
     return update_triu_from_vec(x, k, dim), update_triu_from_vec_pullback
@@ -177,7 +177,7 @@ function vec_to_triu1_row_index(idx)
     # Assumes that vector was saved in a column-major order
     # and that vector is one-based indexed.
     M = _triu1_dim_from_length(idx - 1)
-    return idx - (M*(M-1) ÷ 2)
+    return idx - (M * (M - 1) ÷ 2)
 end
 
 """
@@ -224,9 +224,13 @@ function logabsdetjac(b::VecCorrBijector, x)
     return -logabsdetjac(inverse(b), b(x))
 end
 
-transform(::Inverse{VecCorrBijector}, y::AbstractVector{<:Real}) = pd_from_upper(_inv_link_chol_lkj(y))
+function transform(::Inverse{VecCorrBijector}, y::AbstractVector{<:Real})
+    return pd_from_upper(_inv_link_chol_lkj(y))
+end
 
-logabsdetjac(::Inverse{VecCorrBijector}, y::AbstractVector{<:Real}) = _logabsdetjac_inv_corr(y)
+function logabsdetjac(::Inverse{VecCorrBijector}, y::AbstractVector{<:Real})
+    return _logabsdetjac_inv_corr(y)
+end
 
 """
     VecCholeskyBijector <: Bijector
@@ -272,14 +276,18 @@ true
 julia> X_inv.L ≈ X.L  # (✓) Also works for the lower triangular factor.
 true
 """
-struct VecCholeskyBijector <: Bijector 
+struct VecCholeskyBijector <: Bijector
     mode::Symbol
     function VecCholeskyBijector(uplo)
         s = Symbol(uplo)
         if (s === :U) || (s === :L)
             new(s)
         else
-            throw(ArgumentError("mode must be either :U (upper triangular) or :L (lower triangular)"))
+            throw(
+                ArgumentError(
+                    "mode must be either :U (upper triangular) or :L (lower triangular)"
+                ),
+            )
         end
     end
 end
@@ -305,7 +313,9 @@ function transform(b::Inverse{VecCholeskyBijector}, y::AbstractVector{<:Real})
     end
 end
 
-logabsdetjac(::Inverse{VecCholeskyBijector}, y::AbstractVector{<:Real}) = _logabsdetjac_inv_chol(y)
+function logabsdetjac(::Inverse{VecCholeskyBijector}, y::AbstractVector{<:Real})
+    return _logabsdetjac_inv_chol(y)
+end
 
 """
     function _link_chol_lkj(w)
@@ -349,10 +359,10 @@ function _link_chol_lkj(W::AbstractMatrix)
     # This block can't be integrated with loop below, because W[1,1] != 0.
     @inbounds z[1, 1] = 0
 
-    @inbounds for j = 2:K
+    @inbounds for j in 2:K
         z[1, j] = atanh(W[1, j])
         tmp = sqrt(1 - W[1, j]^2)
-        for i in 2:(j-1)
+        for i in 2:(j - 1)
             p = W[i, j] / tmp
             tmp *= sqrt(1 - p^2)
             z[i, j] = atanh(p)
@@ -365,16 +375,16 @@ end
 
 function _link_chol_lkj(W::UpperTriangular)
     K = LinearAlgebra.checksquare(W)
-    N = ((K-1)*K) ÷ 2   # {K \choose 2} free parameters
+    N = ((K - 1) * K) ÷ 2   # {K \choose 2} free parameters
 
     z = similar(W, N)
 
     idx = 1
-    @inbounds for j = 2:K
+    @inbounds for j in 2:K
         z[idx] = atanh(W[1, j])
         idx += 1
         tmp = sqrt(1 - W[1, j]^2)
-        for i in 2:(j-1)
+        for i in 2:(j - 1)
             p = W[i, j] / tmp
             tmp *= sqrt(1 - p^2)
             z[idx] = atanh(p)
@@ -401,12 +411,12 @@ function _inv_link_chol_lkj(Y::AbstractMatrix)
     @inbounds for j in 1:K
         W[1, j] = 1
         for i in 2:j
-            z = tanh(Y[i-1, j])
-            tmp = W[i-1, j]
-            W[i-1, j] = z * tmp
+            z = tanh(Y[i - 1, j])
+            tmp = W[i - 1, j]
+            W[i - 1, j] = z * tmp
             W[i, j] = tmp * sqrt(1 - z^2)
         end
-        for i in (j+1):K
+        for i in (j + 1):K
             W[i, j] = 0
         end
     end
@@ -425,11 +435,11 @@ function _inv_link_chol_lkj(y::AbstractVector)
         for i in 2:j
             z = tanh(y[idx])
             idx += 1
-            tmp = W[i-1, j]
-            W[i-1, j] = z * tmp
+            tmp = W[i - 1, j]
+            W[i - 1, j] = z * tmp
             W[i, j] = tmp * sqrt(1 - z^2)
         end
-        for i in (j+1):K
+        for i in (j + 1):K
             W[i, j] = 0
         end
     end
@@ -441,11 +451,13 @@ function _logabsdetjac_inv_corr(Y::AbstractMatrix)
     K = LinearAlgebra.checksquare(Y)
 
     result = float(zero(eltype(Y)))
-    for j in 2:K, i in 1:(j-1)
+    for j in 2:K, i in 1:(j - 1)
         @inbounds abs_y_i_j = abs(Y[i, j])
-        result += (K - i + 1) * (
-            IrrationalConstants.logtwo - (abs_y_i_j + LogExpFunctions.log1pexp(-2 * abs_y_i_j))
-        )
+        result +=
+            (K - i + 1) * (
+                IrrationalConstants.logtwo -
+                (abs_y_i_j + LogExpFunctions.log1pexp(-2 * abs_y_i_j))
+            )
     end
     return result
 end
@@ -457,9 +469,11 @@ function _logabsdetjac_inv_corr(y::AbstractVector)
     for (i, y_i) in enumerate(y)
         abs_y_i = abs(y_i)
         row_idx = vec_to_triu1_row_index(i)
-        result += (K - row_idx + 1) * (
-            IrrationalConstants.logtwo - (abs_y_i + LogExpFunctions.log1pexp(-2 * abs_y_i))
-        )
+        result +=
+            (K - row_idx + 1) * (
+                IrrationalConstants.logtwo -
+                (abs_y_i + LogExpFunctions.log1pexp(-2 * abs_y_i))
+            )
     end
     return result
 end
@@ -471,7 +485,7 @@ function _logabsdetjac_inv_chol(y::AbstractVector)
     idx = 1
     @inbounds for j in 2:K
         tmp = zero(result)
-        for _ in 1:(j-1)
+        for _ in 1:(j - 1)
             z = tanh(y[idx])
             logz = log(1 - z^2)
             result += logz + (tmp / 2)

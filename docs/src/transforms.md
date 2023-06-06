@@ -1,8 +1,9 @@
 ## Usage
 
 A very simple example of a "bijector"/diffeomorphism, i.e. a differentiable transformation with a differentiable inverse, is the `exp` function:
-- The inverse of `exp` is `log`.
-- The derivative of `exp` at an input `x` is simply `exp(x)`, hence `logabsdetjac` is simply `x`.
+
+  - The inverse of `exp` is `log`.
+  - The derivative of `exp` at an input `x` is simply `exp(x)`, hence `logabsdetjac` is simply `x`.
 
 ```@repl usage
 using Bijectors
@@ -100,4 +101,3 @@ Bijectors.OrderedBijector
 Bijectors.NamedTransform
 Bijectors.NamedCoupling
 ```
-

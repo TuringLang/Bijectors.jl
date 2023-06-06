@@ -78,21 +78,17 @@ struct RationalQuadraticSpline{T} <: Bijector
     derivatives::T # K derivatives, with endpoints being ones
 
     function RationalQuadraticSpline(
-        widths::T,
-        heights::T,
-        derivatives::T
+        widths::T, heights::T, derivatives::T
     ) where {T<:AbstractVector}
         # TODO: add a `NoArgCheck` type and argument so we can circumvent if we want        
         @assert length(widths) == length(heights) == length(derivatives)
         @assert all(derivatives .> 0) "derivatives need to be positive"
-        
+
         return new{T}(widths, heights, derivatives)
     end
 
     function RationalQuadraticSpline(
-        widths::T,
-        heights::T,
-        derivatives::T
+        widths::T, heights::T, derivatives::T
     ) where {T<:AbstractMatrix}
         @assert size(widths, 2) == size(heights, 2) == size(derivatives, 2)
         @assert all(derivatives .> 0) "derivatives need to be positive"
@@ -101,32 +97,28 @@ struct RationalQuadraticSpline{T} <: Bijector
 end
 
 function RationalQuadraticSpline(
-    widths::A,
-    heights::A, 
-    derivatives::A,
-    B::T2
-) where {T1, T2, A <: AbstractVector{T1}}
+    widths::A, heights::A, derivatives::A, B::T2
+) where {T1,T2,A<:AbstractVector{T1}}
     return RationalQuadraticSpline(
         (cumsum(vcat([zero(T1)], LogExpFunctions.softmax(widths))) .- 0.5) * 2 * B,
         (cumsum(vcat([zero(T1)], LogExpFunctions.softmax(heights))) .- 0.5) * 2 * B,
-        vcat([one(T1)], LogExpFunctions.log1pexp.(derivatives), [one(T1)])
+        vcat([one(T1)], LogExpFunctions.log1pexp.(derivatives), [one(T1)]),
     )
 end
 
 function RationalQuadraticSpline(
-    widths::A,
-    heights::A,
-    derivatives::A,
-    B::T2
-) where {T1, T2, A <: AbstractMatrix{T1}}
-    ws = hcat(zeros(T1, size(widths, 1)), LogExpFunctions.softmax(widths; dims = 2))
-    hs = hcat(zeros(T1, size(widths, 1)), LogExpFunctions.softmax(heights; dims = 2))
-    ds = hcat(ones(T1, size(widths, 1)), LogExpFunctions.log1pexp.(derivatives), ones(T1, size(widths, 1)))
+    widths::A, heights::A, derivatives::A, B::T2
+) where {T1,T2,A<:AbstractMatrix{T1}}
+    ws = hcat(zeros(T1, size(widths, 1)), LogExpFunctions.softmax(widths; dims=2))
+    hs = hcat(zeros(T1, size(widths, 1)), LogExpFunctions.softmax(heights; dims=2))
+    ds = hcat(
+        ones(T1, size(widths, 1)),
+        LogExpFunctions.log1pexp.(derivatives),
+        ones(T1, size(widths, 1)),
+    )
 
     return RationalQuadraticSpline(
-        (2 * B) .* (cumsum(ws; dims = 2) .- 0.5),
-        (2 * B) .* (cumsum(hs; dims = 2) .- 0.5),
-        ds
+        (2 * B) .* (cumsum(ws; dims=2) .- 0.5), (2 * B) .* (cumsum(hs; dims=2) .- 0.5), ds
     )
 end
 
@@ -171,7 +163,6 @@ function rqs_univariate(widths, heights, derivatives, x::Real)
     return g
 end
 
-
 # univariate
 function transform(b::RationalQuadraticSpline{<:AbstractVector}, x::Real)
     return rqs_univariate(b.widths, b.heights, b.derivatives, x)
@@ -180,7 +171,10 @@ end
 # multivariate
 # TODO: Improve.
 function transform(b::RationalQuadraticSpline{<:AbstractMatrix}, x::AbstractVector)
-    return [rqs_univariate(b.widths[i, :], b.heights[i, :], b.derivatives[i, :], x[i]) for i = 1:length(x)]
+    return [
+        rqs_univariate(b.widths[i, :], b.heights[i, :], b.derivatives[i, :], x[i]) for
+        i in 1:length(x)
+    ]
 end
 
 ##########################
@@ -215,10 +209,10 @@ function rqs_univariate_inverse(widths, heights, derivatives, y::Real)
     # Eq. (26)
     a2 = Δy * d_k - (y - h_k) * ds
     # Eq. (27)
-    a3 = - s * (y - h_k)
+    a3 = -s * (y - h_k)
 
     # Eq. (24). There's a mistake in the paper; says `x` but should be `ξ`
-    numerator = - 2 * a3
+    numerator = -2 * a3
     denominator = (a2 + sqrt(a2^2 - 4 * a1 * a3))
     ξ = numerator / denominator
 
@@ -232,7 +226,10 @@ end
 # TODO: Improve.
 function transform(ib::Inverse{<:RationalQuadraticSpline}, y::AbstractVector)
     b = ib.orig
-    return [rqs_univariate_inverse(b.widths[i, :], b.heights[i, :], b.derivatives[i, :], y[i]) for i = 1:length(y)]
+    return [
+        rqs_univariate_inverse(b.widths[i, :], b.heights[i, :], b.derivatives[i, :], y[i])
+        for i in 1:length(y)
+    ]
 end
 
 ######################
@@ -241,7 +238,7 @@ end
 function rqs_logabsdetjac(widths, heights, derivatives, x::Real)
     T = promote_type(eltype(widths), eltype(heights), eltype(derivatives), eltype(y))
     K = length(widths) - 1
-    
+
     # Find which bin `x` is in
     k = searchsortedfirst(widths, x) - 1
 
@@ -259,19 +256,15 @@ function rqs_logabsdetjac(widths, heights, derivatives, x::Real)
     s = Δy / w
     ξ = (x - widths[k]) / w
 
-    numerator = s^2 * (derivatives[k + 1] * ξ^2
-                       + 2 * s * ξ * (1 - ξ)
-                       + derivatives[k] * (1 - ξ)^2)
+    numerator =
+        s^2 * (derivatives[k + 1] * ξ^2 + 2 * s * ξ * (1 - ξ) + derivatives[k] * (1 - ξ)^2)
     denominator = s + (derivatives[k + 1] + derivatives[k] - 2 * s) * ξ * (1 - ξ)
 
     return log(numerator) - 2 * log(denominator)
 end
 
 function rqs_logabsdetjac(
-    widths::AbstractVector,
-    heights::AbstractVector,
-    derivatives::AbstractVector,
-    x::Real
+    widths::AbstractVector, heights::AbstractVector, derivatives::AbstractVector, x::Real
 )
     T = promote_type(eltype(widths), eltype(heights), eltype(derivatives), eltype(x))
 
@@ -310,8 +303,8 @@ end
 # TODO: Improve.
 function logabsdetjac(b::RationalQuadraticSpline{<:AbstractMatrix}, x::AbstractVector)
     return sum([
-        rqs_logabsdetjac(b.widths[i, :], b.heights[i, :], b.derivatives[i, :], x[i])
-        for i = 1:length(x)
+        rqs_logabsdetjac(b.widths[i, :], b.heights[i, :], b.derivatives[i, :], x[i]) for
+        i in 1:length(x)
     ])
 end
 
@@ -322,10 +315,7 @@ end
 # TODO: implement this for `x::AbstractVector` and similarily for 1-dimensional `b`,
 # and possibly inverses too?
 function rqs_forward(
-    widths::AbstractVector,
-    heights::AbstractVector,
-    derivatives::AbstractVector,
-    x::Real
+    widths::AbstractVector, heights::AbstractVector, derivatives::AbstractVector, x::Real
 )
     T = promote_type(eltype(widths), eltype(heights), eltype(derivatives), eltype(x))
 
@@ -370,6 +360,8 @@ function with_logabsdet_jacobian(b::RationalQuadraticSpline{<:AbstractVector}, x
     return rqs_forward(b.widths, b.heights, b.derivatives, x)
 end
 
-function with_logabsdet_jacobian(b::RationalQuadraticSpline{<:AbstractMatrix}, x::AbstractVector)
+function with_logabsdet_jacobian(
+    b::RationalQuadraticSpline{<:AbstractMatrix}, x::AbstractVector
+)
     return transform(b, x), logabsdetjac(b, x)
 end

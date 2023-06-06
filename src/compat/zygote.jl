@@ -11,14 +11,14 @@ end
 @adjoint function eachcolmaphcat(f, x1, x2)
     function g(f, x1, x2)
         init = reshape(f(view(x1, :, 1), x2[1]), :, 1)
-        return reduce(hcat, [f(view(x1, :, i), x2[i]) for i in 2:size(x1, 2)]; init = init)
+        return reduce(hcat, [f(view(x1, :, i), x2[i]) for i in 2:size(x1, 2)]; init=init)
     end
     return pullback(g, f, x1, x2)
 end
 @adjoint function eachcolmaphcat(f, x)
     function g(f, x)
         init = reshape(f(view(x, :, 1)), :, 1)
-        return reduce(hcat, [f(view(x, :, i)) for i in 2:size(x, 2)]; init = init)
+        return reduce(hcat, [f(view(x, :, i)) for i in 2:size(x, 2)]; init=init)
     end
     return pullback(g, f, x)
 end
@@ -59,7 +59,7 @@ end
 @adjoint function replace_diag(::typeof(log), X)
     f(i, j) = i == j ? log(X[i, j]) : X[i, j]
     out = f.(1:size(X, 1), (1:size(X, 2))')
-    out, ∇ -> begin
+    return out, ∇ -> begin
         g(i, j) = i == j ? ∇[i, j] / X[i, j] : ∇[i, j]
         (nothing, g.(1:size(X, 1), (1:size(X, 2))'))
     end
@@ -67,28 +67,20 @@ end
 @adjoint function replace_diag(::typeof(exp), X)
     f(i, j) = ifelse(i == j, exp(X[i, j]), X[i, j])
     out = f.(1:size(X, 1), (1:size(X, 2))')
-    out, ∇ -> begin
+    return out, ∇ -> begin
         g(i, j) = ifelse(i == j, ∇[i, j] * exp(X[i, j]), ∇[i, j])
         (nothing, g.(1:size(X, 1), (1:size(X, 2))'))
     end
 end
 
-@adjoint function pd_logpdf_with_trans(
-    d,
-    X::AbstractMatrix{<:Real},
-    transform::Bool,
-)
+@adjoint function pd_logpdf_with_trans(d, X::AbstractMatrix{<:Real}, transform::Bool)
     return pullback(pd_logpdf_with_trans_zygote, d, X, transform)
 end
-function pd_logpdf_with_trans_zygote(
-    d,
-    X::AbstractMatrix{<:Real},
-    transform::Bool,
-)
+function pd_logpdf_with_trans_zygote(d, X::AbstractMatrix{<:Real}, transform::Bool)
     T = eltype(X)
-    Xcf = cholesky(X, check = false)
+    Xcf = cholesky(X; check=false)
     if !issuccess(Xcf)
-        Xcf = cholesky(X + max(eps(T), eps(T) * norm(X)) * I, check = true)
+        Xcf = cholesky(X + max(eps(T), eps(T) * norm(X)) * I; check=true)
     end
     lp = getlogp(d, Xcf, X)
     if transform && isfinite(lp)
@@ -114,17 +106,21 @@ end
 end
 
 @adjoint function _simplex_bijector(X::AbstractMatrix, b::SimplexBijector)
-    return _simplex_bijector(X, b), Δ -> begin
+    return _simplex_bijector(X, b),
+    Δ -> begin
         maphcat(eachcol(X), eachcol(Δ)) do c1, c2
             simplex_link_jacobian(c1)' * c2
-        end, nothing
+        end,
+        nothing
     end
 end
 @adjoint function _simplex_inv_bijector(Y::AbstractMatrix, b::SimplexBijector)
-    return _simplex_inv_bijector(Y, b), Δ -> begin
+    return _simplex_inv_bijector(Y, b),
+    Δ -> begin
         maphcat(eachcol(Y), eachcol(Δ)) do c1, c2
             simplex_invlink_jacobian(c1)' * c2
-        end, nothing
+        end,
+        nothing
     end
 end
 
@@ -162,14 +158,15 @@ end
     return lower_triangular(A), Δ -> (lower_triangular(Δ),)
 end
 @adjoint function pd_from_lower(X::AbstractMatrix)
-    return LowerTriangular(X) * LowerTriangular(X)', Δ -> begin
+    return LowerTriangular(X) * LowerTriangular(X)',
+    Δ -> begin
         Xl = LowerTriangular(X)
         return (LowerTriangular(Δ' * Xl + Δ * Xl),)
     end
 end
 @adjoint function pd_link(X::AbstractMatrix{<:Real})
     return pullback(X) do X
-        Y = cholesky(X; check = true).L
+        Y = cholesky(X; check=true).L
         return replace_diag(log, Y)
     end
 end
