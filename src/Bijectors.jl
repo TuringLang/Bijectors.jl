@@ -98,27 +98,27 @@ end
 function mapvcat(f, args...)
     out = map(f, args...)
     init = vcat(out[1])
-    return reduce(vcat, drop(out, 1); init = init)
+    return reduce(vcat, drop(out, 1); init=init)
 end
 
 function maphcat(f, args...)
     out = map(f, args...)
     init = reshape(out[1], :, 1)
-    return reduce(hcat, drop(out, 1); init = init)
+    return reduce(hcat, drop(out, 1); init=init)
 end
 function eachcolmaphcat(f, x1, x2)
-    out = [f(x1[:, i], x2[i]) for i = 1:size(x1, 2)]
+    out = [f(x1[:, i], x2[i]) for i in 1:size(x1, 2)]
     init = reshape(out[1], :, 1)
-    return reduce(hcat, drop(out, 1); init = init)
+    return reduce(hcat, drop(out, 1); init=init)
 end
 function eachcolmaphcat(f, x)
     out = map(f, eachcol(x))
     init = reshape(out[1], :, 1)
-    return reduce(hcat, drop(out, 1); init = init)
+    return reduce(hcat, drop(out, 1); init=init)
 end
 function sumeachcol(f, x1, x2)
     # Using a view below for x1 breaks Tracker
-    return sum(f(x1[:, i], x2[i]) for i = 1:size(x1, 2))
+    return sum(f(x1[:, i], x2[i]) for i in 1:size(x1, 2))
 end
 
 # Distributions
@@ -202,33 +202,23 @@ isdirichlet(::Distribution) = false
 # ∑xᵢ = 1 #
 ###########
 
-function link(
-    d::Dirichlet,
-    x::AbstractVecOrMat{<:Real},
-    ::Val{proj} = Val(true),
-) where {proj}
+function link(d::Dirichlet, x::AbstractVecOrMat{<:Real}, ::Val{proj}=Val(true)) where {proj}
     return SimplexBijector{proj}()(x)
 end
 
 function link_jacobian(
-    d::Dirichlet,
-    x::AbstractVector{<:Real},
-    ::Val{proj} = Val(true),
+    d::Dirichlet, x::AbstractVector{<:Real}, ::Val{proj}=Val(true)
 ) where {proj}
     return jacobian(SimplexBijector{proj}(), x)
 end
 
 function invlink(
-    d::Dirichlet,
-    y::AbstractVecOrMat{<:Real},
-    ::Val{proj} = Val(true),
+    d::Dirichlet, y::AbstractVecOrMat{<:Real}, ::Val{proj}=Val(true)
 ) where {proj}
     return inverse(SimplexBijector{proj}())(y)
 end
 function invlink_jacobian(
-    d::Dirichlet,
-    y::AbstractVector{<:Real},
-    ::Val{proj} = Val(true),
+    d::Dirichlet, y::AbstractVector{<:Real}, ::Val{proj}=Val(true)
 ) where {proj}
     return jacobian(inverse(SimplexBijector{proj}()), y)
 end
@@ -244,9 +234,7 @@ ispd(::Distribution) = false
 ispd(::PDMatDistribution) = true
 
 function logpdf_with_trans(
-    d::MatrixDistribution,
-    X::AbstractArray{<:AbstractMatrix{<:Real}},
-    transform::Bool,
+    d::MatrixDistribution, X::AbstractArray{<:AbstractMatrix{<:Real}}, transform::Bool
 )
     return map(X) do x
         logpdf_with_trans(d, x, transform)
@@ -254,7 +242,7 @@ function logpdf_with_trans(
 end
 function pd_logpdf_with_trans(d, X::AbstractMatrix{<:Real}, transform::Bool)
     T = eltype(X)
-    Xcf = cholesky(X; check = false)
+    Xcf = cholesky(X; check=false)
     if !issuccess(Xcf)
         Xcf = cholesky(X + max(eps(T), eps(T) * norm(X)) * I)
     end
@@ -291,22 +279,22 @@ maporbroadcast(f, x::AbstractArray...) = f.(x...)
 if !isdefined(Base, :get_extension)
     function __init__()
         @require LazyArrays = "5078a376-72f3-5289-bfd5-ec5146d43c02" include(
-            "../ext/BijectorsLazyArraysExt.jl",
+            "../ext/BijectorsLazyArraysExt.jl"
         )
         @require ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210" include(
-            "../ext/BijectorsForwardDiffExt.jl",
+            "../ext/BijectorsForwardDiffExt.jl"
         )
         @require Tracker = "9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c" include(
-            "../ext/BijectorsTrackerExt.jl",
+            "../ext/BijectorsTrackerExt.jl"
         )
         @require Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f" include(
-            "../ext/BijectorsZygoteExt.jl",
+            "../ext/BijectorsZygoteExt.jl"
         )
         @require ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267" include(
-            "../ext/BijectorsReverseDiffExt.jl",
+            "../ext/BijectorsReverseDiffExt.jl"
         )
         @require DistributionsAD = "ced4e74d-a319-5a8a-b0ac-84af2272839c" include(
-            "../ext/BijectorsDistributionsADExt.jl",
+            "../ext/BijectorsDistributionsADExt.jl"
         )
     end
 end
