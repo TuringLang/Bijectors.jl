@@ -301,7 +301,7 @@ function transform(b::Inverse{VecCholeskyBijector}, y::AbstractVector{<:Real})
     else # No need to check for === :L, as it is checked in the VecCholeskyBijector constructor.
         # HACK: Need to make materialize the transposed matrix to avoid numerical instabilities.
         # If we don't, the return-type can be both `Matrix` and `Transposed`.
-        return Cholesky(Matrix(transpose(_inv_link_chol_lkj(y))), 'L', 0)
+        return Cholesky(permutedims(_inv_link_chol_lkj(y), (2, 1)), 'L', 0)
     end
 end
 
