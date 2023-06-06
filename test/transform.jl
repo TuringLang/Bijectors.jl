@@ -40,7 +40,7 @@ function single_sample_tests(dist)
     x = rand(dist)
 
     if dist isa LKJCholesky
-        x_inv = @inferred Union{Cholesky{Float64, Matrix{Float64}}, Matrix{Float64}} invlink(dist, link(dist, copy(x)))
+        x_inv = @inferred Cholesky{Float64, Matrix{Float64}} invlink(dist, link(dist, copy(x)))
         @test x_inv.UL ≈ x.UL atol=1e-9
     else
         @test @inferred(invlink(dist, link(dist, copy(x)))) ≈ x atol=1e-9
