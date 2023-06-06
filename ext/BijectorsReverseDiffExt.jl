@@ -5,6 +5,7 @@ if isdefined(Base, :get_extension)
         ReverseDiff, @grad, value, track, TrackedReal, TrackedVector, TrackedMatrix
 
     using Bijectors:
+        ChainRulesCore,
         Elementwise,
         SimplexBijector,
         maphcat,
@@ -27,11 +28,16 @@ if isdefined(Base, :get_extension)
         _transform_ordered,
         _transform_inverse_ordered,
         find_alpha
+
+    using Bijectors.LinearAlgebra
+    using Bijectors.Compat: eachcol
+    using Bijectors.Distributions: LocationScale
 else
     using ..ReverseDiff:
         ReverseDiff, @grad, value, track, TrackedReal, TrackedVector, TrackedMatrix
 
     using ..Bijectors:
+        ChainRulesCore,
         Elementwise,
         SimplexBijector,
         maphcat,
@@ -54,13 +60,11 @@ else
         _transform_ordered,
         _transform_inverse_ordered,
         find_alpha
+
+    using ..Bijectors.LinearAlgebra
+    using ..Bijectors.Compat: eachcol
+    using ..Bijectors.Distributions: LocationScale
 end
-
-using ChainRulesCore: ChainRulesCore
-
-using LinearAlgebra
-using Compat: eachcol
-using Distributions: LocationScale
 
 _eps(::Type{<:TrackedReal{T}}) where {T} = _eps(T)
 function Base.minimum(d::LocationScale{<:TrackedReal})
