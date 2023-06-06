@@ -46,9 +46,7 @@ end
 
 Bijectors.maporbroadcast(f, x::TrackedArray...) = f.(x...)
 function Bijectors.maporbroadcast(
-    f,
-    x1::TrackedArray{T,N},
-    x::AbstractArray{<:TrackedReal}...,
+    f, x1::TrackedArray{T,N}, x::AbstractArray{<:TrackedReal}...
 ) where {T,N}
     return f.(convert(Array{TrackedReal{T},N}, x1), x...)
 end
@@ -79,16 +77,12 @@ function Bijectors._logabsdetjac_shift(a::TrackedReal, x::AbstractVector{<:Real}
     return tracker_shift_logabsdetjac(a, x, Val(0))
 end
 function Bijectors._logabsdetjac_shift(
-    a::Union{TrackedReal,TrackedVector{<:Real}},
-    x::AbstractVector{<:Real},
-    ::Val{1},
+    a::Union{TrackedReal,TrackedVector{<:Real}}, x::AbstractVector{<:Real}, ::Val{1}
 )
     return tracker_shift_logabsdetjac(a, x, Val(1))
 end
 function Bijectors._logabsdetjac_shift(
-    a::Union{TrackedReal,TrackedVector{<:Real}},
-    x::AbstractMatrix{<:Real},
-    ::Val{1},
+    a::Union{TrackedReal,TrackedVector{<:Real}}, x::AbstractMatrix{<:Real}, ::Val{1}
 )
     return tracker_shift_logabsdetjac(a, x, Val(1))
 end
@@ -182,8 +176,9 @@ end
     Δ -> (Bijectors.simplex_invlink_jacobian(Yd)' * Δ, nothing)
 end
 
-Bijectors.replace_diag(::typeof(log), X::TrackedMatrix) =
-    track(Bijectors.replace_diag, log, X)
+function Bijectors.replace_diag(::typeof(log), X::TrackedMatrix)
+    return track(Bijectors.replace_diag, log, X)
+end
 @grad function Bijectors.replace_diag(::typeof(log), X)
     Xd = data(X)
     f(i, j) = i == j ? log(Xd[i, j]) : Xd[i, j]
@@ -194,8 +189,9 @@ Bijectors.replace_diag(::typeof(log), X::TrackedMatrix) =
     end
 end
 
-Bijectors.replace_diag(::typeof(exp), X::TrackedMatrix) =
-    track(Bijectors.replace_diag, exp, X)
+function Bijectors.replace_diag(::typeof(exp), X::TrackedMatrix)
+    return track(Bijectors.replace_diag, exp, X)
+end
 @grad function Bijectors.replace_diag(::typeof(exp), X)
     Xd = data(X)
     f(i, j) = ifelse(i == j, exp(Xd[i, j]), Xd[i, j])
@@ -206,8 +202,9 @@ Bijectors.replace_diag(::typeof(exp), X::TrackedMatrix) =
     end
 end
 
-Bijectors.logabsdetjac(b::SimplexBijector, x::TrackedVecOrMat) =
-    track(Bijectors.logabsdetjac, b, x)
+function Bijectors.logabsdetjac(b::SimplexBijector, x::TrackedVecOrMat)
+    return track(Bijectors.logabsdetjac, b, x)
+end
 @grad function Bijectors.logabsdetjac(b::SimplexBijector, x::AbstractVector)
     xd = data(x)
     return Bijectors.logabsdetjac(b, xd),
@@ -246,7 +243,7 @@ for header in [
             Tr = promote_type(eltype(z), eltype(z_0))
             r::Tr = norm((z .- z_0)::TV)
             transformed::T = z .+ β_hat ./ (α .+ r') .* (z .- z_0)   # from eq(14)
-            return (transformed = transformed, α = α, β_hat = β_hat, r = r)
+            return (transformed=transformed, α=α, β_hat=β_hat, r=r)
         end
     end
 end
@@ -281,7 +278,7 @@ for header in [
             end
             r::TV = eachcolnorm(z .- z_0)
             transformed::T = z .+ β_hat ./ (α .+ r') .* (z .- z_0)   # from eq(14)
-            return (transformed = transformed, α = α, β_hat = β_hat, r = r)
+            return (transformed=transformed, α=α, β_hat=β_hat, r=r)
         end
     end
 end
@@ -341,19 +338,19 @@ Bijectors._inv_link_chol_lkj(y::TrackedMatrix) = track(Bijectors._inv_link_chol_
     z_mat = similar(y) # cache for adjoint
     tmp_mat = similar(y)
 
-    @inbounds for j = 1:K
+    @inbounds for j in 1:K
         w[1, j] = 1
-        for i = 2:j
-            z = tanh(y[i-1, j])
-            tmp = w[i-1, j]
+        for i in 2:j
+            z = tanh(y[i - 1, j])
+            tmp = w[i - 1, j]
 
             z_mat[i, j] = z
             tmp_mat[i, j] = tmp
 
-            w[i-1, j] = z * tmp
+            w[i - 1, j] = z * tmp
             w[i, j] = tmp * sqrt(1 - z^2)
         end
-        for i = (j+1):K
+        for i in (j + 1):K
             w[i, j] = 0
         end
     end
@@ -363,14 +360,14 @@ Bijectors._inv_link_chol_lkj(y::TrackedMatrix) = track(Bijectors._inv_link_chol_
 
         Δy = zero(y)
 
-        @inbounds for j = 1:K
+        @inbounds for j in 1:K
             Δtmp = Δw[j, j]
-            for i = j:-1:2
+            for i in j:-1:2
                 Δz =
-                    Δw[i-1, j] * tmp_mat[i, j] -
+                    Δw[i - 1, j] * tmp_mat[i, j] -
                     Δtmp * tmp_mat[i, j] / sqrt(1 - z_mat[i, j]^2) * z_mat[i, j]
-                Δy[i-1, j] = Δz / cosh(y[i-1, j])^2
-                Δtmp = Δw[i-1, j] * z_mat[i, j] + Δtmp * sqrt(1 - z_mat[i, j]^2)
+                Δy[i - 1, j] = Δz / cosh(y[i - 1, j])^2
+                Δtmp = Δw[i - 1, j] * z_mat[i, j] + Δtmp * sqrt(1 - z_mat[i, j]^2)
             end
         end
 
@@ -392,11 +389,11 @@ Bijectors._link_chol_lkj(w::TrackedMatrix) = track(Bijectors._link_chol_lkj, w)
 
     tmp_mat = similar(w) # cache for pullback.
 
-    @inbounds for j = 2:K
+    @inbounds for j in 2:K
         z[1, j] = atanh(w[1, j])
         tmp = sqrt(1 - w[1, j]^2)
         tmp_mat[1, j] = tmp
-        for i = 2:(j-1)
+        for i in 2:(j - 1)
             p = w[i, j] / tmp
             tmp *= sqrt(1 - p^2)
             tmp_mat[i, j] = tmp
@@ -412,17 +409,17 @@ Bijectors._link_chol_lkj(w::TrackedMatrix) = track(Bijectors._link_chol_lkj, w)
 
         @inbounds Δw[1, 1] = zero(eltype(Δz))
 
-        @inbounds for j = 2:K
+        @inbounds for j in 2:K
             Δw[j, j] = 0
             Δtmp = zero(eltype(Δz)) # Δtmp_mat[j-1,j]
-            for i = (j-1):-1:2
-                p = w[i, j] / tmp_mat[i-1, j]
+            for i in (j - 1):-1:2
+                p = w[i, j] / tmp_mat[i - 1, j]
                 ftmp = sqrt(1 - p^2)
                 d_ftmp_p = -p / ftmp
-                d_p_tmp = -w[i, j] / tmp_mat[i-1, j]^2
+                d_p_tmp = -w[i, j] / tmp_mat[i - 1, j]^2
 
-                Δp = Δz[i, j] / (1 - p^2) + Δtmp * tmp_mat[i-1, j] * d_ftmp_p
-                Δw[i, j] = Δp / tmp_mat[i-1, j]
+                Δp = Δz[i, j] / (1 - p^2) + Δtmp * tmp_mat[i - 1, j] * d_ftmp_p
+                Δw[i, j] = Δp / tmp_mat[i - 1, j]
                 Δtmp = Δp * d_p_tmp + Δtmp * ftmp # update to "previous" Δtmp
             end
             Δw[1, j] = Δz[1, j] / (1 - w[1, j]^2) - Δtmp / sqrt(1 - w[1, j]^2) * w[1, j]
@@ -438,9 +435,7 @@ function Bijectors.find_alpha(wt_y::T, wt_u_hat::T, b::T) where {T<:TrackedReal}
     return track(Bijectors.find_alpha, wt_y, wt_u_hat, b)
 end
 @grad function Bijectors.find_alpha(
-    wt_y::TrackedReal,
-    wt_u_hat::TrackedReal,
-    b::TrackedReal,
+    wt_y::TrackedReal, wt_u_hat::TrackedReal, b::TrackedReal
 )
     α = Bijectors.find_alpha(data(wt_y), data(wt_u_hat), data(b))
 
@@ -453,8 +448,9 @@ end
 end
 
 # `OrderedBijector`
-Bijectors._transform_ordered(y::Union{TrackedVector,TrackedMatrix}) =
-    track(Bijectors._transform_ordered, y)
+function Bijectors._transform_ordered(y::Union{TrackedVector,TrackedMatrix})
+    return track(Bijectors._transform_ordered, y)
+end
 @grad function Bijectors._transform_ordered(y::AbstractVecOrMat)
     x, dx = ChainRulesCore.rrule(Bijectors._transform_ordered, data(y))
     return x, (wrap_chainrules_output ∘ Base.tail ∘ dx)

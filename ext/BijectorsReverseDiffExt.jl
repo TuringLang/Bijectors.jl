@@ -84,8 +84,9 @@ function Base.maximum(d::LocationScale{<:TrackedReal})
     end
 end
 
-logabsdetjac(b::Elementwise{typeof(log)}, x::Union{TrackedVector,TrackedMatrix}) =
-    track(logabsdetjac, b, x)
+function logabsdetjac(b::Elementwise{typeof(log)}, x::Union{TrackedVector,TrackedMatrix})
+    return track(logabsdetjac, b, x)
+end
 @grad function logabsdetjac(b::Elementwise{typeof(log)}, x::AbstractVector)
     return -sum(log, value(x)), Δ -> (nothing, -Δ ./ value(x))
 end
@@ -157,7 +158,8 @@ end
     Δ -> begin
         maphcat(eachcol(Yd), eachcol(Δ)) do c1, c2
             simplex_invlink_jacobian(c1)' * c2
-        end, nothing
+        end,
+        nothing
     end
 end
 
@@ -183,8 +185,9 @@ replace_diag(::typeof(exp), X::TrackedMatrix) = track(replace_diag, exp, X)
     end
 end
 
-logabsdetjac(b::SimplexBijector, x::Union{TrackedVector,TrackedMatrix}) =
-    track(logabsdetjac, b, x)
+function logabsdetjac(b::SimplexBijector, x::Union{TrackedVector,TrackedMatrix})
+    return track(logabsdetjac, b, x)
+end
 @grad function logabsdetjac(b::SimplexBijector, x::AbstractVector)
     xd = value(x)
     return logabsdetjac(b, xd), Δ -> begin
