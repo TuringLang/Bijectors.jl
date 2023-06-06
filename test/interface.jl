@@ -170,7 +170,8 @@ end
                 @test b(param(x)) isa TrackedArray
                 @test logabsdet(ForwardDiff.jacobian(b, x)[:, 1:(end - 1)])[1] ≈
                     logabsdetjac(b, x)
-                @test logabsdet(ForwardDiff.jacobian(inverse(b), y)[1:(end - 1), :])[1] ≈ logabsdetjac(inverse(b), y)
+                @test logabsdet(ForwardDiff.jacobian(inverse(b), y)[1:(end - 1), :])[1] ≈
+                    logabsdetjac(inverse(b), y)
             else
                 b = bijector(dist)
                 x = rand(dist)
