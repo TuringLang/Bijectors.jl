@@ -13,7 +13,17 @@ if isdefined(Base, :get_extension)
         data,
         param
 
-    using Bijectors: Elementwise, SimplexBijector, Inverse, Stacked, Bijectors
+    using Bijectors:
+        Elementwise,
+        SimplexBijector,
+        Inverse,
+        Stacked,
+        Bijectors,
+        ChainRulesCore,
+        LogExpFunctions
+    using Bijectors.LinearAlgebra
+    using Bijectors.Compat: eachcol
+    using Bijectors.Distributions: LocationScale
 else
     using ..Tracker:
         Tracker,
@@ -27,15 +37,12 @@ else
         data,
         param
 
-    using ..Bijectors: Elementwise, SimplexBijector, Inverse, Stacked, Bijectors
+    using ..Bijectors:
+        Elementwise, SimplexBijector, Inverse, Bijectors, ChainRulesCore, LogExpFunctions
+    using ..Bijectors.LinearAlgebra
+    using ..Bijectors.Compat: eachcol
+    using ..Bijectors.Distributions: LocationScale
 end
-
-using ChainRulesCore: ChainRulesCore
-using LogExpFunctions: LogExpFunctions
-
-using Compat: eachcol
-using LinearAlgebra
-using Distributions: LocationScale
 
 Bijectors.maporbroadcast(f, x::TrackedArray...) = f.(x...)
 function Bijectors.maporbroadcast(
