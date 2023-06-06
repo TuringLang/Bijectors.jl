@@ -203,8 +203,7 @@ end
 function simplex_link_jacobian(x::AbstractVector{T}) where {T<:Real}
     K = length(x)
     @assert K > 1 "x needs to be of length greater than 1"
-    dydxt = similar(x, K, K - 1)
-    @inbounds dydxt .= 0
+    dydxt = fill!(similar(x, K, K - 1), 0)
     ϵ = _eps(T)
     sum_tmp = zero(T)
 
@@ -297,8 +296,7 @@ end
 function simplex_invlink_jacobian(y::AbstractVector{T}) where {T<:Real}
     K = length(y) + 1
     @assert K > 1 "x needs to be of length greater than 1"
-    dxdy = similar(y, K, K - 1)
-    @inbounds dxdy .= 0
+    dxdy = fill!(similar(y, K, K - 1), 0)
 
     ϵ = _eps(T)
     @inbounds z = LogExpFunctions.logistic(y[1] - log(T(K - 1)))
