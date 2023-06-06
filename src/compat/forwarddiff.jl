@@ -1,7 +1,7 @@
 import .ForwardDiff
 
-_eps(::Type{<:ForwardDiff.Dual{<:Any, Real}}) = _eps(Real)
-_eps(::Type{<:ForwardDiff.Dual{<:Any, <:Integer}}) = _eps(Real)
+_eps(::Type{<:ForwardDiff.Dual{<:Any,Real}}) = _eps(Real)
+_eps(::Type{<:ForwardDiff.Dual{<:Any,<:Integer}}) = _eps(Real)
 
 # Define forward-mode rule for ForwardDiff and don't trust support for ForwardDiff in Roots
 # https://github.com/JuliaMath/Roots.jl/issues/314

@@ -1,10 +1,8 @@
 # differentation rule for the iterative algorithm in the inverse of `PlanarLayer`
 ChainRulesCore.@scalar_rule(
     find_alpha(wt_y::Real, wt_u_hat::Real, b::Real),
-    @setup(
-        x = inv(1 + wt_u_hat * sech(Ω + b)^2),
-    ),
-    (x, - tanh(Ω + b) * x, x - 1),
+    @setup(x = inv(1 + wt_u_hat * sech(Ω + b)^2),),
+    (x, -tanh(Ω + b) * x, x - 1),
 )
 
 function ChainRulesCore.rrule(::typeof(combine), m::PartitionMask, x_1, x_2, x_3)
@@ -15,7 +13,9 @@ function ChainRulesCore.rrule(::typeof(combine), m::PartitionMask, x_1, x_2, x_3
     function combine_pullback(ΔΩ)
         Δ = ChainRulesCore.unthunk(ΔΩ)
         dx_1, dx_2, dx_3 = partition(m, Δ)
-        return ChainRulesCore.NoTangent(), ChainRulesCore.NoTangent(), proj_x_1(dx_1), proj_x_2(dx_2), proj_x_3(dx_3)
+        return ChainRulesCore.NoTangent(),
+        ChainRulesCore.NoTangent(), proj_x_1(dx_1), proj_x_2(dx_2),
+        proj_x_3(dx_3)
     end
 
     return combine(m, x_1, x_2, x_3), combine_pullback
@@ -81,7 +81,7 @@ function ChainRulesCore.rrule(::typeof(_transform_inverse_ordered), x::AbstractV
     project_x = ChainRulesCore.ProjectTo(x)
 
     r = similar(x)
-    @inbounds for i = 1:length(r)
+    @inbounds for i in 1:length(r)
         if i == 1
             r[i] = 1
         else
@@ -95,7 +95,7 @@ function ChainRulesCore.rrule(::typeof(_transform_inverse_ordered), x::AbstractV
         @assert length(Δ_new) == length(Δ)
 
         n = length(Δ_new)
-        @inbounds for j = 1:n - 1
+        @inbounds for j in 1:(n - 1)
             Δ_new[j] = (Δ[j] / r[j]) - (Δ[j + 1] / r[j + 1])
         end
         @inbounds Δ_new[n] = Δ[n] / r[n]
@@ -105,7 +105,7 @@ function ChainRulesCore.rrule(::typeof(_transform_inverse_ordered), x::AbstractV
 
     y = similar(x)
     @inbounds y[1] = x[1]
-    @inbounds for i = 2:length(x)
+    @inbounds for i in 2:length(x)
         y[i] = log(r[i])
     end
 
@@ -117,7 +117,7 @@ function ChainRulesCore.rrule(::typeof(_transform_inverse_ordered), x::AbstractM
     project_x = ChainRulesCore.ProjectTo(x)
 
     r = similar(x)
-    @inbounds for j = 1:size(x, 2), i = 1:size(x, 1)
+    @inbounds for j in 1:size(x, 2), i in 1:size(x, 1)
         if i == 1
             r[i, j] = 1
         else
@@ -131,11 +131,11 @@ function ChainRulesCore.rrule(::typeof(_transform_inverse_ordered), x::AbstractM
         n = size(Δ, 1)
         @assert size(Δ) == size(Δ_new)
 
-        @inbounds for j = 1:size(Δ_new, 2), i = 1:n - 1
+        @inbounds for j in 1:size(Δ_new, 2), i in 1:(n - 1)
             Δ_new[i, j] = (Δ[i, j] / r[i, j]) - (Δ[i + 1, j] / r[i + 1, j])
         end
 
-        @inbounds for j = 1:size(Δ_new, 2)
+        @inbounds for j in 1:size(Δ_new, 2)
             Δ_new[n, j] = Δ[n, j] / r[n, j]
         end
 
@@ -145,7 +145,7 @@ function ChainRulesCore.rrule(::typeof(_transform_inverse_ordered), x::AbstractM
     # Compute primal here so we can make use of the already
     # computed `r`.
     y = similar(x)
-    @inbounds for j = 1:size(x, 2), i = 1:size(x, 1)
+    @inbounds for j in 1:size(x, 2), i in 1:size(x, 1)
         if i == 1
             y[i, j] = x[i, j]
         else
