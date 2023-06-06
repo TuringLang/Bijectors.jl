@@ -15,15 +15,16 @@ function test_bijector(
     changes_of_variables_test=true,
     inverse_functions_test=true,
     compare=isapprox,
-    kwargs...
+    kwargs...,
 )
     # Ensure that everything is type-stable.
     ib = @inferred inverse(b)
     logjac_test = @inferred logabsdetjac(b, x)
-    res = @inferred with_logabsdet_jacobian(b, x)    
+    res = @inferred with_logabsdet_jacobian(b, x)
 
     y_test = @inferred b(x)
-    ilogjac_test = !isnothing(y) ? @inferred(logabsdetjac(ib, y)) : @inferred(logabsdetjac(ib, y_test))
+    ilogjac_test =
+        !isnothing(y) ? @inferred(logabsdetjac(ib, y)) : @inferred(logabsdetjac(ib, y_test))
     ires = if !isnothing(y)
         @inferred(with_logabsdet_jacobian(inverse(b), y))
     else
@@ -34,18 +35,20 @@ function test_bijector(
     # For non-bijective transformations, these tests always fail since determinant of
     # the Jacobian is zero. Hence we allow the caller to disable them if necessary.
     if changes_of_variables_test
-        ChangesOfVariables.test_with_logabsdet_jacobian(b, x, getjacobian; compare=compare, kwargs...)
         ChangesOfVariables.test_with_logabsdet_jacobian(
-            ib, isnothing(y) ? y_test : y, getjacobian;
-            compare=compare,
-            kwargs...
+            b, x, getjacobian; compare=compare, kwargs...
+        )
+        ChangesOfVariables.test_with_logabsdet_jacobian(
+            ib, isnothing(y) ? y_test : y, getjacobian; compare=compare, kwargs...
         )
     end
 
     # InverseFunctions.jl
     if inverse_functions_test
         InverseFunctions.test_inverse(b, x; compare, kwargs...)
-        InverseFunctions.test_inverse(ib, isnothing(y) ? y_test : y; compare=compare, kwargs...)
+        InverseFunctions.test_inverse(
+            ib, isnothing(y) ? y_test : y; compare=compare, kwargs...
+        )
     end
 
     # Always want the following to hold
@@ -100,9 +103,9 @@ function test_functor(x, xs)
     @test _xs == xs
 end
 
-function test_bijector_parameter_gradient(b::Bijectors.Transform, x, y = b(x))
+function test_bijector_parameter_gradient(b::Bijectors.Transform, x, y=b(x))
     args, re = Functors.functor(b)
-    recon(k, param) = re(merge(args, NamedTuple{(k, )}((param, ))))
+    recon(k, param) = re(merge(args, NamedTuple{(k,)}((param,))))
 
     # Compute the gradient wrt. one argument at the time.
     for (k, v) in pairs(args)

@@ -56,7 +56,7 @@ else
         find_alpha
 end
 
-import ChainRulesCore
+using ChainRulesCore: ChainRulesCore
 
 using LinearAlgebra
 using Compat: eachcol

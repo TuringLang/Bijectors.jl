@@ -18,11 +18,11 @@ using Bijectors: LeakyReLU
     b = LeakyReLU(Float32(b.α))
 
     # < 0
-    x = -1f0
+    x = -1.0f0
     test_bijector(b, x)
 
     # ≥ 0
-    x = 1f0
+    x = 1.0f0
     test_bijector(b, x; test_not_identity=false, test_types=true)
 end
 

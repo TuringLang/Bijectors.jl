@@ -9,7 +9,7 @@ function replace_diag(f, X)
 end
 transform(b::PDBijector, X::AbstractMatrix{<:Real}) = pd_link(X)
 function pd_link(X)
-    Y = lower(parent(cholesky(X; check = true).L))
+    Y = lower(parent(cholesky(X; check=true).L))
     return replace_diag(log, Y)
 end
 lower(A::AbstractMatrix) = convert(typeof(A), LowerTriangular(A))
@@ -22,7 +22,7 @@ getpd(X) = LowerTriangular(X) * LowerTriangular(X)'
 
 function logabsdetjac(b::PDBijector, X::AbstractMatrix{<:Real})
     T = eltype(X)
-    Xcf = cholesky(X, check = false)
+    Xcf = cholesky(X; check=false)
     if !issuccess(Xcf)
         Xcf = cholesky(X + max(eps(T), eps(T) * norm(X)) * I)
     end
@@ -35,7 +35,7 @@ function logabsdetjac_pdbijector_chol(Xcf::Cholesky)
     UL = Xcf.UL
     d = size(UL, 1)
     z = sum(((d + 1):(-1):2) .* log.(diag(UL)))
-    return - (z + d * oftype(z, IrrationalConstants.logtwo))
+    return -(z + d * oftype(z, IrrationalConstants.logtwo))
 end
 
 # TODO: Implement explicitly.

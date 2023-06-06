@@ -30,8 +30,8 @@ else
     using ..Bijectors: Elementwise, SimplexBijector, Inverse, Stacked, Bijectors
 end
 
-import ChainRulesCore
-import LogExpFunctions
+using ChainRulesCore: ChainRulesCore
+using LogExpFunctions: LogExpFunctions
 
 using Compat: eachcol
 using LinearAlgebra
@@ -283,7 +283,7 @@ eachcolnorm(X::TrackedMatrix) = track(eachcolnorm, X)
 @grad function eachcolnorm(X)
     Xd = data(X)
     y = map(norm, eachcol(Xd))
-    y, Δ -> begin
+    return y, Δ -> begin
         (Xd .* (Δ ./ y)',)
     end
 end

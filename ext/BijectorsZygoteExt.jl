@@ -124,7 +124,7 @@ end
 @adjoint function replace_diag(::typeof(log), X)
     f(i, j) = i == j ? log(X[i, j]) : X[i, j]
     out = f.(1:size(X, 1), (1:size(X, 2))')
-    out, ∇ -> begin
+    return out, ∇ -> begin
         g(i, j) = i == j ? ∇[i, j] / X[i, j] : ∇[i, j]
         (nothing, g.(1:size(X, 1), (1:size(X, 2))'))
     end
@@ -132,7 +132,7 @@ end
 @adjoint function replace_diag(::typeof(exp), X)
     f(i, j) = ifelse(i == j, exp(X[i, j]), X[i, j])
     out = f.(1:size(X, 1), (1:size(X, 2))')
-    out, ∇ -> begin
+    return out, ∇ -> begin
         g(i, j) = ifelse(i == j, ∇[i, j] * exp(X[i, j]), ∇[i, j])
         (nothing, g.(1:size(X, 1), (1:size(X, 2))'))
     end
@@ -143,9 +143,9 @@ end
 end
 function pd_logpdf_with_trans_zygote(d, X::AbstractMatrix{<:Real}, transform::Bool)
     T = eltype(X)
-    Xcf = cholesky(X, check = false)
+    Xcf = cholesky(X; check = false)
     if !issuccess(Xcf)
-        Xcf = cholesky(X + max(eps(T), eps(T) * norm(X)) * I, check = true)
+        Xcf = cholesky(X + max(eps(T), eps(T) * norm(X)) * I; check = true)
     end
     lp = getlogp(d, Xcf, X)
     if transform && isfinite(lp)
@@ -330,6 +330,5 @@ end
     end
 
     return z, pullback_link_chol_lkj
-
 end
 end

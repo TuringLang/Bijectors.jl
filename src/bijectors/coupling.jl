@@ -48,13 +48,15 @@ PartitionMask{Float32,SparseArrays.SparseMatrixCSC{Float32,Int64}}(
   [3, 1]  =  1.0)
 ```
 """
-struct PartitionMask{T, A}
+struct PartitionMask{T,A}
     A_1::A
     A_2::A
     A_3::A
 
     # Only make it possible to construct using matrices
-    PartitionMask(A_1::A, A_2::A, A_3::A) where {T<:Real, A <: AbstractMatrix{T}} = new{T, A}(A_1, A_2, A_3)
+    function PartitionMask(A_1::A, A_2::A, A_3::A) where {T<:Real,A<:AbstractMatrix{T}}
+        return new{T,A}(A_1, A_2, A_3)
+    end
 end
 
 PartitionMask(args...) = PartitionMask{Bool}(args...)
@@ -63,7 +65,7 @@ function PartitionMask{T}(
     n::Int,
     indices_1::AbstractVector{Int},
     indices_2::AbstractVector{Int},
-    indices_3::AbstractVector{Int}
+    indices_3::AbstractVector{Int},
 ) where {T<:Real}
     A_1 = sparse(indices_1, 1:length(indices_1), one(T), n, length(indices_1))
     A_2 = sparse(indices_2, 1:length(indices_2), one(T), n, length(indices_2))
@@ -72,25 +74,29 @@ function PartitionMask{T}(
     return PartitionMask(A_1, A_2, A_3)
 end
 
-PartitionMask{T}(
-    n::Int,
-    indices_1::AbstractVector{Int},
-    indices_2::AbstractVector{Int};
-) where {T} = PartitionMask{T}(n, indices_1, indices_2, nothing)
+function PartitionMask{T}(
+    n::Int, indices_1::AbstractVector{Int}, indices_2::AbstractVector{Int};
+) where {T}
+    return PartitionMask{T}(n, indices_1, indices_2, nothing)
+end
 
-PartitionMask{T}(
+function PartitionMask{T}(
     n::Int,
     indices_1::AbstractVector{Int},
     indices_2::AbstractVector{Int},
     indices_3::Nothing,
-) where {T} = PartitionMask{T}(n, indices_1, indices_2, setdiff(1:n, indices_1, indices_2))
+) where {T}
+    return PartitionMask{T}(n, indices_1, indices_2, setdiff(1:n, indices_1, indices_2))
+end
 
-PartitionMask{T}(
+function PartitionMask{T}(
     n::Int,
     indices_1::AbstractVector{Int},
     indices_2::Nothing,
     indices_3::AbstractVector{Int},
-) where {T} = PartitionMask{T}(n, indices_1, setdiff(1:n, indices_1, indices_3), indices_3)
+) where {T}
+    return PartitionMask{T}(n, indices_1, setdiff(1:n, indices_1, indices_3), indices_3)
+end
 
 """
     PartitionMask(n::Int, indices)
@@ -123,8 +129,9 @@ Combines `x_1`, `x_2`, and `x_3` into a single vector.
 
 Partitions `x` into 3 disjoint subvectors.
 """
-@inline partition(m::PartitionMask, x) = (transpose(m.A_1) * x, transpose(m.A_2) * x, transpose(m.A_3) * x)
-
+@inline function partition(m::PartitionMask, x)
+    return (transpose(m.A_1) * x, transpose(m.A_2) * x, transpose(m.A_3) * x)
+end
 
 # Coupling
 
@@ -168,7 +175,7 @@ julia> with_logabsdet_jacobian(cl, x)
 # References
 [1] Kobyzev, I., Prince, S., & Brubaker, M. A., Normalizing flows: introduction and ideas, CoRR, (),  (2019). 
 """
-struct Coupling{F, M} <: Bijector where {F, M <: PartitionMask}
+struct Coupling{F,M} <: Bijector where {F,M<:PartitionMask}
     θ::F
     mask::M
 end
@@ -233,7 +240,7 @@ end
 
 function transform(icl::Inverse{<:Coupling}, y::AbstractVector)
     cl = icl.orig
-    
+
     y_1, y_2, y_3 = partition(cl.mask, y)
 
     b = cl.θ(y_2)

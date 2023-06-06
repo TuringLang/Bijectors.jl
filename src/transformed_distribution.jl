@@ -1,11 +1,18 @@
 # Transformed distributions
-struct TransformedDistribution{D, B, V} <: Distribution{V, Continuous} where {D<:Distribution{V, Continuous}, B}
+struct TransformedDistribution{D,B,V} <:
+       Distribution{V,Continuous} where {D<:Distribution{V,Continuous},B}
     dist::D
     transform::B
 
-    TransformedDistribution(d::UnivariateDistribution, b) = new{typeof(d), typeof(b), Univariate}(d, b)
-    TransformedDistribution(d::MultivariateDistribution, b) = new{typeof(d), typeof(b), Multivariate}(d, b)
-    TransformedDistribution(d::MatrixDistribution, b) = new{typeof(d), typeof(b), Matrixvariate}(d, b)
+    function TransformedDistribution(d::UnivariateDistribution, b)
+        return new{typeof(d),typeof(b),Univariate}(d, b)
+    end
+    function TransformedDistribution(d::MultivariateDistribution, b)
+        return new{typeof(d),typeof(b),Multivariate}(d, b)
+    end
+    function TransformedDistribution(d::MatrixDistribution, b)
+        return new{typeof(d),typeof(b),Matrixvariate}(d, b)
+    end
 end
 
 # fields may contain nested numerical parameters
@@ -16,7 +23,6 @@ const MultivariateTransformed = TransformedDistribution{<:Distribution,<:Any,Mul
 const MvTransformed = MultivariateTransformed
 const MatrixTransformed = TransformedDistribution{<:Distribution,<:Any,Matrixvariate}
 const Transformed = TransformedDistribution
-
 
 """
     transformed(d::Distribution)
@@ -64,14 +70,14 @@ bijector(d::KSOneSided) = Logit(zero(eltype(d)), one(eltype(d)))
 
 bijector_bounded(d, a=minimum(d), b=maximum(d)) = Logit(a, b)
 bijector_lowerbounded(d, a=minimum(d)) = elementwise(log) ∘ Shift(-a)
-bijector_upperbounded(d, b=maximum(d)) = elementwise(log) ∘ Shift(b) ∘ Scale(- one(typeof(b)))
+function bijector_upperbounded(d, b=maximum(d))
+    return elementwise(log) ∘ Shift(b) ∘ Scale(-one(typeof(b)))
+end
 
-const BoundedDistribution = Union{
-    Arcsine, Biweight, Cosine, Epanechnikov, Beta, NoncentralBeta
-}
+const BoundedDistribution = Union{Arcsine,Biweight,Cosine,Epanechnikov,Beta,NoncentralBeta}
 bijector(d::BoundedDistribution) = bijector_bounded(d)
 
-const LowerboundedDistribution = Union{Pareto, Levy}
+const LowerboundedDistribution = Union{Pareto,Levy}
 bijector(d::LowerboundedDistribution) = bijector_lowerbounded(d)
 
 bijector(d::PDMatDistribution) = PDBijector()
@@ -111,7 +117,7 @@ function logpdf(td::MvTransformed{<:Dirichlet}, y::AbstractMatrix{<:Real})
     ϵ = _eps(T)
 
     x, logjac = with_logabsdet_jacobian(inverse(td.transform), y)
-    return logpdf(td.dist, mappedarray(x->x+ϵ, x)) + logjac
+    return logpdf(td.dist, mappedarray(x -> x + ϵ, x)) + logjac
 end
 
 function _logpdf(td::MvTransformed, y::AbstractVector{<:Real})
@@ -124,7 +130,7 @@ function _logpdf(td::MvTransformed{<:Dirichlet}, y::AbstractVector{<:Real})
     ϵ = _eps(T)
 
     x, logjac = with_logabsdet_jacobian(inverse(td.transform), y)
-    return logpdf(td.dist, mappedarray(x->x+ϵ, x)) + logjac
+    return logpdf(td.dist, mappedarray(x -> x + ϵ, x)) + logjac
 end
 
 # TODO: should eventually drop using `logpdf_with_trans` and replace with
@@ -145,20 +151,23 @@ rand(rng::AbstractRNG, td::MvTransformed) = td.transform(rand(rng, td.dist))
 # TODO: implement more efficiently for flows
 function rand(rng::AbstractRNG, td::MvTransformed, num_samples::Int)
     samples = rand(rng, td.dist, num_samples)
-    res = reduce(hcat, map(axes(samples, 2)) do i
-        return td.transform(view(samples, :, i))
-    end)
+    res = reduce(
+        hcat,
+        map(axes(samples, 2)) do i
+            return td.transform(view(samples, :, i))
+        end,
+    )
     return res
 end
 
 function _rand!(rng::AbstractRNG, td::MvTransformed, x::AbstractVector{<:Real})
     rand!(rng, td.dist, x)
-    x .= td.transform(x)
+    return x .= td.transform(x)
 end
 
 function _rand!(rng::AbstractRNG, td::MatrixTransformed, x::DenseMatrix{<:Real})
     rand!(rng, td.dist, x)
-    x .= td.transform(x)
+    return x .= td.transform(x)
 end
 
 # utility stuff
@@ -173,4 +182,3 @@ function Base.minimum(td::UnivariateTransformed)
     min, max = td.transform.((Base.minimum(td.dist), Base.maximum(td.dist)))
     return max < min ? max : min
 end
-

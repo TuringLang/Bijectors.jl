@@ -14,7 +14,7 @@ inverse(b::Shift) = Shift(-b.a)
 transform(b::Shift, x) = b.a .+ x
 
 # FIXME: implement custom adjoint to ensure we don't get tracking
-function logabsdetjac(b::Shift, x::Union{Real, AbstractArray{<:Real}})
+function logabsdetjac(b::Shift, x::Union{Real,AbstractArray{<:Real}})
     return _logabsdetjac_shift(b.a, x)
 end
 

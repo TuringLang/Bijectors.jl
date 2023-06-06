@@ -40,11 +40,11 @@ using InverseFunctions: InverseFunctions
 import ChangesOfVariables: ChangesOfVariables, with_logabsdet_jacobian
 import InverseFunctions: inverse
 
-import ChainRulesCore
-import Functors
-import IrrationalConstants
-import LogExpFunctions
-import Roots
+using ChainRulesCore: ChainRulesCore
+using Functors: Functors
+using IrrationalConstants: IrrationalConstants
+using LogExpFunctions: LogExpFunctions
+using Roots: Roots
 
 export TransformDistribution,
     PositiveDistribution,
@@ -129,18 +129,21 @@ invlink(d::Distribution, y) = inverse(bijector(d))(y)
 # To still allow `logpdf_with_trans` to work with "batches" in a similar way
 # as `logpdf` can.
 _logabsdetjac_dist(d::UnivariateDistribution, x::Real) = logabsdetjac(bijector(d), x)
-_logabsdetjac_dist(d::UnivariateDistribution, x::AbstractArray) =
-    logabsdetjac.((bijector(d),), x)
+function _logabsdetjac_dist(d::UnivariateDistribution, x::AbstractArray)
+    return logabsdetjac.((bijector(d),), x)
+end
 
-_logabsdetjac_dist(d::MultivariateDistribution, x::AbstractVector) =
-    logabsdetjac(bijector(d), x)
-_logabsdetjac_dist(d::MultivariateDistribution, x::AbstractMatrix) =
-    logabsdetjac.((bijector(d),), eachcol(x))
+function _logabsdetjac_dist(d::MultivariateDistribution, x::AbstractVector)
+    return logabsdetjac(bijector(d), x)
+end
+function _logabsdetjac_dist(d::MultivariateDistribution, x::AbstractMatrix)
+    return logabsdetjac.((bijector(d),), eachcol(x))
+end
 
 _logabsdetjac_dist(d::MatrixDistribution, x::AbstractMatrix) = logabsdetjac(bijector(d), x)
-_logabsdetjac_dist(d::MatrixDistribution, x::AbstractVector{<:AbstractMatrix}) =
-    logabsdetjac.((bijector(d),), x)
-
+function _logabsdetjac_dist(d::MatrixDistribution, x::AbstractVector{<:AbstractMatrix})
+    return logabsdetjac.((bijector(d),), x)
+end
 
 function logpdf_with_trans(d::Distribution, x, transform::Bool)
     if ispd(d)
@@ -251,7 +254,7 @@ function logpdf_with_trans(
 end
 function pd_logpdf_with_trans(d, X::AbstractMatrix{<:Real}, transform::Bool)
     T = eltype(X)
-    Xcf = cholesky(X, check = false)
+    Xcf = cholesky(X; check = false)
     if !issuccess(Xcf)
         Xcf = cholesky(X + max(eps(T), eps(T) * norm(X)) * I)
     end
@@ -304,7 +307,6 @@ if !isdefined(Base, :get_extension)
         )
         @require DistributionsAD = "ced4e74d-a319-5a8a-b0ac-84af2272839c" include(
             "../ext/BijectorsDistributionsADExt.jl",
-            3,
         )
     end
 end
