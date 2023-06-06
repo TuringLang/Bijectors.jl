@@ -29,7 +29,7 @@ function _simplex_bijector!(y, x::AbstractVector, ::SimplexBijector)
         sum_tmp += x[k - 1]
         # z ∈ [ϵ, 1-ϵ]
         # x[k] = 0 && sum_tmp = 1 -> z ≈ 1
-        z = (x[k] + ϵ)*(one(T) - 2ϵ)/((one(T) + ϵ) - sum_tmp)
+        z = (x[k] + ϵ) * (one(T) - 2ϵ) / ((one(T) + ϵ) - sum_tmp)
         y[k] = LogExpFunctions.logit(z) + log(T(K - k))
     end
     return y
@@ -47,7 +47,7 @@ function _simplex_bijector!(Y, X::AbstractMatrix, ::SimplexBijector)
         Y[1, n] = LogExpFunctions.logit(z) + log(T(K - 1))
         for k in 2:(K - 1)
             sum_tmp += X[k - 1, n]
-            z = (X[k, n] + ϵ)*(one(T) - 2ϵ)/((one(T) + ϵ) - sum_tmp)
+            z = (X[k, n] + ϵ) * (one(T) - 2ϵ) / ((one(T) + ϵ) - sum_tmp)
             Y[k, n] = LogExpFunctions.logit(z) + log(T(K - k))
         end
     end
@@ -56,11 +56,11 @@ function _simplex_bijector!(Y, X::AbstractMatrix, ::SimplexBijector)
 end
 
 # Inverse.
-transform(ib::Inverse{<:SimplexBijector}, y::AbstractArray) = _simplex_inv_bijector(y, ib.orig)
+function transform(ib::Inverse{<:SimplexBijector}, y::AbstractArray)
+    return _simplex_inv_bijector(y, ib.orig)
+end
 function transform!(
-    ib::Inverse{<:SimplexBijector},
-    x::AbstractArray{T},
-    y::AbstractArray{T},
+    ib::Inverse{<:SimplexBijector}, x::AbstractArray{T}, y::AbstractArray{T}
 ) where {T}
     return _simplex_inv_bijector!(x, y, ib.orig)
 end
@@ -81,9 +81,9 @@ function _simplex_inv_bijector!(x, y::AbstractVector, b::SimplexBijector)
     @inbounds z = LogExpFunctions.logistic(y[1] - log(T(K - 1)))
     @inbounds x[1] = _clamp((z - ϵ) / (one(T) - 2ϵ), 0, 1)
     sum_tmp = zero(T)
-    @inbounds @simd for k = 2:(K - 1)
+    @inbounds @simd for k in 2:(K - 1)
         z = LogExpFunctions.logistic(y[k] - log(T(K - k)))
-        sum_tmp += x[k-1]
+        sum_tmp += x[k - 1]
         x[k] = _clamp(((one(T) + ϵ) - sum_tmp) / (one(T) - 2ϵ) * z - ϵ, 0, 1)
     end
     @inbounds sum_tmp += x[K - 1]
@@ -114,14 +114,14 @@ end
 function logabsdetjac(b::SimplexBijector, x::AbstractVector{T}) where {T}
     ϵ = _eps(T)
     lp = zero(T)
-    
+
     K = length(x)
 
     sum_tmp = zero(eltype(x))
     @inbounds z = x[1]
     lp += log(max(z, ϵ)) + log(max(one(T) - z, ϵ))
     @inbounds @simd for k in 2:(K - 1)
-        sum_tmp += x[k-1]
+        sum_tmp += x[k - 1]
         z = x[k] / max(one(T) - sum_tmp, ϵ)
         lp += log(max(z, ϵ)) + log(max(one(T) - z, ϵ)) + log(max(one(T) - sum_tmp, ϵ))
     end
@@ -130,7 +130,7 @@ function logabsdetjac(b::SimplexBijector, x::AbstractVector{T}) where {T}
 end
 function simplex_logabsdetjac_gradient(x::AbstractVector)
     T = eltype(x)
-    ϵ = _eps(T)    
+    ϵ = _eps(T)
     K = length(x)
     g = similar(x)
     g .= 0
@@ -140,9 +140,9 @@ function simplex_logabsdetjac_gradient(x::AbstractVector)
     c1 = z >= ϵ
     zc = one(T) - z
     c2 = zc >= ϵ
-    g[1] = ifelse(c1 & c2, -1/z + 1/zc, ifelse(c1, -1/z, 1/zc))
+    g[1] = ifelse(c1 & c2, -1 / z + 1 / zc, ifelse(c1, -1 / z, 1 / zc))
     @inbounds @simd for k in 2:(K - 1)
-        sum_tmp += x[k-1]
+        sum_tmp += x[k - 1]
         temp = 1 / (1 - sum_tmp)
         c0 = temp >= ϵ
         z = ifelse(c0, x[k] * temp, x[k] / ϵ)
@@ -151,14 +151,14 @@ function simplex_logabsdetjac_gradient(x::AbstractVector)
         c1 = z >= ϵ
         zc = one(T) - z
         c2 = zc >= ϵ
-        dldz = ifelse(c1 & c2, 1/z - 1/zc, ifelse(c1, 1/z, -1/zc))
+        dldz = ifelse(c1 & c2, 1 / z - 1 / zc, ifelse(c1, 1 / z, -1 / zc))
         dldx = dldz * dzdx
-	    g[k] -= dldx
-        for i in 1:k-1
-	        dzdxp = ifelse(c0, x[k] * dzdx^2, zero(T))
-	        dldxp = dldz * dzdxp - ifelse(c0, temp, zero(T))
-	        g[i] -= dldxp
-	    end
+        g[k] -= dldx
+        for i in 1:(k - 1)
+            dzdxp = ifelse(c0, x[k] * dzdx^2, zero(T))
+            dldxp = dldz * dzdxp - ifelse(c0, temp, zero(T))
+            g[i] -= dldxp
+        end
     end
     return g
 end
@@ -171,29 +171,29 @@ function simplex_logabsdetjac_gradient(x::AbstractMatrix)
     g .= 0
     @inbounds @simd for col in 1:size(x, 2)
         sum_tmp = zero(eltype(x))
-        z = x[1,col]
+        z = x[1, col]
         #lp += log(z + ϵ) + log((one(T) + ϵ) - z)
         c1 = z >= ϵ
         zc = one(T) - z
         c2 = zc >= ϵ
-        g[1,col] = ifelse(c1 & c2, -1/z + 1/zc, ifelse(c1, -1/z, 1/zc))
+        g[1, col] = ifelse(c1 & c2, -1 / z + 1 / zc, ifelse(c1, -1 / z, 1 / zc))
         for k in 2:(K - 1)
-            sum_tmp += x[k-1,col]
+            sum_tmp += x[k - 1, col]
             temp = 1 / (1 - sum_tmp)
             c0 = temp >= ϵ
-            z = ifelse(c0, x[k,col] * temp, x[k,col] / ϵ)
+            z = ifelse(c0, x[k, col] * temp, x[k, col] / ϵ)
             #lp += log(z + ϵ) + log((one(T) + ϵ) - z) + log(temp)
             dzdx = ifelse(c0, temp, one(T))
             c1 = z >= ϵ
             zc = one(T) - z
             c2 = zc >= ϵ
-            dldz = ifelse(c1 & c2, 1/z - 1/zc, ifelse(c1, 1/z, -1/zc))
+            dldz = ifelse(c1 & c2, 1 / z - 1 / zc, ifelse(c1, 1 / z, -1 / zc))
             dldx = dldz * dzdx
-            g[k,col] -= dldx
-            for i in 1:k-1
-                dzdxp = ifelse(c0, x[k,col] * dzdx^2, zero(T))
+            g[k, col] -= dldx
+            for i in 1:(k - 1)
+                dzdxp = ifelse(c0, x[k, col] * dzdx^2, zero(T))
                 dldxp = dldz * dzdxp - ifelse(c0, temp, zero(T))
-                g[i,col] -= dldxp
+                g[i, col] -= dldxp
             end
         end
     end
@@ -209,15 +209,17 @@ function simplex_link_jacobian(x::AbstractVector{T}) where {T<:Real}
     sum_tmp = zero(T)
 
     @inbounds z = x[1] * (one(T) - 2ϵ) + ϵ # z ∈ [ϵ, 1-ϵ]
-    @inbounds dydxt[1,1] = (1/z + 1/(1-z)) * (one(T) - 2ϵ)
+    @inbounds dydxt[1, 1] = (1 / z + 1 / (1 - z)) * (one(T) - 2ϵ)
     @inbounds @simd for k in 2:(K - 1)
         sum_tmp += x[k - 1]
         # z ∈ [ϵ, 1-ϵ]
         # x[k] = 0 && sum_tmp = 1 -> z ≈ 1
-        z = (x[k] + ϵ)*(one(T) - 2ϵ)/((one(T) + ϵ) - sum_tmp)
-        dydxt[k,k] = (1/z + 1/(1-z)) * (one(T) - 2ϵ)/((one(T) + ϵ) - sum_tmp)
-        for i in 1:k-1
-            dydxt[i,k] = (1/z + 1/(1-z)) * (x[k] + ϵ)*(one(T) - 2ϵ)/((one(T) + ϵ) - sum_tmp)^2
+        z = (x[k] + ϵ) * (one(T) - 2ϵ) / ((one(T) + ϵ) - sum_tmp)
+        dydxt[k, k] = (1 / z + 1 / (1 - z)) * (one(T) - 2ϵ) / ((one(T) + ϵ) - sum_tmp)
+        for i in 1:(k - 1)
+            dydxt[i, k] =
+                (1 / z + 1 / (1 - z)) * (x[k] + ϵ) * (one(T) - 2ϵ) /
+                ((one(T) + ϵ) - sum_tmp)^2
         end
     end
     return dydxt'
@@ -303,19 +305,19 @@ function simplex_invlink_jacobian(y::AbstractVector{T}) where {T<:Real}
     unclamped_x = (z - ϵ) / (one(T) - 2ϵ)
     clamped_x = _clamp(unclamped_x, 0, 1)
     @inbounds if unclamped_x == clamped_x
-        dxdy[1,1] = z * (1 - z) / (one(T) - 2ϵ)
+        dxdy[1, 1] = z * (1 - z) / (one(T) - 2ϵ)
     end
     sum_tmp = zero(T)
-    @inbounds for k = 2:(K - 1)
+    @inbounds for k in 2:(K - 1)
         z = LogExpFunctions.logistic(y[k] - log(T(K - k)))
         sum_tmp += clamped_x
         unclamped_x = ((one(T) + ϵ) - sum_tmp) / (one(T) - 2ϵ) * z - ϵ
         clamped_x = _clamp(unclamped_x, 0, 1)
         if unclamped_x == clamped_x
-            dxdy[k,k] = z * (1 - z) * ((one(T) + ϵ) - sum_tmp) / (one(T) - 2ϵ)
-            for i in 1:k-1
-                for j in i:k-1
-                    dxdy[k,i] += -dxdy[j,i] * z / (one(T) - 2ϵ)
+            dxdy[k, k] = z * (1 - z) * ((one(T) + ϵ) - sum_tmp) / (one(T) - 2ϵ)
+            for i in 1:(k - 1)
+                for j in i:(k - 1)
+                    dxdy[k, i] += -dxdy[j, i] * z / (one(T) - 2ϵ)
                 end
             end
         end
@@ -324,9 +326,9 @@ function simplex_invlink_jacobian(y::AbstractVector{T}) where {T<:Real}
     unclamped_x = one(T) - sum_tmp
     clamped_x = _clamp(unclamped_x, 0, 1)
     @inbounds if unclamped_x == clamped_x
-        for i in 1:K-1
-            @simd for j in i:K-1
-                dxdy[K,i] += -dxdy[j,i]
+        for i in 1:(K - 1)
+            @simd for j in i:(K - 1)
+                dxdy[K, i] += -dxdy[j, i]
             end
         end
     end

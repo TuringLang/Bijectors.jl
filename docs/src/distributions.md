@@ -1,10 +1,13 @@
 ## Basic usage
+
 Other than the `logpdf_with_trans` methods, the package also provides a more composable interface through the `Bijector` types. Consider for example the one from above with `Beta(2, 2)`.
 
 ```julia
-julia> using Random; Random.seed!(42);
+julia> using Random;
+       Random.seed!(42);
 
-julia> using Bijectors; using Bijectors: Logit
+julia> using Bijectors;
+       using Bijectors: Logit;
 
 julia> dist = Beta(2, 2)
 Beta{Float64}(α=2.0, β=2.0)

@@ -7,7 +7,19 @@ using Tracker
 using DistributionsAD
 
 using Bijectors
-using Bijectors: Shift, Scale, Logit, SimplexBijector, PDBijector, Permute, PlanarLayer, RadialLayer, Stacked, TruncatedBijector, RationalQuadraticSpline, LeakyReLU
+using Bijectors:
+    Shift,
+    Scale,
+    Logit,
+    SimplexBijector,
+    PDBijector,
+    Permute,
+    PlanarLayer,
+    RadialLayer,
+    Stacked,
+    TruncatedBijector,
+    RationalQuadraticSpline,
+    LeakyReLU
 
 Random.seed!(123)
 
@@ -19,7 +31,7 @@ contains(predicate::Function, b::Stacked) = any(contains.(predicate, b.bs))
     # Tests with scalar-valued distributions.
     uni_dists = [
         Arcsine(2, 4),
-        Beta(2,2),
+        Beta(2, 2),
         BetaPrime(),
         Biweight(),
         Cauchy(),
@@ -44,10 +56,10 @@ contains(predicate::Function, b::Stacked) = any(contains.(predicate, b.bs))
         Rayleigh(1.0),
         TDist(2),
         truncated(Normal(0, 1), -Inf, 2),
-        transformed(Beta(2,2)),
+        transformed(Beta(2, 2)),
         transformed(Exponential()),
     ]
-    
+
     for dist in uni_dists
         @testset "$dist: dist" begin
             td = @inferred transformed(dist)
@@ -68,7 +80,8 @@ contains(predicate::Function, b::Stacked) = any(contains.(predicate, b.bs))
             b = @inferred bijector(d)
             x = rand(d)
             y = @inferred b(x)
-            @test logpdf(d, inverse(b)(y)) + logabsdetjacinv(b, y) ≈ logpdf_with_trans(d, x, true)
+            @test logpdf(d, inverse(b)(y)) + logabsdetjacinv(b, y) ≈
+                logpdf_with_trans(d, x, true)
             @test logpdf(d, x) - logabsdetjac(b, x) ≈ logpdf_with_trans(d, x, true)
 
             # verify against AD
@@ -78,8 +91,9 @@ contains(predicate::Function, b::Stacked) = any(contains.(predicate, b.bs))
             y = b(x)
             # `ForwardDiff.derivative` can lead to some numerical inaccuracy,
             # so we use a slightly higher `atol` than default.
-            @test log(abs(ForwardDiff.derivative(b, x))) ≈ logabsdetjac(b, x) atol=1e-6
-            @test log(abs(ForwardDiff.derivative(inverse(b), y))) ≈ logabsdetjac(inverse(b), y) atol=1e-6
+            @test log(abs(ForwardDiff.derivative(b, x))) ≈ logabsdetjac(b, x) atol = 1e-6
+            @test log(abs(ForwardDiff.derivative(inverse(b), y))) ≈
+                logabsdetjac(inverse(b), y) atol = 1e-6
         end
     end
 end
@@ -91,7 +105,8 @@ end
     y = b(x)
     @test y ≈ link(d, x)
     @test inverse(b)(y) ≈ x
-    @test logabsdetjac(b, x) ≈ logpdf_with_trans(d, x, false) - logpdf_with_trans(d, x, true)
+    @test logabsdetjac(b, x) ≈
+        logpdf_with_trans(d, x, false) - logpdf_with_trans(d, x, true)
 
     d = truncated(Normal(), -Inf, 1)
     b = bijector(d)
@@ -99,7 +114,8 @@ end
     y = b(x)
     @test y ≈ link(d, x)
     @test inverse(b)(y) ≈ x
-    @test logabsdetjac(b, x) ≈ logpdf_with_trans(d, x, false) - logpdf_with_trans(d, x, true)
+    @test logabsdetjac(b, x) ≈
+        logpdf_with_trans(d, x, false) - logpdf_with_trans(d, x, true)
 
     d = truncated(Normal(), 1, Inf)
     b = bijector(d)
@@ -107,7 +123,8 @@ end
     y = b(x)
     @test y ≈ link(d, x)
     @test inverse(b)(y) ≈ x
-    @test logabsdetjac(b, x) ≈ logpdf_with_trans(d, x, false) - logpdf_with_trans(d, x, true)
+    @test logabsdetjac(b, x) ≈
+        logpdf_with_trans(d, x, false) - logpdf_with_trans(d, x, true)
 end
 
 @testset "Multivariate" begin
@@ -117,7 +134,7 @@ end
         Dirichlet([eps(Float64), 1000 * one(Float64)]),
         MvNormal(randn(10), Diagonal(exp.(randn(10)))),
         MvLogNormal(MvNormal(randn(10), Diagonal(exp.(randn(10))))),
-        Dirichlet([1000 * one(Float64), eps(Float64)]), 
+        Dirichlet([1000 * one(Float64), eps(Float64)]),
         Dirichlet([eps(Float64), 1000 * one(Float64)]),
         transformed(MvNormal(randn(10), Diagonal(exp.(randn(10))))),
         transformed(MvLogNormal(MvNormal(randn(10), Diagonal(exp.(randn(10)))))),
@@ -144,11 +161,17 @@ end
                 # which in turn will lead to differences between `ForwardDiff.jacobian`
                 # and `logabsdetjac` due to how we handle the boundary values in `SimplexBijector`.
                 # We therefore test the realizations _on_ the boundary rather if we're near the boundary.
-                x = any(rand(dist) .> 0.9999) ? [0.0, 1.0][sortperm(rand(dist))] : rand(dist)
+                x = if any(rand(dist) .> 0.9999)
+                    [0.0, 1.0][sortperm(rand(dist))]
+                else
+                    rand(dist)
+                end
                 y = b(x)
                 @test b(param(x)) isa TrackedArray
-                @test log(abs(det(ForwardDiff.jacobian(b, x)[1:end,1:end-1]))) ≈ logabsdetjac(b, x)
-                @test log(abs(det(ForwardDiff.jacobian(inverse(b), y)[1:end-1,1:end]))) ≈ logabsdetjac(inverse(b), y)
+                @test log(abs(det(ForwardDiff.jacobian(b, x)[1:end,1:end-1]))) ≈
+                    logabsdetjac(b, x)
+                @test log(abs(det(ForwardDiff.jacobian(inverse(b), y)[1:end-1,1:end]))) ≈
+                    logabsdetjac(inverse(b), y)
             else
                 b = bijector(dist)
                 x = rand(dist)
@@ -156,8 +179,10 @@ end
                 # `ForwardDiff.derivative` can lead to some numerical inaccuracy,
                 # so we use a slightly higher `atol` than default.
                 @test b(param(x)) isa TrackedArray
-                @test log(abs(det(ForwardDiff.jacobian(b, x)))) ≈ logabsdetjac(b, x) atol=1e-6
-                @test log(abs(det(ForwardDiff.jacobian(inverse(b), y)))) ≈ logabsdetjac(inverse(b), y) atol=1e-6
+                @test log(abs(det(ForwardDiff.jacobian(b, x)))) ≈ logabsdetjac(b, x) atol =
+                    1e-6
+                @test log(abs(det(ForwardDiff.jacobian(inverse(b), y)))) ≈
+                    logabsdetjac(inverse(b), y) atol = 1e-6
             end
         end
     end
@@ -169,11 +194,11 @@ end
     S[1, 2] = S[2, 1] = 0.5
 
     matrix_dists = [
-        Wishart(v,S),
-        InverseWishart(v,S),
-        TuringWishart(v,S),
-        TuringInverseWishart(v,S),
-        LKJ(3, 1.),
+        Wishart(v, S),
+        InverseWishart(v, S),
+        TuringWishart(v, S),
+        TuringInverseWishart(v, S),
+        LKJ(3, 1.0),
         reshape(MvNormal(zeros(6), I), 2, 3),
     ]
 
@@ -224,16 +249,16 @@ end
     @test sb1(param([x, x, y, y])) isa TrackedArray
 
     @test sb1([x, x, y, y]) ≈ res1[1]
-    @test logabsdetjac(sb1, [x, x, y, y]) ≈ 0 atol=1e-6
-    @test res1[2] ≈ 0 atol=1e-6
+    @test logabsdetjac(sb1, [x, x, y, y]) ≈ 0 atol = 1e-6
+    @test res1[2] ≈ 0 atol = 1e-6
 
     sb2 = Stacked([b, b, inverse(b), inverse(b)])        # <= Array
     res2 = with_logabsdet_jacobian(sb2, [x, x, y, y])
     @test sb2(param([x, x, y, y])) isa TrackedArray
 
     @test sb2([x, x, y, y]) ≈ res2[1]
-    @test logabsdetjac(sb2, [x, x, y, y]) ≈ 0.0 atol=1e-12
-    @test res2[2] ≈ 0.0 atol=1e-12
+    @test logabsdetjac(sb2, [x, x, y, y]) ≈ 0.0 atol = 1e-12
+    @test res2[2] ≈ 0.0 atol = 1e-12
 
     # value-test
     x = ones(3)
@@ -242,9 +267,9 @@ end
     @test sb(param(x)) isa TrackedArray
     @test sb(x) == [exp(x[1]), log(x[2]), x[3] + 5.0]
     @test res[1] == [exp(x[1]), log(x[2]), x[3] + 5.0]
-    @test logabsdetjac(sb, x) == sum([sum(logabsdetjac(sb.bs[i], x[sb.ranges[i]])) for i = 1:3])
+    @test logabsdetjac(sb, x) ==
+        sum([sum(logabsdetjac(sb.bs[i], x[sb.ranges[i]])) for i in 1:3])
     @test res[2] == logabsdetjac(sb, x)
-
 
     # TODO: change when we have dimensionality in the type
     sb = @inferred Stacked((elementwise(exp), SimplexBijector()), (1:1, 2:3))
@@ -253,7 +278,8 @@ end
     @test sb(param(x)) isa TrackedArray
     @test sb(x) == [exp(x[1]), sb.bs[2](x[2:3])...]
     @test res[1] == [exp(x[1]), sb.bs[2](x[2:3])...]
-    @test logabsdetjac(sb, x) == sum([sum(logabsdetjac(sb.bs[i], x[sb.ranges[i]])) for i = 1:2])
+    @test logabsdetjac(sb, x) ==
+        sum([sum(logabsdetjac(sb.bs[i], x[sb.ranges[i]])) for i in 1:2])
     @test res[2] == logabsdetjac(sb, x)
 
     x = ones(4) ./ 4.0
@@ -266,7 +292,8 @@ end
     @test sb(param(x)) isa TrackedArray
     @test sb(x) == [exp(x[1]), sb.bs[2](x[2:3])...]
     @test res[1] == [exp(x[1]), sb.bs[2](x[2:3])...]
-    @test logabsdetjac(sb, x) == sum([sum(logabsdetjac(sb.bs[i], x[sb.ranges[i]])) for i = 1:2])
+    @test logabsdetjac(sb, x) ==
+        sum([sum(logabsdetjac(sb.bs[i], x[sb.ranges[i]])) for i in 1:2])
     @test res[2] == logabsdetjac(sb, x)
 
     x = ones(4) ./ 4.0
@@ -280,7 +307,8 @@ end
     @test sb(param(x)) isa TrackedArray
     @test sb(x) == [exp(x[1]), sb.bs[2](x[2:3])...]
     @test res[1] == [exp(x[1]), sb.bs[2](x[2:3])...]
-    @test logabsdetjac(sb, x) == sum([sum(logabsdetjac(sb.bs[i], x[sb.ranges[i]])) for i = 1:2])
+    @test logabsdetjac(sb, x) ==
+        sum([sum(logabsdetjac(sb.bs[i], x[sb.ranges[i]])) for i in 1:2])
     @test res[2] == logabsdetjac(sb, x)
 
     x = ones(4) ./ 4.0
@@ -293,12 +321,12 @@ end
     @test sb(param(x)) isa TrackedArray
     @test sb(x) == [exp(x[1]), sb.bs[2](x[2:3])...]
     @test res[1] == [exp(x[1]), sb.bs[2](x[2:3])...]
-    @test logabsdetjac(sb, x) == sum([sum(logabsdetjac(sb.bs[i], x[sb.ranges[i]])) for i = 1:2])
+    @test logabsdetjac(sb, x) ==
+        sum([sum(logabsdetjac(sb.bs[i], x[sb.ranges[i]])) for i in 1:2])
     @test res[2] == logabsdetjac(sb, x)
 
     x = ones(4) ./ 4.0
     @test_throws AssertionError sb(x)
-
 
     @testset "Stacked: ADVI with MvNormal" begin
         # MvNormal test
@@ -313,14 +341,14 @@ end
             InverseGamma(),
             Cauchy(),
             Gamma(),
-            MvNormal(zeros(2), I)
+            MvNormal(zeros(2), I),
         ]
 
         ranges = []
         idx = 1
-        for i = 1:length(dists)
+        for i in 1:length(dists)
             d = dists[i]
-            push!(ranges, idx:idx + length(d) - 1)
+            push!(ranges, idx:(idx + length(d) - 1))
             idx += length(d)
         end
         ranges = tuple(ranges...)
@@ -337,7 +365,7 @@ end
         @test sb isa Stacked
 
         td = transformed(d, sb)  # => MultivariateTransformed <: Distribution{Multivariate, Continuous}
-        @test td isa Distribution{Multivariate, Continuous}
+        @test td isa Distribution{Multivariate,Continuous}
 
         # check that wrong ranges fails
         sb = Stacked(ibs)
@@ -360,8 +388,8 @@ end
         # verification of computation
         x = rand(d)
         y = sb(x)
-        y_ = vcat([ibs[i](x[ranges[i]]) for i = 1:length(dists)]...)
-        x_ = vcat([bs[i](y[ranges[i]]) for i = 1:length(dists)]...)
+        y_ = vcat([ibs[i](x[ranges[i]]) for i in 1:length(dists)]...)
+        x_ = vcat([bs[i](y[ranges[i]]) for i in 1:length(dists)]...)
         @test x ≈ x_
         @test y ≈ y_
 
@@ -371,8 +399,8 @@ end
 
         # Ensure `Stacked` works for a single bijector
         d = (MvNormal(zeros(2), I),)
-        sb = Stacked(bijector.(d), (1:2, ))
-        x = [.5, 1.]
+        sb = Stacked(bijector.(d), (1:2,))
+        x = [0.5, 1.0]
         @test sb(x) == x
         @test logabsdetjac(sb, x) == 0
         @test with_logabsdet_jacobian(sb, x) == (x, zero(eltype(x)))
@@ -433,8 +461,8 @@ end
         elementwise(log),
         Scale(2.0),
         Scale(3.0),
-        Scale(rand(2,2)),
-        Scale(rand(2,2)),
+        Scale(rand(2, 2)),
+        Scale(rand(2, 2)),
         Shift(2.0),
         Shift(3.0),
         Shift(rand(2)),
@@ -474,7 +502,7 @@ end
 end
 
 @testset "test_inverse and test_with_logabsdet_jacobian" begin
-    b = Bijectors.Scale{Float64,}(4.2)
+    b = Bijectors.Scale{Float64}(4.2)
     x = 0.3
 
     InverseFunctions.test_inverse(b, x)

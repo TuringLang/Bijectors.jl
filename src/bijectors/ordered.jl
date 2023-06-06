@@ -18,7 +18,11 @@ This transformation is currently only supported for otherwise unconstrained dist
 """
 function ordered(d::ContinuousMultivariateDistribution)
     if bijector(d) !== identity
-        throw(ArgumentError("ordered transform is currently only supported for unconstrained distributions."))
+        throw(
+            ArgumentError(
+                "ordered transform is currently only supported for unconstrained distributions.",
+            ),
+        )
     end
     return transformed(d, OrderedBijector())
 end
@@ -32,7 +36,7 @@ function _transform_ordered(y::AbstractVector)
     @assert !isempty(y)
 
     @inbounds x[1] = y[1]
-    @inbounds for i = 2:length(x)
+    @inbounds for i in 2:length(x)
         x[i] = x[i - 1] + exp(y[i])
     end
 
@@ -43,7 +47,7 @@ function _transform_ordered(y::AbstractMatrix)
     x = similar(y)
     @assert !isempty(y)
 
-    @inbounds for j = 1:size(x, 2), i = 1:size(x, 1)
+    @inbounds for j in 1:size(x, 2), i in 1:size(x, 1)
         if i == 1
             x[i, j] = y[i, j]
         else
@@ -60,7 +64,7 @@ function _transform_inverse_ordered(x::AbstractVector)
     @assert !isempty(y)
 
     @inbounds y[1] = x[1]
-    @inbounds for i = 2:length(y)
+    @inbounds for i in 2:length(y)
         y[i] = log(x[i] - x[i - 1])
     end
 
@@ -71,7 +75,7 @@ function _transform_inverse_ordered(x::AbstractMatrix)
     y = similar(x)
     @assert !isempty(y)
 
-    @inbounds for j = 1:size(y, 2), i = 1:size(y, 1)
+    @inbounds for j in 1:size(y, 2), i in 1:size(y, 1)
         if i == 1
             y[i, j] = x[i, j]
         else
@@ -83,4 +87,4 @@ function _transform_inverse_ordered(x::AbstractMatrix)
 end
 
 logabsdetjac(b::OrderedBijector, x::AbstractVector) = sum(@view(x[2:end]))
-logabsdetjac(b::OrderedBijector, x::AbstractMatrix) = vec(sum(@view(x[2:end, :]); dims = 1))
+logabsdetjac(b::OrderedBijector, x::AbstractMatrix) = vec(sum(@view(x[2:end, :]); dims=1))
