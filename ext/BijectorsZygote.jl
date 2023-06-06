@@ -1,5 +1,68 @@
-using .Zygote: Zygote, @adjoint, pullback
+module BijectorsZygote
 
+if isdefined(Base, :get_extension)
+    using Zygote: Zygote, @adjoint, pullback
+    using Bijectors:
+        Elementwise,
+        SimplexBijector,
+        simplex_link_jacobian,
+        simplex_invlink_jacobian,
+        simplex_logabsdetjac_gradient,
+        Inverse,
+        maphcat,
+        IrrationalConstants,
+        Distributions,
+        logabsdetjac,
+        _logabsdetjac_scale,
+        _simplex_bijector,
+        _simplex_inv_bijector,
+        replace_diag,
+        jacobian,
+        getpd,
+        lower,
+        _inv_link_chol_lkj,
+        _link_chol_lkj,
+        _transform_ordered,
+        _transform_inverse_ordered,
+        find_alpha,
+        pd_logpdf_with_trans,
+        istraining,
+        mapvcat,
+        eachcolmaphcat,
+        sumeachcol
+else
+    using .Zygote: Zygote, @adjoint, pullback
+    using .Bijectors:
+        Elementwise,
+        SimplexBijector,
+        simplex_link_jacobian,
+        simplex_invlink_jacobian,
+        simplex_logabsdetjac_gradient,
+        Inverse,
+        maphcat,
+        IrrationalConstants,
+        Distributions,
+        logabsdetjac,
+        _logabsdetjac_scale,
+        _simplex_bijector,
+        _simplex_inv_bijector,
+        replace_diag,
+        jacobian,
+        getpd,
+        lower,
+        _inv_link_chol_lkj,
+        _link_chol_lkj,
+        _transform_ordered,
+        _transform_inverse_ordered,
+        find_alpha,
+        pd_logpdf_with_trans,
+        istraining,
+        mapvcat,
+        eachcolmaphcat,
+        sumeachcol
+end
+
+using LinearAlgebra
 using Compat: eachcol
 
 @adjoint istraining() = true, _ -> nothing
@@ -11,19 +74,19 @@ end
 @adjoint function eachcolmaphcat(f, x1, x2)
     function g(f, x1, x2)
         init = reshape(f(view(x1, :, 1), x2[1]), :, 1)
-        return reduce(hcat, [f(view(x1, :, i), x2[i]) for i in 2:size(x1, 2)]; init = init)
+        return reduce(hcat, [f(view(x1, :, i), x2[i]) for i = 2:size(x1, 2)]; init = init)
     end
     return pullback(g, f, x1, x2)
 end
 @adjoint function eachcolmaphcat(f, x)
     function g(f, x)
         init = reshape(f(view(x, :, 1)), :, 1)
-        return reduce(hcat, [f(view(x, :, i)) for i in 2:size(x, 2)]; init = init)
+        return reduce(hcat, [f(view(x, :, i)) for i = 2:size(x, 2)]; init = init)
     end
     return pullback(g, f, x)
 end
 @adjoint function sumeachcol(f, x1, x2)
-    g(f, x1, x2) = sum([f(view(x1, :, i), x2[i]) for i in 1:size(x1, 2)])
+    g(f, x1, x2) = sum([f(view(x1, :, i), x2[i]) for i = 1:size(x1, 2)])
     return pullback(g, f, x1, x2)
 end
 
@@ -73,18 +136,10 @@ end
     end
 end
 
-@adjoint function pd_logpdf_with_trans(
-    d,
-    X::AbstractMatrix{<:Real},
-    transform::Bool,
-)
+@adjoint function pd_logpdf_with_trans(d, X::AbstractMatrix{<:Real}, transform::Bool)
     return pullback(pd_logpdf_with_trans_zygote, d, X, transform)
 end
-function pd_logpdf_with_trans_zygote(
-    d,
-    X::AbstractMatrix{<:Real},
-    transform::Bool,
-)
+function pd_logpdf_with_trans_zygote(d, X::AbstractMatrix{<:Real}, transform::Bool)
     T = eltype(X)
     Xcf = cholesky(X, check = false)
     if !issuccess(Xcf)
@@ -114,14 +169,16 @@ end
 end
 
 @adjoint function _simplex_bijector(X::AbstractMatrix, b::SimplexBijector)
-    return _simplex_bijector(X, b), Δ -> begin
+    return _simplex_bijector(X, b),
+    Δ -> begin
         maphcat(eachcol(X), eachcol(Δ)) do c1, c2
             simplex_link_jacobian(c1)' * c2
         end, nothing
     end
 end
 @adjoint function _simplex_inv_bijector(Y::AbstractMatrix, b::SimplexBijector)
-    return _simplex_inv_bijector(Y, b), Δ -> begin
+    return _simplex_inv_bijector(Y, b),
+    Δ -> begin
         maphcat(eachcol(Y), eachcol(Δ)) do c1, c2
             simplex_invlink_jacobian(c1)' * c2
         end, nothing
@@ -135,8 +192,8 @@ end
 end
 
 # LocationScale fix
-
-@adjoint function minimum(d::LocationScale)
+# TODO: Remove this.
+@adjoint function Base.minimum(d::Distributions.LocationScale)
     function _minimum(d)
         m = minimum(d.ρ)
         if isfinite(m)
@@ -147,7 +204,7 @@ end
     end
     return pullback(_minimum, d)
 end
-@adjoint function maximum(d::LocationScale)
+@adjoint function Base.maximum(d::LocationScale)
     function _maximum(d)
         m = maximum(d.ρ)
         if isfinite(m)
@@ -162,7 +219,8 @@ end
     return lower(A), Δ -> (lower(Δ),)
 end
 @adjoint function getpd(X::AbstractMatrix)
-    return LowerTriangular(X) * LowerTriangular(X)', Δ -> begin
+    return LowerTriangular(X) * LowerTriangular(X)',
+    Δ -> begin
         Xl = LowerTriangular(X)
         return (LowerTriangular(Δ' * Xl + Δ * Xl),)
     end
@@ -181,10 +239,10 @@ end
 
     z_mat = similar(y) # cache for adjoint
     tmp_mat = similar(y)
-    
-    @inbounds for j in 1:K
+
+    @inbounds for j = 1:K
         w[1, j] = 1
-        for i in 2:j
+        for i = 2:j
             z = tanh(y[i-1, j])
             tmp = w[i-1, j]
 
@@ -194,7 +252,7 @@ end
             w[i-1, j] = z * tmp
             w[i, j] = tmp * sqrt(1 - z^2)
         end
-        for i in (j+1):K
+        for i = (j+1):K
             w[i, j] = 0
         end
     end
@@ -204,15 +262,17 @@ end
 
         Δy = zero(y)
 
-        @inbounds for j in 1:K
-            Δtmp = Δw[j,j]
-            for i in j:-1:2
-                Δz = Δw[i-1, j] * tmp_mat[i, j] - Δtmp * tmp_mat[i, j] / sqrt(1 - z_mat[i, j]^2) * z_mat[i, j]
+        @inbounds for j = 1:K
+            Δtmp = Δw[j, j]
+            for i = j:-1:2
+                Δz =
+                    Δw[i-1, j] * tmp_mat[i, j] -
+                    Δtmp * tmp_mat[i, j] / sqrt(1 - z_mat[i, j]^2) * z_mat[i, j]
                 Δy[i-1, j] = Δz / cosh(y[i-1, j])^2
                 Δtmp = Δw[i-1, j] * z_mat[i, j] + Δtmp * sqrt(1 - z_mat[i, j]^2)
             end
         end
-        
+
         return (Δy,)
     end
 
@@ -221,18 +281,18 @@ end
 
 @adjoint function _link_chol_lkj(w)
     K = LinearAlgebra.checksquare(w)
-    
+
     z = similar(w)
 
     @inbounds z[1, 1] = 0
 
     tmp_mat = similar(w) # cache for pullback.
 
-    @inbounds for j=2:K
+    @inbounds for j = 2:K
         z[1, j] = atanh(w[1, j])
         tmp = sqrt(1 - w[1, j]^2)
         tmp_mat[1, j] = tmp
-        for i in 2:(j - 1)
+        for i = 2:(j-1)
             p = w[i, j] / tmp
             tmp *= sqrt(1 - p^2)
             tmp_mat[i, j] = tmp
@@ -246,22 +306,22 @@ end
 
         Δw = similar(w)
 
-        @inbounds Δw[1,1] = zero(eltype(Δz))
+        @inbounds Δw[1, 1] = zero(eltype(Δz))
 
-        @inbounds for j=2:K
+        @inbounds for j = 2:K
             Δw[j, j] = 0
             Δtmp = zero(eltype(Δz)) # Δtmp_mat[j-1,j]
-            for i in (j-1):-1:2
+            for i = (j-1):-1:2
                 p = w[i, j] / tmp_mat[i-1, j]
                 ftmp = sqrt(1 - p^2)
                 d_ftmp_p = -p / ftmp
-                d_p_tmp = -w[i,j] / tmp_mat[i-1, j]^2
+                d_p_tmp = -w[i, j] / tmp_mat[i-1, j]^2
 
-                Δp = Δz[i,j] / (1-p^2) + Δtmp * tmp_mat[i-1, j] * d_ftmp_p
+                Δp = Δz[i, j] / (1 - p^2) + Δtmp * tmp_mat[i-1, j] * d_ftmp_p
                 Δw[i, j] = Δp / tmp_mat[i-1, j]
                 Δtmp = Δp * d_p_tmp + Δtmp * ftmp # update to "previous" Δtmp
             end
-            Δw[1, j] = Δz[1, j] / (1-w[1,j]^2) - Δtmp / sqrt(1 - w[1,j]^2) * w[1,j]
+            Δw[1, j] = Δz[1, j] / (1 - w[1, j]^2) - Δtmp / sqrt(1 - w[1, j]^2) * w[1, j]
         end
 
         return (Δw,)
@@ -269,4 +329,5 @@ end
 
     return z, pullback_link_chol_lkj
 
+end
 end
