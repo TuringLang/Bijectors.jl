@@ -46,35 +46,35 @@ import IrrationalConstants
 import LogExpFunctions
 import Roots
 
-export  TransformDistribution,
-        PositiveDistribution,
-        UnitDistribution,
-        SimplexDistribution,
-        PDMatDistribution,
-        link,
-        invlink,
-        logpdf_with_trans,
-        isclosedform,
-        transform,
-        transform!,
-        with_logabsdet_jacobian,
-        with_logabsdet_jacobian!,
-        inverse,
-        logabsdetjac,
-        logabsdetjac!,
-        logabsdetjacinv,
-        Bijector,
-        Inverse,
-        Stacked,
-        bijector,
-        transformed,
-        UnivariateTransformed,
-        MultivariateTransformed,
-        PlanarLayer,
-        RadialLayer,
-        Coupling,
-        InvertibleBatchNorm,
-        elementwise
+export TransformDistribution,
+    PositiveDistribution,
+    UnitDistribution,
+    SimplexDistribution,
+    PDMatDistribution,
+    link,
+    invlink,
+    logpdf_with_trans,
+    isclosedform,
+    transform,
+    transform!,
+    with_logabsdet_jacobian,
+    with_logabsdet_jacobian!,
+    inverse,
+    logabsdetjac,
+    logabsdetjac!,
+    logabsdetjacinv,
+    Bijector,
+    Inverse,
+    Stacked,
+    bijector,
+    transformed,
+    UnivariateTransformed,
+    MultivariateTransformed,
+    PlanarLayer,
+    RadialLayer,
+    Coupling,
+    InvertibleBatchNorm,
+    elementwise
 
 if VERSION < v"1.1"
     using Compat: eachcol
@@ -107,7 +107,7 @@ function maphcat(f, args...)
     return reduce(hcat, drop(out, 1); init = init)
 end
 function eachcolmaphcat(f, x1, x2)
-    out = [f(x1[:,i], x2[i]) for i in 1:size(x1, 2)]
+    out = [f(x1[:, i], x2[i]) for i = 1:size(x1, 2)]
     init = reshape(out[1], :, 1)
     return reduce(hcat, drop(out, 1); init = init)
 end
@@ -118,7 +118,7 @@ function eachcolmaphcat(f, x)
 end
 function sumeachcol(f, x1, x2)
     # Using a view below for x1 breaks Tracker
-    return sum(f(x1[:,i], x2[i]) for i in 1:size(x1, 2))
+    return sum(f(x1[:, i], x2[i]) for i = 1:size(x1, 2))
 end
 
 # Distributions
@@ -129,13 +129,17 @@ invlink(d::Distribution, y) = inverse(bijector(d))(y)
 # To still allow `logpdf_with_trans` to work with "batches" in a similar way
 # as `logpdf` can.
 _logabsdetjac_dist(d::UnivariateDistribution, x::Real) = logabsdetjac(bijector(d), x)
-_logabsdetjac_dist(d::UnivariateDistribution, x::AbstractArray) = logabsdetjac.((bijector(d),), x)
+_logabsdetjac_dist(d::UnivariateDistribution, x::AbstractArray) =
+    logabsdetjac.((bijector(d),), x)
 
-_logabsdetjac_dist(d::MultivariateDistribution, x::AbstractVector) = logabsdetjac(bijector(d), x)
-_logabsdetjac_dist(d::MultivariateDistribution, x::AbstractMatrix) = logabsdetjac.((bijector(d),), eachcol(x))
+_logabsdetjac_dist(d::MultivariateDistribution, x::AbstractVector) =
+    logabsdetjac(bijector(d), x)
+_logabsdetjac_dist(d::MultivariateDistribution, x::AbstractMatrix) =
+    logabsdetjac.((bijector(d),), eachcol(x))
 
 _logabsdetjac_dist(d::MatrixDistribution, x::AbstractMatrix) = logabsdetjac(bijector(d), x)
-_logabsdetjac_dist(d::MatrixDistribution, x::AbstractVector{<:AbstractMatrix}) = logabsdetjac.((bijector(d),), x)
+_logabsdetjac_dist(d::MatrixDistribution, x::AbstractVector{<:AbstractMatrix}) =
+    logabsdetjac.((bijector(d),), x)
 
 
 function logpdf_with_trans(d::Distribution, x, transform::Bool)
@@ -155,15 +159,27 @@ end
 
 ## Univariate
 
-const TransformDistribution = Union{
-    T,
-    Truncated{T},
-} where T <: ContinuousUnivariateDistribution
+const TransformDistribution =
+    Union{T,Truncated{T}} where {T<:ContinuousUnivariateDistribution}
 const PositiveDistribution = Union{
-    BetaPrime, Chi, Chisq, Erlang, Exponential, FDist, Frechet, Gamma, InverseGamma,
-    InverseGaussian, Kolmogorov, LogNormal, NoncentralChisq, NoncentralF, Rayleigh, Weibull,
+    BetaPrime,
+    Chi,
+    Chisq,
+    Erlang,
+    Exponential,
+    FDist,
+    Frechet,
+    Gamma,
+    InverseGamma,
+    InverseGaussian,
+    Kolmogorov,
+    LogNormal,
+    NoncentralChisq,
+    NoncentralF,
+    Rayleigh,
+    Weibull,
 }
-const UnitDistribution = Union{Beta, KSOneSided, NoncentralBeta}
+const UnitDistribution = Union{Beta,KSOneSided,NoncentralBeta}
 
 function logpdf_with_trans(d::UnivariateDistribution, x, transform::Bool)
     if transform
@@ -186,7 +202,7 @@ isdirichlet(::Distribution) = false
 function link(
     d::Dirichlet,
     x::AbstractVecOrMat{<:Real},
-    ::Val{proj}=Val(true),
+    ::Val{proj} = Val(true),
 ) where {proj}
     return SimplexBijector{proj}()(x)
 end
@@ -194,7 +210,7 @@ end
 function link_jacobian(
     d::Dirichlet,
     x::AbstractVector{<:Real},
-    ::Val{proj}=Val(true),
+    ::Val{proj} = Val(true),
 ) where {proj}
     return jacobian(SimplexBijector{proj}(), x)
 end
@@ -202,14 +218,14 @@ end
 function invlink(
     d::Dirichlet,
     y::AbstractVecOrMat{<:Real},
-    ::Val{proj}=Val(true),
+    ::Val{proj} = Val(true),
 ) where {proj}
     return inverse(SimplexBijector{proj}())(y)
 end
 function invlink_jacobian(
     d::Dirichlet,
     y::AbstractVector{<:Real},
-    ::Val{proj}=Val(true),
+    ::Val{proj} = Val(true),
 ) where {proj}
     return jacobian(inverse(SimplexBijector{proj}()), y)
 end
@@ -220,7 +236,7 @@ end
 # Positive definite #
 #####################
 
-const PDMatDistribution = Union{MatrixBeta, InverseWishart, Wishart}
+const PDMatDistribution = Union{MatrixBeta,InverseWishart,Wishart}
 ispd(::Distribution) = false
 ispd(::PDMatDistribution) = true
 
@@ -265,27 +281,32 @@ include("interface.jl")
 include("chainrules.jl")
 
 # Broadcasting here breaks Tracker for some reason
-maporbroadcast(f, x::AbstractArray{<:Any, N}...) where {N} = map(f, x...)
+maporbroadcast(f, x::AbstractArray{<:Any,N}...) where {N} = map(f, x...)
 maporbroadcast(f, x::AbstractArray...) = f.(x...)
 
 # optional dependencies
-function __init__()
-    @require LazyArrays = "5078a376-72f3-5289-bfd5-ec5146d43c02" begin
-        function maporbroadcast(f, x1::LazyArrays.BroadcastArray, x...)
-            return copy(f.(x1, x...))
-        end
-        function maporbroadcast(f, x1, x2::LazyArrays.BroadcastArray, x...)
-            return copy(f.(x1, x2, x...))
-        end
-        function maporbroadcast(f, x1, x2, x3::LazyArrays.BroadcastArray, x...)
-            return copy(f.(x1, x2, x3, x...))
-        end
+if !isdefined(Base, :get_extension)
+    function __init__()
+        @require LazyArrays = "5078a376-72f3-5289-bfd5-ec5146d43c02" include(
+            "../ext/BijectorsLazyArraysExt.jl",
+        )
+        @require ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210" include(
+            "../ext/BijectorsForwardDiffExt.jl",
+        )
+        @require Tracker = "9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c" include(
+            "../ext/BijectorsTrackerExt.jl",
+        )
+        @require Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f" include(
+            "../ext/BijectorsZygoteExt.jl",
+        )
+        @require ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267" include(
+            "../ext/BijectorsReverseDiffExt.jl",
+        )
+        @require DistributionsAD = "ced4e74d-a319-5a8a-b0ac-84af2272839c" include(
+            "../ext/BijectorsDistributionsADExt.jl",
+            3,
+        )
     end
-    @require ForwardDiff="f6369f11-7733-5829-9624-2563aa707210" include("compat/forwarddiff.jl")
-    @require Tracker="9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c" include("compat/tracker.jl")
-    @require Zygote="e88e6eb3-aa80-5325-afca-941959d7151f" include("compat/zygote.jl")
-    @require ReverseDiff="37e2e3b7-166d-5795-8a7a-e32c996b4267" include("compat/reversediff.jl")
-    @require DistributionsAD="ced4e74d-a319-5a8a-b0ac-84af2272839c" include("compat/distributionsad.jl")
 end
 
 end # module

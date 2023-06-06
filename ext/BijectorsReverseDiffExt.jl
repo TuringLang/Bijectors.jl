@@ -1,9 +1,8 @@
 module BijectorsReverseDiffExt
 
-if isdefined(Base, :get_extensions)
+if isdefined(Base, :get_extension)
     using ReverseDiff:
         ReverseDiff, @grad, value, track, TrackedReal, TrackedVector, TrackedMatrix
-    using Requires, LinearAlgebra
 
     using Bijectors:
         Elementwise,
@@ -31,7 +30,6 @@ if isdefined(Base, :get_extensions)
 else
     using ..ReverseDiff:
         ReverseDiff, @grad, value, track, TrackedReal, TrackedVector, TrackedMatrix
-    using Requires, LinearAlgebra
 
     using ..Bijectors:
         Elementwise,
@@ -60,6 +58,7 @@ end
 
 import ChainRulesCore
 
+using LinearAlgebra
 using Compat: eachcol
 using Distributions: LocationScale
 

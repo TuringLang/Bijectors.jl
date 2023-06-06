@@ -1,10 +1,10 @@
 module BijectorsLazyArraysExt
 
 if isdefined(Base, :get_extension)
-    using Bijectors: maporbroadcast
+    import Bijectors: maporbroadcast
     using LazyArrays: LazyArrays
 else
-    using ..Bijectors: maporbroadcast
+    import ..Bijectors: maporbroadcast
     using ..LazyArrays: LazyArrays
 end
 

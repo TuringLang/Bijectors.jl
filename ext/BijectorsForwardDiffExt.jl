@@ -1,20 +1,19 @@
 module BijectorsForwardDiffExt
 
 if isdefined(Base, :get_extension)
+    using Bijectors: Bijectors
     using ForwardDiff: ForwardDiff
 else
-    using .ForwardDiff: ForwardDiff
+    using ..Bijectors: Bijectors
+    using ..ForwardDiff: ForwardDiff
 end
 
-using Bijectors
-import Bijectors::_eps, find_alpha
-
-_eps(::Type{<:ForwardDiff.Dual{<:Any,Real}}) = _eps(Real)
-_eps(::Type{<:ForwardDiff.Dual{<:Any,<:Integer}}) = _eps(Real)
+Bijectors._eps(::Type{<:ForwardDiff.Dual{<:Any,Real}}) = Bijectors._eps(Real)
+Bijectors._eps(::Type{<:ForwardDiff.Dual{<:Any,<:Integer}}) = Bijectors._eps(Real)
 
 # Define forward-mode rule for ForwardDiff and don't trust support for ForwardDiff in Roots
 # https://github.com/JuliaMath/Roots.jl/issues/314
-function find_alpha(
+function Bijectors.find_alpha(
     wt_y::ForwardDiff.Dual{T,<:Real},
     wt_u_hat::ForwardDiff.Dual{T,<:Real},
     b::ForwardDiff.Dual{T,<:Real},

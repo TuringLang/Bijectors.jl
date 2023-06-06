@@ -1,4 +1,4 @@
-module BijectorsZygote
+module BijectorsZygoteExt
 
 if isdefined(Base, :get_extension)
     using Zygote: Zygote, @adjoint, pullback
@@ -29,10 +29,11 @@ if isdefined(Base, :get_extension)
         istraining,
         mapvcat,
         eachcolmaphcat,
-        sumeachcol
+        sumeachcol,
+        pd_link
 else
-    using .Zygote: Zygote, @adjoint, pullback
-    using .Bijectors:
+    using ..Zygote: Zygote, @adjoint, pullback
+    using ..Bijectors:
         Elementwise,
         SimplexBijector,
         simplex_link_jacobian,
@@ -59,10 +60,11 @@ else
         istraining,
         mapvcat,
         eachcolmaphcat,
-        sumeachcol
+        sumeachcol,
+        pd_link
 end
 
-using LinearAlgebra
+using LinearAlgebra, Distributions
 using Compat: eachcol
 
 @adjoint istraining() = true, _ -> nothing

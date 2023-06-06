@@ -302,7 +302,6 @@ function vectorof(::Type{TrackedReal{T}}) where {T<:Real}
 end
 
 (b::Elementwise{typeof(exp)})(x::TrackedVector) = exp.(x)::vectorof(float(eltype(x)))
-(b::Elementwise{typeof(exp)})(x::TrackedVector) = exp.(x)::vectorof(float(eltype(x)))
 (b::Elementwise{typeof(exp)})(x::TrackedMatrix) = exp.(x)::matrixof(float(eltype(x)))
 
 (b::Elementwise{typeof(log)})(x::TrackedVector) = log.(x)::vectorof(float(eltype(x)))

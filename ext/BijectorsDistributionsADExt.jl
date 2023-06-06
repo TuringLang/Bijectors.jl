@@ -1,86 +1,114 @@
-using .DistributionsAD:
-    TuringDirichlet,
-    TuringWishart,
-    TuringInverseWishart,
-    FillVectorOfUnivariate,
-    FillMatrixOfUnivariate,
-    MatrixOfUnivariate,
-    FillVectorOfMultivariate,
-    VectorOfMultivariate,
-    TuringScalMvNormal,
-    TuringDiagMvNormal,
-    TuringDenseMvNormal
+module BijectorsDistributionsADExt
+
+if isdefined(Base, :get_extension)
+    using Bijectors
+    using DistributionsAD:
+        TuringDirichlet,
+        TuringWishart,
+        TuringInverseWishart,
+        FillVectorOfUnivariate,
+        FillMatrixOfUnivariate,
+        MatrixOfUnivariate,
+        FillVectorOfMultivariate,
+        VectorOfMultivariate,
+        TuringScalMvNormal,
+        TuringDiagMvNormal,
+        TuringDenseMvNormal
+else
+    using ..Bijectors
+    using ..DistributionsAD:
+        TuringDirichlet,
+        TuringWishart,
+        TuringInverseWishart,
+        FillVectorOfUnivariate,
+        FillMatrixOfUnivariate,
+        MatrixOfUnivariate,
+        FillVectorOfMultivariate,
+        VectorOfMultivariate,
+        TuringScalMvNormal,
+        TuringDiagMvNormal,
+        TuringDenseMvNormal
+end
+
+using LinearAlgebra
 using Distributions: AbstractMvLogNormal
 
 # Bijectors
 
-bijector(::TuringDirichlet) = SimplexBijector()
-bijector(::TuringWishart) = PDBijector()
-bijector(::TuringInverseWishart) = PDBijector()
-bijector(::TuringScalMvNormal) = identity
-bijector(::TuringDiagMvNormal) = identity
-bijector(::TuringDenseMvNormal) = identity
+Bijectors.bijector(::TuringDirichlet) = Bijectors.SimplexBijector()
+Bijectors.bijector(::TuringWishart) = Bijectors.PDBijector()
+Bijectors.bijector(::TuringInverseWishart) = Bijectors.PDBijector()
+Bijectors.bijector(::TuringScalMvNormal) = identity
+Bijectors.bijector(::TuringDiagMvNormal) = identity
+Bijectors.bijector(::TuringDenseMvNormal) = identity
 
-bijector(d::FillVectorOfUnivariate{Continuous}) = bijector(d.v.value)
-bijector(d::FillMatrixOfUnivariate{Continuous}) = up1(bijector(d.dists.value))
-bijector(d::MatrixOfUnivariate{Discrete}) = identity
-bijector(d::MatrixOfUnivariate{Continuous}) = TruncatedBijector(_minmax(d.dists)...)
-bijector(d::VectorOfMultivariate{Discrete}) = identity
+Bijectors.bijector(d::FillVectorOfUnivariate{Continuous}) = Bijectors.bijector(d.v.value)
+Bijectors.bijector(d::FillMatrixOfUnivariate{Continuous}) =
+    up1(Bijectors.bijector(d.dists.value))
+Bijectors.bijector(d::MatrixOfUnivariate{Discrete}) = identity
+Bijectors.bijector(d::MatrixOfUnivariate{Continuous}) =
+    TruncatedBijectors.Bijector(_minmax(d.dists)...)
+Bijectors.bijector(d::VectorOfMultivariate{Discrete}) = identity
 for T in (:VectorOfMultivariate, :FillVectorOfMultivariate)
     @eval begin
-        bijector(d::$T{Continuous,<:MvNormal}) = identity
-        bijector(d::$T{Continuous,<:TuringScalMvNormal}) = identity
-        bijector(d::$T{Continuous,<:TuringDiagMvNormal}) = identity
-        bijector(d::$T{Continuous,<:TuringDenseMvNormal}) = identity
-        bijector(d::$T{Continuous,<:MvNormalCanon}) = identity
-        bijector(d::$T{Continuous,<:AbstractMvLogNormal}) = Log()
-        bijector(d::$T{Continuous,<:SimplexDistribution}) = SimplexBijector()
-        bijector(d::$T{Continuous,<:TuringDirichlet}) = SimplexBijector()
+        Bijectors.bijector(d::$T{Continuous,<:MvNormal}) = identity
+        Bijectors.bijector(d::$T{Continuous,<:TuringScalMvNormal}) = identity
+        Bijectors.bijector(d::$T{Continuous,<:TuringDiagMvNormal}) = identity
+        Bijectors.bijector(d::$T{Continuous,<:TuringDenseMvNormal}) = identity
+        Bijectors.bijector(d::$T{Continuous,<:MvNormalCanon}) = identity
+        Bijectors.bijector(d::$T{Continuous,<:AbstractMvLogNormal}) = Log()
+        Bijectors.bijector(d::$T{Continuous,<:SimplexDistribution}) =
+            Bijectors.SimplexBijector()
+        Bijectors.bijector(d::$T{Continuous,<:TuringDirichlet}) =
+            Bijectors.SimplexBijector()
     end
 end
-bijector(d::FillVectorOfMultivariate{Continuous}) = bijector(d.dists.value)
+Bijectors.bijector(d::FillVectorOfMultivariate{Continuous}) =
+    Bijectors.bijector(d.dists.value)
 
-isdirichlet(::VectorOfMultivariate{Continuous,<:Dirichlet}) = true
-isdirichlet(::VectorOfMultivariate{Continuous,<:TuringDirichlet}) = true
-isdirichlet(::TuringDirichlet) = true
+Bijectors.isdirichlet(::VectorOfMultivariate{Continuous,<:Dirichlet}) = true
+Bijectors.isdirichlet(::VectorOfMultivariate{Continuous,<:TuringDirichlet}) = true
+Bijectors.isdirichlet(::TuringDirichlet) = true
 
-function link(
+function Bijectors.link(
     d::TuringDirichlet,
     x::AbstractVecOrMat{<:Real},
     ::Val{proj} = Val(true),
 ) where {proj}
-    return SimplexBijector{proj}()(x)
+    return Bijectors.SimplexBijector{proj}()(x)
 end
 
-function link_jacobian(
+function Bijectors.link_jacobian(
     d::TuringDirichlet,
     x::AbstractVector{<:Real},
     ::Val{proj} = Val(true),
 ) where {proj}
-    return jacobian(SimplexBijector{proj}(), x)
+    return jacobian(Bijectors.SimplexBijector{proj}(), x)
 end
 
-function invlink(
+function Bijectors.invlink(
     d::TuringDirichlet,
     y::AbstractVecOrMat{<:Real},
     ::Val{proj} = Val(true),
 ) where {proj}
-    return inverse(SimplexBijector{proj}())(y)
+    return inverse(Bijectors.SimplexBijector{proj}())(y)
 end
-function invlink_jacobian(
+function Bijectors.invlink_jacobian(
     d::TuringDirichlet,
     y::AbstractVector{<:Real},
     ::Val{proj} = Val(true),
 ) where {proj}
-    return jacobian(inverse(SimplexBijector{proj}()), y)
+    return jacobian(inverse(Bijectors.SimplexBijector{proj}()), y)
 end
 
-ispd(::TuringWishart) = true
-
-function getlogp(d::TuringWishart, Xcf, X)
+Bijectors.ispd(::TuringWishart) = true
+Bijectors.ispd(::TuringInverseWishart) = true
+function Bijectors.getlogp(d::TuringWishart, Xcf, X)
     return ((d.df - (size(d, 1) + 1)) * logdet(Xcf) - tr(d.chol \ X)) / 2 + d.logc0
 end
-function getlogp(d::TuringInverseWishart, Xcf, X)
+function Bijectors.getlogp(d::TuringInverseWishart, Xcf, X)
     Ψ = d.S
     return -((d.df + size(d, 1) + 1) * logdet(Xcf) + tr(Xcf \ Ψ)) / 2 + d.logc0
+end
+
 end
