@@ -35,7 +35,8 @@ import ..Bijectors:
     _link_chol_lkj,
     _transform_ordered,
     _transform_inverse_ordered,
-    find_alpha
+    find_alpha,
+    cholesky_factor
 
 using ChainRulesCore: ChainRulesCore
 
