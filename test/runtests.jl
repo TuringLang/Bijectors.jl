@@ -13,8 +13,17 @@ using Zygote
 
 using Random, LinearAlgebra, Test
 
-using Bijectors: Shift, Scale, Logit, SimplexBijector, PDBijector, Permute,
-    PlanarLayer, RadialLayer, Stacked, TruncatedBijector
+using Bijectors:
+    Shift,
+    Scale,
+    Logit,
+    SimplexBijector,
+    PDBijector,
+    Permute,
+    PlanarLayer,
+    RadialLayer,
+    Stacked,
+    TruncatedBijector
 
 using ChangesOfVariables: ChangesOfVariables
 using InverseFunctions: InverseFunctions
@@ -44,4 +53,3 @@ if GROUP == "All" || GROUP == "AD"
     include("ad/chainrules.jl")
     include("ad/flows.jl")
 end
-

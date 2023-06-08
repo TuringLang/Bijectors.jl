@@ -2,7 +2,7 @@ using Bijectors, DistributionsAD, LinearAlgebra, Test
 using Bijectors: VecCorrBijector, VecCholeskyBijector, CorrBijector
 
 @testset "CorrBijector & VecCorrBijector" begin
-    for d ∈ [1, 2, 5]
+    for d in [1, 2, 5]
         b = CorrBijector()
         bvec = VecCorrBijector()
 
@@ -31,13 +31,13 @@ using Bijectors: VecCorrBijector, VecCholeskyBijector, CorrBijector
         # Hence, we disable those tests.
         test_bijector(b, x; test_not_identity=d != 1, changes_of_variables_test=false)
         test_bijector(bvec, x; test_not_identity=d != 1, changes_of_variables_test=false)
-        
+
         test_ad(x -> sum(bvec(bvecinv(x))), yvec)
     end
 end
 
 @testset "VecCholeskyBijector" begin
-    for d ∈ [2, 5]
+    for d in [2, 5]
         for dist in [LKJCholesky(d, 1, 'U'), LKJCholesky(d, 1, 'L')]
             b = bijector(dist)
 

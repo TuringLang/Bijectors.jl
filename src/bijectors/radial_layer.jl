@@ -8,7 +8,9 @@
 # RadialLayer #
 ###############
 
-mutable struct RadialLayer{T1<:Union{Real, AbstractVector{<:Real}}, T2<:AbstractVector{<:Real}} <: Bijector
+mutable struct RadialLayer{
+    T1<:Union{Real,AbstractVector{<:Real}},T2<:AbstractVector{<:Real}
+} <: Bijector
     α_::T1
     β::T1
     z_0::T2
@@ -27,7 +29,9 @@ end
 # all fields are numerical parameters
 Functors.@functor RadialLayer
 
-Base.show(io::IO, b::RadialLayer) = print(io, "RadialLayer(α_ = $(b.α_), β = $(b.β), z_0 = $(b.z_0))")
+function Base.show(io::IO, b::RadialLayer)
+    return print(io, "RadialLayer(α_ = $(b.α_), β = $(b.β), z_0 = $(b.z_0))")
+end
 
 h(α, r) = 1 ./ (α .+ r)     # for radial flow from eq(14)
 #dh(α, r) = .- (1 ./ (α .+ r)) .^ 2   # for radial flow; derivative of h()
@@ -42,10 +46,10 @@ function _radial_transform(α_, β, z_0, z)
     if z isa AbstractVector
         r = norm(z .- z_0)
     else
-        r = vec(sqrt.(sum(abs2, z .- z_0; dims = 1)))
+        r = vec(sqrt.(sum(abs2, z .- z_0; dims=1)))
     end
     transformed = z .+ β_hat ./ (α .+ r') .* (z .- z_0)   # from eq(14)
-    return (transformed = transformed, α = α, β_hat = β_hat, r = r)
+    return (transformed=transformed, α=α, β_hat=β_hat, r=r)
 end
 
 transform(b::RadialLayer, z::AbstractVector{<:Real}) = vec(_transform(b, z).transformed)
@@ -62,10 +66,9 @@ function with_logabsdet_jacobian(flow::RadialLayer, z::AbstractVecOrMat)
         T = typeof(vec(transformed))
     end
     log_det_jacobian::T = @. (
-        (d - 1) * log(1 + β_hat * h_)
-        + log(1 +  β_hat * h_ + β_hat * (- h_ ^ 2) * r)
+        (d - 1) * log(1 + β_hat * h_) + log(1 + β_hat * h_ + β_hat * (-h_^2) * r)
     )   # from eq(14)
-    return (result = transformed, logabsdetjac = log_det_jacobian)
+    return (result=transformed, logabsdetjac=log_det_jacobian)
 end
 
 function transform(ib::Inverse{<:RadialLayer}, y::AbstractVector{<:Real})
@@ -125,4 +128,6 @@ function compute_r(y_minus_z0::AbstractVector{<:Real}, α, α_plus_β_hat)
     return r
 end
 
-logabsdetjac(flow::RadialLayer, x::AbstractVecOrMat) = last(with_logabsdet_jacobian(flow, x))
+function logabsdetjac(flow::RadialLayer, x::AbstractVecOrMat)
+    return last(with_logabsdet_jacobian(flow, x))
+end

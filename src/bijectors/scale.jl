@@ -18,7 +18,7 @@ transform(ib::Inverse{<:Scale{<:AbstractMatrix}}, y::AbstractVecOrMat) = ib.orig
 
 # We're going to implement custom adjoint for this
 logabsdetjac(b::Scale, x::Real) = _logabsdetjac_scale(b.a, x, Val(0))
-function logabsdetjac(b::Scale, x::AbstractArray{<:Real, N}) where {N}
+function logabsdetjac(b::Scale, x::AbstractArray{<:Real,N}) where {N}
     return _logabsdetjac_scale(b.a, x, Val(N))
 end
 

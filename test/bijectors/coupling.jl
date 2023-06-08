@@ -1,12 +1,4 @@
-using Bijectors:
-    Coupling,
-    PartitionMask,
-    coupling,
-    couple,
-    partition,
-    combine,
-    Shift,
-    Scale
+using Bijectors: Coupling, PartitionMask, coupling, couple, partition, combine, Shift, Scale
 
 @testset "Coupling" begin
     @testset "PartitionMask" begin
@@ -15,9 +7,9 @@ using Bijectors:
 
         @test (m1.A_1 == m2.A_1) & (m1.A_2 == m2.A_2) & (m1.A_3 == m2.A_3)
 
-        x = [1., 2., 3.]
+        x = [1.0, 2.0, 3.0]
         x1, x2, x3 = partition(m1, x)
-        @test (x1 == [1.]) & (x2 == [2.]) & (x3 == [3.])
+        @test (x1 == [1.0]) & (x2 == [2.0]) & (x3 == [3.0])
 
         y = combine(m1, x1, x2, x3)
         @test y == x
@@ -27,8 +19,8 @@ using Bijectors:
         m = PartitionMask(3, [1], [2])
         cl1 = Coupling(x -> Shift(x[1]), m)
 
-        x = [1., 2., 3.]
-        @test cl1(x) == [3., 2., 3.]
+        x = [1.0, 2.0, 3.0]
+        @test cl1(x) == [3.0, 2.0, 3.0]
 
         cl2 = Coupling(θ -> Shift(θ[1]), m)
         @test cl2(x) == cl1(x)
@@ -46,7 +38,7 @@ using Bijectors:
 
         # with_logabsdet_jacobian
         @test with_logabsdet_jacobian(cl1, x) == (cl1(x), logabsdetjac(cl1, x))
-        @test with_logabsdet_jacobian(icl1, cl1(x)) == (x, - logabsdetjac(cl1, x))
+        @test with_logabsdet_jacobian(icl1, cl1(x)) == (x, -logabsdetjac(cl1, x))
     end
 
     @testset "Classic" begin
@@ -54,12 +46,12 @@ using Bijectors:
 
         # With `Scale`
         cl = Coupling(x -> Scale(x[1]), m)
-        x = [-1., -2., -3.]
-        y = [2., -2., -3.]
+        x = [-1.0, -2.0, -3.0]
+        y = [2.0, -2.0, -3.0]
         test_bijector(cl, x; y=y, logjac=log(2))
 
-        x = [1., 2., 3.]
-        y = [2., 2., 3.]
+        x = [1.0, 2.0, 3.0]
+        y = [2.0, 2.0, 3.0]
         test_bijector(cl, x; y=y, logjac=log(2))
     end
 end

@@ -21,7 +21,7 @@ b = stack(b1, b2)
 b([0.0, 1.0]) == [b1(0.0), 1.0]  # => true
 ```
 """
-struct Stacked{Bs, Rs<:Union{Tuple,AbstractArray}} <: Transform
+struct Stacked{Bs,Rs<:Union{Tuple,AbstractArray}} <: Transform
     bs::Bs
     ranges::Rs
 end
@@ -48,27 +48,26 @@ isclosedform(b::Stacked) = all(isclosedform, b.bs)
 
 isinvertible(b::Stacked) = all(isinvertible, b.bs)
 
-
 # For some reason `inverse.(sb.bs)` was unstable... This works though.
 inverse(sb::Stacked) = Stacked(map(inverse, sb.bs), sb.ranges)
 # map is not type stable for many stacked bijectors as a large tuple
 # hence the generated function
-@generated function inverse(sb::Stacked{A}) where {A <: Tuple}
+@generated function inverse(sb::Stacked{A}) where {A<:Tuple}
     exprs = []
-    for i = 1:length(A.parameters)
+    for i in 1:length(A.parameters)
         push!(exprs, :(inverse(sb.bs[$i])))
     end
-    :(Stacked(($(exprs...), ), sb.ranges))
+    return :(Stacked(($(exprs...),), sb.ranges))
 end
 
-@generated function _transform(x, rs::NTuple{N, UnitRange{Int}}, bs...) where N
+@generated function _transform(x, rs::NTuple{N,UnitRange{Int}}, bs...) where {N}
     exprs = []
-    for i = 1:N
+    for i in 1:N
         push!(exprs, :(bs[$i](x[rs[$i]])))
     end
     return :(vcat($(exprs...)))
 end
-function _transform(x, rs::NTuple{1, UnitRange{Int}}, b)
+function _transform(x, rs::NTuple{1,UnitRange{Int}}, b)
     @assert rs[1] == 1:length(x)
     return b(x)
 end
@@ -89,10 +88,7 @@ function transform(sb::Stacked{<:AbstractArray}, x::AbstractVector{<:Real})
     return y
 end
 
-function logabsdetjac(
-    b::Stacked,
-    x::AbstractVector{<:Real}
-)
+function logabsdetjac(b::Stacked, x::AbstractVector{<:Real})
     N = length(b.bs)
     init = sum(logabsdetjac(b.bs[1], x[b.ranges[1]]))
 
@@ -106,8 +102,7 @@ function logabsdetjac(
 end
 
 function logabsdetjac(
-    b::Stacked{<:NTuple{N, Any}, <:NTuple{N, Any}},
-    x::AbstractVector{<:Real}
+    b::Stacked{<:NTuple{N,Any},<:NTuple{N,Any}}, x::AbstractVector{<:Real}
 ) where {N}
     init = sum(logabsdetjac(b.bs[1], x[b.ranges[1]]))
 
@@ -129,7 +124,9 @@ end
 #     logjac += sum(_logjac)
 #     return (vcat(y_1, y_2), logjac)
 # end
-@generated function with_logabsdet_jacobian(b::Stacked{<:NTuple{N, Any}, <:NTuple{N, Any}}, x::AbstractVector) where {N}
+@generated function with_logabsdet_jacobian(
+    b::Stacked{<:NTuple{N,Any},<:NTuple{N,Any}}, x::AbstractVector
+) where {N}
     expr = Expr(:block)
     y_names = []
 
@@ -137,9 +134,12 @@ end
     # TODO: drop the `sum` when we have dimensionality
     push!(expr.args, :(logjac = sum(_logjac)))
     push!(y_names, :y_1)
-    for i = 2:N
+    for i in 2:N
         y_name = Symbol("y_$i")
-        push!(expr.args, :(($y_name, _logjac) = with_logabsdet_jacobian(b.bs[$i], x[b.ranges[$i]])))
+        push!(
+            expr.args,
+            :(($y_name, _logjac) = with_logabsdet_jacobian(b.bs[$i], x[b.ranges[$i]])),
+        )
 
         # TODO: drop the `sum` when we have dimensionality
         push!(expr.args, :(logjac += sum(_logjac)))

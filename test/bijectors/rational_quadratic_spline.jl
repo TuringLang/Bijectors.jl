@@ -4,7 +4,9 @@ using Bijectors: RationalQuadraticSpline
 
 @testset "RationalQuadraticSpline" begin
     # Monotonic spline on '[-B, B]' with `K` intermediate knots/"connection points".
-    d = 2; K = 3; B = 2;
+    d = 2
+    K = 3
+    B = 2
     b_uv = RationalQuadraticSpline(randn(K), randn(K), randn(K - 1), B)
     b_mv = RationalQuadraticSpline(randn(d, K), randn(d, K), randn(d, K - 1), B)
 
@@ -54,7 +56,7 @@ using Bijectors: RationalQuadraticSpline
         test_bijector(b, x)
 
         # Outside of domain
-        x = [-5., 5.]
+        x = [-5.0, 5.0]
         test_bijector(b, x; y=x, logjac=zero(eltype(x)))
     end
 end
