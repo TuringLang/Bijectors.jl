@@ -10,7 +10,7 @@ import ..Bijectors: _eps, logabsdetjac, _logabsdetjac_scale, _simplex_bijector,
     _simplex_inv_bijector, replace_diag, jacobian, pd_from_lower, pd_from_upper,
     lower_triangular, upper_triangular,
     _inv_link_chol_lkj, _link_chol_lkj, _transform_ordered, _transform_inverse_ordered,
-    find_alpha
+    find_alpha, cholesky_factor
 
 import ChainRulesCore
 
@@ -200,5 +200,11 @@ end
 wrap_chainrules_output(x) = x
 wrap_chainrules_output(x::ChainRulesCore.AbstractZero) = nothing
 wrap_chainrules_output(x::Tuple) = map(wrap_chainrules_output, x)
+
+# HACK: To make it work for julia v1.6 .
+# This dispatch does not wrap X in Hermitian before calling cholesky. 
+# cholesky does not work with AbstractMatrix in julia v1.6,
+# and it would error with Hermitian{ReverseDiff.TrackedArray}.
+cholesky_factor(X::ReverseDiff.TrackedArray) = cholesky_factor(cholesky(X))
 
 end
