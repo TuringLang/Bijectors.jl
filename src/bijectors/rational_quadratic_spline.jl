@@ -100,7 +100,7 @@ function RationalQuadraticSpline(
     widths::A, heights::A, derivatives::A, B::T2
 ) where {T1,T2,A<:AbstractVector{T1}}
     return RationalQuadraticSpline(
-        cumsum(vcat([zero(T1)], LogExpFunctions.softmax(widths))) * 2 * B .- B,
+        cumsum(vcat([zero(T1)], LogExpFunctions.softmax(widths))) .* (2 * B) .- B,
         cumsum(vcat([zero(T1)], LogExpFunctions.softmax(heights))) * 2 * B .- B,
         vcat([one(T1)], LogExpFunctions.log1pexp.(derivatives), [one(T1)]),
     )
