@@ -1,10 +1,10 @@
 module BijectorsForwardDiffExt
 
 if isdefined(Base, :get_extension)
-    using Bijectors: Bijectors
+    using Bijectors: Bijectors, find_alpha
     using ForwardDiff: ForwardDiff
 else
-    using ..Bijectors: Bijectors
+    using ..Bijectors: Bijectors, find_alpha
     using ..ForwardDiff: ForwardDiff
 end
 
