@@ -45,6 +45,7 @@ using Functors: Functors
 using IrrationalConstants: IrrationalConstants
 using LogExpFunctions: LogExpFunctions
 using Roots: Roots
+using Compat: Compat
 
 export TransformDistribution,
     PositiveDistribution,
