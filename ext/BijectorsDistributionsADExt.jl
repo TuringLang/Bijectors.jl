@@ -108,8 +108,9 @@ function Bijectors.getlogp(d::TuringWishart, Xcf, X)
 end
 function Bijectors.getlogp(d::TuringInverseWishart, Xcf, X)
     Ψ = d.S
-    return -((d.df + size(d, 1) + 1) * LinearAlgebra.logdet(Xcf) + LinearAlgebra.tr(Xcf \ Ψ)) / 2 +
-           d.logc0
+    return -(
+        (d.df + size(d, 1) + 1) * LinearAlgebra.logdet(Xcf) + LinearAlgebra.tr(Xcf \ Ψ)
+    ) / 2 + d.logc0
 end
 
 end
