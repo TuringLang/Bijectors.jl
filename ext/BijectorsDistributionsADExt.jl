@@ -69,7 +69,7 @@ for T in (:VectorOfMultivariate, :FillVectorOfMultivariate)
     end
 end
 function Bijectors.bijector(d::FillVectorOfMultivariate{Continuous})
-    return columnwise(Bijectors.bijector(d.dists.value))
+    return Bijectors.columnwise(Bijectors.bijector(d.dists.value))
 end
 
 Bijectors.isdirichlet(::VectorOfMultivariate{Continuous,<:Dirichlet}) = true
