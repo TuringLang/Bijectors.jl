@@ -28,7 +28,7 @@ module Bijectors
   > SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 =#
 
-using Reexport, Requires
+using Reexport
 @reexport using Distributions
 using LinearAlgebra
 using MappedArrays
@@ -277,7 +277,10 @@ maporbroadcast(f, x::AbstractArray{<:Any,N}...) where {N} = map(f, x...)
 maporbroadcast(f, x::AbstractArray...) = f.(x...)
 
 # optional dependencies
+
 if !isdefined(Base, :get_extension)
+    using Requires
+
     function __init__()
         @require LazyArrays = "5078a376-72f3-5289-bfd5-ec5146d43c02" include(
             "../ext/BijectorsLazyArraysExt.jl"
