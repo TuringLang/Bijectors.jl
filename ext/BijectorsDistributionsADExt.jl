@@ -102,13 +102,15 @@ end
 Bijectors.ispd(::TuringWishart) = true
 Bijectors.ispd(::TuringInverseWishart) = true
 function Bijectors.getlogp(d::TuringWishart, Xcf, X)
-    return ((d.df - (size(d, 1) + 1)) * LinearAlgebra.logdet(Xcf) - LinearAlgebra.tr(d.chol \ X)) / 2 +
-           d.logc0
+    return (
+        (d.df - (size(d, 1) + 1)) * LinearAlgebra.logdet(Xcf) - LinearAlgebra.tr(d.chol \ X)
+    ) / 2 + d.logc0
 end
 function Bijectors.getlogp(d::TuringInverseWishart, Xcf, X)
     Ψ = d.S
-    return -((d.df + size(d, 1) + 1) * LinearAlgebra.logdet(Xcf) + LinearAlgebra.tr(Xcf \ Ψ)) / 2 +
-           d.logc0
+    return -(
+        (d.df + size(d, 1) + 1) * LinearAlgebra.logdet(Xcf) + LinearAlgebra.tr(Xcf \ Ψ)
+    ) / 2 + d.logc0
 end
 
 end
