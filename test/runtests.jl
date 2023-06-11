@@ -27,6 +27,7 @@ using Bijectors:
 
 using ChangesOfVariables: ChangesOfVariables
 using InverseFunctions: InverseFunctions
+using LazyArrays: LazyArrays
 
 const GROUP = get(ENV, "GROUP", "All")
 
