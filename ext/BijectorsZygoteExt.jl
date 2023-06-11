@@ -34,6 +34,7 @@ if isdefined(Base, :get_extension)
 
     using Bijectors.LinearAlgebra
     using Bijectors.Compat: eachcol
+    using Bijectors.Distributions: LocationScale
 else
     using ..Zygote: Zygote, @adjoint, pullback
     using ..Bijectors:
@@ -68,6 +69,7 @@ else
 
     using ..Bijectors.LinearAlgebra
     using ..Bijectors.Compat: eachcol
+    using ..Bijectors.Distributions: LocationScale
 end
 
 @adjoint istraining() = true, _ -> nothing
