@@ -43,7 +43,9 @@ Bijectors.bijector(::TuringScalMvNormal) = identity
 Bijectors.bijector(::TuringDiagMvNormal) = identity
 Bijectors.bijector(::TuringDenseMvNormal) = identity
 
-Bijectors.bijector(d::FillVectorOfUnivariate{Continuous}) = elementwise(Bijectors.bijector(d.v.value))
+function Bijectors.bijector(d::FillVectorOfUnivariate{Continuous})
+    return elementwise(Bijectors.bijector(d.v.value))
+end
 function Bijectors.bijector(d::FillMatrixOfUnivariate{Continuous})
     return elementwise(Bijectors.bijector(d.dists.value))
 end
