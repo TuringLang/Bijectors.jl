@@ -277,11 +277,12 @@ maporbroadcast(f, x::AbstractArray{<:Any,N}...) where {N} = map(f, x...)
 maporbroadcast(f, x::AbstractArray...) = f.(x...)
 
 # optional dependencies
-
 if !isdefined(Base, :get_extension)
     using Requires
+end
 
-    function __init__()
+function __init__()
+    @static if !isdefined(Base, :get_extension)
         @require LazyArrays = "5078a376-72f3-5289-bfd5-ec5146d43c02" include(
             "../ext/BijectorsLazyArraysExt.jl"
         )
