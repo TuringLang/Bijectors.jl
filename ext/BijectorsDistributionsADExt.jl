@@ -43,9 +43,9 @@ Bijectors.bijector(::TuringScalMvNormal) = identity
 Bijectors.bijector(::TuringDiagMvNormal) = identity
 Bijectors.bijector(::TuringDenseMvNormal) = identity
 
-Bijectors.bijector(d::FillVectorOfUnivariate{Continuous}) = Bijectors.bijector(d.v.value)
+Bijectors.bijector(d::FillVectorOfUnivariate{Continuous}) = elementwise(Bijectors.bijector(d.v.value))
 function Bijectors.bijector(d::FillMatrixOfUnivariate{Continuous})
-    return up1(Bijectors.bijector(d.dists.value))
+    return elementwise(Bijectors.bijector(d.dists.value))
 end
 Bijectors.bijector(d::MatrixOfUnivariate{Discrete}) = identity
 function Bijectors.bijector(d::MatrixOfUnivariate{Continuous})
@@ -69,7 +69,7 @@ for T in (:VectorOfMultivariate, :FillVectorOfMultivariate)
     end
 end
 function Bijectors.bijector(d::FillVectorOfMultivariate{Continuous})
-    return Bijectors.bijector(d.dists.value)
+    return columnwise(Bijectors.bijector(d.dists.value))
 end
 
 Bijectors.isdirichlet(::VectorOfMultivariate{Continuous,<:Dirichlet}) = true
