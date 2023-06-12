@@ -33,7 +33,7 @@ using Reexport, Requires
 using LinearAlgebra
 using MappedArrays
 using Base.Iterators: drop
-using LinearAlgebra: AbstractTriangular
+using LinearAlgebra: AbstractTriangular, Hermitian
 
 using InverseFunctions: InverseFunctions
 
@@ -144,6 +144,9 @@ _logabsdetjac_dist(d::MatrixDistribution, x::AbstractMatrix) = logabsdetjac(bije
 function _logabsdetjac_dist(d::MatrixDistribution, x::AbstractVector{<:AbstractMatrix})
     return logabsdetjac.((bijector(d),), x)
 end
+
+_logabsdetjac_dist(d::LKJCholesky, x::Cholesky) = logabsdetjac(bijector(d), x)
+_logabsdetjac_dist(d::LKJCholesky, x::AbstractVector) = logabsdetjac.((bijector(d),), x)
 
 function logpdf_with_trans(d::Distribution, x, transform::Bool)
     if ispd(d)
