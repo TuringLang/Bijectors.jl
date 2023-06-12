@@ -13,6 +13,9 @@ struct TransformedDistribution{D,B,V} <:
     function TransformedDistribution(d::MatrixDistribution, b)
         return new{typeof(d),typeof(b),Matrixvariate}(d, b)
     end
+    function TransformedDistribution(d::Distribution{CholeskyVariate}, b)
+        return new{typeof(d),typeof(b),CholeskyVariate}(d, b)
+    end
 end
 
 # fields may contain nested numerical parameters
@@ -83,7 +86,8 @@ bijector(d::LowerboundedDistribution) = bijector_lowerbounded(d)
 bijector(d::PDMatDistribution) = PDBijector()
 bijector(d::MatrixBeta) = PDBijector()
 
-bijector(d::LKJ) = CorrBijector()
+bijector(d::LKJ) = VecCorrBijector()
+bijector(d::LKJCholesky) = VecCholeskyBijector(d.uplo)
 
 function bijector(d::Distributions.ReshapedDistribution)
     inner_dims = size(d.dist)
@@ -118,6 +122,13 @@ function logpdf(td::MvTransformed{<:Dirichlet}, y::AbstractMatrix{<:Real})
 
     x, logjac = with_logabsdet_jacobian(inverse(td.transform), y)
     return logpdf(td.dist, mappedarray(x -> x + ϵ, x)) + logjac
+end
+
+function logpdf(
+    td::TransformedDistribution{T}, y::AbstractVector{<:Real}
+) where {T<:Union{LKJ,LKJCholesky}}
+    x, logjac = with_logabsdet_jacobian(inverse(td.transform), y)
+    return logpdf(td.dist, x) + logjac
 end
 
 function _logpdf(td::MvTransformed, y::AbstractVector{<:Real})
@@ -168,6 +179,12 @@ end
 function _rand!(rng::AbstractRNG, td::MatrixTransformed, x::DenseMatrix{<:Real})
     rand!(rng, td.dist, x)
     return x .= td.transform(x)
+end
+
+function rand(
+    rng::AbstractRNG, td::TransformedDistribution{T}
+) where {T<:Union{LKJ,LKJCholesky}}
+    return td.transform(rand(rng, td.dist))
 end
 
 # utility stuff
