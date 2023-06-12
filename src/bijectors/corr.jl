@@ -356,7 +356,7 @@ function _link_chol_lkj(W::AbstractMatrix)
     # Some zero filling can be avoided. Though diagnoal is still needed to be filled with zero.
 
     # This block can't be integrated with loop below, because W[1,1] != 0.
-    @inbounds z[1, 1] = 0
+    @inbounds z[:, 1] .= 0
 
     @inbounds for j in 2:K
         z[1, j] = atanh(W[1, j])
@@ -366,7 +366,9 @@ function _link_chol_lkj(W::AbstractMatrix)
             tmp *= sqrt(1 - p^2)
             z[i, j] = atanh(p)
         end
-        z[j, j] = 0
+        for i in j:K
+            z[i, j] = 0
+        end
     end
 
     return z
