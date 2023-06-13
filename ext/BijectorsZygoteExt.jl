@@ -18,8 +18,6 @@ if isdefined(Base, :get_extension)
         _simplex_inv_bijector,
         replace_diag,
         jacobian,
-        getpd,
-        lower,
         _inv_link_chol_lkj,
         _link_chol_lkj,
         _transform_ordered,
@@ -30,7 +28,10 @@ if isdefined(Base, :get_extension)
         mapvcat,
         eachcolmaphcat,
         sumeachcol,
-        pd_link
+        pd_link,
+        pd_from_lower,
+        lower_triangular,
+        upper_triangular
 
     using Bijectors.LinearAlgebra
     using Bijectors.Compat: eachcol
@@ -53,8 +54,6 @@ else
         _simplex_inv_bijector,
         replace_diag,
         jacobian,
-        getpd,
-        lower,
         _inv_link_chol_lkj,
         _link_chol_lkj,
         _transform_ordered,
@@ -65,7 +64,10 @@ else
         mapvcat,
         eachcolmaphcat,
         sumeachcol,
-        pd_link
+        pd_link,
+        pd_from_lower,
+        lower_triangular,
+        upper_triangular
 
     using ..Bijectors.LinearAlgebra
     using ..Bijectors.Compat: eachcol
