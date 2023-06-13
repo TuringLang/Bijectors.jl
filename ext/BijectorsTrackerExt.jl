@@ -20,7 +20,9 @@ if isdefined(Base, :get_extension)
         Stacked,
         Bijectors,
         ChainRulesCore,
-        LogExpFunctions
+        LogExpFunctions,
+        _triu1_dim_from_length
+
     using Bijectors.LinearAlgebra
     using Bijectors.Compat: eachcol
     using Bijectors.Distributions: LocationScale
@@ -37,8 +39,16 @@ else
         data,
         param
 
-    using ..Bijectors:
-        Elementwise, SimplexBijector, Inverse, Bijectors, ChainRulesCore, LogExpFunctions
+    using Bijectors:
+        Elementwise,
+        SimplexBijector,
+        Inverse,
+        Stacked,
+        Bijectors,
+        ChainRulesCore,
+        LogExpFunctions,
+        _triu1_dim_from_length
+
     using ..Bijectors.LinearAlgebra
     using ..Bijectors.Compat: eachcol
     using ..Bijectors.Distributions: LocationScale
