@@ -2,7 +2,14 @@ module BijectorsReverseDiffExt
 
 if isdefined(Base, :get_extension)
     using ReverseDiff:
-        ReverseDiff, @grad, value, track, TrackedReal, TrackedVector, TrackedMatrix, @grad_from_chainrules
+        ReverseDiff,
+        @grad,
+        value,
+        track,
+        TrackedReal,
+        TrackedVector,
+        TrackedMatrix,
+        @grad_from_chainrules
 
     using Bijectors:
         ChainRulesCore,
@@ -35,7 +42,14 @@ if isdefined(Base, :get_extension)
     using Bijectors.Distributions: LocationScale
 else
     using ..ReverseDiff:
-        ReverseDiff, @grad, value, track, TrackedReal, TrackedVector, TrackedMatrix, @grad_from_chainrules
+        ReverseDiff,
+        @grad,
+        value,
+        track,
+        TrackedReal,
+        TrackedVector,
+        TrackedMatrix,
+        @grad_from_chainrules
 
     using ..Bijectors:
         ChainRulesCore,
