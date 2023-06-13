@@ -1,26 +1,58 @@
-module TrackerCompat
+module BijectorsTrackerExt
 
-using ..Tracker:
-    Tracker,
-    TrackedReal,
-    TrackedVector,
-    TrackedMatrix,
-    TrackedArray,
-    TrackedVecOrMat,
-    @grad,
-    track,
-    data,
-    param
+if isdefined(Base, :get_extension)
+    using Tracker:
+        Tracker,
+        TrackedReal,
+        TrackedVector,
+        TrackedMatrix,
+        TrackedArray,
+        TrackedVecOrMat,
+        @grad,
+        track,
+        data,
+        param
 
-import ..Bijectors
-using ..Bijectors: Elementwise, SimplexBijector, Inverse, Stacked, _triu1_dim_from_length
+    using Bijectors:
+        Elementwise,
+        SimplexBijector,
+        Inverse,
+        Stacked,
+        Bijectors,
+        ChainRulesCore,
+        LogExpFunctions,
+        _triu1_dim_from_length
 
-using ChainRulesCore: ChainRulesCore
-using LogExpFunctions: LogExpFunctions
+    using Bijectors.LinearAlgebra
+    using Bijectors.Compat: eachcol
+    using Bijectors.Distributions: LocationScale
+else
+    using ..Tracker:
+        Tracker,
+        TrackedReal,
+        TrackedVector,
+        TrackedMatrix,
+        TrackedArray,
+        TrackedVecOrMat,
+        @grad,
+        track,
+        data,
+        param
 
-using Compat: eachcol
-using LinearAlgebra
-using Distributions: LocationScale
+    using Bijectors:
+        Elementwise,
+        SimplexBijector,
+        Inverse,
+        Stacked,
+        Bijectors,
+        ChainRulesCore,
+        LogExpFunctions,
+        _triu1_dim_from_length
+
+    using ..Bijectors.LinearAlgebra
+    using ..Bijectors.Compat: eachcol
+    using ..Bijectors.Distributions: LocationScale
+end
 
 Bijectors.maporbroadcast(f, x::TrackedArray...) = f.(x...)
 function Bijectors.maporbroadcast(
@@ -283,7 +315,6 @@ function vectorof(::Type{TrackedReal{T}}) where {T<:Real}
     return TrackedArray{T,1,Vector{T}}
 end
 
-(b::Elementwise{typeof(exp)})(x::TrackedVector) = exp.(x)::vectorof(float(eltype(x)))
 (b::Elementwise{typeof(exp)})(x::TrackedVector) = exp.(x)::vectorof(float(eltype(x)))
 (b::Elementwise{typeof(exp)})(x::TrackedMatrix) = exp.(x)::matrixof(float(eltype(x)))
 
