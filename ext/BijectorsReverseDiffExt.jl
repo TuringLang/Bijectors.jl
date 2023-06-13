@@ -2,7 +2,7 @@ module BijectorsReverseDiffExt
 
 if isdefined(Base, :get_extension)
     using ReverseDiff:
-        ReverseDiff, @grad, value, track, TrackedReal, TrackedVector, TrackedMatrix
+        ReverseDiff, @grad, value, track, TrackedReal, TrackedVector, TrackedMatrix, @grad_from_chainrules
 
     using Bijectors:
         ChainRulesCore,
@@ -21,20 +21,21 @@ if isdefined(Base, :get_extension)
         _simplex_inv_bijector,
         replace_diag,
         jacobian,
-        getpd,
-        lower,
         _inv_link_chol_lkj,
         _link_chol_lkj,
         _transform_ordered,
         _transform_inverse_ordered,
-        find_alpha
+        find_alpha,
+        pd_from_lower,
+        lower_triangular,
+        upper_triangular
 
     using Bijectors.LinearAlgebra
     using Bijectors.Compat: eachcol
     using Bijectors.Distributions: LocationScale
 else
     using ..ReverseDiff:
-        ReverseDiff, @grad, value, track, TrackedReal, TrackedVector, TrackedMatrix
+        ReverseDiff, @grad, value, track, TrackedReal, TrackedVector, TrackedMatrix, @grad_from_chainrules
 
     using ..Bijectors:
         ChainRulesCore,
@@ -53,13 +54,14 @@ else
         _simplex_inv_bijector,
         replace_diag,
         jacobian,
-        getpd,
-        lower,
         _inv_link_chol_lkj,
         _link_chol_lkj,
         _transform_ordered,
         _transform_inverse_ordered,
-        find_alpha
+        find_alpha,
+        pd_from_lower,
+        lower_triangular,
+        upper_triangular
 
     using ..Bijectors.LinearAlgebra
     using ..Bijectors.Compat: eachcol
