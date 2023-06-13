@@ -195,8 +195,8 @@ end
     end
 end
 
-getpd(X::TrackedMatrix) = track(getpd, X)
-@grad function getpd(X::AbstractMatrix)
+pd_from_lower(X::TrackedMatrix) = track(pd_from_lower, X)
+@grad function pd_from_lower(X::AbstractMatrix)
     Xd = value(X)
     return LowerTriangular(Xd) * LowerTriangular(Xd)',
     Δ -> begin
@@ -204,10 +204,19 @@ getpd(X::TrackedMatrix) = track(getpd, X)
         return (LowerTriangular(Δ' * Xl + Δ * Xl),)
     end
 end
-lower(A::TrackedMatrix) = track(lower, A)
-@grad function lower(A::AbstractMatrix)
+
+@grad_from_chainrules pd_from_upper(X::TrackedMatrix)
+
+lower_triangular(A::TrackedMatrix) = track(lower_triangular, A)
+@grad function lower_triangular(A::AbstractMatrix)
     Ad = value(A)
-    return lower(Ad), Δ -> (lower(Δ),)
+    return lower_triangular(Ad), Δ -> (lower_triangular(Δ),)
+end
+
+upper_triangular(A::TrackedMatrix) = track(upper_triangular, A)
+@grad function upper_triangular(A::AbstractMatrix)
+    Ad = value(A)
+    return upper_triangular(Ad), Δ -> (upper_triangular(Δ),)
 end
 
 function find_alpha(wt_y::T, wt_u_hat::T, b::T) where {T<:TrackedReal}
@@ -241,9 +250,23 @@ end
     return y, (wrap_chainrules_output ∘ Base.tail ∘ dy)
 end
 
+@grad_from_chainrules update_triu_from_vec(vals::TrackedVector{<:Real}, k::Int, dim::Int)
+
+@grad_from_chainrules _link_chol_lkj(x::TrackedMatrix)
+@grad_from_chainrules _inv_link_chol_lkj(x::TrackedVector)
+
 # NOTE: Probably doesn't work in complete generality.
 wrap_chainrules_output(x) = x
 wrap_chainrules_output(x::ChainRulesCore.AbstractZero) = nothing
 wrap_chainrules_output(x::Tuple) = map(wrap_chainrules_output, x)
+
+if VERSION <= v"1.8.0-DEV.1526"
+    # HACK: This dispatch does not wrap X in Hermitian before calling cholesky. 
+    # cholesky does not work with AbstractMatrix in julia versions before the compared one,
+    # and it would error with Hermitian{ReverseDiff.TrackedArray}.
+    # See commit when the fix was introduced :
+    # https://github.com/JuliaLang/julia/commit/635449dabee81bba315ab066627a98f856141969
+    cholesky_factor(X::ReverseDiff.TrackedArray) = cholesky_factor(cholesky(X))
+end
 
 end

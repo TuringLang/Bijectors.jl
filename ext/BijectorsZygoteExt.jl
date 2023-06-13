@@ -224,10 +224,10 @@ end
     end
     return pullback(_maximum, d)
 end
-@adjoint function lower(A::AbstractMatrix)
-    return lower(A), Δ -> (lower(Δ),)
+@adjoint function lower_triangular(A::AbstractMatrix)
+    return lower_triangular(A), Δ -> (lower_triangular(Δ),)
 end
-@adjoint function getpd(X::AbstractMatrix)
+@adjoint function pd_from_lower(X::AbstractMatrix)
     return LowerTriangular(X) * LowerTriangular(X)',
     Δ -> begin
         Xl = LowerTriangular(X)
