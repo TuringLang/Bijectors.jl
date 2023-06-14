@@ -31,7 +31,8 @@ if isdefined(Base, :get_extension)
         pd_link,
         pd_from_lower,
         lower_triangular,
-        upper_triangular
+        upper_triangular,
+        getlogp
 
     using Bijectors.LinearAlgebra
     using Bijectors.Compat: eachcol
@@ -67,7 +68,8 @@ else
         pd_link,
         pd_from_lower,
         lower_triangular,
-        upper_triangular
+        upper_triangular,
+        getlogp
 
     using ..Bijectors.LinearAlgebra
     using ..Bijectors.Compat: eachcol
