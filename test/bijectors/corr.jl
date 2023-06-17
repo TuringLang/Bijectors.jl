@@ -33,6 +33,13 @@ using Bijectors: VecCorrBijector, VecCholeskyBijector, CorrBijector
         test_bijector(bvec, x; test_not_identity=d != 1, changes_of_variables_test=false)
 
         test_ad(x -> sum(bvec(bvecinv(x))), yvec)
+
+        # Check that output sizes are computed correctly.
+        dist = transformed(dist)
+        @test length(dist) == length(yvec)
+
+        dist_unconstrained = transformed(MvNormal(zeros(length(dist)), I), inverse(dist.transform))
+        @test size(dist_unconstrained) == size(x)
     end
 end
 
