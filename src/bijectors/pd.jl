@@ -40,3 +40,34 @@ end
 function with_logabsdet_jacobian(b::PDBijector, X)
     return transform(b, X), logabsdetjac(b, X)
 end
+
+
+struct PDVecBijector <: Bijector end
+
+function _triu_dim_from_length(d)
+    #           d = n^2 + n
+    # n² + n - 2d = 0
+    #           n = (-1 + sqrt(1 + 8d)) / 2
+    return (-1 + isqrt(1 + 8 * d)) ÷ 2
+end
+
+"""
+    vec_to_triu(x::AbstractVector{<:Real})
+
+Constructs a matrix from a vector `x` by filling the upper triangle.
+"""
+function vec_to_triu(x::AbstractVector)
+    n = _triu_dim_from_length(length(x))
+    X = update_triu_from_vec(x, 0, n)
+    return upper_triangular(X)
+end
+
+transform(::PDVecBijector, X::AbstractMatrix{<:Real}) = pd_vec_link(X)
+pd_vec_link(X) = triu_to_vec(transpose(pd_link(X)), 0)
+
+function transform(::Inverse{PDVecBijector}, y::AbstractVector{<:Real})
+    Y = permutedims(vec_to_triu(y))
+    return transform(inverse(PDBijector()), Y)
+end
+
+logabsdetjac(::PDVecBijector, X::AbstractMatrix{<:Real}) = logabsdetjac(PDBijector(), X)
