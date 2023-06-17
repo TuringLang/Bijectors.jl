@@ -1,8 +1,10 @@
-function variateform(d::Distribution{<:ArrayLikeVariate}, b)
+function variateform(d::Distribution, b)
     sz_in = size(d)
     sz_out = output_size(b, sz_in)
     return ArrayLikeVariate{length(sz_out)}
 end
+
+variateform(::MultivariateDistribution, ::Inverse{VecCholeskyBijector}) = CholeskyVariate
 
 # Transformed distributions
 struct TransformedDistribution{D,B,V} <: Distribution{V,Continuous} where {D<:ContinuousDistribution,B}
