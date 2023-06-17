@@ -28,7 +28,7 @@ module Bijectors
   > SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 =#
 
-using Reexport, Requires
+using Reexport
 @reexport using Distributions
 using LinearAlgebra
 using MappedArrays
@@ -45,6 +45,7 @@ using Functors: Functors
 using IrrationalConstants: IrrationalConstants
 using LogExpFunctions: LogExpFunctions
 using Roots: Roots
+using Compat: Compat
 
 export TransformDistribution,
     PositiveDistribution,
@@ -279,29 +280,31 @@ maporbroadcast(f, x::AbstractArray{<:Any,N}...) where {N} = map(f, x...)
 maporbroadcast(f, x::AbstractArray...) = f.(x...)
 
 # optional dependencies
+if !isdefined(Base, :get_extension)
+    using Requires
+end
+
 function __init__()
-    @require LazyArrays = "5078a376-72f3-5289-bfd5-ec5146d43c02" begin
-        function maporbroadcast(f, x1::LazyArrays.BroadcastArray, x...)
-            return copy(f.(x1, x...))
-        end
-        function maporbroadcast(f, x1, x2::LazyArrays.BroadcastArray, x...)
-            return copy(f.(x1, x2, x...))
-        end
-        function maporbroadcast(f, x1, x2, x3::LazyArrays.BroadcastArray, x...)
-            return copy(f.(x1, x2, x3, x...))
-        end
+    @static if !isdefined(Base, :get_extension)
+        @require LazyArrays = "5078a376-72f3-5289-bfd5-ec5146d43c02" include(
+            "../ext/BijectorsLazyArraysExt.jl"
+        )
+        @require ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210" include(
+            "../ext/BijectorsForwardDiffExt.jl"
+        )
+        @require Tracker = "9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c" include(
+            "../ext/BijectorsTrackerExt.jl"
+        )
+        @require Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f" include(
+            "../ext/BijectorsZygoteExt.jl"
+        )
+        @require ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267" include(
+            "../ext/BijectorsReverseDiffExt.jl"
+        )
+        @require DistributionsAD = "ced4e74d-a319-5a8a-b0ac-84af2272839c" include(
+            "../ext/BijectorsDistributionsADExt.jl"
+        )
     end
-    @require ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210" include(
-        "compat/forwarddiff.jl"
-    )
-    @require Tracker = "9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c" include("compat/tracker.jl")
-    @require Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f" include("compat/zygote.jl")
-    @require ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267" include(
-        "compat/reversediff.jl"
-    )
-    @require DistributionsAD = "ced4e74d-a319-5a8a-b0ac-84af2272839c" include(
-        "compat/distributionsad.jl"
-    )
 end
 
 end # module

@@ -1,47 +1,86 @@
-module ReverseDiffCompat
+module BijectorsReverseDiffExt
 
-using ..ReverseDiff:
-    ReverseDiff,
-    @grad,
-    value,
-    track,
-    TrackedReal,
-    TrackedVector,
-    TrackedMatrix,
-    @grad_from_chainrules
-using Requires, LinearAlgebra
+if isdefined(Base, :get_extension)
+    using ReverseDiff:
+        ReverseDiff,
+        @grad,
+        value,
+        track,
+        TrackedReal,
+        TrackedVector,
+        TrackedMatrix,
+        @grad_from_chainrules
 
-using ..Bijectors:
-    Elementwise,
-    SimplexBijector,
-    maphcat,
-    simplex_link_jacobian,
-    simplex_invlink_jacobian,
-    simplex_logabsdetjac_gradient,
-    Inverse
-import ..Bijectors:
-    _eps,
-    logabsdetjac,
-    _logabsdetjac_scale,
-    _simplex_bijector,
-    _simplex_inv_bijector,
-    replace_diag,
-    jacobian,
-    pd_from_lower,
-    pd_from_upper,
-    lower_triangular,
-    upper_triangular,
-    _inv_link_chol_lkj,
-    _link_chol_lkj,
-    _transform_ordered,
-    _transform_inverse_ordered,
-    find_alpha,
-    cholesky_factor
+    using Bijectors:
+        ChainRulesCore,
+        Elementwise,
+        SimplexBijector,
+        maphcat,
+        simplex_link_jacobian,
+        simplex_invlink_jacobian,
+        simplex_logabsdetjac_gradient,
+        Inverse
+    import Bijectors:
+        _eps,
+        logabsdetjac,
+        _logabsdetjac_scale,
+        _simplex_bijector,
+        _simplex_inv_bijector,
+        replace_diag,
+        jacobian,
+        _inv_link_chol_lkj,
+        _link_chol_lkj,
+        _transform_ordered,
+        _transform_inverse_ordered,
+        find_alpha,
+        pd_from_lower,
+        lower_triangular,
+        upper_triangular
 
-using ChainRulesCore: ChainRulesCore
+    using Bijectors.LinearAlgebra
+    using Bijectors.Compat: eachcol
+    using Bijectors.Distributions: LocationScale
+else
+    using ..ReverseDiff:
+        ReverseDiff,
+        @grad,
+        value,
+        track,
+        TrackedReal,
+        TrackedVector,
+        TrackedMatrix,
+        @grad_from_chainrules
 
-using Compat: eachcol
-using Distributions: LocationScale
+    using ..Bijectors:
+        ChainRulesCore,
+        Elementwise,
+        SimplexBijector,
+        maphcat,
+        simplex_link_jacobian,
+        simplex_invlink_jacobian,
+        simplex_logabsdetjac_gradient,
+        Inverse
+    import ..Bijectors:
+        _eps,
+        logabsdetjac,
+        _logabsdetjac_scale,
+        _simplex_bijector,
+        _simplex_inv_bijector,
+        replace_diag,
+        jacobian,
+        _inv_link_chol_lkj,
+        _link_chol_lkj,
+        _transform_ordered,
+        _transform_inverse_ordered,
+        find_alpha,
+        pd_from_lower,
+        lower_triangular,
+        upper_triangular
+
+    using ..Bijectors.LinearAlgebra
+    using ..Bijectors.Compat: eachcol
+    using ..Bijectors.Distributions: LocationScale
+end
 
 _eps(::Type{<:TrackedReal{T}}) where {T} = _eps(T)
 function Base.minimum(d::LocationScale{<:TrackedReal})

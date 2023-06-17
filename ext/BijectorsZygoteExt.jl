@@ -1,6 +1,80 @@
-using .Zygote: Zygote, @adjoint, pullback
+module BijectorsZygoteExt
 
-using Compat: eachcol
+if isdefined(Base, :get_extension)
+    using Zygote: Zygote, @adjoint, pullback
+    using Bijectors:
+        Elementwise,
+        SimplexBijector,
+        simplex_link_jacobian,
+        simplex_invlink_jacobian,
+        simplex_logabsdetjac_gradient,
+        Inverse,
+        maphcat,
+        IrrationalConstants,
+        Distributions,
+        logabsdetjac,
+        _logabsdetjac_scale,
+        _simplex_bijector,
+        _simplex_inv_bijector,
+        replace_diag,
+        jacobian,
+        _inv_link_chol_lkj,
+        _link_chol_lkj,
+        _transform_ordered,
+        _transform_inverse_ordered,
+        find_alpha,
+        pd_logpdf_with_trans,
+        istraining,
+        mapvcat,
+        eachcolmaphcat,
+        sumeachcol,
+        pd_link,
+        pd_from_lower,
+        lower_triangular,
+        upper_triangular,
+        getlogp
+
+    using Bijectors.LinearAlgebra
+    using Bijectors.Compat: eachcol
+    using Bijectors.Distributions: LocationScale
+else
+    using ..Zygote: Zygote, @adjoint, pullback
+    using ..Bijectors:
+        Elementwise,
+        SimplexBijector,
+        simplex_link_jacobian,
+        simplex_invlink_jacobian,
+        simplex_logabsdetjac_gradient,
+        Inverse,
+        maphcat,
+        IrrationalConstants,
+        Distributions,
+        logabsdetjac,
+        _logabsdetjac_scale,
+        _simplex_bijector,
+        _simplex_inv_bijector,
+        replace_diag,
+        jacobian,
+        _inv_link_chol_lkj,
+        _link_chol_lkj,
+        _transform_ordered,
+        _transform_inverse_ordered,
+        find_alpha,
+        pd_logpdf_with_trans,
+        istraining,
+        mapvcat,
+        eachcolmaphcat,
+        sumeachcol,
+        pd_link,
+        pd_from_lower,
+        lower_triangular,
+        upper_triangular,
+        getlogp
+
+    using ..Bijectors.LinearAlgebra
+    using ..Bijectors.Compat: eachcol
+    using ..Bijectors.Distributions: LocationScale
+end
 
 @adjoint istraining() = true, _ -> nothing
 
@@ -131,8 +205,8 @@ end
 end
 
 # LocationScale fix
-
-@adjoint function minimum(d::LocationScale)
+# TODO: Remove this.
+@adjoint function Base.minimum(d::Distributions.LocationScale)
     function _minimum(d)
         m = minimum(d.ρ)
         if isfinite(m)
@@ -143,7 +217,7 @@ end
     end
     return pullback(_minimum, d)
 end
-@adjoint function maximum(d::LocationScale)
+@adjoint function Base.maximum(d::LocationScale)
     function _maximum(d)
         m = maximum(d.ρ)
         if isfinite(m)
@@ -169,4 +243,5 @@ end
         Y = cholesky(X; check=true).L
         return replace_diag(log, Y)
     end
+end
 end
