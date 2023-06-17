@@ -37,9 +37,11 @@ using Bijectors: VecCorrBijector, VecCholeskyBijector, CorrBijector
         # Check that output sizes are computed correctly.
         dist = transformed(dist)
         @test length(dist) == length(yvec)
+        @test dist isa MultivariateDistribution
 
         dist_unconstrained = transformed(MvNormal(zeros(length(dist)), I), inverse(bvec))
         @test size(dist_unconstrained) == size(x)
+        @test dist_unconstrained isa MatrixDistribution
     end
 end
 

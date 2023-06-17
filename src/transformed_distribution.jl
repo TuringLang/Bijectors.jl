@@ -1,20 +1,16 @@
+function variateform(d::Distribution{<:ArrayLikeVariate}, b)
+    sz_in = size(d)
+    sz_out = output_size(b, sz_in)
+    return ArrayLikeVariate{length(sz_out)}
+end
+
 # Transformed distributions
-struct TransformedDistribution{D,B,V} <:
-       Distribution{V,Continuous} where {D<:Distribution{V,Continuous},B}
+struct TransformedDistribution{D,B,V} <: Distribution{V,Continuous} where {D<:ContinuousDistribution,B}
     dist::D
     transform::B
 
-    function TransformedDistribution(d::UnivariateDistribution, b)
-        return new{typeof(d),typeof(b),Univariate}(d, b)
-    end
-    function TransformedDistribution(d::MultivariateDistribution, b)
-        return new{typeof(d),typeof(b),Multivariate}(d, b)
-    end
-    function TransformedDistribution(d::MatrixDistribution, b)
-        return new{typeof(d),typeof(b),Matrixvariate}(d, b)
-    end
-    function TransformedDistribution(d::Distribution{CholeskyVariate}, b)
-        return new{typeof(d),typeof(b),CholeskyVariate}(d, b)
+    function TransformedDistribution(d::ContinuousDistribution, b)
+        return new{typeof(d),typeof(b),variateform(d,b)}(d, b)
     end
 end
 
