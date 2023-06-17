@@ -25,3 +25,5 @@ end
 inverse(b::Reshape) = Reshape(b.out_shape, b.in_shape)
 
 with_logabsdet_jacobian(b::Reshape, x) = reshape(x, b.out_shape), zero(eltype(x))
+
+output_size(b::Reshape, in_size) = b.out_shape
