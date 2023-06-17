@@ -38,7 +38,7 @@ using Bijectors: VecCorrBijector, VecCholeskyBijector, CorrBijector
         dist = transformed(dist)
         @test length(dist) == length(yvec)
 
-        dist_unconstrained = transformed(MvNormal(zeros(length(dist)), I), inverse(dist.transform))
+        dist_unconstrained = transformed(MvNormal(zeros(length(dist)), I), inverse(bvec))
         @test size(dist_unconstrained) == size(x)
     end
 end
