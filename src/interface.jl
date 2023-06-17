@@ -35,6 +35,26 @@ function logabsdetjac(f::Columnwise, x::AbstractMatrix)
 end
 with_logabsdet_jacobian(f::Columnwise, x::AbstractMatrix) = (f(x), logabsdetjac(f, x))
 
+"""
+    output_size(f, sz)
+
+Returns the output size of `f` given the input size `sz`.
+"""
+output_size(f, sz) = sz
+
+"""
+    output_length(f, len::Int)
+    output_length(f, sz::Tuple)
+
+Returns the output length of `f` given the input length `len` or size `sz`.
+"""
+output_length(f, len::Int) = len
+function output_length(f, len::Tuple)
+    sz = output_size(f, len)
+    @assert length(sz) == 1
+    return first(sz)
+end
+
 ######################
 # Bijector interface #
 ######################
