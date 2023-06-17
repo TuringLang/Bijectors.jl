@@ -206,26 +206,11 @@ isdirichlet(::Distribution) = false
 # ∑xᵢ = 1 #
 ###########
 
-function link(d::Dirichlet, x::AbstractVecOrMat{<:Real}, ::Val{proj}=Val(true)) where {proj}
-    return SimplexBijector{proj}()(x)
-end
+link(d::Dirichlet, x::AbstractVecOrMat{<:Real}) = SimplexBijector()(x)
+link_jacobian(d::Dirichlet, x::AbstractVector{<:Real}) = jacobian(SimplexBijector(), x)
 
-function link_jacobian(
-    d::Dirichlet, x::AbstractVector{<:Real}, ::Val{proj}=Val(true)
-) where {proj}
-    return jacobian(SimplexBijector{proj}(), x)
-end
-
-function invlink(
-    d::Dirichlet, y::AbstractVecOrMat{<:Real}, ::Val{proj}=Val(true)
-) where {proj}
-    return inverse(SimplexBijector{proj}())(y)
-end
-function invlink_jacobian(
-    d::Dirichlet, y::AbstractVector{<:Real}, ::Val{proj}=Val(true)
-) where {proj}
-    return jacobian(inverse(SimplexBijector{proj}()), y)
-end
+invlink(d::Dirichlet, y::AbstractVecOrMat{<:Real}) = inverse(SimplexBijector())(y)
+invlink_jacobian(d::Dirichlet, y::AbstractVector{<:Real}) = jacobian(inverse(SimplexBijector()), y)
 
 ## Matrix
 
