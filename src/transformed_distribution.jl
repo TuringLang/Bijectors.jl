@@ -101,8 +101,8 @@ end
 ##############################
 
 # size
-Base.length(td::Transformed) = length(td.dist)
-Base.size(td::Transformed) = size(td.dist)
+Base.length(td::Transformed) = length(td.transform(rand(td.dist)))
+Base.size(td::Transformed) = size(td.transform(rand(td.dist)))
 
 function logpdf(td::UnivariateTransformed, y::Real)
     x, logjac = with_logabsdet_jacobian(inverse(td.transform), y)
