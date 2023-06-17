@@ -210,7 +210,9 @@ link(d::Dirichlet, x::AbstractVecOrMat{<:Real}) = SimplexBijector()(x)
 link_jacobian(d::Dirichlet, x::AbstractVector{<:Real}) = jacobian(SimplexBijector(), x)
 
 invlink(d::Dirichlet, y::AbstractVecOrMat{<:Real}) = inverse(SimplexBijector())(y)
-invlink_jacobian(d::Dirichlet, y::AbstractVector{<:Real}) = jacobian(inverse(SimplexBijector()), y)
+function invlink_jacobian(d::Dirichlet, y::AbstractVector{<:Real})
+    return jacobian(inverse(SimplexBijector()), y)
+end
 
 ## Matrix
 
