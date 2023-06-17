@@ -100,6 +100,7 @@ end
 # Distributions.jl interface #
 ##############################
 
+# FIXME: Do this properly yah fool
 # size
 Base.length(td::Transformed) = length(td.transform(rand(td.dist)))
 Base.size(td::Transformed) = size(td.transform(rand(td.dist)))
