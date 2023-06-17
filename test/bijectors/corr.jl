@@ -75,9 +75,7 @@ end
             @test length(tdist) == length(y)
             @test tdist isa MultivariateDistribution
 
-            dist_unconstrained = transformed(
-                MvNormal(zeros(length(tdist)), I), inverse(b)
-            )
+            dist_unconstrained = transformed(MvNormal(zeros(length(tdist)), I), inverse(b))
             @test size(dist_unconstrained) == size(x)
             @test dist_unconstrained isa Distribution{CholeskyVariate,Continuous}
         end
