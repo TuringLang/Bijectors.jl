@@ -232,6 +232,17 @@ function logabsdetjac(::Inverse{VecCorrBijector}, y::AbstractVector{<:Real})
     return _logabsdetjac_inv_corr(y)
 end
 
+function output_size(::VecCorrBijector, sz::NTuple{2})
+    @assert sz[1] == sz[2]
+    n = sz[1]
+    return (n * (n - 1)) ÷ 2
+end
+
+function output_size(::Inverse{VecCorrBijector}, sz::NTuple{1})
+    n = _triu1_dim_from_length(first(sz))
+    return (n, n)
+end
+
 """
     VecCholeskyBijector <: Bijector
 
