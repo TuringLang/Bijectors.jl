@@ -329,7 +329,9 @@ function logabsdetjac(::Inverse{VecCholeskyBijector}, y::AbstractVector{<:Real})
 end
 
 output_size(::VecCholeskyBijector, sz::NTuple{2}) = output_size(VecCorrBijector(), sz)
-output_size(::Inverse{<:VecCholeskyBijector}, sz::NTuple{1}) = output_size(inverse(VecCorrBijector()), sz)
+function output_size(::Inverse{<:VecCholeskyBijector}, sz::NTuple{1})
+    return output_size(inverse(VecCorrBijector()), sz)
+end
 
 """
     function _link_chol_lkj(w)

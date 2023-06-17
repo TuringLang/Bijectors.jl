@@ -7,12 +7,13 @@ end
 variateform(::MultivariateDistribution, ::Inverse{VecCholeskyBijector}) = CholeskyVariate
 
 # Transformed distributions
-struct TransformedDistribution{D,B,V} <: Distribution{V,Continuous} where {D<:ContinuousDistribution,B}
+struct TransformedDistribution{D,B,V} <:
+       Distribution{V,Continuous} where {D<:ContinuousDistribution,B}
     dist::D
     transform::B
 
     function TransformedDistribution(d::ContinuousDistribution, b)
-        return new{typeof(d),typeof(b),variateform(d,b)}(d, b)
+        return new{typeof(d),typeof(b),variateform(d, b)}(d, b)
     end
 end
 
