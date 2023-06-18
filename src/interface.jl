@@ -44,9 +44,8 @@ output_size(f, sz) = sz
 
 """
     output_length(f, len::Int)
-    output_length(f, sz::Tuple)
 
-Returns the output length of `f` given the input length `len` or size `sz`.
+Returns the output length of `f` given the input length `len`.
 """
 output_length(f, len::Int) = only(output_size(f, (len,)))
 
