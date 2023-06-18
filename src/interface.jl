@@ -49,11 +49,6 @@ output_size(f, sz) = sz
 Returns the output length of `f` given the input length `len` or size `sz`.
 """
 output_length(f, len::Int) = only(output_size(f, (len,)))
-output_length(f, len::Tuple{Int,Vararg{Int}}) = only(output_size(f, len))
-    sz = output_size(f, len)
-    @assert length(sz) == 1
-    return first(sz)
-end
 
 ######################
 # Bijector interface #
