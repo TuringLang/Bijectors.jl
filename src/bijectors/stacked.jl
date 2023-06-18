@@ -27,7 +27,12 @@ struct Stacked{Bs,Rs<:Union{Tuple,AbstractArray}} <: Transform
     ranges_out::Rs
 end
 
-Stacked(bs, ranges) = Stacked(bs, ranges, determine_output_ranges(bs, ranges))
+function Stacked(bs, ranges_in)
+    ranges_out = determine_output_ranges(bs, ranges_in)
+    return Stacked{typeof(bs), typeof(ranges_in)}(bs, ranges_in, ranges_out)
+end
+Stacked(bs::AbstractVector, ranges::Tuple) = Stacked(bs, [ranges...])
+Stacked(bs::Tuple, ranges::AbstractVector) = Stacked([bs...], ranges)
 Stacked(bs::Tuple) = Stacked(bs, ntuple(i -> i:i, length(bs)))
 Stacked(bs::AbstractArray) = Stacked(bs, [i:i for i in 1:length(bs)])
 Stacked(bs...) = Stacked(bs, ntuple(i -> i:i, length(bs)))
@@ -39,6 +44,32 @@ function determine_output_ranges(bs, ranges)
         r = offset .+ (1:out_length)
         offset += out_length
         return r
+    end
+end
+
+# NOTE: I don't like this.
+determine_output_ranges(bs::Tuple, ranges::Tuple) = determine_output_ranges_generated(bs, ranges)
+@generated function determine_output_ranges_generated(bs::Tuple, ranges::Tuple)
+    N = length(bs.parameters)
+    exprs = []
+    push!(exprs, :(offset = 0))
+
+    rsyms = []
+    for i = 1:N
+        rsym = Symbol("r_$i")
+        lengthsym = Symbol("length_$i")
+        push!(exprs, :($lengthsym = output_length(bs[$i], length(ranges[$i]))))
+        push!(exprs, :($rsym = offset .+ (1:$lengthsym)))
+        push!(exprs, :(offset += $lengthsym))
+
+        push!(rsyms, rsym)
+    end
+
+    acc_expr = Expr(:tuple, rsyms...)
+
+    return quote
+        $(exprs...)
+        return $acc_expr
     end
 end
 

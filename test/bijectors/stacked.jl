@@ -11,20 +11,28 @@ function Bijectors.with_logabsdet_jacobian(::Inverse{ProjectionBijector}, x::Abs
 end
 
 @testset "Stacked with differing input and output size" begin
-    b = Stacked((elementwise(exp), ProjectionBijector()), (1:1, 2:3))
-    binv = inverse(b)
-    x = [1.0, 2.0, 3.0]
-    y = b(x)
-    x_ = binv(y)
+    bs = [
+        Stacked((elementwise(exp), ProjectionBijector()), (1:1, 2:3)),
+        Stacked([elementwise(exp), ProjectionBijector()], [1:1, 2:3]),
+        Stacked([elementwise(exp), ProjectionBijector()], (1:1, 2:3)),
+        Stacked((elementwise(exp), ProjectionBijector()), [1:1, 2:3])
+    ]
+    @testset "$b" for b in bs
+        binv = inverse(b)
+        x = [1.0, 2.0, 3.0]
+        y = b(x)
+        x_ = binv(y)
 
-    # Are the values of correct size?
-    @test size(y) == (2,)
-    @test size(x_) == (3,)
-    # Can we determine the sizes correctly?
-    @test Bijectors.output_size(b, size(x)) == (2,)
-    @test Bijectors.output_size(binv, size(y)) == (3,)
+        # Are the values of correct size?
+        @test size(y) == (2,)
+        @test size(x_) == (3,)
+        # Can we determine the sizes correctly?
+        @test Bijectors.output_size(b, size(x)) == (2,)
+        @test Bijectors.output_size(binv, size(y)) == (3,)
 
-    # Are values correct?
-    @test y == [exp(1.0), 2.0]
-    @test binv(y) == [1.0, 2.0, 0.0]
+        # Are values correct?
+        @test y == [exp(1.0), 2.0]
+        @test binv(y) == [1.0, 2.0, 0.0]
+    end
 end
+
