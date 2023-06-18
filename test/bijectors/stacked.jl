@@ -3,8 +3,12 @@ struct ProjectionBijector <: Bijectors.Bijector end
 Bijectors.output_size(::ProjectionBijector, sz::Tuple{Int}) = (sz[1] - 1,)
 Bijectors.output_size(::Inverse{ProjectionBijector}, sz::Int) = (sz[1] + 1,)
 
-Bijectors.with_logabsdet_jacobian(::ProjectionBijector, x::AbstractVector) = x[1:(end - 1)], 0
-Bijectors.with_logabsdet_jacobian(::Inverse{ProjectionBijector}, x::AbstractVector) = vcat(x, 0), 0
+function Bijectors.with_logabsdet_jacobian(::ProjectionBijector, x::AbstractVector)
+    return x[1:(end - 1)], 0
+end
+function Bijectors.with_logabsdet_jacobian(::Inverse{ProjectionBijector}, x::AbstractVector)
+    return vcat(x, 0), 0
+end
 
 @testset "Stacked with differing input and output size" begin
     b = Stacked((elementwise(exp), ProjectionBijector()), (1:1, 2:3))
