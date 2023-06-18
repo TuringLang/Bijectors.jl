@@ -15,7 +15,7 @@ end
         Stacked((elementwise(exp), ProjectionBijector()), (1:1, 2:3)),
         Stacked([elementwise(exp), ProjectionBijector()], [1:1, 2:3]),
         Stacked([elementwise(exp), ProjectionBijector()], (1:1, 2:3)),
-        Stacked((elementwise(exp), ProjectionBijector()), [1:1, 2:3])
+        Stacked((elementwise(exp), ProjectionBijector()), [1:1, 2:3]),
     ]
     @testset "$b" for b in bs
         binv = inverse(b)
@@ -35,4 +35,3 @@ end
         @test binv(y) == [1.0, 2.0, 0.0]
     end
 end
-

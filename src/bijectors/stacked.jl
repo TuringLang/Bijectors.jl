@@ -29,7 +29,7 @@ end
 
 function Stacked(bs, ranges_in)
     ranges_out = determine_output_ranges(bs, ranges_in)
-    return Stacked{typeof(bs), typeof(ranges_in)}(bs, ranges_in, ranges_out)
+    return Stacked{typeof(bs),typeof(ranges_in)}(bs, ranges_in, ranges_out)
 end
 Stacked(bs::AbstractVector, ranges::Tuple) = Stacked(bs, [ranges...])
 Stacked(bs::Tuple, ranges::AbstractVector) = Stacked([bs...], ranges)
@@ -48,18 +48,20 @@ function determine_output_ranges(bs, ranges)
 end
 
 # NOTE: I don't like this but it seems necessary because `Stacked(...)` can occur in hot code paths.
-determine_output_ranges(bs::Tuple, ranges::Tuple) = determine_output_ranges_generated(bs, ranges)
+function determine_output_ranges(bs::Tuple, ranges::Tuple)
+    return determine_output_ranges_generated(bs, ranges)
+end
 @generated function determine_output_ranges_generated(bs::Tuple, ranges::Tuple)
     N = length(bs.parameters)
     exprs = []
     push!(exprs, :(offset = 0))
 
     rsyms = []
-    for i = 1:N
+    for i in 1:N
         rsym = Symbol("r_$i")
         lengthsym = Symbol("length_$i")
         push!(exprs, :($lengthsym = output_length(bs[$i], length(ranges[$i]))))
-        push!(exprs, :($rsym = offset .+ (1:$lengthsym)))
+        push!(exprs, :($rsym = offset .+ (1:($lengthsym))))
         push!(exprs, :(offset += $lengthsym))
 
         push!(rsyms, rsym)
