@@ -33,6 +33,15 @@ using Bijectors: VecCorrBijector, VecCholeskyBijector, CorrBijector
         test_bijector(bvec, x; test_not_identity=d != 1, changes_of_variables_test=false)
 
         test_ad(x -> sum(bvec(bvecinv(x))), yvec)
+
+        # Check that output sizes are computed correctly.
+        tdist = transformed(dist)
+        @test length(tdist) == length(yvec)
+        @test tdist isa MultivariateDistribution
+
+        dist_unconstrained = transformed(MvNormal(zeros(length(tdist)), I), inverse(bvec))
+        @test size(dist_unconstrained) == size(x)
+        @test dist_unconstrained isa MatrixDistribution
     end
 end
 
@@ -60,6 +69,15 @@ end
             # test_bijector is commented out for now, 
             # as isapprox is not defined for ::Cholesky types (the domain of LKJCholesky)
             # test_bijector(b, x; test_not_identity=d != 1, changes_of_variables_test=false)
+
+            # Check that output sizes are computed correctly.
+            tdist = transformed(dist)
+            @test length(tdist) == length(y)
+            @test tdist isa MultivariateDistribution
+
+            dist_unconstrained = transformed(MvNormal(zeros(length(tdist)), I), inverse(b))
+            @test size(dist_unconstrained) == size(x)
+            @test dist_unconstrained isa Distribution{CholeskyVariate,Continuous}
         end
     end
 end

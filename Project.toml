@@ -2,7 +2,6 @@ name = "Bijectors"
 uuid = "76274a88-744f-5084-9051-94815aaf08c4"
 version = "0.13.0"
 
-
 [deps]
 ArgCheck = "dce04be8-c92d-5529-be00-80e4d2c0e197"
 ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"

@@ -268,7 +268,7 @@ end
     @test sb(x) == [exp(x[1]), log(x[2]), x[3] + 5.0]
     @test res[1] == [exp(x[1]), log(x[2]), x[3] + 5.0]
     @test logabsdetjac(sb, x) ==
-        sum([sum(logabsdetjac(sb.bs[i], x[sb.ranges[i]])) for i in 1:3])
+        sum([sum(logabsdetjac(sb.bs[i], x[sb.ranges_in[i]])) for i in 1:3])
     @test res[2] == logabsdetjac(sb, x)
 
     # TODO: change when we have dimensionality in the type
@@ -279,11 +279,11 @@ end
     @test sb(x) == [exp(x[1]), sb.bs[2](x[2:3])...]
     @test res[1] == [exp(x[1]), sb.bs[2](x[2:3])...]
     @test logabsdetjac(sb, x) ==
-        sum([sum(logabsdetjac(sb.bs[i], x[sb.ranges[i]])) for i in 1:2])
+        sum([sum(logabsdetjac(sb.bs[i], x[sb.ranges_in[i]])) for i in 1:2])
     @test res[2] == logabsdetjac(sb, x)
 
     x = ones(4) ./ 4.0
-    @test_throws AssertionError sb(x)
+    @test_throws ErrorException sb(x)
 
     # Array-version
     sb = Stacked([elementwise(exp), SimplexBijector()], [1:1, 2:3])
@@ -293,11 +293,11 @@ end
     @test sb(x) == [exp(x[1]), sb.bs[2](x[2:3])...]
     @test res[1] == [exp(x[1]), sb.bs[2](x[2:3])...]
     @test logabsdetjac(sb, x) ==
-        sum([sum(logabsdetjac(sb.bs[i], x[sb.ranges[i]])) for i in 1:2])
+        sum([sum(logabsdetjac(sb.bs[i], x[sb.ranges_in[i]])) for i in 1:2])
     @test res[2] == logabsdetjac(sb, x)
 
     x = ones(4) ./ 4.0
-    @test_throws AssertionError sb(x)
+    @test_throws ErrorException sb(x)
 
     # Mixed versions
     # Tuple, Array
@@ -308,11 +308,11 @@ end
     @test sb(x) == [exp(x[1]), sb.bs[2](x[2:3])...]
     @test res[1] == [exp(x[1]), sb.bs[2](x[2:3])...]
     @test logabsdetjac(sb, x) ==
-        sum([sum(logabsdetjac(sb.bs[i], x[sb.ranges[i]])) for i in 1:2])
+        sum([sum(logabsdetjac(sb.bs[i], x[sb.ranges_in[i]])) for i in 1:2])
     @test res[2] == logabsdetjac(sb, x)
 
     x = ones(4) ./ 4.0
-    @test_throws AssertionError sb(x)
+    @test_throws ErrorException sb(x)
 
     # Array, Tuple
     sb = Stacked((elementwise(exp), SimplexBijector()), [1:1, 2:3])
@@ -322,11 +322,11 @@ end
     @test sb(x) == [exp(x[1]), sb.bs[2](x[2:3])...]
     @test res[1] == [exp(x[1]), sb.bs[2](x[2:3])...]
     @test logabsdetjac(sb, x) ==
-        sum([sum(logabsdetjac(sb.bs[i], x[sb.ranges[i]])) for i in 1:2])
+        sum([sum(logabsdetjac(sb.bs[i], x[sb.ranges_in[i]])) for i in 1:2])
     @test res[2] == logabsdetjac(sb, x)
 
     x = ones(4) ./ 4.0
-    @test_throws AssertionError sb(x)
+    @test_throws ErrorException sb(x)
 
     @testset "Stacked: ADVI with MvNormal" begin
         # MvNormal test
@@ -370,7 +370,7 @@ end
         # check that wrong ranges fails
         sb = Stacked(ibs)
         x = rand(d)
-        @test_throws AssertionError sb(x)
+        @test_throws ErrorException sb(x)
 
         # Stacked{<:Tuple}
         bs = bijector.(tuple(dists...))

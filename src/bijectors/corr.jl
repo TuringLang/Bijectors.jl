@@ -232,6 +232,17 @@ function logabsdetjac(::Inverse{VecCorrBijector}, y::AbstractVector{<:Real})
     return _logabsdetjac_inv_corr(y)
 end
 
+function output_size(::VecCorrBijector, sz::Tuple{Int,Int})
+    sz[1] == sz[2] || error("sizes should be equal; received $(sz)")
+    n = sz[1]
+    return ((n * (n - 1)) ÷ 2,)
+end
+
+function output_size(::Inverse{VecCorrBijector}, sz::Tuple{Int})
+    n = _triu1_dim_from_length(first(sz))
+    return (n, n)
+end
+
 """
     VecCholeskyBijector <: Bijector
 
@@ -315,6 +326,11 @@ end
 
 function logabsdetjac(::Inverse{VecCholeskyBijector}, y::AbstractVector{<:Real})
     return _logabsdetjac_inv_chol(y)
+end
+
+output_size(::VecCholeskyBijector, sz::Tuple{Int,Int}) = output_size(VecCorrBijector(), sz)
+function output_size(::Inverse{<:VecCholeskyBijector}, sz::Tuple{Int})
+    return output_size(inverse(VecCorrBijector()), sz)
 end
 
 """
