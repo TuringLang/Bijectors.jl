@@ -233,7 +233,7 @@ function logabsdetjac(::Inverse{VecCorrBijector}, y::AbstractVector{<:Real})
 end
 
 function output_size(::VecCorrBijector, sz::Tuple{Int,Int})
-    @assert sz[1] == sz[2]
+    sz[1] == sz[2] || error("sizes should be equal; received $(sz)")
     n = sz[1]
     return (n * (n - 1)) ÷ 2
 end
