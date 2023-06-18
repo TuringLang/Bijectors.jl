@@ -235,7 +235,7 @@ end
 function output_size(::VecCorrBijector, sz::Tuple{Int,Int})
     sz[1] == sz[2] || error("sizes should be equal; received $(sz)")
     n = sz[1]
-    return (n * (n - 1)) ÷ 2
+    return ((n * (n - 1)) ÷ 2,)
 end
 
 function output_size(::Inverse{VecCorrBijector}, sz::Tuple{Int})
