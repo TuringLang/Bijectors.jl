@@ -35,6 +35,20 @@ function logabsdetjac(f::Columnwise, x::AbstractMatrix)
 end
 with_logabsdet_jacobian(f::Columnwise, x::AbstractMatrix) = (f(x), logabsdetjac(f, x))
 
+"""
+    output_size(f, sz)
+
+Returns the output size of `f` given the input size `sz`.
+"""
+output_size(f, sz) = sz
+
+"""
+    output_length(f, len::Int)
+
+Returns the output length of `f` given the input length `len`.
+"""
+output_length(f, len::Int) = only(output_size(f, (len,)))
+
 ######################
 # Bijector interface #
 ######################

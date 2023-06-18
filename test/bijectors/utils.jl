@@ -14,6 +14,7 @@ function test_bijector(
     test_types=false,
     changes_of_variables_test=true,
     inverse_functions_test=true,
+    test_sizes=true,
     compare=isapprox,
     kwargs...,
 )
@@ -29,6 +30,11 @@ function test_bijector(
         @inferred(with_logabsdet_jacobian(inverse(b), y))
     else
         @inferred(with_logabsdet_jacobian(inverse(b), y_test))
+    end
+
+    if test_sizes
+        @test Bijectors.output_size(b, size(x)) == size(y_test)
+        @test Bijectors.output_size(ib, size(y_test)) == size(x)
     end
 
     # ChangesOfVariables.jl

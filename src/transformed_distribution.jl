@@ -1,20 +1,19 @@
+function variateform(d::Distribution, b)
+    sz_in = size(d)
+    sz_out = output_size(b, sz_in)
+    return ArrayLikeVariate{length(sz_out)}
+end
+
+variateform(::MultivariateDistribution, ::Inverse{VecCholeskyBijector}) = CholeskyVariate
+
 # Transformed distributions
 struct TransformedDistribution{D,B,V} <:
-       Distribution{V,Continuous} where {D<:Distribution{V,Continuous},B}
+       Distribution{V,Continuous} where {D<:ContinuousDistribution,B}
     dist::D
     transform::B
 
-    function TransformedDistribution(d::UnivariateDistribution, b)
-        return new{typeof(d),typeof(b),Univariate}(d, b)
-    end
-    function TransformedDistribution(d::MultivariateDistribution, b)
-        return new{typeof(d),typeof(b),Multivariate}(d, b)
-    end
-    function TransformedDistribution(d::MatrixDistribution, b)
-        return new{typeof(d),typeof(b),Matrixvariate}(d, b)
-    end
-    function TransformedDistribution(d::Distribution{CholeskyVariate}, b)
-        return new{typeof(d),typeof(b),CholeskyVariate}(d, b)
+    function TransformedDistribution(d::ContinuousDistribution, b)
+        return new{typeof(d),typeof(b),variateform(d, b)}(d, b)
     end
 end
 
@@ -101,8 +100,8 @@ end
 ##############################
 
 # size
-Base.length(td::Transformed) = length(td.dist)
-Base.size(td::Transformed) = size(td.dist)
+Base.length(td::Transformed) = prod(output_size(td.transform, size(td.dist)))
+Base.size(td::Transformed) = output_size(td.transform, size(td.dist))
 
 function logpdf(td::UnivariateTransformed, y::Real)
     x, logjac = with_logabsdet_jacobian(inverse(td.transform), y)
