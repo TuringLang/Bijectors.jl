@@ -29,14 +29,20 @@ struct Stacked{Bs,Rs<:Union{Tuple,AbstractArray}} <: Transform
     length_out::Int
 end
 
-function Stacked(bs, ranges_in)
+function Stacked(bs::AbstractArray, ranges_in::AbstractArray)
     ranges_out = determine_output_ranges(bs, ranges_in)
     return Stacked{typeof(bs),typeof(ranges_in)}(
         bs, ranges_in, ranges_out, sum(length, ranges_in), sum(length, ranges_out)
     )
 end
-Stacked(bs::AbstractVector, ranges::Tuple) = Stacked(bs, [ranges...])
-Stacked(bs::Tuple, ranges::AbstractVector) = Stacked([bs...], ranges)
+function Stacked(bs::Tuple, ranges_in::Tuple)
+    ranges_out = determine_output_ranges(bs, ranges_in)
+    return Stacked{typeof(bs),typeof(ranges_in)}(
+        bs, ranges_in, ranges_out, sum(length, ranges_in), sum(length, ranges_out)
+    )
+end
+Stacked(bs::AbstractArray, ranges::Tuple) = Stacked(bs, [ranges...])
+Stacked(bs::Tuple, ranges::AbstractArray) = Stacked([bs...], ranges)
 Stacked(bs::Tuple) = Stacked(bs, ntuple(i -> i:i, length(bs)))
 Stacked(bs::AbstractArray) = Stacked(bs, [i:i for i in 1:length(bs)])
 Stacked(bs...) = Stacked(bs, ntuple(i -> i:i, length(bs)))
