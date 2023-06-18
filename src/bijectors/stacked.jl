@@ -47,14 +47,18 @@ Stacked(bs::Tuple, ranges::AbstractArray) = Stacked(collect(bs), ranges)
 
 Functors.@functor Stacked (bs,)
 
-Base.show(io::IO, b::Stacked) = print(io, "Stacked($(b.bs), $(b.ranges_in), $(b.ranges_out))")
+function Base.show(io::IO, b::Stacked)
+    return print(io, "Stacked($(b.bs), $(b.ranges_in), $(b.ranges_out))")
+end
 
 function Base.:(==)(b1::Stacked, b2::Stacked)
     bs1, bs2 = b1.bs, b2.bs
     if !(bs1 isa Tuple && bs2 isa Tuple || bs1 isa Vector && bs2 isa Vector)
         return false
     end
-    return all(bs1 .== bs2) && all(b1.ranges_in .== b2.ranges_in) && all(b1.ranges_out .== b2.ranges_out)
+    return all(bs1 .== bs2) &&
+           all(b1.ranges_in .== b2.ranges_in) &&
+           all(b1.ranges_out .== b2.ranges_out)
 end
 
 isclosedform(b::Stacked) = all(isclosedform, b.bs)
@@ -146,7 +150,9 @@ end
     expr = Expr(:block)
     y_names = []
 
-    push!(expr.args, :((y_1, _logjac) = with_logabsdet_jacobian(b.bs[1], x[b.ranges_in[1]])))
+    push!(
+        expr.args, :((y_1, _logjac) = with_logabsdet_jacobian(b.bs[1], x[b.ranges_in[1]]))
+    )
     # TODO: drop the `sum` when we have dimensionality
     push!(expr.args, :(logjac = sum(_logjac)))
     push!(y_names, :y_1)
