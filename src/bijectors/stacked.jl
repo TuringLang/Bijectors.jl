@@ -47,7 +47,7 @@ function determine_output_ranges(bs, ranges)
     end
 end
 
-# NOTE: I don't like this.
+# NOTE: I don't like this but it seems necessary because `Stacked(...)` can occur in hot code paths.
 determine_output_ranges(bs::Tuple, ranges::Tuple) = determine_output_ranges_generated(bs, ranges)
 @generated function determine_output_ranges_generated(bs::Tuple, ranges::Tuple)
     N = length(bs.parameters)
