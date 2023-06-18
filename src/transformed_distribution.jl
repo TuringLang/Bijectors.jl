@@ -100,7 +100,7 @@ end
 ##############################
 
 # size
-Base.length(td::Transformed) = output_length(td.transform, size(td.dist))
+Base.length(td::Transformed) = only(output_size(td.transform, size(td.dist)))
 Base.size(td::Transformed) = output_size(td.transform, size(td.dist))
 
 function logpdf(td::UnivariateTransformed, y::Real)
