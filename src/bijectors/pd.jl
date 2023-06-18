@@ -41,7 +41,6 @@ function with_logabsdet_jacobian(b::PDBijector, X)
     return transform(b, X), logabsdetjac(b, X)
 end
 
-
 struct PDVecBijector <: Bijector end
 
 function _triu_dim_from_length(d)
