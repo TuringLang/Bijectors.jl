@@ -82,8 +82,8 @@ bijector(d::BoundedDistribution) = bijector_bounded(d)
 const LowerboundedDistribution = Union{Pareto,Levy}
 bijector(d::LowerboundedDistribution) = bijector_lowerbounded(d)
 
-bijector(d::PDMatDistribution) = PDBijector()
-bijector(d::MatrixBeta) = PDBijector()
+bijector(d::PDMatDistribution) = PDVecBijector()
+bijector(d::MatrixBeta) = PDVecBijector()
 
 bijector(d::LKJ) = VecCorrBijector()
 bijector(d::LKJCholesky) = VecCholeskyBijector(d.uplo)
