@@ -45,9 +45,9 @@ end
 struct PDVecBijector <: Bijector end
 
 function _triu_dim_from_length(d)
-    #           d = n^2 + n
-    # n² + n - 2d = 0
-    #           n = (-1 + sqrt(1 + 8d)) / 2
+    # (n^2 + n) / 2 = d
+    #   n² + n - 2d = 0
+    #             n = (-1 + sqrt(1 + 8d)) / 2
     return (-1 + isqrt(1 + 8 * d)) ÷ 2
 end
 
@@ -71,3 +71,18 @@ function transform(::Inverse{PDVecBijector}, y::AbstractVector{<:Real})
 end
 
 logabsdetjac(::PDVecBijector, X::AbstractMatrix{<:Real}) = logabsdetjac(PDBijector(), X)
+
+function with_logabsdet_jacobian(b::PDVecBijector, X)
+    return transform(b, X), logabsdetjac(b, X)
+end
+
+function output_size(::PDVecBijector, sz::Tuple{Int,Int})
+    n = first(sz)
+    d = (n^2 + n) ÷ 2
+    return (d,)
+end
+
+function output_size(::Inverse{PDVecBijector}, sz::Tuple{Int})
+    n = _triu_dim_from_length(first(sz))
+    return (n, n)
+end
