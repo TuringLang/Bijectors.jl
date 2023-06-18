@@ -529,7 +529,9 @@ end
 
 # NOTE: Probably doesn't work in complete generality.
 wrap_chainrules_output(x) = x
-wrap_chainrules_output(x::ChainRulesCore.Thunk) = wrap_chainrules_output(ChainRulesCore.unthunk(x))
+function wrap_chainrules_output(x::ChainRulesCore.Thunk)
+    return wrap_chainrules_output(ChainRulesCore.unthunk(x))
+end
 wrap_chainrules_output(x::ChainRulesCore.AbstractZero) = nothing
 wrap_chainrules_output(x::Tuple) = map(wrap_chainrules_output, x)
 
@@ -549,6 +551,5 @@ Bijectors.upper_triangular(A::TrackedMatrix) = track(Bijectors.upper_triangular,
     Ad = data(A)
     return Bijectors.upper_triangular(Ad), Δ -> (Bijectors.upper_triangular(Δ),)
 end
-
 
 end
