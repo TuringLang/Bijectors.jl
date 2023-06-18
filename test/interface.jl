@@ -406,7 +406,6 @@ end
     end
 end
 
-
 @testset "Example: ADVI single" begin
     # Usage in ADVI
     d = Beta()
