@@ -23,25 +23,38 @@ b([0.0, 1.0]) == [b1(0.0), 1.0]  # => true
 """
 struct Stacked{Bs,Rs<:Union{Tuple,AbstractArray}} <: Transform
     bs::Bs
-    ranges::Rs
+    ranges_in::Rs
+    ranges_out::Rs
 end
+
+Stacked(bs, ranges) = Stacked(bs, ranges, determine_output_ranges(bs, ranges))
 Stacked(bs::Tuple) = Stacked(bs, ntuple(i -> i:i, length(bs)))
 Stacked(bs::AbstractArray) = Stacked(bs, [i:i for i in 1:length(bs)])
 Stacked(bs...) = Stacked(bs, ntuple(i -> i:i, length(bs)))
+
+function determine_output_ranges(bs, ranges)
+    offset = 0
+    return map(bs, ranges) do b, r
+        out_length = output_length(b, length(r))
+        r = offset .+ (1:out_length)
+        offset += out_length
+        return r
+    end
+end
 
 # Avoid mixing tuples and arrays.
 Stacked(bs::Tuple, ranges::AbstractArray) = Stacked(collect(bs), ranges)
 
 Functors.@functor Stacked (bs,)
 
-Base.show(io::IO, b::Stacked) = print(io, "Stacked($(b.bs), $(b.ranges))")
+Base.show(io::IO, b::Stacked) = print(io, "Stacked($(b.bs), $(b.ranges_in), $(b.ranges_out))")
 
 function Base.:(==)(b1::Stacked, b2::Stacked)
     bs1, bs2 = b1.bs, b2.bs
     if !(bs1 isa Tuple && bs2 isa Tuple || bs1 isa Vector && bs2 isa Vector)
         return false
     end
-    return all(bs1 .== bs2) && all(b1.ranges .== b2.ranges)
+    return all(bs1 .== bs2) && all(b1.ranges_in .== b2.ranges_in) && all(b1.ranges_out .== b2.ranges_out)
 end
 
 isclosedform(b::Stacked) = all(isclosedform, b.bs)
@@ -49,7 +62,7 @@ isclosedform(b::Stacked) = all(isclosedform, b.bs)
 isinvertible(b::Stacked) = all(isinvertible, b.bs)
 
 # For some reason `inverse.(sb.bs)` was unstable... This works though.
-inverse(sb::Stacked) = Stacked(map(inverse, sb.bs), sb.ranges)
+inverse(sb::Stacked) = Stacked(map(inverse, sb.bs), sb.ranges_out, sb.ranges_in)
 # map is not type stable for many stacked bijectors as a large tuple
 # hence the generated function
 @generated function inverse(sb::Stacked{A}) where {A<:Tuple}
@@ -57,7 +70,12 @@ inverse(sb::Stacked) = Stacked(map(inverse, sb.bs), sb.ranges)
     for i in 1:length(A.parameters)
         push!(exprs, :(inverse(sb.bs[$i])))
     end
-    return :(Stacked(($(exprs...),), sb.ranges))
+    return :(Stacked(($(exprs...),), sb.ranges_out, sb.ranges_in))
+end
+
+function output_size(b::Stacked, sz::Tuple{Int})
+    sz_out = sum(length, b.ranges_out)
+    return (sz_out,)
 end
 
 @generated function _transform(x, rs::NTuple{N,UnitRange{Int}}, bs...) where {N}
@@ -72,29 +90,27 @@ function _transform(x, rs::NTuple{1,UnitRange{Int}}, b)
     return b(x)
 end
 function transform(sb::Stacked{<:Tuple,<:Tuple}, x::AbstractVector{<:Real})
-    y = _transform(x, sb.ranges, sb.bs...)
-    @assert size(y) == size(x) "x is size $(size(x)) but y is $(size(y))"
+    y = _transform(x, sb.ranges_in, sb.bs...)
     return y
 end
 # The Stacked{<:AbstractArray} version is not TrackedArray friendly
 function transform(sb::Stacked{<:AbstractArray}, x::AbstractVector{<:Real})
     N = length(sb.bs)
-    N == 1 && return sb.bs[1](x[sb.ranges[1]])
+    N == 1 && return sb.bs[1](x[sb.ranges_in[1]])
 
     y = mapvcat(1:N) do i
-        sb.bs[i](x[sb.ranges[i]])
+        sb.bs[i](x[sb.ranges_in[i]])
     end
-    @assert size(y) == size(x) "x is size $(size(x)) but y is $(size(y))"
     return y
 end
 
 function logabsdetjac(b::Stacked, x::AbstractVector{<:Real})
     N = length(b.bs)
-    init = sum(logabsdetjac(b.bs[1], x[b.ranges[1]]))
+    init = sum(logabsdetjac(b.bs[1], x[b.ranges_in[1]]))
 
     return if N > 1
         init + sum(2:N) do i
-            sum(logabsdetjac(b.bs[i], x[b.ranges[i]]))
+            sum(logabsdetjac(b.bs[i], x[b.ranges_in[i]]))
         end
     else
         init
@@ -104,13 +120,13 @@ end
 function logabsdetjac(
     b::Stacked{<:NTuple{N,Any},<:NTuple{N,Any}}, x::AbstractVector{<:Real}
 ) where {N}
-    init = sum(logabsdetjac(b.bs[1], x[b.ranges[1]]))
+    init = sum(logabsdetjac(b.bs[1], x[b.ranges_in[1]]))
 
     return if N == 1
         init
     else
         init + sum(2:N) do i
-            sum(logabsdetjac(b.bs[i], x[b.ranges[i]]))
+            sum(logabsdetjac(b.bs[i], x[b.ranges_in[i]]))
         end
     end
 end
@@ -130,7 +146,7 @@ end
     expr = Expr(:block)
     y_names = []
 
-    push!(expr.args, :((y_1, _logjac) = with_logabsdet_jacobian(b.bs[1], x[b.ranges[1]])))
+    push!(expr.args, :((y_1, _logjac) = with_logabsdet_jacobian(b.bs[1], x[b.ranges_in[1]])))
     # TODO: drop the `sum` when we have dimensionality
     push!(expr.args, :(logjac = sum(_logjac)))
     push!(y_names, :y_1)
@@ -138,7 +154,7 @@ end
         y_name = Symbol("y_$i")
         push!(
             expr.args,
-            :(($y_name, _logjac) = with_logabsdet_jacobian(b.bs[$i], x[b.ranges[$i]])),
+            :(($y_name, _logjac) = with_logabsdet_jacobian(b.bs[$i], x[b.ranges_in[$i]])),
         )
 
         # TODO: drop the `sum` when we have dimensionality
@@ -153,9 +169,9 @@ end
 
 function with_logabsdet_jacobian(sb::Stacked, x::AbstractVector)
     N = length(sb.bs)
-    yinit, linit = with_logabsdet_jacobian(sb.bs[1], x[sb.ranges[1]])
+    yinit, linit = with_logabsdet_jacobian(sb.bs[1], x[sb.ranges_in[1]])
     logjac = sum(linit)
-    ys = mapreduce(vcat, sb.bs[2:end], sb.ranges[2:end]; init=yinit) do b, r
+    ys = mapreduce(vcat, sb.bs[2:end], sb.ranges_in[2:end]; init=yinit) do b, r
         y, l = with_logabsdet_jacobian(b, x[r])
         logjac += sum(l)
         y
