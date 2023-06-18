@@ -529,7 +529,26 @@ end
 
 # NOTE: Probably doesn't work in complete generality.
 wrap_chainrules_output(x) = x
+wrap_chainrules_output(x::ChainRulesCore.Thunk) = wrap_chainrules_output(ChainRulesCore.unthunk(x))
 wrap_chainrules_output(x::ChainRulesCore.AbstractZero) = nothing
 wrap_chainrules_output(x::Tuple) = map(wrap_chainrules_output, x)
+
+# `update_triu_from_vec`
+function Bijectors.update_triu_from_vec(vals::TrackedVector{<:Real}, k::Int, dim::Int)
+    return track(Bijectors.update_triu_from_vec, vals, k, dim)
+end
+
+@grad function Bijectors.update_triu_from_vec(vals::TrackedVector{<:Real}, k::Int, dim::Int)
+    # HACK: This doesn't support higher order!
+    y, dy = ChainRulesCore.rrule(Bijectors.update_triu_from_vec, data(vals), k, dim)
+    return y, (wrap_chainrules_output ∘ Base.tail ∘ dy)
+end
+
+Bijectors.upper_triangular(A::TrackedMatrix) = track(Bijectors.upper_triangular, A)
+@grad function Bijectors.upper_triangular(A::AbstractMatrix)
+    Ad = data(A)
+    return Bijectors.upper_triangular(Ad), Δ -> (Bijectors.upper_triangular(Δ),)
+end
+
 
 end
