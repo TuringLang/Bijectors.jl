@@ -25,11 +25,15 @@ struct Stacked{Bs,Rs<:Union{Tuple,AbstractArray}} <: Transform
     bs::Bs
     ranges_in::Rs
     ranges_out::Rs
+    length_in::Int
+    length_out::Int
 end
 
 function Stacked(bs, ranges_in)
     ranges_out = determine_output_ranges(bs, ranges_in)
-    return Stacked{typeof(bs),typeof(ranges_in)}(bs, ranges_in, ranges_out)
+    return Stacked{typeof(bs),typeof(ranges_in)}(
+        bs, ranges_in, ranges_out, sum(length, ranges_in), sum(length, ranges_out)
+    )
 end
 Stacked(bs::AbstractVector, ranges::Tuple) = Stacked(bs, [ranges...])
 Stacked(bs::Tuple, ranges::AbstractVector) = Stacked([bs...], ranges)
@@ -99,7 +103,11 @@ isclosedform(b::Stacked) = all(isclosedform, b.bs)
 isinvertible(b::Stacked) = all(isinvertible, b.bs)
 
 # For some reason `inverse.(sb.bs)` was unstable... This works though.
-inverse(sb::Stacked) = Stacked(map(inverse, sb.bs), sb.ranges_out, sb.ranges_in)
+function inverse(sb::Stacked)
+    return Stacked(
+        map(inverse, sb.bs), sb.ranges_out, sb.ranges_in, sb.length_out, sb.length_in
+    )
+end
 # map is not type stable for many stacked bijectors as a large tuple
 # hence the generated function
 @generated function inverse(sb::Stacked{A}) where {A<:Tuple}
@@ -107,36 +115,48 @@ inverse(sb::Stacked) = Stacked(map(inverse, sb.bs), sb.ranges_out, sb.ranges_in)
     for i in 1:length(A.parameters)
         push!(exprs, :(inverse(sb.bs[$i])))
     end
-    return :(Stacked(($(exprs...),), sb.ranges_out, sb.ranges_in))
+    return :(Stacked(
+        ($(exprs...),), sb.ranges_out, sb.ranges_in, sb.length_out, sb.length_in
+    ))
 end
 
-function output_size(b::Stacked, sz::Tuple{Int})
-    sz_out = sum(length, b.ranges_out)
-    return (sz_out,)
-end
+output_size(b::Stacked, sz::Tuple{Int}) = (b.length_out,)
 
-@generated function _transform(x, rs::NTuple{N,UnitRange{Int}}, bs...) where {N}
+@generated function _transform_stacked_recursive(
+    x, rs::NTuple{N,UnitRange{Int}}, bs...
+) where {N}
     exprs = []
     for i in 1:N
         push!(exprs, :(bs[$i](x[rs[$i]])))
     end
     return :(vcat($(exprs...)))
 end
-function _transform(x, rs::NTuple{1,UnitRange{Int}}, b)
-    @assert rs[1] == 1:length(x)
+function _transform_stacked_recursive(x, rs::NTuple{1,UnitRange{Int}}, b)
+    rs[1] == 1:length(x) || error("range must be 1:length(x)")
     return b(x)
 end
-function transform(sb::Stacked{<:Tuple,<:Tuple}, x::AbstractVector{<:Real})
-    y = _transform(x, sb.ranges_in, sb.bs...)
+function _transform_stacked(sb::Stacked{<:Tuple,<:Tuple}, x::AbstractVector{<:Real})
+    y = _transform_stacked_recursive(x, sb.ranges_in, sb.bs...)
     return y
 end
 # The Stacked{<:AbstractArray} version is not TrackedArray friendly
-function transform(sb::Stacked{<:AbstractArray}, x::AbstractVector{<:Real})
+function _transform_stacked(sb::Stacked{<:AbstractArray}, x::AbstractVector{<:Real})
     N = length(sb.bs)
     N == 1 && return sb.bs[1](x[sb.ranges_in[1]])
 
     y = mapvcat(1:N) do i
         sb.bs[i](x[sb.ranges_in[i]])
+    end
+    return y
+end
+
+function transform(sb::Stacked, x::AbstractVector{<:Real})
+    if sb.length_in != length(x)
+        error("input length mismatch ($(sb.length_in) != $(length(x)))")
+    end
+    y = _transform_stacked(sb, x)
+    if sb.length_out != length(y)
+        error("output length mismatch ($(sb.length_out) != $(length(y)))")
     end
     return y
 end
@@ -177,7 +197,7 @@ end
 #     logjac += sum(_logjac)
 #     return (vcat(y_1, y_2), logjac)
 # end
-@generated function with_logabsdet_jacobian(
+@generated function _with_logabsdet_jacobian(
     b::Stacked{<:NTuple{N,Any},<:NTuple{N,Any}}, x::AbstractVector
 ) where {N}
     expr = Expr(:block)
@@ -206,7 +226,7 @@ end
     return expr
 end
 
-function with_logabsdet_jacobian(sb::Stacked, x::AbstractVector)
+function _with_logabsdet_jacobian(sb::Stacked, x::AbstractVector)
     N = length(sb.bs)
     yinit, linit = with_logabsdet_jacobian(sb.bs[1], x[sb.ranges_in[1]])
     logjac = sum(linit)
@@ -216,4 +236,16 @@ function with_logabsdet_jacobian(sb::Stacked, x::AbstractVector)
         y
     end
     return (ys, logjac)
+end
+
+function with_logabsdet_jacobian(sb::Stacked, x::AbstractVector)
+    if sb.length_in != length(x)
+        error("input length mismatch ($(sb.length_in) != $(length(x)))")
+    end
+    y, logjac = _with_logabsdet_jacobian(sb, x)
+    if output_length(sb, length(x)) != length(y)
+        error("output length mismatch ($(output_length(sb, length(x))) != $(length(y)))")
+    end
+
+    return (y, logjac)
 end
