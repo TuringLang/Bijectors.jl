@@ -6,9 +6,9 @@ struct SimplexBijector <: Bijector end
 output_size(::SimplexBijector, sz::Tuple{Int}) = (first(sz) - 1,)
 output_size(::Inverse{SimplexBijector}, sz::Tuple{Int}) = (first(sz) + 1,)
 
-output_size(::SimplexBijector, sz::Tuple{Int,Int}) = Base.setindex(sz, first(sz) - 1, 1)
+output_size(::SimplexBijector, sz::Tuple{Int,Int}) = (first(sz) - 1, last(sz))
 function output_size(::Inverse{SimplexBijector}, sz::Tuple{Int,Int})
-    return Base.setindex(sz, first(sz) + 1, 1)
+    return (first(sz) + 1, last(sz))
 end
 
 with_logabsdet_jacobian(b::SimplexBijector, x) = transform(b, x), logabsdetjac(b, x)
