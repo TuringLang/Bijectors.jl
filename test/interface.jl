@@ -421,35 +421,37 @@ end
     b = SimplexBijector()
     ib = inverse(b)
 
-    x = ib(randn(10))
+    d_x = 10
+    x = ib(randn(d_x - 1))
     y = b(x)
 
     @test Bijectors.jacobian(b, x) ≈ ForwardDiff.jacobian(b, x)
     @test Bijectors.jacobian(ib, y) ≈ ForwardDiff.jacobian(ib, y)
 
     # Just some additional computation so we also ensure the pullbacks are the same
-    weights = randn(10)
+    weights_x = randn(d_x)
+    weights_y = randn(d_x - 1)
 
     # Tracker.jl
     x_tracked = Tracker.param(x)
-    z = sum(weights .* b(x_tracked))
+    z = sum(weights_y .* b(x_tracked))
     Tracker.back!(z)
     Δ_tracker = Tracker.grad(x_tracked)
 
     # ForwardDiff.jl
-    Δ_forwarddiff = ForwardDiff.gradient(z -> sum(weights .* b(z)), x)
+    Δ_forwarddiff = ForwardDiff.gradient(z -> sum(weights_y .* b(z)), x)
 
     # Compare
     @test Δ_forwarddiff ≈ Δ_tracker
 
     # Tracker.jl
     y_tracked = Tracker.param(y)
-    z = sum(weights .* ib(y_tracked))
+    z = sum(weights_x .* ib(y_tracked))
     Tracker.back!(z)
     Δ_tracker = Tracker.grad(y_tracked)
 
     # ForwardDiff.jl
-    Δ_forwarddiff = ForwardDiff.gradient(z -> sum(weights .* ib(z)), y)
+    Δ_forwarddiff = ForwardDiff.gradient(z -> sum(weights_x .* ib(z)), y)
 
     @test Δ_forwarddiff ≈ Δ_tracker
 end
