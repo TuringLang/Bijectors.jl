@@ -78,26 +78,18 @@ Bijectors.isdirichlet(::VectorOfMultivariate{Continuous,<:Dirichlet}) = true
 Bijectors.isdirichlet(::VectorOfMultivariate{Continuous,<:TuringDirichlet}) = true
 Bijectors.isdirichlet(::TuringDirichlet) = true
 
-function Bijectors.link(
-    d::TuringDirichlet, x::AbstractVecOrMat{<:Real}
-)
+function Bijectors.link(d::TuringDirichlet, x::AbstractVecOrMat{<:Real})
     return Bijectors.SimplexBijector()(x)
 end
 
-function Bijectors.link_jacobian(
-    d::TuringDirichlet, x::AbstractVector{<:Real}
-)
+function Bijectors.link_jacobian(d::TuringDirichlet, x::AbstractVector{<:Real})
     return jacobian(Bijectors.SimplexBijector(), x)
 end
 
-function Bijectors.invlink(
-    d::TuringDirichlet, y::AbstractVecOrMat{<:Real}
-)
+function Bijectors.invlink(d::TuringDirichlet, y::AbstractVecOrMat{<:Real})
     return inverse(Bijectors.SimplexBijector())(y)
 end
-function Bijectors.invlink_jacobian(
-    d::TuringDirichlet, y::AbstractVector{<:Real}
-)
+function Bijectors.invlink_jacobian(d::TuringDirichlet, y::AbstractVector{<:Real})
     return jacobian(inverse(Bijectors.SimplexBijector()), y)
 end
 
