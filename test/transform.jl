@@ -146,7 +146,7 @@ end
                     end
 
                 logpdf_turing = logpdf_with_trans(dist, x, true)
-                J = ForwardDiff.jacobian(x -> link(dist, x, Val(false)), x)
+                J = ForwardDiff.jacobian(x -> link(dist, x), x)
                 @test logpdf(dist, x .+ ϵ) - _logabsdet(J) ≈ logpdf_turing
 
                 # Issue #12
@@ -272,25 +272,17 @@ end
         x = rand(dist)
         y = @inferred(link(dist, x))
 
-        f1 = x -> link(dist, x, Val(true))
-        f2 = x -> link(dist, x, Val(false))
-        g1 = y -> invlink(dist, y, Val(true))
-        g2 = y -> invlink(dist, y, Val(false))
+        f1 = x -> link(dist, x)
+        g1 = y -> invlink(dist, y)
 
         @test @aeq ForwardDiff.jacobian(f1, x) @inferred(
-            Bijectors.simplex_link_jacobian(x, Val(true))
-        )
-        @test @aeq ForwardDiff.jacobian(f2, x) @inferred(
-            Bijectors.simplex_link_jacobian(x, Val(false))
+            Bijectors.simplex_link_jacobian(x)
         )
         @test @aeq ForwardDiff.jacobian(g1, y) @inferred(
-            Bijectors.simplex_invlink_jacobian(y, Val(true))
+            Bijectors.simplex_invlink_jacobian(y)
         )
-        @test @aeq ForwardDiff.jacobian(g2, y) @inferred(
-            Bijectors.simplex_invlink_jacobian(y, Val(false))
-        )
-        @test @aeq Bijectors.simplex_link_jacobian(x, Val(false)) *
-            Bijectors.simplex_invlink_jacobian(y, Val(false)) I
+        @test @aeq Bijectors.simplex_link_jacobian(x) *
+            Bijectors.simplex_invlink_jacobian(y)
     end
     for i in 1:4
         test_link_and_invlink()
