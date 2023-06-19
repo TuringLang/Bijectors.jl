@@ -1,8 +1,15 @@
 ####################
 # Simplex bijector #
 ####################
-struct SimplexBijector{T} <: Bijector end
-SimplexBijector() = SimplexBijector{true}()
+struct SimplexBijector <: Bijector end
+
+output_size(::SimplexBijector, sz::Tuple{Int}) = (first(sz) - 1,)
+output_size(::Inverse{SimplexBijector}, sz::Tuple{Int}) = (first(sz) + 1,)
+
+output_size(::SimplexBijector, sz::Tuple{Int,Int}) = (first(sz) - 1, last(sz))
+function output_size(::Inverse{SimplexBijector}, sz::Tuple{Int,Int})
+    return (first(sz) + 1, last(sz))
+end
 
 with_logabsdet_jacobian(b::SimplexBijector, x) = transform(b, x), logabsdetjac(b, x)
 
@@ -10,11 +17,15 @@ transform(b::SimplexBijector, x) = _simplex_bijector(x, b)
 transform!(b::SimplexBijector, y, x) = _simplex_bijector!(y, x, b)
 
 function _simplex_bijector(x::AbstractArray, b::SimplexBijector)
-    return _simplex_bijector!(similar(x), x, b)
+    sz = size(x)
+    K = size(x, 1)
+    y = similar(x, Base.setindex(sz, K - 1, 1))
+    _simplex_bijector!(y, x, b)
+    return y
 end
 
 # Vector implementation.
-function _simplex_bijector!(y, x::AbstractVector, ::SimplexBijector{proj}) where {proj}
+function _simplex_bijector!(y, x::AbstractVector, ::SimplexBijector)
     K = length(x)
     @assert K > 1 "x needs to be of length greater than 1"
     T = eltype(x)
@@ -29,18 +40,11 @@ function _simplex_bijector!(y, x::AbstractVector, ::SimplexBijector{proj}) where
         z = (x[k] + ϵ) * (one(T) - 2ϵ) / ((one(T) + ϵ) - sum_tmp)
         y[k] = LogExpFunctions.logit(z) + log(T(K - k))
     end
-    @inbounds sum_tmp += x[K - 1]
-    @inbounds if proj
-        y[K] = zero(T)
-    else
-        y[K] = one(T) - sum_tmp - x[K]
-    end
-
     return y
 end
 
 # Matrix implementation.
-function _simplex_bijector!(Y, X::AbstractMatrix, ::SimplexBijector{proj}) where {proj}
+function _simplex_bijector!(Y, X::AbstractMatrix, ::SimplexBijector)
     K, N = size(X, 1), size(X, 2)
     @assert K > 1 "x needs to be of length greater than 1"
     T = eltype(X)
@@ -53,12 +57,6 @@ function _simplex_bijector!(Y, X::AbstractMatrix, ::SimplexBijector{proj}) where
             sum_tmp += X[k - 1, n]
             z = (X[k, n] + ϵ) * (one(T) - 2ϵ) / ((one(T) + ϵ) - sum_tmp)
             Y[k, n] = LogExpFunctions.logit(z) + log(T(K - k))
-        end
-        sum_tmp += X[K - 1, n]
-        if proj
-            Y[K, n] = zero(T)
-        else
-            Y[K, n] = one(T) - sum_tmp - X[K, n]
         end
     end
 
@@ -75,10 +73,16 @@ function transform!(
     return _simplex_inv_bijector!(x, y, ib.orig)
 end
 
-_simplex_inv_bijector(y, b) = _simplex_inv_bijector!(similar(y), y, b)
+function _simplex_inv_bijector(y, b)
+    sz = size(y)
+    K = sz[1] + 1
+    x = similar(y, Base.setindex(sz, K, 1))
+    _simplex_inv_bijector!(x, y, b)
+    return x
+end
 
-function _simplex_inv_bijector!(x, y::AbstractVector, b::SimplexBijector{proj}) where {proj}
-    K = length(y)
+function _simplex_inv_bijector!(x, y::AbstractVector, b::SimplexBijector)
+    K = length(y) + 1
     @assert K > 1 "x needs to be of length greater than 1"
     T = eltype(y)
     ϵ = _eps(T)
@@ -91,17 +95,12 @@ function _simplex_inv_bijector!(x, y::AbstractVector, b::SimplexBijector{proj}) 
         x[k] = _clamp(((one(T) + ϵ) - sum_tmp) / (one(T) - 2ϵ) * z - ϵ, 0, 1)
     end
     @inbounds sum_tmp += x[K - 1]
-    @inbounds if proj
-        x[K] = _clamp(one(T) - sum_tmp, 0, 1)
-    else
-        x[K] = _clamp(one(T) - sum_tmp - y[K], 0, 1)
-    end
-
+    x[K] = _clamp(one(T) - sum_tmp, 0, 1)
     return x
 end
 
-function _simplex_inv_bijector!(X, Y::AbstractMatrix, b::SimplexBijector{proj}) where {proj}
-    K, N = size(Y, 1), size(Y, 2)
+function _simplex_inv_bijector!(X, Y::AbstractMatrix, b::SimplexBijector)
+    K, N = size(Y, 1) + 1, size(Y, 2)
     @assert K > 1 "x needs to be of length greater than 1"
     T = eltype(Y)
     ϵ = _eps(T)
@@ -114,11 +113,7 @@ function _simplex_inv_bijector!(X, Y::AbstractMatrix, b::SimplexBijector{proj}) 
             X[k, n] = _clamp(((one(T) + ϵ) - sum_tmp) / (one(T) - 2ϵ) * z - ϵ, 0, 1)
         end
         sum_tmp += X[K - 1, n]
-        if proj
-            X[K, n] = _clamp(one(T) - sum_tmp, 0, 1)
-        else
-            X[K, n] = _clamp(one(T) - sum_tmp - Y[K, n], 0, 1)
-        end
+        X[K, n] = _clamp(one(T) - sum_tmp, 0, 1)
     end
 
     return X
@@ -213,13 +208,10 @@ function simplex_logabsdetjac_gradient(x::AbstractMatrix)
     return g
 end
 
-function simplex_link_jacobian(
-    x::AbstractVector{T}, ::Val{proj}=Val(true)
-) where {T<:Real,proj}
+function simplex_link_jacobian(x::AbstractVector{T}) where {T<:Real}
     K = length(x)
     @assert K > 1 "x needs to be of length greater than 1"
-    dydxt = similar(x, length(x), length(x))
-    @inbounds dydxt .= 0
+    dydxt = fill!(similar(x, K, K - 1), 0)
     ϵ = _eps(T)
     sum_tmp = zero(T)
 
@@ -237,16 +229,10 @@ function simplex_link_jacobian(
                 ((one(T) + ϵ) - sum_tmp)^2
         end
     end
-    @inbounds sum_tmp += x[K - 1]
-    @inbounds if !proj
-        @simd for i in 1:K
-            dydxt[i, K] = -1
-        end
-    end
-    return UpperTriangular(dydxt)'
+    return dydxt'
 end
-function jacobian(b::SimplexBijector{proj}, x::AbstractVector{T}) where {proj,T}
-    return simplex_link_jacobian(x, Val(proj))
+function jacobian(b::SimplexBijector, x::AbstractVector{T}) where {T}
+    return simplex_link_jacobian(x)
 end
 
 #=
@@ -315,13 +301,10 @@ function add_simplex_link_adjoint!(
 end
 =#
 
-function simplex_invlink_jacobian(
-    y::AbstractVector{T}, ::Val{proj}=Val(true)
-) where {T<:Real,proj}
-    K = length(y)
+function simplex_invlink_jacobian(y::AbstractVector{T}) where {T<:Real}
+    K = length(y) + 1
     @assert K > 1 "x needs to be of length greater than 1"
-    dxdy = similar(y, length(y), length(y))
-    @inbounds dxdy .= 0
+    dxdy = fill!(similar(y, K, K - 1), 0)
 
     ϵ = _eps(T)
     @inbounds z = LogExpFunctions.logistic(y[1] - log(T(K - 1)))
@@ -346,16 +329,8 @@ function simplex_invlink_jacobian(
         end
     end
     @inbounds sum_tmp += clamped_x
-    @inbounds if proj
-        unclamped_x = one(T) - sum_tmp
-        clamped_x = _clamp(unclamped_x, 0, 1)
-    else
-        unclamped_x = one(T) - sum_tmp - y[K]
-        clamped_x = _clamp(unclamped_x, 0, 1)
-        if unclamped_x == clamped_x
-            dxdy[K, K] = -1
-        end
-    end
+    unclamped_x = one(T) - sum_tmp
+    clamped_x = _clamp(unclamped_x, 0, 1)
     @inbounds if unclamped_x == clamped_x
         for i in 1:(K - 1)
             @simd for j in i:(K - 1)
@@ -363,11 +338,11 @@ function simplex_invlink_jacobian(
             end
         end
     end
-    return LowerTriangular(dxdy)
+    return dxdy
 end
 # jacobian
-function jacobian(ib::Inverse{<:SimplexBijector{proj}}, y::AbstractVector{T}) where {proj,T}
-    return simplex_invlink_jacobian(y, Val(proj))
+function jacobian(ib::Inverse{<:SimplexBijector}, y::AbstractVector{T}) where {T}
+    return simplex_invlink_jacobian(y)
 end
 
 #=
