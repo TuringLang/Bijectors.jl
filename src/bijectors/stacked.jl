@@ -85,9 +85,6 @@ end
     end
 end
 
-# Avoid mixing tuples and arrays.
-Stacked(bs::Tuple, ranges::AbstractArray) = Stacked(collect(bs), ranges)
-
 Functors.@functor Stacked (bs,)
 
 function Base.show(io::IO, b::Stacked)

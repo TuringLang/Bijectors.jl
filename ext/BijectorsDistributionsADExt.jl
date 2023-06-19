@@ -78,27 +78,19 @@ Bijectors.isdirichlet(::VectorOfMultivariate{Continuous,<:Dirichlet}) = true
 Bijectors.isdirichlet(::VectorOfMultivariate{Continuous,<:TuringDirichlet}) = true
 Bijectors.isdirichlet(::TuringDirichlet) = true
 
-function Bijectors.link(
-    d::TuringDirichlet, x::AbstractVecOrMat{<:Real}, ::Val{proj}=Val(true)
-) where {proj}
-    return Bijectors.SimplexBijector{proj}()(x)
+function Bijectors.link(d::TuringDirichlet, x::AbstractVecOrMat{<:Real})
+    return Bijectors.SimplexBijector()(x)
 end
 
-function Bijectors.link_jacobian(
-    d::TuringDirichlet, x::AbstractVector{<:Real}, ::Val{proj}=Val(true)
-) where {proj}
-    return jacobian(Bijectors.SimplexBijector{proj}(), x)
+function Bijectors.link_jacobian(d::TuringDirichlet, x::AbstractVector{<:Real})
+    return jacobian(Bijectors.SimplexBijector(), x)
 end
 
-function Bijectors.invlink(
-    d::TuringDirichlet, y::AbstractVecOrMat{<:Real}, ::Val{proj}=Val(true)
-) where {proj}
-    return inverse(Bijectors.SimplexBijector{proj}())(y)
+function Bijectors.invlink(d::TuringDirichlet, y::AbstractVecOrMat{<:Real})
+    return inverse(Bijectors.SimplexBijector())(y)
 end
-function Bijectors.invlink_jacobian(
-    d::TuringDirichlet, y::AbstractVector{<:Real}, ::Val{proj}=Val(true)
-) where {proj}
-    return jacobian(inverse(Bijectors.SimplexBijector{proj}()), y)
+function Bijectors.invlink_jacobian(d::TuringDirichlet, y::AbstractVector{<:Real})
+    return jacobian(inverse(Bijectors.SimplexBijector()), y)
 end
 
 Bijectors.ispd(::TuringWishart) = true

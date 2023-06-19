@@ -156,7 +156,7 @@ end
             # verify against AD
             # similar to what we do in test/transform.jl for Dirichlet
             if dist isa Dirichlet
-                b = Bijectors.SimplexBijector{false}()
+                b = Bijectors.SimplexBijector()
                 # HACK(torfjelde): Calling `rand(dist)` will sometimes lead to `[0.999..., 0.0]`
                 # which in turn will lead to differences between `ForwardDiff.jacobian`
                 # and `logabsdetjac` due to how we handle the boundary values in `SimplexBijector`.
@@ -168,8 +168,9 @@ end
                 end
                 y = b(x)
                 @test b(param(x)) isa TrackedArray
-                @test log(abs(det(ForwardDiff.jacobian(b, x)))) ≈ logabsdetjac(b, x)
-                @test log(abs(det(ForwardDiff.jacobian(inverse(b), y)))) ≈
+                @test logabsdet(ForwardDiff.jacobian(b, x)[:, 1:(end - 1)])[1] ≈
+                    logabsdetjac(b, x)
+                @test logabsdet(ForwardDiff.jacobian(inverse(b), y)[1:(end - 1), :])[1] ≈
                     logabsdetjac(inverse(b), y)
             else
                 b = bijector(dist)
@@ -420,35 +421,37 @@ end
     b = SimplexBijector()
     ib = inverse(b)
 
-    x = ib(randn(10))
+    d_x = 10
+    x = ib(randn(d_x - 1))
     y = b(x)
 
     @test Bijectors.jacobian(b, x) ≈ ForwardDiff.jacobian(b, x)
     @test Bijectors.jacobian(ib, y) ≈ ForwardDiff.jacobian(ib, y)
 
     # Just some additional computation so we also ensure the pullbacks are the same
-    weights = randn(10)
+    weights_x = randn(d_x)
+    weights_y = randn(d_x - 1)
 
     # Tracker.jl
     x_tracked = Tracker.param(x)
-    z = sum(weights .* b(x_tracked))
+    z = sum(weights_y .* b(x_tracked))
     Tracker.back!(z)
     Δ_tracker = Tracker.grad(x_tracked)
 
     # ForwardDiff.jl
-    Δ_forwarddiff = ForwardDiff.gradient(z -> sum(weights .* b(z)), x)
+    Δ_forwarddiff = ForwardDiff.gradient(z -> sum(weights_y .* b(z)), x)
 
     # Compare
     @test Δ_forwarddiff ≈ Δ_tracker
 
     # Tracker.jl
     y_tracked = Tracker.param(y)
-    z = sum(weights .* ib(y_tracked))
+    z = sum(weights_x .* ib(y_tracked))
     Tracker.back!(z)
     Δ_tracker = Tracker.grad(y_tracked)
 
     # ForwardDiff.jl
-    Δ_forwarddiff = ForwardDiff.gradient(z -> sum(weights .* ib(z)), y)
+    Δ_forwarddiff = ForwardDiff.gradient(z -> sum(weights_x .* ib(z)), y)
 
     @test Δ_forwarddiff ≈ Δ_tracker
 end
