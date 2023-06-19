@@ -42,7 +42,6 @@ transform(b::CDFBijector, x) = Distributions.cdf.(b.dist, x)
 
 logabsdetjac(b::CDFBijector, x) = Distributions.logpdf.(b.dist, x)
 
-
 """
     QuantileBijector(dist::Distributions.ContinuousUnivariateDistribution)
 
