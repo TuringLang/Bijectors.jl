@@ -77,7 +77,8 @@ function single_sample_tests(dist)
         # This should probably be exact.
         @test logpdf(dist, x) == logpdf_with_trans(dist, x, false)
         @test all(
-            isfinite, logpdf.(Ref(dist), [invlink(dist, _rand_real(dist, y)) for _ in 1:100])
+            isfinite,
+            logpdf.(Ref(dist), [invlink(dist, _rand_real(dist, y)) for _ in 1:100]),
         )
     end
 end
@@ -281,9 +282,7 @@ end
         f1 = x -> link(dist, x)
         g1 = y -> invlink(dist, y)
 
-        @test @aeq ForwardDiff.jacobian(f1, x) @inferred(
-            Bijectors.simplex_link_jacobian(x)
-        )
+        @test @aeq ForwardDiff.jacobian(f1, x) @inferred(Bijectors.simplex_link_jacobian(x))
         @test @aeq ForwardDiff.jacobian(g1, y) @inferred(
             Bijectors.simplex_invlink_jacobian(y)
         )
