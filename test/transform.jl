@@ -11,9 +11,12 @@ _logabsdet(x::AbstractArray) = logabsdet(x)[1]
 _logabsdet(x::Real) = log(abs(x))
 
 # Generate a (vector / matrix of) random number(s).
-_rand_real(::Real) = randn()
-_rand_real(x) = randn(size(x))
-_rand_real(x, e) = (y = randn(size(x)); y[end] = e; y)
+_rand_real(dist, ::Real) = randn()
+function _rand_real(dist, x)
+    b = bijector(dist)
+    sz = Bijectors.output_size(b, size(x))
+    return randn(sz)
+end
 
 # Standard tests for all distributions involving a single-sample.
 function single_sample_tests(dist, jacobian)
@@ -68,13 +71,13 @@ function single_sample_tests(dist)
         # Check that invlink maps back to the apppropriate constrained domain.
         @test all(
             isfinite,
-            logpdf.(Ref(dist), [invlink(dist, _rand_real(x, 0)) .+ ϵ for _ in 1:100]),
+            logpdf.(Ref(dist), [invlink(dist, _rand_real(dist, x)) .+ ϵ for _ in 1:100]),
         )
     else
         # This should probably be exact.
         @test logpdf(dist, x) == logpdf_with_trans(dist, x, false)
         @test all(
-            isfinite, logpdf.(Ref(dist), [invlink(dist, _rand_real(y)) for _ in 1:100])
+            isfinite, logpdf.(Ref(dist), [invlink(dist, _rand_real(dist, y)) for _ in 1:100])
         )
     end
 end
@@ -144,14 +147,17 @@ end
                     else
                         rand(dist)
                     end
-
-                logpdf_turing = logpdf_with_trans(dist, x, true)
-                J = ForwardDiff.jacobian(x -> link(dist, x), x)
-                @test logpdf(dist, x .+ ϵ) - _logabsdet(J) ≈ logpdf_turing
+                # `Dirichlet` is no longer mapping between spaces of the same dimensionality,
+                # so the block below no longer works.
+                if !(dist isa Dirichlet)
+                    logpdf_turing = logpdf_with_trans(dist, x, true)
+                    J = ForwardDiff.jacobian(x -> link(dist, x), x)
+                    @test logpdf(dist, x .+ ϵ) - _logabsdet(J) ≈ logpdf_turing
+                end
 
                 # Issue #12
                 stepsize = 1e10
-                dim = length(dist)
+                dim = Bijectors.output_length(bijector(dist), length(dist))
                 x = [
                     logpdf_with_trans(
                         dist,
@@ -237,8 +243,8 @@ end
 # julia> logpdf_with_trans(Dirichlet([1., 1., 1.]), [-1., -2., -3.], true, true)
 # -3.006450206744678
 d = Dirichlet([1.0, 1.0, 1.0])
-r = [-1000.0, -1000.0, 0.0]
-r2 = [-1.0, -2.0, 0.0]
+r = [-1000.0, -1000.0]
+r2 = [-1.0, -2.0]
 
 # test vector invlink
 dist = Dirichlet(ones(5))
@@ -282,7 +288,7 @@ end
             Bijectors.simplex_invlink_jacobian(y)
         )
         @test @aeq Bijectors.simplex_link_jacobian(x) *
-            Bijectors.simplex_invlink_jacobian(y)
+            Bijectors.simplex_invlink_jacobian(y) I
     end
     for i in 1:4
         test_link_and_invlink()
