@@ -58,7 +58,7 @@ end
 function update_triu_from_vec(vals::AbstractVector{<:Real}, k::Int, dim::Int)
     X = similar(vals, dim, dim)
     # TODO: Do we need this?
-    X .= 0
+    fill!(X, 0)
     return update_triu_from_vec!(vals, k, X)
 end
 
