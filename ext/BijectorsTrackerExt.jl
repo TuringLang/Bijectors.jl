@@ -529,9 +529,6 @@ end
 
 # NOTE: Probably doesn't work in complete generality.
 wrap_chainrules_output(x) = x
-function wrap_chainrules_output(x::ChainRulesCore.Thunk)
-    return wrap_chainrules_output(ChainRulesCore.unthunk(x))
-end
 wrap_chainrules_output(x::ChainRulesCore.AbstractZero) = nothing
 wrap_chainrules_output(x::Tuple) = map(wrap_chainrules_output, x)
 
