@@ -183,15 +183,12 @@ end
 
             x = rand(dist)
             x = x + x' + 2I
-            lowerinds = [
-                LinearIndices(size(x))[I] for I in CartesianIndices(size(x)) if I[1] >= I[2]
-            ]
             upperinds = [
                 LinearIndices(size(x))[I] for I in CartesianIndices(size(x)) if I[2] >= I[1]
             ]
             logpdf_turing = logpdf_with_trans(dist, x, true)
             J = ForwardDiff.jacobian(x -> link(dist, x), x)
-            J = J[lowerinds, upperinds]
+            J = J[:, upperinds]
             @test logpdf(dist, x) - _logabsdet(J) ≈ logpdf_turing
         end
     end

@@ -250,31 +250,13 @@ end
 end
 
 # `OrderedBijector`
-function _transform_ordered(y::Union{TrackedVector,TrackedMatrix})
-    return track(_transform_ordered, y)
-end
-@grad function _transform_ordered(y::AbstractVecOrMat)
-    x, dx = ChainRulesCore.rrule(_transform_ordered, value(y))
-    return x, (wrap_chainrules_output ∘ Base.tail ∘ dx)
-end
-
-function _transform_inverse_ordered(x::Union{TrackedVector,TrackedMatrix})
-    return track(_transform_inverse_ordered, x)
-end
-@grad function _transform_inverse_ordered(x::AbstractVecOrMat)
-    y, dy = ChainRulesCore.rrule(_transform_inverse_ordered, value(x))
-    return y, (wrap_chainrules_output ∘ Base.tail ∘ dy)
-end
+@grad_from_chainrules _transform_ordered(y::Union{TrackedVector,TrackedMatrix})
+@grad_from_chainrules _transform_inverse_ordered(x::Union{TrackedVector,TrackedMatrix})
 
 @grad_from_chainrules update_triu_from_vec(vals::TrackedVector{<:Real}, k::Int, dim::Int)
 
 @grad_from_chainrules _link_chol_lkj(x::TrackedMatrix)
 @grad_from_chainrules _inv_link_chol_lkj(x::TrackedVector)
-
-# NOTE: Probably doesn't work in complete generality.
-wrap_chainrules_output(x) = x
-wrap_chainrules_output(x::ChainRulesCore.AbstractZero) = nothing
-wrap_chainrules_output(x::Tuple) = map(wrap_chainrules_output, x)
 
 if VERSION <= v"1.8.0-DEV.1526"
     # HACK: This dispatch does not wrap X in Hermitian before calling cholesky. 

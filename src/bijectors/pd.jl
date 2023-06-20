@@ -40,3 +40,30 @@ end
 function with_logabsdet_jacobian(b::PDBijector, X)
     return transform(b, X), logabsdetjac(b, X)
 end
+
+struct PDVecBijector <: Bijector end
+
+transform(::PDVecBijector, X::AbstractMatrix{<:Real}) = pd_vec_link(X)
+pd_vec_link(X) = triu_to_vec(transpose(pd_link(X)))
+
+function transform(::Inverse{PDVecBijector}, y::AbstractVector{<:Real})
+    Y = permutedims(vec_to_triu(y))
+    return transform(inverse(PDBijector()), Y)
+end
+
+logabsdetjac(::PDVecBijector, X::AbstractMatrix{<:Real}) = logabsdetjac(PDBijector(), X)
+
+function with_logabsdet_jacobian(b::PDVecBijector, X)
+    return transform(b, X), logabsdetjac(b, X)
+end
+
+function output_size(::PDVecBijector, sz::Tuple{Int,Int})
+    n = first(sz)
+    d = (n^2 + n) ÷ 2
+    return (d,)
+end
+
+function output_size(::Inverse{PDVecBijector}, sz::Tuple{Int})
+    n = _triu_dim_from_length(first(sz))
+    return (n, n)
+end
