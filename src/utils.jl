@@ -35,7 +35,7 @@ end
 
 ChainRulesCore.@non_differentiable triu_mask(X::AbstractMatrix, k::Int)
 
-triu_to_vec(X::AbstractMatrix{<:Real}, k::Int) = X[triu_mask(X, k)]
+_triu_to_vec(X::AbstractMatrix{<:Real}, k::Int) = X[triu_mask(X, k)]
 
 function update_triu_from_vec!(
     vals::AbstractVector{<:Real}, k::Int, X::AbstractMatrix{<:Real}
@@ -70,7 +70,7 @@ function ChainRulesCore.rrule(
     function update_triu_from_vec_pullback(ΔX)
         return (
             ChainRulesCore.NoTangent(),
-            triu_to_vec(ChainRulesCore.unthunk(ΔX), k),
+            _triu_to_vec(ChainRulesCore.unthunk(ΔX), k),
             ChainRulesCore.NoTangent(),
             ChainRulesCore.NoTangent(),
         )
@@ -88,7 +88,7 @@ _triu1_dim_from_length(d) = (1 + isqrt(1 + 8d)) ÷ 2
 
 Extracts elements from upper triangle of `X` with offset `1` and returns them as a vector.
 """
-triu1_to_vec(X::AbstractMatrix) = triu_to_vec(X, 1)
+triu1_to_vec(X::AbstractMatrix) = _triu_to_vec(X, 1)
 
 inverse(::typeof(triu1_to_vec)) = vec_to_triu1
 
@@ -111,3 +111,30 @@ function vec_to_triu1_row_index(idx)
     M = _triu1_dim_from_length(idx - 1)
     return idx - (M * (M - 1) ÷ 2)
 end
+
+# Triangular matrix with diagonals.
+
+#     (n^2 + n) / 2 = d
+# ⟺    n² + n - 2d = 0
+# ⟺              n = (-1 + sqrt(1 + 8d)) / 2
+_triu_dim_from_length(d) = (-1 + isqrt(1 + 8 * d)) ÷ 2
+
+"""
+    triu_to_vec(X::AbstractMatrix{<:Real})
+
+Extracts elements from upper triangle of `X` and returns them as a vector.
+"""
+triu_to_vec(X::AbstractMatrix) = _triu_to_vec(X, 0)
+
+"""
+    vec_to_triu(x::AbstractVector{<:Real})
+
+Constructs a matrix from a vector `x` by filling the upper triangle.
+"""
+function vec_to_triu(x::AbstractVector)
+    n = _triu_dim_from_length(length(x))
+    X = update_triu_from_vec(x, 0, n)
+    return upper_triangular(X)
+end
+
+inverse(::typeof(vec_to_triu)) = triu_to_vec
