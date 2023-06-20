@@ -30,7 +30,7 @@ function triu_mask(X::AbstractMatrix, k::Int)
 
     # Using `similar` allows us to respect device of array, etc., e.g. `CuArray`.
     m = similar(X, Bool)
-    return triu(.~m .| m, k)
+    return triu!(fill!(m, true), k)
 end
 
 triu_to_vec(X::AbstractMatrix{<:Real}, k::Int) = X[triu_mask(X, k)]
