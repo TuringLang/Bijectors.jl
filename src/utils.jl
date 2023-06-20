@@ -33,6 +33,8 @@ function triu_mask(X::AbstractMatrix, k::Int)
     return triu!(fill!(m, true), k)
 end
 
+ChainRulesCore.@non_differentiable triu_mask(X::AbstractMatrix, k::Int)
+
 triu_to_vec(X::AbstractMatrix{<:Real}, k::Int) = X[triu_mask(X, k)]
 
 function update_triu_from_vec!(
