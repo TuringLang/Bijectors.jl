@@ -7,7 +7,7 @@
 
 *A package for transforming distributions, used by [Turing.jl](https://github.com/TuringLang/Turing.jl).*
 
-Bijectors.jl implements both an interface for transforming distributions from Distributions.jl and many transformations needed in this context. This package is used heavily in the probabiistic programing language Turing.jl.
+Bijectors.jl implements both an interface for transforming distributions from Distributions.jl and many transformations needed in this context. This package is used heavily in the probabilistic programing language Turing.jl.
 
 See the [documentation](https://turinglang.github.io/Bijectors.jl) for more.
 
