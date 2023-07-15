@@ -37,8 +37,8 @@ end
 # Bijectors
 
 Bijectors.bijector(::TuringDirichlet) = Bijectors.SimplexBijector()
-Bijectors.bijector(::TuringWishart) = Bijectors.PDBijector()
-Bijectors.bijector(::TuringInverseWishart) = Bijectors.PDBijector()
+Bijectors.bijector(::TuringWishart) = Bijectors.PDVecBijector()
+Bijectors.bijector(::TuringInverseWishart) = Bijectors.PDVecBijector()
 Bijectors.bijector(::TuringScalMvNormal) = identity
 Bijectors.bijector(::TuringDiagMvNormal) = identity
 Bijectors.bijector(::TuringDenseMvNormal) = identity
