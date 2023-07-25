@@ -30,7 +30,7 @@ function triu_mask(X::AbstractMatrix, k::Int)
 
     # Using `similar` allows us to respect device of array, etc., e.g. `CuArray`.
     m = similar(X, Bool)
-    return triu!(fill!(m, true), k)
+    return triu!(fill!(parent(m), true), k)
 end
 
 ChainRulesCore.@non_differentiable triu_mask(X::AbstractMatrix, k::Int)
