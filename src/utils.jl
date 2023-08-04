@@ -34,7 +34,6 @@ cholesky_lower(X::AbstractMatrix) = lower_triangular(parent(cholesky(Hermitian(X
 function ChainRulesCore.rrule(::typeof(cholesky_lower), X::AbstractMatrix)
     # TODO: Do we need a special rule for `Hermitian`?
     H, hermitian_pullback = ChainRulesCore.rrule(Hermitian, X, :L)
-    # TODO: what do we do with `check` here?
     C, cholesky_pullback = ChainRulesCore.rrule(cholesky, H, Val(false))
     function cholesky_lower_pullback(_ΔL)
         ΔL = ChainRulesCore.unthunk(_ΔL)
