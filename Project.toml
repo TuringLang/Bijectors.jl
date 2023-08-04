@@ -4,6 +4,7 @@ version = "0.13.3"
 
 [deps]
 ArgCheck = "dce04be8-c92d-5529-be00-80e4d2c0e197"
+ChainRules = "082447d4-558c-5d27-93f4-14fc19e9eca2"
 ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
 ChangesOfVariables = "9e997f8a-9a97-42d5-a9f1-ce6bfc15e2c0"
 Compat = "34da2185-b29b-5c13-b0c7-acf172513d20"
@@ -22,20 +23,20 @@ SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [weakdeps]
+DistributionsAD = "ced4e74d-a319-5a8a-b0ac-84af2272839c"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+LazyArrays = "5078a376-72f3-5289-bfd5-ec5146d43c02"
 ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267"
 Tracker = "9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
-LazyArrays = "5078a376-72f3-5289-bfd5-ec5146d43c02"
-DistributionsAD = "ced4e74d-a319-5a8a-b0ac-84af2272839c"
 
 [extensions]
+BijectorsDistributionsADExt = "DistributionsAD"
 BijectorsForwardDiffExt = "ForwardDiff"
+BijectorsLazyArraysExt = "LazyArrays"
 BijectorsReverseDiffExt = "ReverseDiff"
 BijectorsTrackerExt = "Tracker"
 BijectorsZygoteExt = "Zygote"
-BijectorsLazyArraysExt = "LazyArrays"
-BijectorsDistributionsADExt = "DistributionsAD"
 
 [compat]
 ArgCheck = "1, 2"
