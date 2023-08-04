@@ -35,7 +35,9 @@ if isdefined(Base, :get_extension)
         find_alpha,
         pd_from_lower,
         lower_triangular,
-        upper_triangular
+        upper_triangular,
+        cholesky_lower,
+        cholesky_upper
 
     using Bijectors.LinearAlgebra
     using Bijectors.Compat: eachcol
@@ -75,7 +77,9 @@ else
         find_alpha,
         pd_from_lower,
         lower_triangular,
-        upper_triangular
+        upper_triangular,
+        cholesky_lower,
+        cholesky_upper
 
     using ..Bijectors.LinearAlgebra
     using ..Bijectors.Compat: eachcol
@@ -257,6 +261,9 @@ end
 
 @grad_from_chainrules _link_chol_lkj(x::TrackedMatrix)
 @grad_from_chainrules _inv_link_chol_lkj(x::TrackedVector)
+
+@grad_from_chainrules cholesky_lower(X::TrackedMatrix)
+@grad_from_chainrules cholesky_upper(X::TrackedMatrix)
 
 if VERSION <= v"1.8.0-DEV.1526"
     # HACK: This dispatch does not wrap X in Hermitian before calling cholesky. 
