@@ -26,10 +26,9 @@ function logabsdetjac_pdbijector_chol(X::AbstractMatrix)
     return -(z + d * oftype(z, IrrationalConstants.logtwo))
 end
 
-# TODO: Implement explicitly.
 function with_logabsdet_jacobian(b::PDBijector, X)
-    U = cholesky_upper(X)
-    return replace_diag(log, U), logabsdetjac_pdbijector_chol(U)
+    L = cholesky_lower(X)
+    return replace_diag(log, L), logabsdetjac_pdbijector_chol(L)
 end
 
 struct PDVecBijector <: Bijector end
