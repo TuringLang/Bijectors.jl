@@ -21,6 +21,7 @@ if isdefined(Base, :get_extension)
         simplex_logabsdetjac_gradient,
         Inverse
     import Bijectors:
+        Bijectors,
         _eps,
         logabsdetjac,
         _logabsdetjac_scale,
@@ -35,9 +36,7 @@ if isdefined(Base, :get_extension)
         find_alpha,
         pd_from_lower,
         lower_triangular,
-        upper_triangular,
-        cholesky_lower,
-        cholesky_upper
+        upper_triangular
 
     using Bijectors.LinearAlgebra
     using Bijectors.Compat: eachcol
@@ -63,6 +62,7 @@ else
         simplex_logabsdetjac_gradient,
         Inverse
     import ..Bijectors:
+        Bijectors,
         _eps,
         logabsdetjac,
         _logabsdetjac_scale,
@@ -77,9 +77,7 @@ else
         find_alpha,
         pd_from_lower,
         lower_triangular,
-        upper_triangular,
-        cholesky_lower,
-        cholesky_upper
+        upper_triangular
 
     using ..Bijectors.LinearAlgebra
     using ..Bijectors.Compat: eachcol
@@ -257,13 +255,18 @@ end
 @grad_from_chainrules _transform_ordered(y::Union{TrackedVector,TrackedMatrix})
 @grad_from_chainrules _transform_inverse_ordered(x::Union{TrackedVector,TrackedMatrix})
 
-@grad_from_chainrules update_triu_from_vec(vals::TrackedVector{<:Real}, k::Int, dim::Int)
+@grad_from_chainrules Bijectors.update_triu_from_vec(
+    vals::TrackedVector{<:Real}, k::Int, dim::Int
+)
 
 @grad_from_chainrules _link_chol_lkj(x::TrackedMatrix)
 @grad_from_chainrules _inv_link_chol_lkj(x::TrackedVector)
 
-@grad_from_chainrules cholesky_lower(X::TrackedMatrix)
-@grad_from_chainrules cholesky_upper(X::TrackedMatrix)
+@grad_from_chainrules Bijectors.cholesky_lower(X::TrackedMatrix)
+@grad_from_chainrules Bijectors.cholesky_upper(X::TrackedMatrix)
+
+# TODO: Type-piracy; probably shouldn't do this.
+@grad_from_chainrules LinearAlgebra.permutedims(X::TrackedMatrix, perm)
 
 if VERSION <= v"1.8.0-DEV.1526"
     # HACK: This dispatch does not wrap X in Hermitian before calling cholesky. 
