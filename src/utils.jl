@@ -32,6 +32,7 @@ rather than `LowerTriangular`.
 """
 cholesky_lower(X::AbstractMatrix) = lower_triangular(parent(cholesky(Hermitian(X)).L))
 function ChainRulesCore.rrule(::typeof(cholesky_lower), X::AbstractMatrix)
+    project_to = ChainRulesCore.ProjectTo(X)
     # TODO: Do we need a special rule for `Hermitian`?
     H, hermitian_pullback = ChainRulesCore.rrule(Hermitian, X, :L)
     C, cholesky_pullback = ChainRulesCore.rrule(cholesky, H, Val(false))
@@ -43,7 +44,7 @@ function ChainRulesCore.rrule(::typeof(cholesky_lower), X::AbstractMatrix)
         # No need to add pullback for `lower_triangular`, because the pullback
         # for `Hermitian` already produces the correct result (i.e. the lower-triangular
         # part zeroed out).
-        return (ChainRulesCore.NoTangent(), Δx)
+        return (ChainRulesCore.NoTangent(), project_to(Δx))
     end
 
     return lower_triangular(parent(C.L)), cholesky_lower_pullback
