@@ -310,13 +310,4 @@ transpose_eager(X::TrackedMatrix) = track(transpose_eager, X)
     return y, transpose_eager_pullback
 end
 
-if VERSION <= v"1.8.0-DEV.1526"
-    # HACK: This dispatch does not wrap X in Hermitian before calling cholesky. 
-    # cholesky does not work with AbstractMatrix in julia versions before the compared one,
-    # and it would error with Hermitian{ReverseDiff.TrackedArray}.
-    # See commit when the fix was introduced :
-    # https://github.com/JuliaLang/julia/commit/635449dabee81bba315ab066627a98f856141969
-    cholesky_factor(X::ReverseDiff.TrackedArray) = cholesky_factor(cholesky(X))
-end
-
 end

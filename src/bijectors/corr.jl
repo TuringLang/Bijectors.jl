@@ -68,7 +68,7 @@ with_logabsdet_jacobian(b::CorrBijector, x) = transform(b, x), logabsdetjac(b, x
 function transform(b::CorrBijector, X::AbstractMatrix{<:Real})
     w = cholesky_upper(X)
     r = _link_chol_lkj(w)
-    return r + zero(X)
+    return r
 end
 
 function transform(ib::Inverse{CorrBijector}, y::AbstractMatrix{<:Real})
