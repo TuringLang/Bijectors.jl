@@ -19,6 +19,16 @@ cholesky_factor(X::Cholesky) = X.U
 cholesky_factor(X::UpperTriangular) = X
 cholesky_factor(X::LowerTriangular) = X
 
+# HACK: Allows us to define custom chain rules while we wait for upstream fixes.
+transpose_eager(X::AbstractMatrix) = permutedims(X)
+function ChainRulesCore.rrule(::typeof(transpose_eager), X::AbstractMatrix)
+    y, y_pullback = ChainRulesCore.rrule(permutedims, X, (2, 1))
+    function transpose_eager_pullback(Δ)
+        return (ChainRulesCore.NoTangent(), y_pullback(Δ)[2])
+    end
+    return y, transpose_eager_pullback
+end
+
 # TODO: Add `check` as an argument?
 """
     cholesky_lower(X)

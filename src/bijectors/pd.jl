@@ -35,10 +35,10 @@ struct PDVecBijector <: Bijector end
 
 transform(::PDVecBijector, X::AbstractMatrix{<:Real}) = pd_vec_link(X)
 # TODO: Implement `tril_to_vec` and remove `permutedims`.
-pd_vec_link(X) = triu_to_vec(permutedims(pd_link(X)))
+pd_vec_link(X) = triu_to_vec(transpose_eager(pd_link(X)))
 
 function transform(::Inverse{PDVecBijector}, y::AbstractVector{<:Real})
-    Y = permutedims(vec_to_triu(y))
+    Y = transpose_eager(vec_to_triu(y))
     return transform(inverse(PDBijector()), Y)
 end
 

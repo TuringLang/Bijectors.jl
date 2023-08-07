@@ -268,6 +268,8 @@ end
 # TODO: Type-piracy; probably shouldn't do this.
 @grad_from_chainrules LinearAlgebra.permutedims(X::TrackedMatrix, perm)
 
+@grad_from_chainrules Bijectors.transpose_eager(X::TrackedMatrix)
+
 if VERSION <= v"1.8.0-DEV.1526"
     # HACK: This dispatch does not wrap X in Hermitian before calling cholesky. 
     # cholesky does not work with AbstractMatrix in julia versions before the compared one,
