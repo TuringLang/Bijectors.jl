@@ -1,9 +1,8 @@
 _topd(x) = x * x' + I
 
-@testset "AD for PD bijector" begin
+@testset "AD for PDVecBijector" begin
     d = 4
-    dist = Wishart(4, Matrix{Float64}(Distributions.I, d, d))
-    b = bijector(dist)
+    b = Bijectors.PDVecBijector()
     binv = inverse(b)
 
     z = randn(d, d)
