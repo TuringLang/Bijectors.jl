@@ -264,7 +264,6 @@ end
 @grad_from_chainrules _link_chol_lkj(x::TrackedMatrix)
 @grad_from_chainrules _inv_link_chol_lkj(x::TrackedVector)
 
-
 cholesky_lower(X::TrackedMatrix) = track(cholesky_lower, X)
 @grad function cholesky_lower(X_tracked::TrackedMatrix)
     X = value(X_tracked)
@@ -308,7 +307,6 @@ transpose_eager(X::TrackedMatrix) = track(transpose_eager, X)
     transpose_eager_pullback(Δ) = (y_pullback(Δ)[2],)
     return y, transpose_eager_pullback
 end
-
 
 if VERSION <= v"1.8.0-DEV.1526"
     # HACK: This dispatch does not wrap X in Hermitian before calling cholesky. 
