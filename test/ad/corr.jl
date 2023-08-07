@@ -1,4 +1,4 @@
-@testset "AD for CorrBijector" begin
+@testset "AD for VecCorrBijector" begin
     d = 4
     dist = LKJ(d, 2.0)
     b = bijector(dist)
