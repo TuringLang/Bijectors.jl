@@ -262,8 +262,19 @@ end
 @grad_from_chainrules _link_chol_lkj(x::TrackedMatrix)
 @grad_from_chainrules _inv_link_chol_lkj(x::TrackedVector)
 
-@grad_from_chainrules Bijectors.cholesky_lower(X::TrackedMatrix)
-@grad_from_chainrules Bijectors.cholesky_upper(X::TrackedMatrix)
+cholesky_lower(X::TrackedMatrix) = track(cholesky_lower, X)
+@grad function cholesky_lower(X::TrackedMatrix)
+    X_val = value(X)
+    y, y_pullback = ChainRulesCore.rrule(cholesky_lower, X_val)
+    return y, last ∘ y_pullback
+end
+
+cholesky_upper(X::TrackedMatrix) = track(cholesky_upper, X)
+@grad function cholesky_upper(X::TrackedMatrix)
+    X_val = value(X)
+    y, y_pullback = ChainRulesCore.rrule(cholesky_upper, X_val)
+    return y, last ∘ y_pullback
+end
 
 @grad_from_chainrules Bijectors.transpose_eager(X::TrackedMatrix)
 
