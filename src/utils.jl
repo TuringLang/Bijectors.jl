@@ -31,7 +31,7 @@ rather than `LowerTriangular`.
 
 !!! note
     This is a thin wrapper around `cholesky(Hermitian(X)).L`
-    but with a custom `ChainRulesCore.rrule` implementation.
+    that returns a `Matrix` rather than `LowerTriangular`.
 """
 cholesky_lower(X::AbstractMatrix) = lower_triangular(parent(cholesky(Hermitian(X)).L))
 
@@ -43,7 +43,7 @@ rather than `UpperTriangular`.
 
 !!! note
     This is a thin wrapper around `cholesky(Hermitian(X)).U`
-    but with a custom `ChainRulesCore.rrule` implementation.
+    that returns a `Matrix` rather than `UpperTriangular`.
 """
 cholesky_upper(X::AbstractMatrix) = upper_triangular(parent(cholesky(Hermitian(X)).U))
 
