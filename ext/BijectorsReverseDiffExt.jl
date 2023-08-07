@@ -36,7 +36,8 @@ if isdefined(Base, :get_extension)
         find_alpha,
         pd_from_lower,
         lower_triangular,
-        upper_triangular
+        upper_triangular,
+        transpose_eager
 
     using Bijectors.LinearAlgebra
     using Bijectors.Compat: eachcol
@@ -77,7 +78,8 @@ else
         find_alpha,
         pd_from_lower,
         lower_triangular,
-        upper_triangular
+        upper_triangular,
+        transpose_eager
 
     using ..Bijectors.LinearAlgebra
     using ..Bijectors.Compat: eachcol
@@ -262,21 +264,51 @@ end
 @grad_from_chainrules _link_chol_lkj(x::TrackedMatrix)
 @grad_from_chainrules _inv_link_chol_lkj(x::TrackedVector)
 
+
 cholesky_lower(X::TrackedMatrix) = track(cholesky_lower, X)
-@grad function cholesky_lower(X::TrackedMatrix)
-    X_val = value(X)
-    y, y_pullback = ChainRulesCore.rrule(cholesky_lower, X_val)
-    return y, last ∘ y_pullback
+@grad function cholesky_lower(X_tracked::TrackedMatrix)
+    X = value(X_tracked)
+    H, hermitian_pullback = ChainRulesCore.rrule(Hermitian, X, :L)
+    C, cholesky_pullback = ChainRulesCore.rrule(cholesky, H, Val(false))
+    function cholesky_lower_pullback(ΔL)
+        ΔC = ChainRulesCore.Tangent{typeof(C)}(; factors=(C.uplo === :L ? ΔL : ΔL'))
+        ΔH = cholesky_pullback(ΔC)[2]
+        Δx = hermitian_pullback(ΔH)[2]
+        # No need to add pullback for `lower_triangular`, because the pullback
+        # for `Hermitian` already produces the correct result (i.e. the lower-triangular
+        # part zeroed out).
+        return (Δx,)
+    end
+
+    return lower_triangular(parent(C.L)), cholesky_lower_pullback
 end
 
 cholesky_upper(X::TrackedMatrix) = track(cholesky_upper, X)
-@grad function cholesky_upper(X::TrackedMatrix)
-    X_val = value(X)
-    y, y_pullback = ChainRulesCore.rrule(cholesky_upper, X_val)
-    return y, last ∘ y_pullback
+@grad function cholesky_upper(X_tracked::TrackedMatrix)
+    X = value(X_tracked)
+    H, hermitian_pullback = ChainRulesCore.rrule(Hermitian, X, :U)
+    C, cholesky_pullback = ChainRulesCore.rrule(cholesky, H, Val(false))
+    function cholesky_upper_pullback(ΔU)
+        ΔC = ChainRulesCore.Tangent{typeof(C)}(; factors=(C.uplo === :U ? ΔU : ΔU'))
+        ΔH = cholesky_pullback(ΔC)[2]
+        Δx = hermitian_pullback(ΔH)[2]
+        # No need to add pullback for `upper_triangular`, because the pullback
+        # for `Hermitian` already produces the correct result (i.e. the upper-triangular
+        # part zeroed out).
+        return (Δx,)
+    end
+
+    return upper_triangular(parent(C.U)), cholesky_upper_pullback
 end
 
-@grad_from_chainrules Bijectors.transpose_eager(X::TrackedMatrix)
+transpose_eager(X::TrackedMatrix) = track(transpose_eager, X)
+@grad function transpose_eager(X_tracked::TrackedMatrix)
+    X = value(X_tracked)
+    y, y_pullback = ChainRulesCore.rrule(permutedims, X, (2, 1))
+    transpose_eager_pullback(Δ) = (y_pullback(Δ)[2],)
+    return y, transpose_eager_pullback
+end
+
 
 if VERSION <= v"1.8.0-DEV.1526"
     # HACK: This dispatch does not wrap X in Hermitian before calling cholesky. 

@@ -21,13 +21,6 @@ cholesky_factor(X::LowerTriangular) = X
 
 # HACK: Allows us to define custom chain rules while we wait for upstream fixes.
 transpose_eager(X::AbstractMatrix) = permutedims(X)
-function ChainRulesCore.rrule(::typeof(transpose_eager), X::AbstractMatrix)
-    y, y_pullback = ChainRulesCore.rrule(permutedims, X, (2, 1))
-    function transpose_eager_pullback(Δ)
-        return (ChainRulesCore.NoTangent(), y_pullback(Δ)[2])
-    end
-    return y, transpose_eager_pullback
-end
 
 # TODO: Add `check` as an argument?
 """
@@ -41,23 +34,6 @@ rather than `LowerTriangular`.
     but with a custom `ChainRulesCore.rrule` implementation.
 """
 cholesky_lower(X::AbstractMatrix) = lower_triangular(parent(cholesky(Hermitian(X)).L))
-function ChainRulesCore.rrule(::typeof(cholesky_lower), X::AbstractMatrix)
-    project_to = ChainRulesCore.ProjectTo(X)
-    H, hermitian_pullback = ChainRulesCore.rrule(Hermitian, X, :L)
-    C, cholesky_pullback = ChainRulesCore.rrule(cholesky, H, Val(false))
-    function cholesky_lower_pullback(_ΔL)
-        ΔL = ChainRulesCore.unthunk(_ΔL)
-        ΔC = ChainRulesCore.Tangent{typeof(C)}(; factors=(C.uplo === :L ? ΔL : ΔL'))
-        ΔH = cholesky_pullback(ΔC)[2]
-        Δx = hermitian_pullback(ΔH)[2]
-        # No need to add pullback for `lower_triangular`, because the pullback
-        # for `Hermitian` already produces the correct result (i.e. the lower-triangular
-        # part zeroed out).
-        return (ChainRulesCore.NoTangent(), project_to(Δx))
-    end
-
-    return lower_triangular(parent(C.L)), cholesky_lower_pullback
-end
 
 """
     cholesky_upper(X)
@@ -70,23 +46,6 @@ rather than `UpperTriangular`.
     but with a custom `ChainRulesCore.rrule` implementation.
 """
 cholesky_upper(X::AbstractMatrix) = upper_triangular(parent(cholesky(Hermitian(X)).U))
-function ChainRulesCore.rrule(::typeof(cholesky_upper), X::AbstractMatrix)
-    project_to = ChainRulesCore.ProjectTo(X)
-    H, hermitian_pullback = ChainRulesCore.rrule(Hermitian, X, :U)
-    C, cholesky_pullback = ChainRulesCore.rrule(cholesky, H, Val(false))
-    function cholesky_upper_pullback(_ΔU)
-        ΔU = ChainRulesCore.unthunk(_ΔU)
-        ΔC = ChainRulesCore.Tangent{typeof(C)}(; factors=(C.uplo === :U ? ΔU : ΔU'))
-        ΔH = cholesky_pullback(ΔC)[2]
-        Δx = hermitian_pullback(ΔH)[2]
-        # No need to add pullback for `upper_triangular`, because the pullback
-        # for `Hermitian` already produces the correct result (i.e. the upper-triangular
-        # part zeroed out).
-        return (ChainRulesCore.NoTangent(), project_to(Δx))
-    end
-
-    return upper_triangular(parent(C.U)), cholesky_upper_pullback
-end
 
 """
     triu_mask(X::AbstractMatrix, k::Int)
