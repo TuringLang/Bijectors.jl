@@ -265,9 +265,6 @@ end
 @grad_from_chainrules Bijectors.cholesky_lower(X::TrackedMatrix)
 @grad_from_chainrules Bijectors.cholesky_upper(X::TrackedMatrix)
 
-# TODO: Type-piracy; probably shouldn't do this.
-@grad_from_chainrules LinearAlgebra.permutedims(X::TrackedMatrix, perm)
-
 @grad_from_chainrules Bijectors.transpose_eager(X::TrackedMatrix)
 
 if VERSION <= v"1.8.0-DEV.1526"
