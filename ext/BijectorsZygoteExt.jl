@@ -240,4 +240,9 @@ end
         return replace_diag(log, Y)
     end
 end
+
+# TODO: Remove these as soon as https://github.com/FluxML/Zygote.jl/pull/1444 is merged.
+@adjoint LinearAlgebra.parent(x::LinearAlgebra.UpperTriangular) = parent(x), ȳ -> (LinearAlgebra.UpperTriangular(ȳ),)
+@adjoint LinearAlgebra.parent(x::LinearAlgebra.LowerTriangular) = parent(x), ȳ -> (LinearAlgebra.LowerTriangular(ȳ),)
+
 end

@@ -34,6 +34,7 @@ rather than `LowerTriangular`.
     that returns a `Matrix` rather than `LowerTriangular`.
 """
 cholesky_lower(X::AbstractMatrix) = lower_triangular(parent(cholesky(Hermitian(X)).L))
+cholesky_lower(X::Cholesky) = X.L
 
 """
     cholesky_upper(X)
@@ -46,6 +47,7 @@ rather than `UpperTriangular`.
     that returns a `Matrix` rather than `UpperTriangular`.
 """
 cholesky_upper(X::AbstractMatrix) = upper_triangular(parent(cholesky(Hermitian(X)).U))
+cholesky_upper(X::Cholesky) = X.U
 
 """
     triu_mask(X::AbstractMatrix, k::Int)

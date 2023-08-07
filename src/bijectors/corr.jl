@@ -325,7 +325,7 @@ function _link_chol_lkj_from_upper(W::AbstractMatrix)
     return z
 end
 
-_link_chol_lkj_from_lower(W::AbstractMatrix) = _link_chol_lkj(transpose_eager(W))
+_link_chol_lkj_from_lower(W::AbstractMatrix) = _link_chol_lkj_from_upper(transpose_eager(W))
 
 """
     _inv_link_chol_lkj(y)
