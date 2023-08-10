@@ -23,8 +23,8 @@
     # LKJ and LKJCholesky bijector
     dist = LKJCholesky(3, 4)
     x = rand(dist)
-    test_rrule(Bijectors._link_chol_lkj, x.U)
-    test_rrule(Bijectors._link_chol_lkj, x.L)
+    test_rrule(Bijectors._link_chol_lkj_from_upper, x.U)
+    test_rrule(Bijectors._link_chol_lkj_from_lower, x.L)
 
     b = bijector(dist)
     y = b(x)
