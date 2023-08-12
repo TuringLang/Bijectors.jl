@@ -18,8 +18,6 @@ if isdefined(Base, :get_extension)
         _simplex_inv_bijector,
         replace_diag,
         jacobian,
-        _inv_link_chol_lkj,
-        _link_chol_lkj,
         _transform_ordered,
         _transform_inverse_ordered,
         find_alpha,
@@ -55,8 +53,6 @@ else
         _simplex_inv_bijector,
         replace_diag,
         jacobian,
-        _inv_link_chol_lkj,
-        _link_chol_lkj,
         _transform_ordered,
         _transform_inverse_ordered,
         find_alpha,
@@ -244,4 +240,5 @@ end
         return replace_diag(log, Y)
     end
 end
+
 end

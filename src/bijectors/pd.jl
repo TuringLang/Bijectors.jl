@@ -8,10 +8,7 @@ function replace_diag(f, X)
     return g.(1:size(X, 1), (1:size(X, 2))')
 end
 transform(b::PDBijector, X::AbstractMatrix{<:Real}) = pd_link(X)
-function pd_link(X)
-    Y = lower_triangular(parent(cholesky(X; check=true).L))
-    return replace_diag(log, Y)
-end
+pd_link(X) = replace_diag(log, cholesky_lower(X))
 
 function transform(ib::Inverse{PDBijector}, Y::AbstractMatrix{<:Real})
     X = replace_diag(exp, Y)
@@ -19,35 +16,29 @@ function transform(ib::Inverse{PDBijector}, Y::AbstractMatrix{<:Real})
 end
 
 function logabsdetjac(b::PDBijector, X::AbstractMatrix{<:Real})
-    T = eltype(X)
-    Xcf = cholesky(X; check=false)
-    if !issuccess(Xcf)
-        Xcf = cholesky(X + max(eps(T), eps(T) * norm(X)) * I)
-    end
-    return logabsdetjac_pdbijector_chol(Xcf)
+    L = cholesky_lower(X)
+    return logabsdetjac_pdbijector_chol(L)
 end
 
-function logabsdetjac_pdbijector_chol(Xcf::Cholesky)
-    # NOTE: Use `UpperTriangular` here because we only need `diag(U)`
-    # and `UL` is by default already constructed in `Cholesky`.
-    UL = Xcf.UL
-    d = size(UL, 1)
-    z = sum(((d + 1):(-1):2) .* log.(diag(UL)))
+function logabsdetjac_pdbijector_chol(X::AbstractMatrix)
+    d = size(X, 1)
+    z = sum(((d + 1):(-1):2) .* log.(diag(X)))
     return -(z + d * oftype(z, IrrationalConstants.logtwo))
 end
 
-# TODO: Implement explicitly.
 function with_logabsdet_jacobian(b::PDBijector, X)
-    return transform(b, X), logabsdetjac(b, X)
+    L = cholesky_lower(X)
+    return replace_diag(log, L), logabsdetjac_pdbijector_chol(L)
 end
 
 struct PDVecBijector <: Bijector end
 
 transform(::PDVecBijector, X::AbstractMatrix{<:Real}) = pd_vec_link(X)
-pd_vec_link(X) = triu_to_vec(transpose(pd_link(X)))
+# TODO: Implement `tril_to_vec` and remove `permutedims`.
+pd_vec_link(X) = triu_to_vec(transpose_eager(pd_link(X)))
 
 function transform(::Inverse{PDVecBijector}, y::AbstractVector{<:Real})
-    Y = permutedims(vec_to_triu(y))
+    Y = transpose_eager(vec_to_triu(y))
     return transform(inverse(PDBijector()), Y)
 end
 

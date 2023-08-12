@@ -66,11 +66,9 @@ struct CorrBijector <: Bijector end
 with_logabsdet_jacobian(b::CorrBijector, x) = transform(b, x), logabsdetjac(b, x)
 
 function transform(b::CorrBijector, X::AbstractMatrix{<:Real})
-    w = upper_triangular(parent(cholesky(X).U))  # keep LowerTriangular until here can avoid some computation
+    w = cholesky_upper(X)
     r = _link_chol_lkj(w)
-    return r + zero(X)
-    # This dense format itself is required by a test, though I can't get the point.
-    # https://github.com/TuringLang/Bijectors.jl/blob/b0aaa98f90958a167a0b86c8e8eca9b95502c42d/test/transform.jl#L67
+    return r
 end
 
 function transform(ib::Inverse{CorrBijector}, y::AbstractMatrix{<:Real})
@@ -127,7 +125,7 @@ struct VecCorrBijector <: Bijector end
 
 with_logabsdet_jacobian(b::VecCorrBijector, x) = transform(b, x), logabsdetjac(b, x)
 
-transform(::VecCorrBijector, X) = _link_chol_lkj(cholesky_factor(X))
+transform(::VecCorrBijector, X) = _link_chol_lkj_from_upper(cholesky_upper(X))
 
 function logabsdetjac(b::VecCorrBijector, x)
     return -logabsdetjac(inverse(b), b(x))
@@ -215,7 +213,13 @@ end
 # TODO: Implement directly to make use of shared computations.
 with_logabsdet_jacobian(b::VecCholeskyBijector, x) = transform(b, x), logabsdetjac(b, x)
 
-transform(::VecCholeskyBijector, X) = _link_chol_lkj(cholesky_factor(X))
+function transform(b::VecCholeskyBijector, X)
+    return if b.mode === :U
+        _link_chol_lkj_from_upper(cholesky_upper(X))
+    else # No need to check for === :L, as it is checked in the VecCholeskyBijector constructor.
+        _link_chol_lkj_from_lower(cholesky_lower(X))
+    end
+end
 
 function logabsdetjac(b::VecCholeskyBijector, x)
     return -logabsdetjac(inverse(b), b(x))
@@ -229,7 +233,7 @@ function transform(b::Inverse{VecCholeskyBijector}, y::AbstractVector{<:Real})
     else # No need to check for === :L, as it is checked in the VecCholeskyBijector constructor.
         # HACK: Need to make materialize the transposed matrix to avoid numerical instabilities.
         # If we don't, the return-type can be both `Matrix` and `Transposed`.
-        return Cholesky(permutedims(_inv_link_chol_lkj(y), (2, 1)), 'L', 0)
+        return Cholesky(transpose_eager(_inv_link_chol_lkj(y)), 'L', 0)
     end
 end
 
@@ -299,7 +303,7 @@ function _link_chol_lkj(W::AbstractMatrix)
     return z
 end
 
-function _link_chol_lkj(W::UpperTriangular)
+function _link_chol_lkj_from_upper(W::AbstractMatrix)
     K = LinearAlgebra.checksquare(W)
     N = ((K - 1) * K) ÷ 2   # {K \choose 2} free parameters
 
@@ -321,7 +325,7 @@ function _link_chol_lkj(W::UpperTriangular)
     return z
 end
 
-_link_chol_lkj(W::LowerTriangular) = _link_chol_lkj(transpose(W))
+_link_chol_lkj_from_lower(W::AbstractMatrix) = _link_chol_lkj_from_upper(transpose_eager(W))
 
 """
     _inv_link_chol_lkj(y)

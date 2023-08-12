@@ -41,6 +41,7 @@ import ChangesOfVariables: ChangesOfVariables, with_logabsdet_jacobian
 import InverseFunctions: inverse
 
 using ChainRulesCore: ChainRulesCore
+using ChainRules: ChainRules
 using Functors: Functors
 using IrrationalConstants: IrrationalConstants
 using LogExpFunctions: LogExpFunctions

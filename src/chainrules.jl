@@ -156,7 +156,7 @@ function ChainRulesCore.rrule(::typeof(_transform_inverse_ordered), x::AbstractM
     return y, _transform_inverse_ordered_adjoint
 end
 
-function ChainRulesCore.rrule(::typeof(_link_chol_lkj), W::UpperTriangular)
+function ChainRulesCore.rrule(::typeof(_link_chol_lkj_from_upper), W::AbstractMatrix)
     K = LinearAlgebra.checksquare(W)
     N = ((K - 1) * K) ÷ 2
 
@@ -178,7 +178,7 @@ function ChainRulesCore.rrule(::typeof(_link_chol_lkj), W::UpperTriangular)
         end
     end
 
-    function pullback_link_chol_lkj(Δz_thunked)
+    function pullback_link_chol_lkj_from_upper(Δz_thunked)
         Δz = ChainRulesCore.unthunk(Δz_thunked)
 
         ΔW = similar(W)
@@ -208,10 +208,10 @@ function ChainRulesCore.rrule(::typeof(_link_chol_lkj), W::UpperTriangular)
         return ChainRulesCore.NoTangent(), ΔW
     end
 
-    return z, pullback_link_chol_lkj
+    return z, pullback_link_chol_lkj_from_upper
 end
 
-function ChainRulesCore.rrule(::typeof(_link_chol_lkj), W::LowerTriangular)
+function ChainRulesCore.rrule(::typeof(_link_chol_lkj_from_lower), W::AbstractMatrix)
     K = LinearAlgebra.checksquare(W)
     N = ((K - 1) * K) ÷ 2
 
@@ -233,7 +233,7 @@ function ChainRulesCore.rrule(::typeof(_link_chol_lkj), W::LowerTriangular)
         end
     end
 
-    function pullback_link_chol_lkj(Δz_thunked)
+    function pullback_link_chol_lkj_from_lower(Δz_thunked)
         Δz = ChainRulesCore.unthunk(Δz_thunked)
 
         ΔW = similar(W)
@@ -263,7 +263,7 @@ function ChainRulesCore.rrule(::typeof(_link_chol_lkj), W::LowerTriangular)
         return ChainRulesCore.NoTangent(), ΔW
     end
 
-    return z, pullback_link_chol_lkj
+    return z, pullback_link_chol_lkj_from_lower
 end
 
 function ChainRulesCore.rrule(::typeof(_inv_link_chol_lkj), y::AbstractVector)
