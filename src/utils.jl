@@ -14,11 +14,6 @@ upper_triangular(A::AbstractMatrix) = convert(typeof(A), UpperTriangular(A))
 pd_from_lower(X) = LowerTriangular(X) * LowerTriangular(X)'
 pd_from_upper(X) = UpperTriangular(X)' * UpperTriangular(X)
 
-cholesky_factor(X::AbstractMatrix) = cholesky_factor(cholesky(Hermitian(X)))
-cholesky_factor(X::Cholesky) = X.U
-cholesky_factor(X::UpperTriangular) = X
-cholesky_factor(X::LowerTriangular) = X
-
 # HACK: Allows us to define custom chain rules while we wait for upstream fixes.
 transpose_eager(X::AbstractMatrix) = permutedims(X)
 
@@ -33,7 +28,8 @@ rather than `LowerTriangular`.
     This is a thin wrapper around `cholesky(Hermitian(X)).L`
     that returns a `Matrix` rather than `LowerTriangular`.
 """
-cholesky_lower(X::AbstractMatrix) = lower_triangular(parent(cholesky(Hermitian(X)).L))
+cholesky_lower(X::AbstractMatrix) = lower_triangular(parent(cholesky(Hermitian(X, :L)).L))
+cholesky_lower(X::Cholesky) = X.L
 
 """
     cholesky_upper(X)
@@ -46,6 +42,7 @@ rather than `UpperTriangular`.
     that returns a `Matrix` rather than `UpperTriangular`.
 """
 cholesky_upper(X::AbstractMatrix) = upper_triangular(parent(cholesky(Hermitian(X)).U))
+cholesky_upper(X::Cholesky) = X.U
 
 """
     triu_mask(X::AbstractMatrix, k::Int)

@@ -54,4 +54,5 @@ if GROUP == "All" || GROUP == "AD"
     include("ad/chainrules.jl")
     include("ad/flows.jl")
     include("ad/pd.jl")
+    include("ad/corr.jl")
 end

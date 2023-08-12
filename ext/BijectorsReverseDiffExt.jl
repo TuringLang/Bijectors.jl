@@ -262,6 +262,8 @@ end
 )
 
 @grad_from_chainrules _link_chol_lkj(x::TrackedMatrix)
+@grad_from_chainrules _link_chol_lkj_from_upper(x::TrackedMatrix)
+@grad_from_chainrules _link_chol_lkj_from_lower(x::TrackedMatrix)
 @grad_from_chainrules _inv_link_chol_lkj(x::TrackedVector)
 
 cholesky_lower(X::TrackedMatrix) = track(cholesky_lower, X)
@@ -306,15 +308,6 @@ transpose_eager(X::TrackedMatrix) = track(transpose_eager, X)
     y, y_pullback = ChainRulesCore.rrule(permutedims, X, (2, 1))
     transpose_eager_pullback(Δ) = (y_pullback(Δ)[2],)
     return y, transpose_eager_pullback
-end
-
-if VERSION <= v"1.8.0-DEV.1526"
-    # HACK: This dispatch does not wrap X in Hermitian before calling cholesky. 
-    # cholesky does not work with AbstractMatrix in julia versions before the compared one,
-    # and it would error with Hermitian{ReverseDiff.TrackedArray}.
-    # See commit when the fix was introduced :
-    # https://github.com/JuliaLang/julia/commit/635449dabee81bba315ab066627a98f856141969
-    cholesky_factor(X::ReverseDiff.TrackedArray) = cholesky_factor(cholesky(X))
 end
 
 end
