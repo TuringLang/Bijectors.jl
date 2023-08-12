@@ -40,6 +40,7 @@ BijectorsZygoteExt = "Zygote"
 
 [compat]
 ArgCheck = "1, 2"
+ChainRules = "1"
 ChainRulesCore = "0.10.11, 1"
 ChangesOfVariables = "0.1"
 Compat = "3, 4"
