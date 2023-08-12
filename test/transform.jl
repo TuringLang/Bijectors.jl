@@ -178,17 +178,17 @@ end
 @testset "matrix" begin
     let
         matrix_dists = [Wishart(7, [1 0.5; 0.5 1]), InverseWishart(2, [1 0.5; 0.5 1])]
-        for dist in matrix_dists
+        @testset "$dist" for dist in matrix_dists
             single_sample_tests(dist)
 
             x = rand(dist)
             x = x + x' + 2I
-            upperinds = [
-                LinearIndices(size(x))[I] for I in CartesianIndices(size(x)) if I[2] >= I[1]
+            inds = [
+                LinearIndices(size(x))[I] for I in CartesianIndices(size(x)) if I[2] <= I[1]
             ]
             logpdf_turing = logpdf_with_trans(dist, x, true)
             J = ForwardDiff.jacobian(x -> link(dist, x), x)
-            J = J[:, upperinds]
+            J = J[:, inds]
             @test logpdf(dist, x) - _logabsdet(J) ≈ logpdf_turing
         end
     end
@@ -214,19 +214,21 @@ end
 end
 
 @testset "LKJCholesky" begin
-    dist = LKJCholesky(3, 1)
+    @testset "uplo: $uplo" for uplo in [:L, :U]
+        dist = LKJCholesky(3, 1, uplo)
+        single_sample_tests(dist)
 
-    single_sample_tests(dist)
+        x = rand(dist)
 
-    x = rand(dist)
-
-    upperinds = [
-        LinearIndices(size(x))[I] for I in CartesianIndices(size(x)) if I[2] > I[1]
-    ]
-    J = ForwardDiff.jacobian(x -> link(dist, x), x.UL)
-    J = J[:, upperinds]
-    logpdf_turing = logpdf_with_trans(dist, x, true)
-    @test logpdf(dist, x) - _logabsdet(J) ≈ logpdf_turing
+        inds = [
+            LinearIndices(size(x))[I] for I in CartesianIndices(size(x)) if
+            (uplo === :L && I[2] < I[1]) || (uplo === :U && I[2] > I[1])
+        ]
+        J = ForwardDiff.jacobian(x -> link(dist, Cholesky(x)), x.UL)
+        J = J[:, inds]
+        logpdf_turing = logpdf_with_trans(dist, x, true)
+        @test logpdf(dist, x) - _logabsdet(J) ≈ logpdf_turing
+    end
 end
 
 ################################## Miscelaneous old tests ##################################
