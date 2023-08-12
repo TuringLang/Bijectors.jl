@@ -224,7 +224,7 @@ end
             LinearIndices(size(x))[I] for I in CartesianIndices(size(x)) if
             (uplo === :L && I[2] < I[1]) || (uplo === :U && I[2] > I[1])
         ]
-        J = ForwardDiff.jacobian(x -> link(dist, Cholesky(x)), x.UL)
+        J = ForwardDiff.jacobian(z -> link(dist, Cholesky(z, x.uplo, x.info)), x.UL)
         J = J[:, inds]
         logpdf_turing = logpdf_with_trans(dist, x, true)
         @test logpdf(dist, x) - _logabsdet(J) ≈ logpdf_turing
