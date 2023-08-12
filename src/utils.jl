@@ -28,7 +28,7 @@ rather than `LowerTriangular`.
     This is a thin wrapper around `cholesky(Hermitian(X)).L`
     that returns a `Matrix` rather than `LowerTriangular`.
 """
-cholesky_lower(X::AbstractMatrix) = lower_triangular(parent(cholesky(Hermitian(X)).L))
+cholesky_lower(X::AbstractMatrix) = lower_triangular(parent(cholesky(Hermitian(X, :L)).L))
 cholesky_lower(X::Cholesky) = X.L
 
 """
