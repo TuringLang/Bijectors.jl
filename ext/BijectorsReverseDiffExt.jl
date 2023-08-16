@@ -37,7 +37,8 @@ if isdefined(Base, :get_extension)
         pd_from_lower,
         lower_triangular,
         upper_triangular,
-        transpose_eager
+        transpose_eager,
+        cholesky_lower
 
     using Bijectors.LinearAlgebra
     using Bijectors.Compat: eachcol
