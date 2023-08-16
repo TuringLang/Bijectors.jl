@@ -16,4 +16,12 @@ _topd(x) = x * x' + I
     test_ad(y) do y
         sum(transform(binv, y))
     end
+
+    test_ad(y) do y
+        sum(Bijectors.cholesky_lower(transform(binv, y)))
+    end
+
+    test_ad(y) do y
+        sum(Bijectors.cholesky_upper(transform(binv, y)))
+    end
 end
