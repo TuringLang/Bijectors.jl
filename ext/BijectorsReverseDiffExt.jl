@@ -38,7 +38,8 @@ if isdefined(Base, :get_extension)
         lower_triangular,
         upper_triangular,
         transpose_eager,
-        cholesky_lower
+        cholesky_lower,
+        cholesky_upper
 
     using Bijectors.LinearAlgebra
     using Bijectors.Compat: eachcol
