@@ -17,11 +17,13 @@ _topd(x) = x * x' + I
         sum(transform(binv, y))
     end
 
-    test_ad(y) do y
-        sum(Bijectors.cholesky_lower(transform(binv, y)))
-    end
+    if AD == "ReverseDiff" # `AD` is defined in `test/ad/utils.jl`. 
+        test_ad(y) do y
+            sum(Bijectors.cholesky_lower(transform(binv, y)))
+        end
 
-    test_ad(y) do y
-        sum(Bijectors.cholesky_upper(transform(binv, y)))
+        test_ad(y) do y
+            sum(Bijectors.cholesky_upper(transform(binv, y)))
+        end
     end
 end
