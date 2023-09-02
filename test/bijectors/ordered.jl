@@ -21,7 +21,7 @@ end
         MvNormal(1:5, Diagonal(6:10)),
         MvTDist(1, 1:5, Matrix(I(5))),
         product_distribution(fill(Normal(), 5)),
-        product_distribution(fill(TDist(1), 5))
+        product_distribution(fill(TDist(1), 5)),
     ]
         d_ordered = ordered(d)
         @test d_ordered isa Bijectors.TransformedDistribution
