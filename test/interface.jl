@@ -136,6 +136,7 @@ end
         MvLogNormal(MvNormal(randn(10), Diagonal(exp.(randn(10))))),
         Dirichlet([1000 * one(Float64), eps(Float64)]),
         Dirichlet([eps(Float64), 1000 * one(Float64)]),
+        MvTDist(1, randn(10), Matrix(Diagonal(exp.(randn(10))))),
         transformed(MvNormal(randn(10), Diagonal(exp.(randn(10))))),
         transformed(MvLogNormal(MvNormal(randn(10), Diagonal(exp.(randn(10)))))),
         transformed(reshape(product_distribution(fill(InverseGamma(2, 3), 6)), 2, 3)),
@@ -200,6 +201,7 @@ end
         TuringInverseWishart(v, S),
         LKJ(3, 1.0),
         reshape(MvNormal(zeros(6), I), 2, 3),
+        product_distribution(fill(InverseGamma(2, 3), 6)),
     ]
 
     for dist in matrix_dists

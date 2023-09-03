@@ -75,7 +75,7 @@ bijector(d::Product{Discrete}) = identity
 function bijector(d::Product{Continuous})
     D = eltype(d.v)
     return if has_constant_bijector(D)
-        bijector(d.v[1])
+        elementwise(bijector(d.v[1]))
     else
         # FIXME: This is not great. Should use something like
         # `Stacked(map(bijector, d.v))` instead.
