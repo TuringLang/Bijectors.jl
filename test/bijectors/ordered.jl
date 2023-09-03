@@ -19,7 +19,7 @@ end
 @testset "ordered" begin
     @testset "$d" for d in [
         MvNormal(1:5, Diagonal(6:10)),
-        MvTDist(1, collect(1.:5), Matrix(I(5))),
+        MvTDist(1, collect(1.0:5), Matrix(I(5))),
         product_distribution(fill(Normal(), 5)),
         product_distribution(fill(TDist(1), 5)),
     ]
