@@ -47,13 +47,43 @@ function bijector(td::TransformedDistribution)
     b = bijector(td.dist)
     return b === identity ? inverse(td.transform) : b ∘ inverse(td.transform)
 end
+
+"""
+    has_constant_bijector(dist_type::Type)
+
+Returns `true` if the distribution type `dist_type` has a constant bijector,
+i.e. the return-value of [`bijector`](@ref) does not depend on runtime information.
+"""
+has_constant_bijector(d::Type) = false
+has_constant_bijector(d::Type{<:Normal}) = true
+has_constant_bijector(d::Type{<:Distributions.AbstractMvNormal}) = true
+has_constant_bijector(d::Type{<:Distributions.AbstractMvLogNormal}) = true
+has_constant_bijector(d::Type{<:TDist}) = true
+has_constant_bijector(d::Type{<:Distributions.GenericMvTDist}) = true
+has_constant_bijector(d::Type{<:PositiveDistribution}) = true
+has_constant_bijector(d::Type{<:SimplexDistribution}) = true
+has_constant_bijector(d::Type{<:KSOneSided}) = true
+function has_constant_bijector(::Type{<:Product{Continuous,D}}) where {D}
+    return has_constant_bijector(D)
+end
+
+# Container distributions.
 bijector(d::DiscreteUnivariateDistribution) = identity
 bijector(d::DiscreteMultivariateDistribution) = identity
 bijector(d::ContinuousUnivariateDistribution) = TruncatedBijector(minimum(d), maximum(d))
 bijector(d::Product{Discrete}) = identity
 function bijector(d::Product{Continuous})
-    return TruncatedBijector(_minmax(d.v)...)
+    D = eltype(d.v)
+    return if has_constant_bijector(D)
+        elementwise(bijector(d.v[1]))
+    else
+        # FIXME: This is not great. Should use something like
+        # `Stacked(map(bijector, d.v))` instead.
+        # TODO: Specialize. F.ex. for FillArrays.jl we can do much better.
+        TruncatedBijector(_minmax(d.v)...)
+    end
 end
+
 @generated function _minmax(d::AbstractArray{T}) where {T}
     try
         min, max = minimum(T), maximum(T)
@@ -63,9 +93,12 @@ end
     end
 end
 
+# Specialized implementations.
 bijector(d::Normal) = identity
 bijector(d::Distributions.AbstractMvNormal) = identity
 bijector(d::Distributions.AbstractMvLogNormal) = elementwise(log)
+bijector(d::TDist) = identity
+bijector(d::Distributions.GenericMvTDist) = identity
 bijector(d::PositiveDistribution) = elementwise(log)
 bijector(d::SimplexDistribution) = SimplexBijector()
 bijector(d::KSOneSided) = Logit(zero(eltype(d)), one(eltype(d)))

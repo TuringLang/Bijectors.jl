@@ -14,6 +14,7 @@ In the case where `f::ComposedFunction`, the result is
 `Base.Fix1(broadcast, f)`.
 """
 elementwise(f) = Base.Fix1(broadcast, f)
+elementwise(f::typeof(identity)) = identity
 # TODO: This is makes dispatching quite a bit easier, but uncertain if this is really
 # the way to go.
 function elementwise(f::ComposedFunction)
@@ -91,7 +92,7 @@ function transform(t::Transform, x)
     res = with_logabsdet_jacobian(t, x)
     if res isa ChangesOfVariables.NoLogAbsDetJacobian
         error(
-            "`transform` not implemented for $(typeof(b)); implement `transform` and/or `with_logabsdet_jacobian`.",
+            "`transform` not implemented for $(typeof(f)); implement `transform` and/or `with_logabsdet_jacobian`.",
         )
     end
 

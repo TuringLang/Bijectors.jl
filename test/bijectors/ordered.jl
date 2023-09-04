@@ -17,20 +17,23 @@ using LinearAlgebra
 end
 
 @testset "ordered" begin
-    d = MvNormal(1:5, Diagonal(6:10))
-    d_ordered = ordered(d)
-    @test d_ordered isa Bijectors.TransformedDistribution
-    @test d_ordered.dist === d
-    @test d_ordered.transform isa OrderedBijector
-    y = randn(5)
-    x = inverse(bijector(d_ordered))(y)
-    @test issorted(x)
+    @testset "$d" for d in [
+        MvNormal(1:5, Diagonal(6:10)),
+        MvTDist(1, collect(1.0:5), Matrix(I(5))),
+        product_distribution(fill(Normal(), 5)),
+        product_distribution(fill(TDist(1), 5)),
+    ]
+        d_ordered = ordered(d)
+        @test d_ordered isa Bijectors.TransformedDistribution
+        @test d_ordered.dist === d
+        @test d_ordered.transform isa OrderedBijector
+        y = randn(5)
+        x = inverse(bijector(d_ordered))(y)
+        @test issorted(x)
+    end
 
-    d = Product(fill(Normal(), 5))
-    # currently errors because `bijector(Product(fill(Normal(), 5)))` is not an `Identity`
-    @test_broken ordered(d) isa Bijectors.TransformedDistribution
-
-    # non-Identity bijector is not supported
-    d = Dirichlet(ones(5))
-    @test_throws ArgumentError ordered(d)
+    @testset "non-identity bijector is not supported" begin
+        d = Dirichlet(ones(5))
+        @test_throws ArgumentError ordered(d)
+    end
 end
