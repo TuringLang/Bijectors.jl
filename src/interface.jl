@@ -246,7 +246,6 @@ end
 is_monotonically_increasing(::typeof(exp)) = true
 is_monotonically_increasing(ef::Elementwise) = is_monotonically_increasing(ef.x)
 
-
 ######################
 # Bijectors includes #
 ######################
