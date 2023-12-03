@@ -28,7 +28,6 @@ end
         d_ordered = ordered(d)
         @test d_ordered isa Bijectors.TransformedDistribution
         @test d_ordered.dist === d
-        # @test d_ordered.transform isa OrderedBijector
         y = randn(5)
         x = inverse(bijector(d_ordered))(y)
         @test issorted(x)

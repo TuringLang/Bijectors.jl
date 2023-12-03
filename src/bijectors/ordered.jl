@@ -25,11 +25,7 @@ function ordered(d::ContinuousMultivariateDistribution)
     b = bijector(d)
     binv = inverse(b)
     if !is_monotonically_increasing(binv)
-        throw(
-            ArgumentError(
-                "ordered transform is not supported for $d.",
-            ),
-        )
+        throw(ArgumentError("ordered transform is currently not supported for $d."))
     end
     return transformed(d, binv ∘ OrderedBijector() ∘ b)
 end
