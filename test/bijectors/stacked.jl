@@ -55,7 +55,9 @@ end
         @test binv(y) == [1.0, 2.0, 0.0]
 
         # Composition with two dimension reductions.
-        b = Stacked((elementwise(exp), ProjectionBijector() ∘ ProjectionBijector()), [1:1, 2:4])
+        b = Stacked(
+            (elementwise(exp), ProjectionBijector() ∘ ProjectionBijector()), [1:1, 2:4]
+        )
         binv = inverse(b)
         x = [1.0, 2.0, 3.0, 4.0]
         y = b(x)
