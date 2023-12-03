@@ -17,14 +17,21 @@ Return a `Distribution` whose support are ordered vectors, i.e., vectors with in
 This transformation is currently only supported for otherwise unconstrained distributions.
 """
 function ordered(d::ContinuousMultivariateDistribution)
-    if bijector(d) !== identity
+    # We're good if the map from unconstrained (in which we apply the ordered bijector)
+    # to constrained is monotonically increasing, i.e. order-preserving. In that case,
+    # we can form the ordered transformation as `binv ∘ OrderedBijector() ∘ b`.
+    # TODO: Add support for monotonically _decreasing_ transformations. This will be the
+    # the same as above, but the ordering will be reversed by `binv` so we need to handle this.
+    b = bijector(d)
+    binv = inverse(b)
+    if !is_monotonically_increasing(binv)
         throw(
             ArgumentError(
-                "ordered transform is currently only supported for unconstrained distributions.",
+                "ordered transform is not supported for $d.",
             ),
         )
     end
-    return transformed(d, OrderedBijector())
+    return transformed(d, binv ∘ OrderedBijector() ∘ b)
 end
 
 with_logabsdet_jacobian(b::OrderedBijector, x) = transform(b, x), logabsdetjac(b, x)

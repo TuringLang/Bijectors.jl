@@ -230,6 +230,23 @@ transform!(::typeof(identity), x, y) = copy!(y, x)
 logabsdetjac(::typeof(identity), x) = zero(eltype(x))
 logabsdetjac!(::typeof(identity), x, logjac) = logjac
 
+###################
+# Other utilities #
+###################
+"""
+    is_monotonically_increasing(f)
+
+Returns `true` if `f` is monotonically increasing.
+"""
+is_monotonically_increasing(f) = false
+is_monotonically_increasing(::typeof(identity)) = true
+function is_monotonically_increasing(cf::ComposedFunction)
+    return is_monotonically_increasing(cf.inner) && is_monotonically_increasing(cf.outer)
+end
+is_monotonically_increasing(::typeof(exp)) = true
+is_monotonically_increasing(ef::Elementwise) = is_monotonically_increasing(ef.x)
+
+
 ######################
 # Bijectors includes #
 ######################
