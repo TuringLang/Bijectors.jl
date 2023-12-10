@@ -28,8 +28,8 @@ function ordered(d::ContinuousMultivariateDistribution)
     # We're good if the map from unconstrained (in which we apply the ordered bijector)
     # to constrained is monotonically increasing, i.e. order-preserving. In that case,
     # we can form the ordered transformation as `binv ∘ OrderedBijector() ∘ b`.
-    # TODO: Add support for monotonically _decreasing_ transformations. This will be the
-    # the same as above, but the ordering will be reversed by `binv` so we need to handle this.
+    # Similarly, if we're working with monotonically decreasing maps, we can do the same
+    # but with the addition of a sign flip before and after the ordered bijector.
     b = bijector(d)
     binv = inverse(b)
     if is_monotonically_decreasing(binv)
