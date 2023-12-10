@@ -51,7 +51,7 @@ function Bijectors.bijector(d::FillMatrixOfUnivariate{Continuous})
 end
 Bijectors.bijector(d::MatrixOfUnivariate{Discrete}) = identity
 function Bijectors.bijector(d::MatrixOfUnivariate{Continuous})
-    return TruncatedBijectors.Bijector(_minmax(d.dists)...)
+    return Bijectors.TruncatedBijector(Bijectors._minmax(d.dists)...)
 end
 Bijectors.bijector(d::VectorOfMultivariate{Discrete}) = identity
 for T in (:VectorOfMultivariate, :FillVectorOfMultivariate)
