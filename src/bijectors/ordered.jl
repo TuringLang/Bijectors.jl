@@ -1,9 +1,8 @@
 struct SignFlip <: Bijector end
 
 with_logabsdet_jacobian(::SignFlip, x) = -x, zero(eltype(x))
-
+inverse(::SignFlip) = SignFlip()
 output_size(::SignFlip, x) = size(x)
-
 is_monotonically_increasing(::SignFlip) = false
 is_monotonically_decreasing(::SignFlip) = false
 
