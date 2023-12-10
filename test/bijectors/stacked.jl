@@ -34,4 +34,44 @@ end
         @test y == [exp(1.0), 2.0]
         @test binv(y) == [1.0, 2.0, 0.0]
     end
+
+    @testset "composition" begin
+        # Composition with one dimension reduction.
+        b = Stacked((elementwise(exp), ProjectionBijector() ∘ identity), [1:1, 2:3])
+        binv = inverse(b)
+        x = [1.0, 2.0, 3.0]
+        y = b(x)
+        x_ = binv(y)
+
+        # Are the values of correct size?
+        @test size(y) == (2,)
+        @test size(x_) == (3,)
+        # Can we determine the sizes correctly?
+        @test Bijectors.output_size(b, size(x)) == (2,)
+        @test Bijectors.output_size(binv, size(y)) == (3,)
+
+        # Are values correct?
+        @test y == [exp(1.0), 2.0]
+        @test binv(y) == [1.0, 2.0, 0.0]
+
+        # Composition with two dimension reductions.
+        b = Stacked(
+            (elementwise(exp), ProjectionBijector() ∘ ProjectionBijector()), [1:1, 2:4]
+        )
+        binv = inverse(b)
+        x = [1.0, 2.0, 3.0, 4.0]
+        y = b(x)
+        x_ = binv(y)
+
+        # Are the values of correct size?
+        @test size(y) == (2,)
+        @test size(x_) == (4,)
+        # Can we determine the sizes correctly?
+        @test Bijectors.output_size(b, size(x)) == (2,)
+        @test Bijectors.output_size(binv, size(y)) == (4,)
+
+        # Are values correct?
+        @test y == [exp(1.0), 2.0]
+        @test binv(y) == [1.0, 2.0, 0.0, 0.0]
+    end
 end
