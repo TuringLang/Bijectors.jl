@@ -29,6 +29,7 @@ end
         product_distribution(fill(-1 * InverseGamma(2, 3), 5)),
         # bounded supports
         product_distribution(fill(Uniform(1, 2), 5)),
+        product_distribution(fill(Beta(), 5)),
         # different transformations
         product_distribution(fill(transformed(InverseGamma(2, 3), Bijectors.Scale(3)), 5)),
         product_distribution(fill(transformed(InverseGamma(2, 3), Bijectors.Scale(-3)), 5)),
