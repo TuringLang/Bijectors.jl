@@ -243,8 +243,6 @@ is_monotonically_increasing(::typeof(identity)) = true
 function is_monotonically_increasing(cf::ComposedFunction)
     return is_monotonically_increasing(cf.inner) && is_monotonically_increasing(cf.outer)
 end
-is_monotonically_increasing(::typeof(exp)) = true
-is_monotonically_increasing(::typeof(log)) = true
 is_monotonically_increasing(binv::Inverse) = is_monotonically_increasing(inverse(b))
 is_monotonically_increasing(ef::Elementwise) = is_monotonically_increasing(ef.x)
 
