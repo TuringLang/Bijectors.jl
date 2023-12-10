@@ -27,3 +27,5 @@ function with_logabsdet_jacobian(b::LeakyReLU, x::AbstractArray)
     J = mask .* b.α .+ (!).(mask)
     return J .* x, sum(log.(abs.(J)))
 end
+
+is_monotonically_increasing(::LeakyReLU) = true

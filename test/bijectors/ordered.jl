@@ -22,11 +22,21 @@ end
         MvTDist(1, collect(1.0:5), Matrix(I(5))),
         product_distribution(fill(Normal(), 5)),
         product_distribution(fill(TDist(1), 5)),
+        # positive supports
+        product_distribution(fill(LogNormal(), 5)),
+        product_distribution(fill(InverseGamma(2, 3), 5)),
+        # negative supports
+        product_distribution(fill(-1 * InverseGamma(2, 3), 5)),
+        # bounded supports
+        product_distribution(fill(Uniform(1, 2), 5)),
+        product_distribution(fill(Beta(), 5)),
+        # different transformations
+        product_distribution(fill(transformed(InverseGamma(2, 3), Bijectors.Scale(3)), 5)),
+        product_distribution(fill(transformed(InverseGamma(2, 3), Bijectors.Scale(-3)), 5)),
     ]
         d_ordered = ordered(d)
         @test d_ordered isa Bijectors.TransformedDistribution
         @test d_ordered.dist === d
-        @test d_ordered.transform isa OrderedBijector
         y = randn(5)
         x = inverse(bijector(d_ordered))(y)
         @test issorted(x)

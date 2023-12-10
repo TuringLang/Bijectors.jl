@@ -28,3 +28,5 @@ logabsdetjac(b::Logit, x) = sum(logit_logabsdetjac.(x, b.a, b.b))
 function with_logabsdet_jacobian(b::Logit, x)
     return _logit.(x, b.a, b.b), sum(logit_logabsdetjac.(x, b.a, b.b))
 end
+
+is_monotonically_increasing(::Logit) = true

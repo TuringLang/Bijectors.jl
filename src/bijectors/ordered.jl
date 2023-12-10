@@ -1,3 +1,11 @@
+struct SignFlip <: Bijector end
+
+with_logabsdet_jacobian(::SignFlip, x) = -x, zero(eltype(x))
+inverse(::SignFlip) = SignFlip()
+output_size(::SignFlip, dim) = dim
+is_monotonically_increasing(::SignFlip) = false
+is_monotonically_decreasing(::SignFlip) = false
+
 """
     OrderedBijector()
 
@@ -17,14 +25,22 @@ Return a `Distribution` whose support are ordered vectors, i.e., vectors with in
 This transformation is currently only supported for otherwise unconstrained distributions.
 """
 function ordered(d::ContinuousMultivariateDistribution)
-    if bijector(d) !== identity
-        throw(
-            ArgumentError(
-                "ordered transform is currently only supported for unconstrained distributions.",
-            ),
-        )
+    # We're good if the map from unconstrained (in which we apply the ordered bijector)
+    # to constrained is monotonically increasing, i.e. order-preserving. In that case,
+    # we can form the ordered transformation as `binv ∘ OrderedBijector() ∘ b`.
+    # Similarly, if we're working with monotonically decreasing maps, we can do the same
+    # but with the addition of a sign flip before and after the ordered bijector.
+    b = bijector(d)
+    binv = inverse(b)
+    if is_monotonically_decreasing(binv)
+        ordered_b = binv ∘ SignFlip() ∘ OrderedBijector() ∘ SignFlip() ∘ b
+    elseif is_monotonically_increasing(binv)
+        ordered_b = binv ∘ OrderedBijector() ∘ b
+    else
+        throw(ArgumentError("ordered transform is currently not supported for $d."))
     end
-    return transformed(d, OrderedBijector())
+
+    return transformed(d, ordered_b)
 end
 
 with_logabsdet_jacobian(b::OrderedBijector, x) = transform(b, x), logabsdetjac(b, x)
