@@ -1,3 +1,12 @@
+struct SignFlip <: Bijector end
+
+with_logabsdet_jacobian(::SignFlip, x) = -x, zero(eltype(x))
+
+output_size(::SignFlip, x) = size(x)
+
+is_monotonically_increasing(::SignFlip) = false
+is_monotonically_decreasing(::SignFlip) = false
+
 """
     OrderedBijector()
 
@@ -24,10 +33,15 @@ function ordered(d::ContinuousMultivariateDistribution)
     # the same as above, but the ordering will be reversed by `binv` so we need to handle this.
     b = bijector(d)
     binv = inverse(b)
-    if !is_monotonically_increasing(binv)
+    if is_monotonically_decreasing(binv)
+        ordered_b = binv ∘ SignFlip() ∘ OrderedBijector() ∘ SignFlip() ∘ b
+    elseif is_monotonically_increasing(binv)
+        ordered_b = binv ∘ OrderedBijector() ∘ b
+    else
         throw(ArgumentError("ordered transform is currently not supported for $d."))
     end
-    return transformed(d, binv ∘ OrderedBijector() ∘ b)
+
+    return transformed(d, ordered_b)
 end
 
 with_logabsdet_jacobian(b::OrderedBijector, x) = transform(b, x), logabsdetjac(b, x)
