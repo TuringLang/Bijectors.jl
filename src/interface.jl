@@ -240,11 +240,52 @@ Returns `true` if `f` is monotonically increasing.
 """
 is_monotonically_increasing(f) = false
 is_monotonically_increasing(::typeof(identity)) = true
-function is_monotonically_increasing(cf::ComposedFunction)
-    return is_monotonically_increasing(cf.inner) && is_monotonically_increasing(cf.outer)
-end
-is_monotonically_increasing(binv::Inverse) = is_monotonically_increasing(inverse(b))
+is_monotonically_increasing(binv::Inverse) = is_monotonically_increasing(inverse(binv))
 is_monotonically_increasing(ef::Elementwise) = is_monotonically_increasing(ef.x)
+function is_monotonically_increasing(cf::ComposedFunction)
+    # Here we have a few different cases:
+    #
+    #     inner \ outer | inc | dec | other
+    #     --------------+-----+-----+------
+    #     inc           | inc | dec | NA   
+    #     dec           | dec | inc | NA   
+    #     other         | NA  | NA  | NA   
+    #     --------------+-----+-----+------
+    return if is_monotonically_increasing(cf.inner)
+        is_monotonically_increasing(cf.outer)
+    elseif is_monotonically_decreasing(cf.inner)
+        is_monotonically_decreasing(cf.outer)
+    else
+        false
+    end
+end
+
+"""
+    is_monotonically_decreasing(f)
+
+Returns `true` if `f` is monotonically decreasing.
+    """
+is_monotonically_decreasing(f) = false
+is_monotonically_decreasing(::typeof(identity)) = false
+is_monotonically_decreasing(binv::Inverse) = is_monotonically_decreasing(inverse(binv))
+is_monotonically_decreasing(ef::Elementwise) = is_monotonically_decreasing(ef.x)
+function is_monotonically_decreasing(cf::ComposedFunction)
+    # Here we have a few different cases:
+    #
+    #     inner \ outer | inc | dec | other
+    #     --------------+-----+-----+------
+    #     inc           | inc | dec | NA   
+    #     dec           | dec | inc | NA   
+    #     other         | NA  | NA  | NA   
+    #     --------------+-----+-----+------
+    return if is_monotonically_increasing(cf.inner)
+        is_monotonically_decreasing(cf.outer)
+    elseif is_monotonically_decreasing(cf.inner)
+        is_monotonically_increasing(cf.outer)
+    else
+        false
+    end
+end
 
 ######################
 # Bijectors includes #
