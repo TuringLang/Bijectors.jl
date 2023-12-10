@@ -34,3 +34,5 @@ _logabsdetjac_scale(a::AbstractVector, x::AbstractMatrix, ::Val{2}) = sum(log âˆ
 # Matrix: single input.
 _logabsdetjac_scale(a::AbstractMatrix, x::AbstractVector, ::Val{1}) = logabsdet(a)[1]
 _logabsdetjac_scale(a::AbstractMatrix, x::AbstractMatrix, ::Val{2}) = logabsdet(a)[1]
+
+is_monotonically_increasing(::Scale) = true
