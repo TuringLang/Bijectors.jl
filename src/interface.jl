@@ -42,6 +42,7 @@ with_logabsdet_jacobian(f::Columnwise, x::AbstractMatrix) = (f(x), logabsdetjac(
 Returns the output size of `f` given the input size `sz`.
 """
 output_size(f, sz) = sz
+output_size(f::ComposedFunction, sz) = output_size(f.outer, output_size(f.inner, sz))
 
 """
     output_length(f, len::Int)
