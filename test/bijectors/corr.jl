@@ -1,5 +1,5 @@
 using Bijectors, DistributionsAD, LinearAlgebra, Test
-using Bijectors: VecCorrBijector, VecCholeskyBijector, CorrBijector
+using Bijectors: VecCorrBijector, VecCorrCholeskyBijector, CorrBijector
 
 @testset "CorrBijector & VecCorrBijector" begin
     for d in [1, 2, 5]
@@ -45,7 +45,7 @@ using Bijectors: VecCorrBijector, VecCholeskyBijector, CorrBijector
     end
 end
 
-@testset "VecCholeskyBijector" begin
+@testset "VecCorrCholeskyBijector" begin
     for d in [2, 5]
         for dist in [LKJCholesky(d, 1, 'U'), LKJCholesky(d, 1, 'L')]
             b = bijector(dist)
