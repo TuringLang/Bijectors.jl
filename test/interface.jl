@@ -230,6 +230,7 @@ end
         filldist(Exponential(), 2),
         filldist(Exponential(), 2, 3),
         filldist(filldist(Exponential(), 2), 3),
+        filldist(Dirichlet(ones(2)), 3),
     ]
         x = rand(dist)
         b = bijector(dist)
