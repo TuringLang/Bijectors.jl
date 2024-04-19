@@ -252,6 +252,9 @@ function is_monotonically_increasing(cf::ComposedFunction)
     #     dec           | dec | inc | NA   
     #     other         | NA  | NA  | NA   
     #     --------------+-----+-----+------
+    #
+    # where `inc` means monotonically increasing, `dec` means monotonically decreasing,
+    # and `NA` means not applicable, i.e. we should return `false`.
     return if is_monotonically_increasing(cf.inner)
         is_monotonically_increasing(cf.outer)
     elseif is_monotonically_decreasing(cf.inner)
@@ -265,7 +268,7 @@ end
     is_monotonically_decreasing(f)
 
 Returns `true` if `f` is monotonically decreasing.
-    """
+"""
 is_monotonically_decreasing(f) = false
 is_monotonically_decreasing(::typeof(identity)) = false
 is_monotonically_decreasing(binv::Inverse) = is_monotonically_decreasing(inverse(binv))
@@ -279,6 +282,9 @@ function is_monotonically_decreasing(cf::ComposedFunction)
     #     dec           | dec | inc | NA   
     #     other         | NA  | NA  | NA   
     #     --------------+-----+-----+------
+    #
+    # where `inc` means monotonically increasing, `dec` means monotonically decreasing,
+    # and `NA` means not applicable, i.e. we should return `false`.
     return if is_monotonically_increasing(cf.inner)
         is_monotonically_decreasing(cf.outer)
     elseif is_monotonically_decreasing(cf.inner)
