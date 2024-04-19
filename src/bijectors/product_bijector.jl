@@ -37,7 +37,6 @@ function transform(
     b::ProductBijector{<:AbstractArray,N}, x::AbstractArray{<:Real,M}
 ) where {N,M}
     slices = _product_bijector_slices(b, x)
-    # TODO: Should we do some `cat`-ing or `stack`-ing here?
     return stack(map(transform, b.bs, slices))
 end
 
