@@ -58,7 +58,6 @@ end
 function output_size(b::ProductBijector{<:AbstractArray,N}, sz::NTuple{M}) where {N,M}
     _product_bijector_check_dim(Val(N), Val(M))
 
-    # TODO: Handle `M == N` explicitly.
     sz_redundant = ntuple(i -> sz[i + (M - N)], N)
     sz_example = ntuple(i -> sz[i], M - N)
     # NOTE: `Base.stack`, which is used in the transformation, only supports the scenario where
