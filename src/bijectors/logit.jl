@@ -1,9 +1,9 @@
 ######################
 # Logit and Logistic #
 ######################
-struct Logit{T} <: Bijector
-    a::T
-    b::T
+struct Logit{T1,T2} <: Bijector
+    a::T1
+    b::T2
 end
 
 Functors.@functor Logit
