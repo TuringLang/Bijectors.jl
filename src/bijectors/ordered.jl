@@ -4,7 +4,7 @@ with_logabsdet_jacobian(::SignFlip, x) = -x, zero(eltype(x))
 inverse(::SignFlip) = SignFlip()
 output_size(::SignFlip, dim) = dim
 is_monotonically_increasing(::SignFlip) = false
-is_monotonically_decreasing(::SignFlip) = false
+is_monotonically_decreasing(::SignFlip) = true
 
 """
     OrderedBijector()

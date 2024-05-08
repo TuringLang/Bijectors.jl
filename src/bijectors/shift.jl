@@ -24,3 +24,4 @@ _logabsdetjac_shift_array_batch(a, x) = zeros(eltype(x), size(x, ndims(x)))
 with_logabsdet_jacobian(b::Shift, x) = transform(b, x), logabsdetjac(b, x)
 
 is_monotonically_increasing(::Shift) = true
+is_monotonically_decreasing(::Shift) = true
