@@ -104,3 +104,47 @@ end
 
 logabsdetjac(b::OrderedBijector, x::AbstractVector) = sum(@view(x[2:end]))
 logabsdetjac(b::OrderedBijector, x::AbstractMatrix) = vec(sum(@view(x[2:end, :]); dims=1))
+
+# Need a custom distribution type to handle this properly.
+struct OrderedDistribution{B,D<:ContinuousMultivariateDistribution} <:
+       ContinuousMultivariateDistribution
+    dist::D
+    bijector::B
+end
+
+bijector(d::OrderedDistribution) = d.bijector
+
+Distributions.logpdf(d::OrderedDistribution, x) = Distributions.logpdf(d.dist, x)
+function Distributions._logpdf(d::OrderedDistribution, x::AbstractVector{<:Real})
+    issorted(x) || return -eltype(d)(Inf)
+    return Distributions.logpdf(d.dist, x)
+end
+Base.length(d::OrderedDistribution) = length(d.dist)
+
+"""
+    marginal_dist(d::MultivariateDistribution, i::Int)
+
+Return the marginal distribution of the `i`-th component of the multivariate
+distribution `d`.
+"""
+marginal_dist(d::Distributions.Product, i::Int) = d.v[i]
+function marginal_dist(d::AbstractMvNormal, i::Int)
+    return Normal(mean(d)[i], sqrt(var(d)[i]))
+end
+
+function Distributions._rand!(
+    rng::AbstractRNG, d::OrderedDistribution, x::AbstractVector{<:Real}
+)
+    # Rejection sampling.
+    x[1] = rand(rng, marginal_dist(d.dist, 1))
+    for i in 2:length(x)
+        x_prev = x[i - 1]
+        d_i = marginal_dist(d.dist, i)
+        success = false
+        while !success
+            x[i] = rand(rng, d_i)
+            success |= x[i] >= x_prev
+        end
+    end
+    return x
+end
