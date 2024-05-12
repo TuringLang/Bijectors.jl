@@ -72,4 +72,43 @@ end
         d = Dirichlet(ones(5))
         @test_throws ArgumentError ordered(d)
     end
+
+    @testset "correctness" begin
+        num_samples = 10_000
+        num_adapts = 1_000
+        k = 2
+        @testset "$(typeof(dist))" for dist in [
+            MvNormal(1:k, Diagonal(1:k)),
+            product_distribution(fill(truncated(Normal(); lower=0), k)),
+        ]
+            prob = OrderedTestProblem(dist)
+            sampler = AdvancedHMC.NUTS(0.8)
+            initial_params = rand(ordered(dist))
+            transitions = sample(
+                prob,
+                sampler,
+                num_samples;
+                initial_params=initial_params,
+                discard_initial=num_adapts,
+                n_adapts=num_adapts,
+            )
+            xs = mapreduce(hcat, transitions) do t
+                to_constrained(prob, t.z.θ)
+            end
+            @test all(issorted, eachcol(xs))
+            # Should result in the same as rejection sampling.
+            dist_ordered = ordered(dist)
+            xs_true = rand(dist_ordered, num_samples)
+            @test all(issorted, eachcol(xs_true))
+
+            qs_true = mapslices(xs_true; dims=2) do xs
+                quantile(xs, [0.25, 0.5, 0.75])
+            end
+            qs = mapslices(xs; dims=2) do xs
+                quantile(xs, [0.25, 0.5, 0.75])
+            end
+
+            @info "quantiles" qs_true qs
+        end
+    end
 end
