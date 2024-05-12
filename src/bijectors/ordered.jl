@@ -17,32 +17,6 @@ A bijector mapping ordered vectors in ℝᵈ to unordered vectors in ℝᵈ.
 """
 struct OrderedBijector <: Bijector end
 
-"""
-    ordered(d::Distribution)
-
-Return a `Distribution` whose support are ordered vectors, i.e., vectors with increasingly ordered elements.
-
-This transformation is currently only supported for otherwise unconstrained distributions.
-"""
-function ordered(d::ContinuousMultivariateDistribution)
-    # We're good if the map from unconstrained (in which we apply the ordered bijector)
-    # to constrained is monotonically increasing, i.e. order-preserving. In that case,
-    # we can form the ordered transformation as `binv ∘ OrderedBijector() ∘ b`.
-    # Similarly, if we're working with monotonically decreasing maps, we can do the same
-    # but with the addition of a sign flip before and after the ordered bijector.
-    b = bijector(d)
-    binv = inverse(b)
-    if is_monotonically_decreasing(binv)
-        ordered_b = binv ∘ SignFlip() ∘ OrderedBijector() ∘ SignFlip() ∘ b
-    elseif is_monotonically_increasing(binv)
-        ordered_b = binv ∘ OrderedBijector() ∘ b
-    else
-        throw(ArgumentError("ordered transform is currently not supported for $d."))
-    end
-
-    return OrderedDistribution(d, inverse(ordered_b))
-end
-
 with_logabsdet_jacobian(b::OrderedBijector, x) = transform(b, x), logabsdetjac(b, x)
 
 transform(b::OrderedBijector, y::AbstractVecOrMat) = _transform_ordered(y)
@@ -110,6 +84,32 @@ struct OrderedDistribution{B,D<:ContinuousMultivariateDistribution} <:
        ContinuousMultivariateDistribution
     dist::D
     bijector::B
+end
+
+"""
+    ordered(d::Distribution)
+
+Return a `Distribution` whose support are ordered vectors, i.e., vectors with increasingly ordered elements.
+
+This transformation is currently only supported for otherwise unconstrained distributions.
+"""
+function ordered(d::ContinuousMultivariateDistribution)
+    # We're good if the map from unconstrained (in which we apply the ordered bijector)
+    # to constrained is monotonically increasing, i.e. order-preserving. In that case,
+    # we can form the ordered transformation as `binv ∘ OrderedBijector() ∘ b`.
+    # Similarly, if we're working with monotonically decreasing maps, we can do the same
+    # but with the addition of a sign flip before and after the ordered bijector.
+    b = bijector(d)
+    binv = inverse(b)
+    if is_monotonically_decreasing(binv)
+        ordered_b = binv ∘ SignFlip() ∘ OrderedBijector() ∘ SignFlip() ∘ b
+    elseif is_monotonically_increasing(binv)
+        ordered_b = binv ∘ OrderedBijector() ∘ b
+    else
+        throw(ArgumentError("ordered transform is currently not supported for $d."))
+    end
+
+    return OrderedDistribution(d, inverse(ordered_b))
 end
 
 bijector(d::OrderedDistribution) = d.bijector
