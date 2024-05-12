@@ -114,7 +114,6 @@ end
 
 bijector(d::OrderedDistribution) = d.bijector
 
-Distributions.logpdf(d::OrderedDistribution, x) = Distributions.logpdf(d.dist, x)
 function Distributions._logpdf(d::OrderedDistribution, x::AbstractVector{<:Real})
     issorted(x) || return -eltype(d)(Inf)
     return Distributions.logpdf(d.dist, x)
