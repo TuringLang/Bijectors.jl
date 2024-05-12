@@ -53,6 +53,8 @@ end
         # different transformations
         product_distribution(fill(transformed(InverseGamma(2, 3), Bijectors.Scale(3)), 5)),
         product_distribution(fill(transformed(InverseGamma(2, 3), Bijectors.Scale(-3)), 5)),
+        product_distribution(fill(transformed(InverseGamma(2, 3), Bijectors.Shift(3)), 5)),
+        product_distribution(fill(transformed(InverseGamma(2, 3), Bijectors.Shift(-3)), 5)),
     ]
         d_ordered = ordered(d)
         @test d_ordered isa Bijectors.OrderedDistribution
