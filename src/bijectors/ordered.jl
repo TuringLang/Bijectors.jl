@@ -40,7 +40,7 @@ function ordered(d::ContinuousMultivariateDistribution)
         throw(ArgumentError("ordered transform is currently not supported for $d."))
     end
 
-    return transformed(d, ordered_b)
+    return OrderedDistribution(d, inverse(ordered_b))
 end
 
 with_logabsdet_jacobian(b::OrderedBijector, x) = transform(b, x), logabsdetjac(b, x)
