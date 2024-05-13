@@ -120,30 +120,12 @@ function Distributions._logpdf(d::OrderedDistribution, x::AbstractVector{<:Real}
 end
 Base.length(d::OrderedDistribution) = length(d.dist)
 
-"""
-    marginal_dist(d::MultivariateDistribution, i::Int)
-
-Return the marginal distribution of the `i`-th component of the multivariate
-distribution `d`.
-"""
-marginal_dist(d::Distributions.Product, i::Int) = d.v[i]
-function marginal_dist(d::AbstractMvNormal, i::Int)
-    return Normal(mean(d)[i], sqrt(var(d)[i]))
-end
-
 function Distributions._rand!(
     rng::AbstractRNG, d::OrderedDistribution, x::AbstractVector{<:Real}
 )
     # Rejection sampling.
-    x[1] = rand(rng, marginal_dist(d.dist, 1))
-    for i in 2:length(x)
-        x_prev = x[i - 1]
-        d_i = marginal_dist(d.dist, i)
-        success = false
-        while !success
-            x[i] = rand(rng, d_i)
-            success |= x[i] >= x_prev
-        end
+    while true
+        Distributions.rand!(rng, d.dist, x)
+        issorted(x) && return x
     end
-    return x
 end
