@@ -102,14 +102,14 @@ function ordered(d::ContinuousMultivariateDistribution)
     b = bijector(d)
     binv = inverse(b)
     if is_monotonically_decreasing(binv)
-        ordered_b = binv ∘ SignFlip() ∘ OrderedBijector() ∘ SignFlip() ∘ b
+        ordered_b = binv ∘ SignFlip() ∘ inverse(OrderedBijector()) ∘ SignFlip() ∘ b
     elseif is_monotonically_increasing(binv)
-        ordered_b = binv ∘ OrderedBijector() ∘ b
+        ordered_b = binv ∘ inverse(OrderedBijector()) ∘ b
     else
         throw(ArgumentError("ordered transform is currently not supported for $d."))
     end
 
-    return OrderedDistribution(d, inverse(ordered_b))
+    return OrderedDistribution(d, ordered_b)
 end
 
 bijector(d::OrderedDistribution) = d.bijector
