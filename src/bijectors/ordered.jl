@@ -114,7 +114,7 @@ end
 
 bijector(d::OrderedDistribution) = d.bijector
 
-Base.eltype(::Type{<:OrderedDistribution{D}) where {D} = eltype(D)
+Base.eltype(::Type{<:OrderedDistribution{D}}) where {D} = eltype(D)
 Base.eltype(d::OrderedDistribution) = eltype(d.dist)
 function Distributions._logpdf(d::OrderedDistribution, x::AbstractVector{<:Real})
     lp = Distributions.logpdf(d.dist, x)
