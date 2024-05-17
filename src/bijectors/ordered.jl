@@ -80,7 +80,7 @@ logabsdetjac(b::OrderedBijector, x::AbstractVector) = sum(@view(x[2:end]))
 logabsdetjac(b::OrderedBijector, x::AbstractMatrix) = vec(sum(@view(x[2:end, :]); dims=1))
 
 # Need a custom distribution type to handle this properly.
-struct OrderedDistribution{B,D<:ContinuousMultivariateDistribution} <:
+struct OrderedDistribution{D<:ContinuousMultivariateDistribution,B} <:
        ContinuousMultivariateDistribution
     dist::D
     bijector::B
@@ -114,9 +114,12 @@ end
 
 bijector(d::OrderedDistribution) = d.bijector
 
+Base.eltype(::Type{<:OrderedDistribution{D}) where {D} = eltype(D)
+Base.eltype(d::OrderedDistribution) = eltype(d.dist)
 function Distributions._logpdf(d::OrderedDistribution, x::AbstractVector{<:Real})
-    issorted(x) || return -eltype(d)(Inf)
-    return Distributions.logpdf(d.dist, x)
+    lp = Distributions.logpdf(d.dist, x)
+    issorted(x) && return lp
+    return oftype(lp, -Inf)
 end
 Base.length(d::OrderedDistribution) = length(d.dist)
 
