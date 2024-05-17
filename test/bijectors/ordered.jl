@@ -85,15 +85,15 @@ end
                 MvNormal(1:k, Diagonal(1:k)),
                 MvNormal(1:k),
                 # positive support
-                product_distribution(fill(truncated(Normal(); lower=0), k)),
+                product_distribution(fill(Exponential(), k)),
                 # bounded
                 product_distribution(fill(Beta(), k)),
                 # using `Scale`
                 product_distribution(
-                    fill(transformed(InverseGamma(2, 3), Bijectors.Scale(3)), k)
+                    fill(transformed(Exponential(), Bijectors.Scale(3)), k)
                 ),
                 # negative support
-                product_distribution(fill(-1 * InverseGamma(2, 3), k)),
+                product_distribution(fill(-1 * Exponential(), k)),
             ]
                 prob = OrderedTestProblem(dist)
                 sampler = AdvancedHMC.NUTS(0.8)
