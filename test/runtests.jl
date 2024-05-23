@@ -48,6 +48,9 @@ if GROUP == "All" || GROUP == "Interface"
     include("bijectors/pd.jl")
     include("bijectors/reshape.jl")
     include("bijectors/corr.jl")
+    include("bijectors/product_bijector.jl")
+
+    include("distributionsad.jl")
 end
 
 if GROUP == "All" || GROUP == "AD"

@@ -251,6 +251,7 @@ include("bijectors/corr.jl")
 include("bijectors/truncated.jl")
 include("bijectors/named_bijector.jl")
 include("bijectors/ordered.jl")
+include("bijectors/product_bijector.jl")
 
 # Normalizing flow related
 include("bijectors/planar_layer.jl")
