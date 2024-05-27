@@ -400,6 +400,69 @@ function _inv_link_chol_lkj(y::AbstractVector)
     return W, logJ
 end
 
+# shared reverse-mode AD rule code
+function _inv_link_chol_lkj_rrule(y::AbstractVector)
+    LinearAlgebra.require_one_based_indexing(y)
+    K = _triu1_dim_from_length(length(y))
+
+    W = similar(y, K, K)
+    T = typeof(log(one(eltype(W))))
+    logJ = zero(T)
+
+    z_vec = tanh.(y)
+
+    idx = 1
+    W[1, 1] = 1
+    @inbounds for j in 2:K
+        log_remainder = zero(T)  # log of proportion of unit vector remaining
+        for i in 1:(j - 1)
+            z = z_vec[idx]
+            idx += 1
+            W[i, j] = z * exp(log_remainder)
+            log_remainder += log1p(-z^2) / 2
+            logJ += log_remainder
+        end
+        logJ += log_remainder
+        W[j, j] = exp(log_remainder)
+        for i in (j + 1):K
+            W[i, j] = 0
+        end
+    end
+
+    function pullback_inv_link_chol_lkj((ΔW, ΔlogJ))
+        LinearAlgebra.require_one_based_indexing(ΔW)
+        Δy = similar(y)
+
+        idx = lastindex(y)
+        @inbounds for j in K:-1:2
+            Δlog_remainder = W[j, j] * ΔW[j, j] + 2ΔlogJ
+            for i in (j - 1):-1:1
+                W_ΔW = W[i, j] * ΔW[i, j]
+                z = z_vec[idx]
+                Δy[idx] = (inv(z) - z) * W_ΔW - z * Δlog_remainder
+                idx -= 1
+                Δlog_remainder += ΔlogJ + W_ΔW
+            end
+        end
+
+        return Δy
+    end
+
+    return (W, logJ), pullback_inv_link_chol_lkj
+end
+
+function _inv_link_chol_lkj_rrule(y::AbstractMatrix)
+    K = LinearAlgebra.checksquare(y)
+    y_vec = Bijectors._triu_to_vec(y, 1)
+    W_logJ, back = _inv_link_chol_lkj_reverse(y_vec)
+    
+    function pullback_inv_link_chol_lkj(ΔW_ΔlogJ)
+        return update_triu_from_vec(_triu_to_vec(back(ΔW_ΔlogJ), 1), 1, K)
+    end
+
+    return W_logJ, pullback_inv_link_chol_lkj
+end
+
 function _logabsdetjac_inv_corr(Y::AbstractMatrix)
     K = LinearAlgebra.checksquare(Y)
 
