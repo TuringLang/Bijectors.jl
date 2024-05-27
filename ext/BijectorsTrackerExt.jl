@@ -341,7 +341,7 @@ Bijectors._inv_link_chol_lkj(y::TrackedVector) = track(Bijectors._inv_link_chol_
 Bijectors._inv_link_chol_lkj(y::TrackedMatrix) = track(Bijectors._inv_link_chol_lkj, y)
 @grad function Bijectors._inv_link_chol_lkj(y_tracked::Union{TrackedVector,TrackedMatrix})
     y = data(y_tracked)
-    W_logJ, back = _inv_link_chol_lkj_rrule(y)
+    W_logJ, back = Bijectors._inv_link_chol_lkj_rrule(y)
 
     function pullback_inv_link_chol_lkj(ΔW_ΔlogJ)
         return (back(ΔW_ΔlogJ),)
