@@ -338,44 +338,54 @@ function _inv_link_chol_lkj(Y::AbstractMatrix)
     K = LinearAlgebra.checksquare(Y)
 
     W = similar(Y)
+    T = typeof(log(one(eltype(W))))
+    logJ = zero(T)
 
+    idx = 1
     @inbounds for j in 1:K
-        W[1, j] = 1
-        for i in 2:j
-            z = tanh(Y[i - 1, j])
-            tmp = W[i - 1, j]
-            W[i - 1, j] = z * tmp
-            W[i, j] = tmp * sqrt(1 - z^2)
+        log_remainder = zero(T)  # log of proportion of unit vector remaining
+        for i in 1:(j - 1)
+            z = tanh(Y[i, j])
+            idx += 1
+            W[i, j] = z * exp(log_remainder)
+            log_remainder += log1p(-z^2) / 2
+            logJ += log_remainder
         end
+        logJ += log_remainder
+        W[j, j] = exp(log_remainder)
         for i in (j + 1):K
             W[i, j] = 0
         end
     end
 
-    return W
+    return W, logJ
 end
 
 function _inv_link_chol_lkj(y::AbstractVector)
     K = _triu1_dim_from_length(length(y))
 
     W = similar(y, K, K)
+    T = typeof(log(one(eltype(W))))
+    logJ = zero(T)
 
     idx = 1
     @inbounds for j in 1:K
-        W[1, j] = 1
-        for i in 2:j
+        log_remainder = zero(T)  # log of proportion of unit vector remaining
+        for i in 1:(j - 1)
             z = tanh(y[idx])
             idx += 1
-            tmp = W[i - 1, j]
-            W[i - 1, j] = z * tmp
-            W[i, j] = tmp * sqrt(1 - z^2)
+            W[i, j] = z * exp(log_remainder)
+            log_remainder += log1p(-z^2) / 2
+            logJ += log_remainder
         end
+        logJ += log_remainder
+        W[j, j] = exp(log_remainder)
         for i in (j + 1):K
             W[i, j] = 0
         end
     end
 
-    return W
+    return W, logJ
 end
 
 function _logabsdetjac_inv_corr(Y::AbstractMatrix)
