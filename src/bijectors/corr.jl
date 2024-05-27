@@ -335,6 +335,7 @@ _link_chol_lkj_from_lower(W::AbstractMatrix) = _link_chol_lkj_from_upper(transpo
 Inverse link function for cholesky factor.
 """
 function _inv_link_chol_lkj(Y::AbstractMatrix)
+    LinearAlgebra.require_one_based_indexing(Y)
     K = LinearAlgebra.checksquare(Y)
 
     W = similar(Y)
@@ -362,6 +363,7 @@ function _inv_link_chol_lkj(Y::AbstractMatrix)
 end
 
 function _inv_link_chol_lkj(y::AbstractVector)
+    LinearAlgebra.require_one_based_indexing(y)
     K = _triu1_dim_from_length(length(y))
 
     W = similar(y, K, K)
