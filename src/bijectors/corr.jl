@@ -71,9 +71,13 @@ function transform(b::CorrBijector, X::AbstractMatrix{<:Real})
     return r
 end
 
-function transform(ib::Inverse{CorrBijector}, y::AbstractMatrix{<:Real})
-    w = _inv_link_chol_lkj(y)
-    return pd_from_upper(w)
+function with_logabsdet_jacobian(ib::Inverse{CorrBijector}, y::AbstractMatrix{<:Real})
+    U, logJ = _inv_link_chol_lkj(y)
+    K = size(U, 1)
+    for j in 2:(K - 1)
+        logJ += (K - j) * log(U[j, j])
+    end
+    return pd_from_upper(U), logJ
 end
 
 logabsdetjac(::Inverse{CorrBijector}, Y::AbstractMatrix{<:Real}) = _logabsdetjac_inv_corr(Y)
@@ -131,8 +135,13 @@ function logabsdetjac(b::VecCorrBijector, x)
     return -logabsdetjac(inverse(b), b(x))
 end
 
-function transform(::Inverse{VecCorrBijector}, y::AbstractVector{<:Real})
-    return pd_from_upper(_inv_link_chol_lkj(y))
+function with_logabsdet_jacobian(::Inverse{VecCorrBijector}, y::AbstractVector{<:Real})
+    U, logJ = _inv_link_chol_lkj(y)
+    K = size(U, 1)
+    for j in 2:(K - 1)
+        logJ += (K - j) * log(U[j, j])
+    end
+    return pd_from_upper(U), logJ
 end
 
 function logabsdetjac(::Inverse{VecCorrBijector}, y::AbstractVector{<:Real})
@@ -227,15 +236,16 @@ function logabsdetjac(b::VecCorrCholeskyBijector, x)
     return -logabsdetjac(inverse(b), b(x))
 end
 
-function transform(b::Inverse{VecCorrCholeskyBijector}, y::AbstractVector{<:Real})
+function with_logabsdet_jacobian(b::Inverse{VecCorrCholeskyBijector}, y::AbstractVector{<:Real})
+    factors, logJ = _inv_link_chol_lkj(y)
     if b.orig.mode === :U
         # This Cholesky constructor is compatible with Julia v1.6
         # for later versions Cholesky(::UpperTriangular) works
-        return Cholesky(_inv_link_chol_lkj(y), 'U', 0)
+        return Cholesky(factors, 'U', 0), logJ
     else # No need to check for === :L, as it is checked in the VecCorrCholeskyBijector constructor.
         # HACK: Need to make materialize the transposed matrix to avoid numerical instabilities.
         # If we don't, the return-type can be both `Matrix` and `Transposed`.
-        return Cholesky(transpose_eager(_inv_link_chol_lkj(y)), 'L', 0)
+        return Cholesky(transpose_eager(factors), 'L', 0), logJ
     end
 end
 
