@@ -293,48 +293,44 @@ which is the above implementation.
 function _link_chol_lkj(W::AbstractMatrix)
     K = LinearAlgebra.checksquare(W)
 
-    z = similar(W) # z is also UpperTriangular. 
+    y = similar(W) # z is also UpperTriangular. 
     # Some zero filling can be avoided. Though diagnoal is still needed to be filled with zero.
 
-    # This block can't be integrated with loop below, because W[1,1] != 0.
-    @inbounds z[:, 1] .= 0
-
-    @inbounds for j in 2:K
-        z[1, j] = atanh(W[1, j])
-        tmp = sqrt(1 - W[1, j]^2)
-        for i in 2:(j - 1)
-            p = W[i, j] / tmp
-            tmp *= sqrt(1 - p^2)
-            z[i, j] = atanh(p)
+    @inbounds for j in 1:K
+        remainder_sq = one(eltype(W))
+        for i in 1:(j - 1)
+            z = W[i, j] / sqrt(remainder_sq)
+            y[i, j] = atanh(z)
+            remainder_sq -= W[i, j]^2
         end
         for i in j:K
-            z[i, j] = 0
+            y[i, j] = 0
         end
     end
 
-    return z
+    return y
 end
 
 function _link_chol_lkj_from_upper(W::AbstractMatrix)
     K = LinearAlgebra.checksquare(W)
     N = ((K - 1) * K) ÷ 2   # {K \choose 2} free parameters
 
-    z = similar(W, N)
+    y = similar(W, N)
 
     idx = 1
     @inbounds for j in 2:K
-        z[idx] = atanh(W[1, j])
+        y[idx] = atanh(W[1, j])
         idx += 1
-        tmp = sqrt(1 - W[1, j]^2)
+        remainder_sq = 1 - W[1, j]^2
         for i in 2:(j - 1)
-            p = W[i, j] / tmp
-            tmp *= sqrt(1 - p^2)
-            z[idx] = atanh(p)
+            z = W[i, j] / sqrt(remainder_sq)
+            y[idx] = atanh(z)
+            remainder_sq -= W[i, j]^2
             idx += 1
         end
     end
 
-    return z
+    return y
 end
 
 _link_chol_lkj_from_lower(W::AbstractMatrix) = _link_chol_lkj_from_upper(transpose_eager(W))
