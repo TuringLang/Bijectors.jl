@@ -338,106 +338,16 @@ Bijectors.lower_triangular(A::TrackedMatrix) = track(Bijectors.lower_triangular,
 end
 
 Bijectors._inv_link_chol_lkj(y::TrackedVector) = track(Bijectors._inv_link_chol_lkj, y)
-@grad function Bijectors._inv_link_chol_lkj(y_tracked::TrackedVector)
-    y = data(y_tracked)
-    K = _triu1_dim_from_length(length(y))
-
-    W = similar(y, K, K)
-
-    z_vec = similar(y)
-    tmp_vec = similar(y)
-
-    idx = 1
-    @inbounds for j in 1:K
-        W[1, j] = 1
-        for i in 2:j
-            z = tanh(y[idx])
-            tmp = W[i - 1, j]
-
-            z_vec[idx] = z
-            tmp_vec[idx] = tmp
-            idx += 1
-
-            W[i - 1, j] = z * tmp
-            W[i, j] = tmp * sqrt(1 - z^2)
-        end
-        for i in (j + 1):K
-            W[i, j] = 0
-        end
-    end
-
-    function pullback_inv_link_chol_lkj(ΔW)
-        LinearAlgebra.checksquare(ΔW)
-
-        Δy = zero(y)
-
-        @inbounds for j in 1:K
-            idx_up_to_prev_column = ((j - 1) * (j - 2) ÷ 2)
-            Δtmp = ΔW[j, j]
-            for i in j:-1:2
-                idx = idx_up_to_prev_column + i - 1
-                Δz =
-                    ΔW[i - 1, j] * tmp_vec[idx] -
-                    Δtmp * tmp_vec[idx] / sqrt(1 - z_vec[idx]^2) * z_vec[idx]
-                Δy[idx] = Δz / cosh(y[idx])^2
-                Δtmp = ΔW[i - 1, j] * z_vec[idx] + Δtmp * sqrt(1 - z_vec[idx]^2)
-            end
-        end
-
-        return (Δy,)
-    end
-
-    return W, pullback_inv_link_chol_lkj
-end
-
 Bijectors._inv_link_chol_lkj(y::TrackedMatrix) = track(Bijectors._inv_link_chol_lkj, y)
-@grad function Bijectors._inv_link_chol_lkj(y_tracked::TrackedMatrix)
+@grad function Bijectors._inv_link_chol_lkj(y_tracked::Union{TrackedVector,TrackedMatrix})
     y = data(y_tracked)
+    W_logJ, back = Bijectors._inv_link_chol_lkj_rrule(y)
 
-    K = LinearAlgebra.checksquare(y)
-
-    w = similar(y)
-
-    z_mat = similar(y) # cache for adjoint
-    tmp_mat = similar(y)
-
-    @inbounds for j in 1:K
-        w[1, j] = 1
-        for i in 2:j
-            z = tanh(y[i - 1, j])
-            tmp = w[i - 1, j]
-
-            z_mat[i, j] = z
-            tmp_mat[i, j] = tmp
-
-            w[i - 1, j] = z * tmp
-            w[i, j] = tmp * sqrt(1 - z^2)
-        end
-        for i in (j + 1):K
-            w[i, j] = 0
-        end
+    function pullback_inv_link_chol_lkj(ΔW_ΔlogJ)
+        return (back(ΔW_ΔlogJ),)
     end
 
-    function pullback_inv_link_chol_lkj(Δw)
-        LinearAlgebra.checksquare(Δw)
-
-        Δy = zero(y)
-
-        @inbounds for j in 1:K
-            Δtmp = Δw[j, j]
-            for i in j:-1:2
-                Δz =
-                    Δw[i - 1, j] * tmp_mat[i, j] -
-                    Δtmp * tmp_mat[i, j] / sqrt(1 - z_mat[i, j]^2) * z_mat[i, j]
-                Δy[i - 1, j] = Δz / cosh(y[i - 1, j])^2
-                Δtmp = Δw[i - 1, j] * z_mat[i, j] + Δtmp * sqrt(1 - z_mat[i, j]^2)
-            end
-        end
-
-        return (Δy,)
-    end
-
-    return w, pullback_inv_link_chol_lkj
+    return W_logJ, pullback_inv_link_chol_lkj
 end
 
 Bijectors._link_chol_lkj(w::TrackedMatrix) = track(Bijectors._link_chol_lkj, w)
