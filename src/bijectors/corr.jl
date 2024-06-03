@@ -449,7 +449,6 @@ function _inv_link_chol_lkj_rrule(y::AbstractMatrix)
     K = LinearAlgebra.checksquare(y)
     y_vec = Bijectors._triu_to_vec(y, 1)
     W_logJ, back = _inv_link_chol_lkj_reverse(y_vec)
-    
     function pullback_inv_link_chol_lkj(ΔW_ΔlogJ)
         return update_triu_from_vec(_triu_to_vec(back(ΔW_ΔlogJ), 1), 1, K)
     end
