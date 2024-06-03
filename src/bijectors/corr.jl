@@ -136,7 +136,9 @@ function logabsdetjac(b::VecCorrBijector, x)
 end
 
 function with_logabsdet_jacobian(::Inverse{VecCorrBijector}, y::AbstractVector{<:Real})
-    U, logJ = _inv_link_chol_lkj(y)
+    U_logJ = _inv_link_chol_lkj(y)
+    # workaround for `Tracker.TrackedTuple` not supporting iteration
+    U, logJ = U_logJ[1], U_logJ[2]
     K = size(U, 1)
     for j in 2:(K - 1)
         logJ += (K - j) * log(U[j, j])
