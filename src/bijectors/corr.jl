@@ -343,7 +343,7 @@ function _inv_link_chol_lkj(Y::AbstractMatrix)
     K = LinearAlgebra.checksquare(Y)
 
     W = similar(Y)
-    T = typeof(log(one(eltype(W))))
+    T = float(eltype(W))
     logJ = zero(T)
 
     idx = 1
@@ -351,7 +351,6 @@ function _inv_link_chol_lkj(Y::AbstractMatrix)
         log_remainder = zero(T)  # log of proportion of unit vector remaining
         for i in 1:(j - 1)
             z = tanh(Y[i, j])
-            idx += 1
             W[i, j] = z * exp(log_remainder)
             log_remainder += log1p(-z^2) / 2
             logJ += log_remainder
@@ -427,14 +426,14 @@ function _inv_link_chol_lkj_rrule(y::AbstractVector)
         LinearAlgebra.require_one_based_indexing(ΔW)
         Δy = similar(y)
 
-        idx = lastindex(y)
+        idx_local = lastindex(y)
         @inbounds for j in K:-1:2
             Δlog_remainder = W[j, j] * ΔW[j, j] + 2ΔlogJ
             for i in (j - 1):-1:1
                 W_ΔW = W[i, j] * ΔW[i, j]
-                z = z_vec[idx]
-                Δy[idx] = (inv(z) - z) * W_ΔW - z * Δlog_remainder
-                idx -= 1
+                z = z_vec[idx_local]
+                Δy[idx_local] = (inv(z) - z) * W_ΔW - z * Δlog_remainder
+                idx_local -= 1
                 Δlog_remainder += ΔlogJ + W_ΔW
             end
         end
