@@ -370,7 +370,7 @@ function _inv_link_chol_lkj(y::AbstractVector)
     K = _triu1_dim_from_length(length(y))
 
     W = similar(y, K, K)
-    T = typeof(log(one(eltype(W))))
+    T = float(eltype(W))
     logJ = zero(T)
 
     idx = 1
