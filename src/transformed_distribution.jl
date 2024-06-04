@@ -66,6 +66,11 @@ has_constant_bijector(d::Type{<:KSOneSided}) = true
 function has_constant_bijector(::Type{<:Product{Continuous,D}}) where {D}
     return has_constant_bijector(D)
 end
+function has_constant_bijector(
+    ::Type{<:Distributions.ProductDistribution{<:Any,<:Any,A}}
+) where {A}
+    return has_constant_bijector(eltype(A))
+end
 
 # Container distributions.
 bijector(d::DiscreteUnivariateDistribution) = identity
@@ -91,6 +96,22 @@ end
     catch
         return :(minimum.(d), maximum.(d))
     end
+end
+
+function bijector(d::Distributions.ProductDistribution{N,0,A}) where {N,A}
+    # This is the univariate scenario, so if we have a constant bijector
+    # we can just use the same one for all elements.
+    return if has_constant_bijector(eltype(A))
+        elementwise(bijector(d.dists[1]))
+    else
+        ProductBijector(map(bijector, d.dists))
+    end
+end
+
+function bijector(d::Distributions.ProductDistribution{N,M,A}) where {N,M,A}
+    dists = d.dists
+    bs = bijector.(dists)
+    return ProductBijector{typeof(bs),N - M}(bs)
 end
 
 # Specialized implementations.
