@@ -29,6 +29,10 @@ using ChangesOfVariables: ChangesOfVariables
 using InverseFunctions: InverseFunctions
 using LazyArrays: LazyArrays
 
+if VERSION < v"1.9"
+    using Compat: stack
+end
+
 const GROUP = get(ENV, "GROUP", "All")
 
 # Always include this since it can be useful for other tests.
