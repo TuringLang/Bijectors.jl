@@ -237,7 +237,7 @@ function _with_logabsdet_jacobian(sb::Stacked, x::AbstractVector)
     y = reduce(vcat, ys)
     logjac = sum(zip(sb.bs, sb.ranges_in)) do tup
         b, r = tup[1], tup[2]
-        logabsdetjac(b,x[r])
+        logabsdetjac(b, x[r])
     end
     return (y, logjac)
 end
