@@ -103,7 +103,7 @@ Return a `Distribution` whose support are ordered vectors, i.e., vectors with in
 
 Specifically, `d` is restricted to the subspace of its domain containing only ordered elements.
 
-!!! warn
+!!! warning
     `rand` is implemented using rejection sampling, which can be slow for high-dimensional distributions.
     In such cases, consider using MCMC methods to sample from the distribution instead.
 """
