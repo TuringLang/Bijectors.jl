@@ -56,8 +56,8 @@ end
         )
         test_rrule(
             Bijectors._link_chol_lkj_from_lower,
-            x.L,
-            testset_name="_link_chol_lkj_from_lower on $(typeof(x)) [$i]"
+            x.L;
+            testset_name="_link_chol_lkj_from_lower on $(typeof(x)) [$i]",
         )
 
         b = bijector(dist)
