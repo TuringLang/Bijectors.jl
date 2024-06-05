@@ -80,10 +80,20 @@ logabsdetjac(b::OrderedBijector, x::AbstractVector) = sum(@view(x[2:end]))
 logabsdetjac(b::OrderedBijector, x::AbstractMatrix) = vec(sum(@view(x[2:end, :]); dims=1))
 
 # Need a custom distribution type to handle this properly.
+"""
+    OrderedDistribution
+
+Wraps a distribution to restrict its support to the subspace of ordered vectors.
+
+# Fields
+$(TYPEDFIELDS)
+"""
 struct OrderedDistribution{D<:ContinuousMultivariateDistribution,B} <:
        ContinuousMultivariateDistribution
+    "distribution transformed to have ordered support"
     dist::D
-    bijector::B
+    "transformation from constrained space to ordered unconstrained space"
+    transform::B
 end
 
 """
@@ -91,7 +101,11 @@ end
 
 Return a `Distribution` whose support are ordered vectors, i.e., vectors with increasingly ordered elements.
 
-This transformation is currently only supported for otherwise unconstrained distributions.
+Specifically, `d` is restricted to the subspace of its domain containing only ordered elements.
+
+!!! warn
+    `rand` is implemented using rejection sampling, which can be slow for high-dimensional distributions.
+    In such cases, consider using MCMC methods to sample from the distribution instead.
 """
 function ordered(d::ContinuousMultivariateDistribution)
     # We're good if the map from unconstrained (in which we apply the ordered bijector)
@@ -101,10 +115,10 @@ function ordered(d::ContinuousMultivariateDistribution)
     # but with the addition of a sign flip before and after the ordered bijector.
     b = bijector(d)
     binv = inverse(b)
-    if is_monotonically_decreasing(binv)
-        ordered_b = binv ∘ SignFlip() ∘ inverse(OrderedBijector()) ∘ SignFlip() ∘ b
+    ordered_b = if is_monotonically_decreasing(binv)
+        SignFlip() ∘ inverse(OrderedBijector()) ∘ SignFlip() ∘ b
     elseif is_monotonically_increasing(binv)
-        ordered_b = binv ∘ inverse(OrderedBijector()) ∘ b
+        inverse(OrderedBijector()) ∘ b
     else
         throw(ArgumentError("ordered transform is currently not supported for $d."))
     end
@@ -112,7 +126,7 @@ function ordered(d::ContinuousMultivariateDistribution)
     return OrderedDistribution(d, ordered_b)
 end
 
-bijector(d::OrderedDistribution) = d.bijector
+bijector(d::OrderedDistribution) = d.transform
 
 Base.eltype(::Type{<:OrderedDistribution{D}}) where {D} = eltype(D)
 Base.eltype(d::OrderedDistribution) = eltype(d.dist)
