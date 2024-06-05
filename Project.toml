@@ -1,6 +1,6 @@
 name = "Bijectors"
 uuid = "76274a88-744f-5084-9051-94815aaf08c4"
-version = "0.13.12"
+version = "0.13.13"
 
 [deps]
 ArgCheck = "dce04be8-c92d-5529-be00-80e4d2c0e197"
@@ -43,7 +43,7 @@ ArgCheck = "1, 2"
 ChainRules = "1"
 ChainRulesCore = "0.10.11, 1"
 ChangesOfVariables = "0.1"
-Compat = "3, 4"
+Compat = "3.46, 4.2"
 Distributions = "0.25.33"
 ForwardDiff = "0.10"
 DistributionsAD = "0.6"

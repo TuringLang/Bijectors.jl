@@ -82,6 +82,10 @@ if VERSION < v"1.1"
     using Compat: eachcol
 end
 
+if VERSION < v"1.9"
+    using Compat: stack
+end
+
 const DEBUG = Bool(parse(Int, get(ENV, "DEBUG_BIJECTORS", "0")))
 _debug(str) = @debug str
 
