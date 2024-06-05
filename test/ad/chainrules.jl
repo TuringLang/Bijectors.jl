@@ -64,8 +64,9 @@ end
         y = b(x)
 
         test_rrule(
-            _inv_link_chol_lkj_wrapper, y,
-            testset_name="_inv_link_chol_lkj on $(typeof(x)) [$i]"
+            _inv_link_chol_lkj_wrapper,
+            y;
+            testset_name="_inv_link_chol_lkj on $(typeof(x)) [$i]",
         )
     end
 end
