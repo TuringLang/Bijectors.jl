@@ -51,8 +51,8 @@ end
         x = rand(dist)
         test_rrule(
             Bijectors._link_chol_lkj_from_upper,
-            x.U,
-            testset_name="_link_chol_lkj_from_upper on $(typeof(x)) [$i]"
+            x.U;
+            testset_name="_link_chol_lkj_from_upper on $(typeof(x)) [$i]",
         )
         test_rrule(
             Bijectors._link_chol_lkj_from_lower,
