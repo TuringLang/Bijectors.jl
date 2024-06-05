@@ -76,67 +76,67 @@ end
         @test_throws ArgumentError ordered(d)
     end
 
-    # @testset "correctness" begin
-    #     num_samples = 10_000
-    #     num_adapts = 1_000
-    #     @testset "k = $k" for k in [2, 3, 5]
-    #         @testset "$(typeof(dist))" for dist in [
-    #             # Unconstrained
-    #             MvNormal(1:k, Diagonal(1:k)),
-    #             MvNormal(1:k),
-    #             # positive support
-    #             product_distribution(fill(Exponential(), k)),
-    #             # bounded
-    #             product_distribution(fill(Beta(), k)),
-    #             # using `Scale`
-    #             product_distribution(
-    #                 fill(transformed(Exponential(), Bijectors.Scale(3)), k)
-    #             ),
-    #             # negative support
-    #             product_distribution(fill(-1 * Exponential(), k)),
-    #         ]
-    #             prob = OrderedTestProblem(dist)
-    #             sampler = AdvancedHMC.NUTS(0.8)
-    #             initial_params = rand(ordered(dist))
-    #             transitions = sample(
-    #                 prob,
-    #                 sampler,
-    #                 num_samples;
-    #                 initial_params=initial_params,
-    #                 discard_initial=num_adapts,
-    #                 n_adapts=num_adapts,
-    #                 progress=false,
-    #             )
-    #             xs = mapreduce(hcat, transitions) do t
-    #                 to_constrained(prob, t.z.θ)
-    #             end
-    #             @test all(issorted, eachcol(xs))
+    @testset "correctness" begin
+        num_samples = 10_000
+        num_adapts = 1_000
+        @testset "k = $k" for k in [2, 3, 5]
+            @testset "$(typeof(dist))" for dist in [
+                # Unconstrained
+                MvNormal(1:k, Diagonal(1:k)),
+                MvNormal(1:k),
+                # positive support
+                product_distribution(fill(Exponential(), k)),
+                # bounded
+                product_distribution(fill(Beta(), k)),
+                # using `Scale`
+                product_distribution(
+                    fill(transformed(Exponential(), Bijectors.Scale(3)), k)
+                ),
+                # negative support
+                product_distribution(fill(-1 * Exponential(), k)),
+            ]
+                prob = OrderedTestProblem(dist)
+                sampler = AdvancedHMC.NUTS(0.8)
+                initial_params = rand(ordered(dist))
+                transitions = sample(
+                    prob,
+                    sampler,
+                    num_samples;
+                    initial_params=initial_params,
+                    discard_initial=num_adapts,
+                    n_adapts=num_adapts,
+                    progress=false,
+                )
+                xs = mapreduce(hcat, transitions) do t
+                    to_constrained(prob, t.z.θ)
+                end
+                @test all(issorted, eachcol(xs))
 
-    #             # `rand` uses rejection sampling => exact.
-    #             dist_ordered = ordered(dist)
-    #             xs_true = rand(dist_ordered, num_samples)
-    #             @test all(issorted, eachcol(xs_true))
+                # `rand` uses rejection sampling => exact.
+                dist_ordered = ordered(dist)
+                xs_true = rand(dist_ordered, num_samples)
+                @test all(issorted, eachcol(xs_true))
 
-    #             # Compare MCMC quantiles to exact quantiles.
-    #             qts = [0.05, 0.25, 0.5, 0.75, 0.95]
-    #             qs_true = mapslices(Base.Fix2(quantile, qts), xs_true; dims=2)
-    #             qs = mapslices(Base.Fix2(quantile, qts), xs; dims=2)
-    #             qs_mcse = mapslices(xs; dims=2) do x
-    #                 map(qts) do q
-    #                     MCMCDiagnosticTools.mcse(x; kind=Base.Fix2(quantile, q))
-    #                 end
-    #             end
-    #             # Check that the quantiles are reasonable, i.e. within
-    #             # 5 standard errors of the true quantiles (and that the MCSE is
-    #             # not too large).
-    #             @info "Checking quantiles" qs_true qs qs_mcse
-    #             for i in 1:k
-    #                 for j in 1:length(qts)
-    #                     @test qs_mcse[i, j] < abs(qs_true[i, end] - qs_true[i, 1]) / 2
-    #                     @test abs(qs[i, j] - qs_true[i, j]) < 5 * qs_mcse[i, j]
-    #                 end
-    #             end
-    #         end
-    #     end
-    # end
+                # Compare MCMC quantiles to exact quantiles.
+                qts = [0.05, 0.25, 0.5, 0.75, 0.95]
+                qs_true = mapslices(Base.Fix2(quantile, qts), xs_true; dims=2)
+                qs = mapslices(Base.Fix2(quantile, qts), xs; dims=2)
+                qs_mcse = mapslices(xs; dims=2) do x
+                    map(qts) do q
+                        MCMCDiagnosticTools.mcse(x; kind=Base.Fix2(quantile, q))
+                    end
+                end
+                # Check that the quantiles are reasonable, i.e. within
+                # 5 standard errors of the true quantiles (and that the MCSE is
+                # not too large).
+                @info "Checking quantiles" qs_true qs qs_mcse
+                for i in 1:k
+                    for j in 1:length(qts)
+                        @test qs_mcse[i, j] < abs(qs_true[i, end] - qs_true[i, 1]) / 2
+                        @test abs(qs[i, j] - qs_true[i, j]) < 5 * qs_mcse[i, j]
+                    end
+                end
+            end
+        end
+    end
 end
