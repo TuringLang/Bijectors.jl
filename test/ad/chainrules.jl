@@ -51,21 +51,22 @@ end
         x = rand(dist)
         test_rrule(
             Bijectors._link_chol_lkj_from_upper,
-            x.U,
-            testset_name="_link_chol_lkj_from_upper on $(typeof(x)) [$i]"
+            x.U;
+            testset_name="_link_chol_lkj_from_upper on $(typeof(x)) [$i]",
         )
         test_rrule(
             Bijectors._link_chol_lkj_from_lower,
-            x.L,
-            testset_name="_link_chol_lkj_from_lower on $(typeof(x)) [$i]"
+            x.L;
+            testset_name="_link_chol_lkj_from_lower on $(typeof(x)) [$i]",
         )
 
         b = bijector(dist)
         y = b(x)
 
         test_rrule(
-            _inv_link_chol_lkj_wrapper, y,
-            testset_name="_inv_link_chol_lkj on $(typeof(x)) [$i]"
+            _inv_link_chol_lkj_wrapper,
+            y;
+            testset_name="_inv_link_chol_lkj on $(typeof(x)) [$i]",
         )
     end
 end
