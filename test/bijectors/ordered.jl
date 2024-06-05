@@ -97,7 +97,7 @@ end
             ]
                 prob = OrderedTestProblem(dist)
                 sampler = AdvancedHMC.NUTS(0.8)
-                initial_params = rand(ordered(dist))
+                initial_params = randn(length(dist))
                 transitions = sample(
                     prob,
                     sampler,
@@ -129,7 +129,6 @@ end
                 # Check that the quantiles are reasonable, i.e. within
                 # 5 standard errors of the true quantiles (and that the MCSE is
                 # not too large).
-                @info "Checking quantiles" qs_true qs qs_mcse
                 for i in 1:k
                     for j in 1:length(qts)
                         @test qs_mcse[i, j] < abs(qs_true[i, end] - qs_true[i, 1]) / 2
