@@ -11,8 +11,14 @@ _vec(x::Real) = x
 lower_triangular(A::AbstractMatrix) = convert(typeof(A), LowerTriangular(A))
 upper_triangular(A::AbstractMatrix) = convert(typeof(A), UpperTriangular(A))
 
-pd_from_lower(X) = LowerTriangular(X) * LowerTriangular(X)'
-pd_from_upper(X) = UpperTriangular(X)' * UpperTriangular(X)
+function pd_from_lower(X)
+    L = lower_triangular(X)
+    return L * L'
+end
+function pd_from_upper(X)
+    U = upper_triangular(X)
+    return U' * U
+end
 
 # HACK: Allows us to define custom chain rules while we wait for upstream fixes.
 transpose_eager(X::AbstractMatrix) = permutedims(X)

@@ -268,7 +268,6 @@ end
 @grad_from_chainrules _link_chol_lkj(x::TrackedMatrix)
 @grad_from_chainrules _link_chol_lkj_from_upper(x::TrackedMatrix)
 @grad_from_chainrules _link_chol_lkj_from_lower(x::TrackedMatrix)
-@grad_from_chainrules _inv_link_chol_lkj(x::TrackedVector)
 
 cholesky_lower(X::TrackedMatrix) = track(cholesky_lower, X)
 @grad function cholesky_lower(X_tracked::TrackedMatrix)

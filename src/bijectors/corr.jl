@@ -71,9 +71,13 @@ function transform(b::CorrBijector, X::AbstractMatrix{<:Real})
     return r
 end
 
-function transform(ib::Inverse{CorrBijector}, y::AbstractMatrix{<:Real})
-    w = _inv_link_chol_lkj(y)
-    return pd_from_upper(w)
+function with_logabsdet_jacobian(ib::Inverse{CorrBijector}, y::AbstractMatrix{<:Real})
+    U, logJ = _inv_link_chol_lkj(y)
+    K = size(U, 1)
+    for j in 2:(K - 1)
+        logJ += (K - j) * log(U[j, j])
+    end
+    return pd_from_upper(U), logJ
 end
 
 logabsdetjac(::Inverse{CorrBijector}, Y::AbstractMatrix{<:Real}) = _logabsdetjac_inv_corr(Y)
@@ -131,8 +135,15 @@ function logabsdetjac(b::VecCorrBijector, x)
     return -logabsdetjac(inverse(b), b(x))
 end
 
-function transform(::Inverse{VecCorrBijector}, y::AbstractVector{<:Real})
-    return pd_from_upper(_inv_link_chol_lkj(y))
+function with_logabsdet_jacobian(::Inverse{VecCorrBijector}, y::AbstractVector{<:Real})
+    U_logJ = _inv_link_chol_lkj(y)
+    # workaround for `Tracker.TrackedTuple` not supporting iteration
+    U, logJ = U_logJ[1], U_logJ[2]
+    K = size(U, 1)
+    for j in 2:(K - 1)
+        logJ += (K - j) * log(U[j, j])
+    end
+    return pd_from_upper(U), logJ
 end
 
 function logabsdetjac(::Inverse{VecCorrBijector}, y::AbstractVector{<:Real})
@@ -225,15 +236,16 @@ function logabsdetjac(b::VecCholeskyBijector, x)
     return -logabsdetjac(inverse(b), b(x))
 end
 
-function transform(b::Inverse{VecCholeskyBijector}, y::AbstractVector{<:Real})
+function with_logabsdet_jacobian(b::Inverse{VecCholeskyBijector}, y::AbstractVector{<:Real})
+    factors, logJ = _inv_link_chol_lkj(y)
     if b.orig.mode === :U
         # This Cholesky constructor is compatible with Julia v1.6
         # for later versions Cholesky(::UpperTriangular) works
-        return Cholesky(_inv_link_chol_lkj(y), 'U', 0)
+        return Cholesky(factors, 'U', 0), logJ
     else # No need to check for === :L, as it is checked in the VecCholeskyBijector constructor.
         # HACK: Need to make materialize the transposed matrix to avoid numerical instabilities.
         # If we don't, the return-type can be both `Matrix` and `Transposed`.
-        return Cholesky(transpose_eager(_inv_link_chol_lkj(y)), 'L', 0)
+        return Cholesky(transpose_eager(factors), 'L', 0), logJ
     end
 end
 
@@ -281,48 +293,44 @@ which is the above implementation.
 function _link_chol_lkj(W::AbstractMatrix)
     K = LinearAlgebra.checksquare(W)
 
-    z = similar(W) # z is also UpperTriangular. 
+    y = similar(W) # z is also UpperTriangular. 
     # Some zero filling can be avoided. Though diagnoal is still needed to be filled with zero.
 
-    # This block can't be integrated with loop below, because W[1,1] != 0.
-    @inbounds z[:, 1] .= 0
-
-    @inbounds for j in 2:K
-        z[1, j] = atanh(W[1, j])
-        tmp = sqrt(1 - W[1, j]^2)
-        for i in 2:(j - 1)
-            p = W[i, j] / tmp
-            tmp *= sqrt(1 - p^2)
-            z[i, j] = atanh(p)
+    @inbounds for j in 1:K
+        remainder_sq = one(eltype(W))
+        for i in 1:(j - 1)
+            z = W[i, j] / sqrt(remainder_sq)
+            y[i, j] = atanh(z)
+            remainder_sq -= W[i, j]^2
         end
         for i in j:K
-            z[i, j] = 0
+            y[i, j] = 0
         end
     end
 
-    return z
+    return y
 end
 
 function _link_chol_lkj_from_upper(W::AbstractMatrix)
     K = LinearAlgebra.checksquare(W)
     N = ((K - 1) * K) ÷ 2   # {K \choose 2} free parameters
 
-    z = similar(W, N)
+    y = similar(W, N)
 
     idx = 1
     @inbounds for j in 2:K
-        z[idx] = atanh(W[1, j])
+        y[idx] = atanh(W[1, j])
         idx += 1
-        tmp = sqrt(1 - W[1, j]^2)
+        remainder_sq = 1 - W[1, j]^2
         for i in 2:(j - 1)
-            p = W[i, j] / tmp
-            tmp *= sqrt(1 - p^2)
-            z[idx] = atanh(p)
+            z = W[i, j] / sqrt(remainder_sq)
+            y[idx] = atanh(z)
+            remainder_sq -= W[i, j]^2
             idx += 1
         end
     end
 
-    return z
+    return y
 end
 
 _link_chol_lkj_from_lower(W::AbstractMatrix) = _link_chol_lkj_from_upper(transpose_eager(W))
@@ -333,47 +341,120 @@ _link_chol_lkj_from_lower(W::AbstractMatrix) = _link_chol_lkj_from_upper(transpo
 Inverse link function for cholesky factor.
 """
 function _inv_link_chol_lkj(Y::AbstractMatrix)
+    LinearAlgebra.require_one_based_indexing(Y)
     K = LinearAlgebra.checksquare(Y)
 
     W = similar(Y)
-
-    @inbounds for j in 1:K
-        W[1, j] = 1
-        for i in 2:j
-            z = tanh(Y[i - 1, j])
-            tmp = W[i - 1, j]
-            W[i - 1, j] = z * tmp
-            W[i, j] = tmp * sqrt(1 - z^2)
-        end
-        for i in (j + 1):K
-            W[i, j] = 0
-        end
-    end
-
-    return W
-end
-
-function _inv_link_chol_lkj(y::AbstractVector)
-    K = _triu1_dim_from_length(length(y))
-
-    W = similar(y, K, K)
+    T = float(eltype(W))
+    logJ = zero(T)
 
     idx = 1
     @inbounds for j in 1:K
-        W[1, j] = 1
-        for i in 2:j
-            z = tanh(y[idx])
-            idx += 1
-            tmp = W[i - 1, j]
-            W[i - 1, j] = z * tmp
-            W[i, j] = tmp * sqrt(1 - z^2)
+        log_remainder = zero(T)  # log of proportion of unit vector remaining
+        for i in 1:(j - 1)
+            z = tanh(Y[i, j])
+            W[i, j] = z * exp(log_remainder)
+            log_remainder += log1p(-z^2) / 2
+            logJ += log_remainder
         end
+        logJ += log_remainder
+        W[j, j] = exp(log_remainder)
         for i in (j + 1):K
             W[i, j] = 0
         end
     end
 
-    return W
+    return W, logJ
+end
+
+function _inv_link_chol_lkj(y::AbstractVector)
+    LinearAlgebra.require_one_based_indexing(y)
+    K = _triu1_dim_from_length(length(y))
+
+    W = similar(y, K, K)
+    T = float(eltype(W))
+    logJ = zero(T)
+
+    idx = 1
+    @inbounds for j in 1:K
+        log_remainder = zero(T)  # log of proportion of unit vector remaining
+        for i in 1:(j - 1)
+            z = tanh(y[idx])
+            idx += 1
+            W[i, j] = z * exp(log_remainder)
+            log_remainder += log1p(-z^2) / 2
+            logJ += log_remainder
+        end
+        logJ += log_remainder
+        W[j, j] = exp(log_remainder)
+        for i in (j + 1):K
+            W[i, j] = 0
+        end
+    end
+
+    return W, logJ
+end
+
+# shared reverse-mode AD rule code
+function _inv_link_chol_lkj_rrule(y::AbstractVector)
+    LinearAlgebra.require_one_based_indexing(y)
+    K = _triu1_dim_from_length(length(y))
+
+    W = similar(y, K, K)
+    T = typeof(log(one(eltype(W))))
+    logJ = zero(T)
+
+    z_vec = tanh.(y)
+
+    idx = 1
+    W[1, 1] = 1
+    @inbounds for j in 2:K
+        log_remainder = zero(T)  # log of proportion of unit vector remaining
+        for i in 1:(j - 1)
+            z = z_vec[idx]
+            idx += 1
+            W[i, j] = z * exp(log_remainder)
+            log_remainder += log1p(-z^2) / 2
+            logJ += log_remainder
+        end
+        logJ += log_remainder
+        W[j, j] = exp(log_remainder)
+        for i in (j + 1):K
+            W[i, j] = 0
+        end
+    end
+
+    function pullback_inv_link_chol_lkj((ΔW, ΔlogJ))
+        LinearAlgebra.require_one_based_indexing(ΔW)
+        Δy = similar(y)
+
+        idx_local = lastindex(y)
+        @inbounds for j in K:-1:2
+            Δlog_remainder = W[j, j] * ΔW[j, j] + 2ΔlogJ
+            for i in (j - 1):-1:1
+                W_ΔW = W[i, j] * ΔW[i, j]
+                z = z_vec[idx_local]
+                Δy[idx_local] = (inv(z) - z) * W_ΔW - z * Δlog_remainder
+                idx_local -= 1
+                Δlog_remainder += ΔlogJ + W_ΔW
+            end
+        end
+
+        return Δy
+    end
+
+    return (W, logJ), pullback_inv_link_chol_lkj
+end
+
+function _inv_link_chol_lkj_rrule(y::AbstractMatrix)
+    K = LinearAlgebra.checksquare(y)
+    y_vec = Bijectors._triu_to_vec(y, 1)
+    W_logJ, back = _inv_link_chol_lkj_reverse(y_vec)
+    function pullback_inv_link_chol_lkj(ΔW_ΔlogJ)
+        return update_triu_from_vec(_triu_to_vec(back(ΔW_ΔlogJ), 1), 1, K)
+    end
+
+    return W_logJ, pullback_inv_link_chol_lkj
 end
 
 function _logabsdetjac_inv_corr(Y::AbstractMatrix)
