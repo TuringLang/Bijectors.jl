@@ -230,15 +230,16 @@ end
 end
 
 function _with_logabsdet_jacobian(sb::Stacked, x::AbstractVector)
-    N = length(sb.bs)
-    yinit, linit = with_logabsdet_jacobian(sb.bs[1], x[sb.ranges_in[1]])
-    logjac = sum(linit)
-    ys = mapreduce(vcat, sb.bs[2:end], sb.ranges_in[2:end]; init=yinit) do b, r
-        y, l = with_logabsdet_jacobian(b, x[r])
-        logjac += sum(l)
-        y
+    ys = map(zip(sb.bs, sb.ranges_in)) do tup
+        b, r = tup[1], tup[2]
+        b(x[r])
     end
-    return (ys, logjac)
+    y = reduce(vcat, ys)
+    logjac = sum(zip(sb.bs, sb.ranges_in)) do tup
+        b, r = tup[1], tup[2]
+        logabsdetjac(b,x[r])
+    end
+    return (y, logjac)
 end
 
 function with_logabsdet_jacobian(sb::Stacked, x::AbstractVector)

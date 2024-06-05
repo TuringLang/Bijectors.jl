@@ -62,4 +62,5 @@ if GROUP == "All" || GROUP == "AD"
     include("ad/flows.jl")
     include("ad/pd.jl")
     include("ad/corr.jl")
+    include("ad/stacked.jl")
 end
