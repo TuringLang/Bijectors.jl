@@ -7,7 +7,7 @@
 
     x1 = rand(dist1)
     x2 = rand(dist2)
-    
+
     y1 = b1(x1)
     y2 = b2(x2)
 
