@@ -30,5 +30,21 @@ function test_ad(f, x, broken=(); rtol=1e-6, atol=1e-6)
         end
     end
 
+    if AD == "All" || AD == "Enzyme"
+        if :EnzymeReverse in broken
+            @test collect(Enzyme.gradient(Enzyme.Forward, f, x)) ≈ finitediff rtol = rtol atol = atol
+            @test_broken Enzyme.gradient(Enzyme.Reverse, f, x) ≈ finitediff rtol = rtol atol = atol
+        elseif :EnzymeForward in broken
+            @test_broken collect(Enzyme.gradient(Enzyme.Forward, f, x)) ≈ finitediff rtol = rtol atol = atol
+            @test Enzyme.gradient(Enzyme.Reverse, f, x) ≈ finitediff rtol = rtol atol = atol
+        elseif :Enzyme in broken
+            @test_broken collect(Enzyme.gradient(Enzyme.Forward, f, x)) ≈ finitediff rtol = rtol atol = atol
+            @test_broken Enzyme.gradient(Enzyme.Reverse, f, x) ≈ finitediff rtol = rtol atol = atol
+        else
+            @test collect(Enzyme.gradient(Enzyme.Forward, f, x)) ≈ finitediff rtol = rtol atol = atol
+            @test Enzyme.gradient(Enzyme.Reverse, f, x) ≈ finitediff rtol = rtol atol = atol
+        end
+    end
+
     return nothing
 end
