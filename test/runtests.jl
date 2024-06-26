@@ -8,6 +8,7 @@ using ForwardDiff
 using Functors
 using LogExpFunctions
 using ReverseDiff
+using Tapir
 using Tracker
 using Zygote
 
