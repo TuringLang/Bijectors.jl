@@ -9,7 +9,7 @@ is_monotonically_decreasing(::SignFlip) = true
 """
     OrderedBijector()
 
-A bijector mapping ordered vectors in ℝᵈ to unordered vectors in ℝᵈ.
+A bijector mapping unordered vectors in ℝᵈ to ordered vectors in ℝᵈ.
 
 ## See also
 - [Stan's documentation](https://mc-stan.org/docs/2_27/reference-manual/ordered-vector.html)
