@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         version:
-          - '1.6'
+          #- '1.6'  # TODO(mhauru) Disabled temporarily for Enzyme testing
           - '1'
         os:
           - ubuntu-latest
@@ -21,10 +21,11 @@ jobs:
         arch:
           - x64
         AD:
-          - ForwardDiff
-          - Tracker
+          # TODO(mhauru) Disabled temporarily for Enzyme testing
+          #- ForwardDiff
+          #- Tracker
           - ReverseDiff
-          - Zygote
+          #- Zygote
           - Enzyme
     steps:
       - uses: actions/checkout@v2
