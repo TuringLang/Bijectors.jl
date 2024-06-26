@@ -8,6 +8,6 @@ else
     using ..Bijectors: find_alpha
 end
 
-@from_rrule MinimalCtx Tuple{typeof(find_alpha), Float64, Float64, Float64}
+@from_rrule MinimalCtx Tuple{typeof(find_alpha),Float64,Float64,Float64}
 
 end
