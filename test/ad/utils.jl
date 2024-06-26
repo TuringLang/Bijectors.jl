@@ -33,9 +33,23 @@ function test_ad(f, x, broken=(); rtol=1e-6, atol=1e-6)
     if AD == "All" || AD == "Tapir"
         rule = Tapir.build_rrule(f, x; safety_on=false)
         if :tapir in broken
-            @test_broken Tapir.value_and_gradient!!(rule, f, x)[2][2] ≈ finitediff rtol = rtol atol = atol
+            @test_broken(
+                isapprox(
+                    Tapir.value_and_gradient!!(rule, f, x)[2][2],
+                    finitediff;
+                    rtol=rtol,
+                    atol=atol,
+                )
+            )
         else
-            @test Tapir.value_and_gradient!!(rule, f, x)[2][2] ≈ finitediff rtol = rtol atol = atol
+            @test(
+                isapprox(
+                    Tapir.value_and_gradient!!(rule, f, x)[2][2],
+                    finitediff;
+                    rtol=rtol,
+                    atol=atol,
+                )
+            )
         end
     end
 
