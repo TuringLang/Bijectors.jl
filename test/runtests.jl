@@ -33,9 +33,10 @@ if VERSION < v"1.9"
     using Compat: stack
 end
 
-# if VERSION >= v"1.10"
-#     using Tapir
-# end
+if VERSION >= v"1.10"
+    using Pkg
+    Pkg.add("Tapir")
+end
 
 const GROUP = get(ENV, "GROUP", "All")
 
