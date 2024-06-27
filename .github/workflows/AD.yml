@@ -5,11 +5,6 @@ on:
     branches:
       - master
   pull_request:
-concurrency:
-  # Skip intermediate builds: always.
-  # Cancel intermediate builds: only if it is a pull request build.
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 jobs:
   test:
     runs-on: ${{ matrix.os }}
@@ -25,11 +20,11 @@ jobs:
         arch:
           - x64
         AD:
-          # - ForwardDiff
+          - ForwardDiff
           - Tapir
-          # - Tracker
-          # - ReverseDiff
-          # - Zygote
+          - Tracker
+          - ReverseDiff
+          - Zygote
         exclude:
           - version: 1.6
             AD: Tapir
