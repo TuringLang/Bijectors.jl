@@ -30,7 +30,7 @@ function test_ad(f, x, broken=(); rtol=1e-6, atol=1e-6)
         end
     end
 
-    if (AD == "All" || AD == "Tapir") && VERSION > v"1.10"
+    if (AD == "All" || AD == "Tapir") && VERSION >= v"1.10"
         rule = Tapir.build_rrule(f, x; safety_on=false)
         if :tapir in broken
             @test_broken(

@@ -8,7 +8,6 @@ using ForwardDiff
 using Functors
 using LogExpFunctions
 using ReverseDiff
-using Tapir
 using Tracker
 using Zygote
 
@@ -32,6 +31,10 @@ using LazyArrays: LazyArrays
 
 if VERSION < v"1.9"
     using Compat: stack
+end
+
+if VERSION >= v"1.10"
+    using Tapir
 end
 
 const GROUP = get(ENV, "GROUP", "All")
