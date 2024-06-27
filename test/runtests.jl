@@ -33,6 +33,8 @@ if VERSION < v"1.9"
     using Compat: stack
 end
 
+# Sadly, Tapir.jl cannot be installed on version 1.6, so we have to add it if we're testing
+# on at least version 1.10.
 if VERSION >= v"1.10"
     using Pkg
     Pkg.add("Tapir")
