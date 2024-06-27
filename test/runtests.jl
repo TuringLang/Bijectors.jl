@@ -36,6 +36,7 @@ end
 if VERSION >= v"1.10"
     using Pkg
     Pkg.add("Tapir")
+    using Tapir
 end
 
 const GROUP = get(ENV, "GROUP", "All")
