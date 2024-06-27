@@ -21,7 +21,6 @@ Requires = "ae029012-a4dd-5104-9daa-d747884805df"
 Roots = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
-Tapir = "07d77754-e150-4737-8c94-cd238a1fb45b"
 
 [weakdeps]
 DistributionsAD = "ced4e74d-a319-5a8a-b0ac-84af2272839c"
