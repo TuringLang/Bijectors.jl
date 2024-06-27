@@ -32,7 +32,7 @@ jobs:
           # - Zygote
         exclude:
           - version: 1.6
-          - AD: Tapir
+            AD: Tapir
     steps:
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1
