@@ -3,6 +3,7 @@ const AD = get(ENV, "AD", "All")
 
 function test_ad(f, x, broken=(); rtol=1e-6, atol=1e-6)
     finitediff = FiniteDifferences.grad(central_fdm(5, 1), f, x)[1]
+    et = eltype(finitediff)
 
     if AD == "All" || AD == "ForwardDiff"
         if :ForwardDiff in broken
@@ -18,7 +19,7 @@ function test_ad(f, x, broken=(); rtol=1e-6, atol=1e-6)
         else
             ∇zygote = Zygote.gradient(f, x)[1]
             @test (all(finitediff .== 0) && ∇zygote === nothing) ||
-                isapprox(∇zygote, finitediff; rtol=rtol, atol=atol)
+                  isapprox(∇zygote, finitediff; rtol=rtol, atol=atol)
         end
     end
 
@@ -32,23 +33,37 @@ function test_ad(f, x, broken=(); rtol=1e-6, atol=1e-6)
 
     if AD == "All" || AD == "Enzyme"
         if :EnzymeReverse in broken
-            @test collect(Enzyme.gradient(Enzyme.Forward, f, x)) ≈ finitediff rtol = rtol atol =
-                atol
-            @test_broken Enzyme.gradient(Enzyme.Reverse, f, x) ≈ finitediff rtol = rtol atol =
-                atol
+            @test(
+                collect(et, Enzyme.gradient(Enzyme.Forward, f, x)) ≈ finitediff,
+                rtol=rtol, atol=atol
+            )
+            @test_broken(
+                Enzyme.gradient(Enzyme.Reverse, f, x) ≈ finitediff, rtol=rtol, atol=atol
+            )
         elseif :EnzymeForward in broken
-            @test_broken collect(Enzyme.gradient(Enzyme.Forward, f, x)) ≈ finitediff rtol =
-                rtol atol = atol
-            @test Enzyme.gradient(Enzyme.Reverse, f, x) ≈ finitediff rtol = rtol atol = atol
+            @test_broken(
+                collect(et, Enzyme.gradient(Enzyme.Forward, f, x)) ≈ finitediff,
+                rtol=rtol, atol=atol
+            )
+            @test(
+                Enzyme.gradient(Enzyme.Reverse, f, x) ≈ finitediff, rtol=rtol, atol=atol
+            )
         elseif :Enzyme in broken
-            @test_broken collect(Enzyme.gradient(Enzyme.Forward, f, x)) ≈ finitediff rtol =
-                rtol atol = atol
-            @test_broken Enzyme.gradient(Enzyme.Reverse, f, x) ≈ finitediff rtol = rtol atol =
-                atol
+            @test_broken(
+                collect(et, Enzyme.gradient(Enzyme.Forward, f, x)) ≈ finitediff,
+                rtol=rtol, atol=atol
+            )
+            @test_broken(
+                Enzyme.gradient(Enzyme.Reverse, f, x) ≈ finitediff, rtol=rtol, atol=atol
+            )
         else
-            @test collect(Enzyme.gradient(Enzyme.Forward, f, x)) ≈ finitediff rtol = rtol atol =
-                atol
-            @test Enzyme.gradient(Enzyme.Reverse, f, x) ≈ finitediff rtol = rtol atol = atol
+            @test(
+                collect(et, Enzyme.gradient(Enzyme.Forward, f, x)) ≈ finitediff,
+                rtol=rtol, atol=atol
+            )
+            @test(
+                Enzyme.gradient(Enzyme.Reverse, f, x) ≈ finitediff, rtol=rtol, atol=atol
+            )
         end
     end
 
