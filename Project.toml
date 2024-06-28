@@ -1,6 +1,6 @@
 name = "Bijectors"
 uuid = "76274a88-744f-5084-9051-94815aaf08c4"
-version = "0.13.14"
+version = "0.13.15"
 
 [deps]
 ArgCheck = "dce04be8-c92d-5529-be00-80e4d2c0e197"
@@ -9,6 +9,7 @@ ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
 ChangesOfVariables = "9e997f8a-9a97-42d5-a9f1-ce6bfc15e2c0"
 Compat = "34da2185-b29b-5c13-b0c7-acf172513d20"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+DocStringExtensions = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
 Functors = "d9f16b24-f501-4c13-a1f2-28368ffc5196"
 InverseFunctions = "3587e190-3f89-42d0-90ee-14403ec27112"
 IrrationalConstants = "92d709cd-6900-40b7-9082-c6be49f344b6"
@@ -48,6 +49,7 @@ ChangesOfVariables = "0.1"
 Compat = "3.46, 4.2"
 Distributions = "0.25.33"
 DistributionsAD = "0.6"
+DocStringExtensions = "0.9"
 # TODO(mhauru) Set Enzyme compat once rapid iteration is done.
 #Enzyme = "0.12.20"
 ForwardDiff = "0.10"
