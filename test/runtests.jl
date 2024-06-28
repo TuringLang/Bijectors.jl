@@ -30,11 +30,6 @@ using ChangesOfVariables: ChangesOfVariables
 using InverseFunctions: InverseFunctions
 using LazyArrays: LazyArrays
 
-# TODO(mhauru) Remove this once Enzyme is fixed?
-Enzyme.API.typeWarning!(false)
-# Enable runtime activity (workaround)
-Enzyme.API.runtimeActivity!(true)
-
 if VERSION < v"1.9"
     using Compat: stack
 end
