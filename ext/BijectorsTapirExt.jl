@@ -1,13 +1,11 @@
 module BijectorsTapirExt
 
 if isdefined(Base, :get_extension)
-    using Tapir: @is_primitive, MinimalCtx, Tapir, CoDual, zero_fcodual, primal, NoRData,
-        NoFData, NoTangent, tangent_type, @from_rrule
+    using Tapir: @is_primitive, MinimalCtx, Tapir, CoDual, primal, tangent_type, @from_rrule
     using Bijectors: find_alpha
     using ChainRulesCore: rrule
 else
-    using ..Tapir: @is_primitive, MinimalCtx, Tapir, zero_fcodual, primal, NoRData,
-        NoFData, NoTangent, tangent_type, @from_rrule
+    using ..Tapir: @is_primitive, MinimalCtx, Tapir, primal, tangent_type, @from_rrule
     using ..Bijectors: find_alpha, rrule
     using ..ChainRulesCore: rrule
 end
@@ -24,10 +22,10 @@ end
 @is_primitive(MinimalCtx, Tuple{typeof(find_alpha),P,P,Integer} where {P<:Base.IEEEFloat})
 
 function Tapir.rrule!!(
-    ::CoDual{typeof(find_alpha)}, x::CoDual{P}, y::CoDual{P}, z::CoDual{I, NoFData}
-) where {P<:Base.IEEEFloat, I<:Integer}
+    ::CoDual{typeof(find_alpha)}, x::CoDual{P}, y::CoDual{P}, z::CoDual{I}
+) where {P<:Base.IEEEFloat,I<:Integer}
     # Require that the integer is non-differentiable.
-    if tangent_type(I) != NoTangent
+    if tangent_type(I) != Tapir.NoTangent
         throw(ArgumentError(
             "Integer argument has tangent type $(tangent_type(I)), should be NoTangent."
         ))
@@ -35,9 +33,9 @@ function Tapir.rrule!!(
     out, pb = rrule(find_alpha, primal(x), primal(y), primal(z))
     function find_alpha_pb(dout::P)
         _, dx, dy, _ = pb(dout)
-        return NoRData(), P(dx), P(dy), NoRData()
+        return Tapir.NoRData(), P(dx), P(dy), Tapir.NoRData()
     end
-    return zero_fcodual(out), find_alpha_pb
+    return Tapir.zero_fcodual(out), find_alpha_pb
 end
 
 end
