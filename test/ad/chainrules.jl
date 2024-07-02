@@ -29,17 +29,17 @@ end
 
     if @isdefined Tapir
         Tapir.TestUtils.test_rrule!!(
-            Xoshiro(123), Bijectors.find_alpha, x, y, z;
-            is_primitive=true, perf_flag=:none,
+            Xoshiro(123), Bijectors.find_alpha, x, y, z; is_primitive=true, perf_flag=:none
         )
         Tapir.TestUtils.test_rrule!!(
-            Xoshiro(123), Bijectors.find_alpha, x, y, 3;
-            is_primitive=true, perf_flag=:none,
+            Xoshiro(123), Bijectors.find_alpha, x, y, 3; is_primitive=true, perf_flag=:none
         )
+        #! format: off
         Tapir.TestUtils.test_rrule!!(
             Xoshiro(123), Bijectors.find_alpha, x, y, UInt32(3);
             is_primitive=true, perf_flag=:none,
         )
+        #! format: on
     end
 
     test_rrule(
