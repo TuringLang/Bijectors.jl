@@ -47,6 +47,7 @@ using IrrationalConstants: IrrationalConstants
 using LogExpFunctions: LogExpFunctions
 using Roots: Roots
 using Compat: Compat
+using DocStringExtensions: TYPEDFIELDS
 
 export TransformDistribution,
     PositiveDistribution,
