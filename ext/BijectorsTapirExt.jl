@@ -26,9 +26,8 @@ function Tapir.rrule!!(
 ) where {P<:Base.IEEEFloat,I<:Integer}
     # Require that the integer is non-differentiable.
     if tangent_type(I) != Tapir.NoTangent
-        throw(ArgumentError(
-            "Integer argument has tangent type $(tangent_type(I)), should be NoTangent."
-        ))
+        msg = "Integer argument has tangent type $(tangent_type(I)), should be NoTangent."
+        throw(ArgumentError(msg))
     end
     out, pb = rrule(find_alpha, primal(x), primal(y), primal(z))
     function find_alpha_pb(dout::P)
