@@ -27,6 +27,19 @@ end
     test_frule(Bijectors.find_alpha, x, y, z)
     test_rrule(Bijectors.find_alpha, x, y, z)
 
+    if @isdefined Tapir
+        rng = Xoshiro(123456)
+        Tapir.TestUtils.test_rrule!!(
+            rng, Bijectors.find_alpha, x, y, z; is_primitive=true, perf_flag=:none
+        )
+        Tapir.TestUtils.test_rrule!!(
+            rng, Bijectors.find_alpha, x, y, 3; is_primitive=true, perf_flag=:none
+        )
+        Tapir.TestUtils.test_rrule!!(
+            rng, Bijectors.find_alpha, x, y, UInt32(3); is_primitive=true, perf_flag=:none
+        )
+    end
+
     test_rrule(
         Bijectors.combine,
         Bijectors.PartitionMask(3, [1], [2]) ⊢ ChainRulesTestUtils.NoTangent(),

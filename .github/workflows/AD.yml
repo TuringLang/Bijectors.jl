@@ -22,9 +22,13 @@ jobs:
           - x64
         AD:
           - ForwardDiff
+          - Tapir
           - Tracker
           - ReverseDiff
           - Zygote
+        exclude:
+          - version: 1.6
+            AD: Tapir
     steps:
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1
