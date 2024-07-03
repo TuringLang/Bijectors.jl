@@ -2,12 +2,10 @@ module BijectorsTapirExt
 
 if isdefined(Base, :get_extension)
     using Tapir: @is_primitive, MinimalCtx, Tapir, CoDual, primal, tangent_type, @from_rrule
-    using Bijectors: find_alpha
-    using ChainRulesCore: rrule
+    using Bijectors: find_alpha, ChainRulesCore
 else
     using ..Tapir: @is_primitive, MinimalCtx, Tapir, primal, tangent_type, @from_rrule
-    using ..Bijectors: find_alpha, rrule
-    using ..ChainRulesCore: rrule
+    using ..Bijectors: find_alpha, ChainRulesCore
 end
 
 for P in [Float16, Float32, Float64]
@@ -29,7 +27,7 @@ function Tapir.rrule!!(
         msg = "Integer argument has tangent type $(tangent_type(I)), should be NoTangent."
         throw(ArgumentError(msg))
     end
-    out, pb = rrule(find_alpha, primal(x), primal(y), primal(z))
+    out, pb = ChainRulesCore.rrule(find_alpha, primal(x), primal(y), primal(z))
     function find_alpha_pb(dout::P)
         _, dx, dy, _ = pb(dout)
         return Tapir.NoRData(), P(dx), P(dy), Tapir.NoRData()
