@@ -2,6 +2,12 @@
 const AD = get(ENV, "AD", "All")
 
 function test_ad(f, x, broken=(); rtol=1e-6, atol=1e-6)
+    for b in broken
+        if !(b in (:ForwardDiff, :Zygote, :ReverseDiff, :Enzyme, :EnzymeForward, :EnzymeReverse))
+            error("Unknown broken AD backend: $b")
+        end
+    end
+
     finitediff = FiniteDifferences.grad(central_fdm(5, 1), f, x)[1]
     et = eltype(finitediff)
 
