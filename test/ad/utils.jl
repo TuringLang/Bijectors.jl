@@ -3,7 +3,7 @@ const AD = get(ENV, "AD", "All")
 
 function test_ad(f, x, broken=(); rtol=1e-6, atol=1e-6)
     for b in broken
-        if !(b in (:ForwardDiff, :Zygote, :ReverseDiff, :Enzyme, :EnzymeForward, :EnzymeReverse))
+        if !(b in (:ForwardDiff, :Zygote, :Tapir, :ReverseDiff, :Enzyme, :EnzymeForward, :EnzymeReverse))
             error("Unknown broken AD backend: $b")
         end
     end
