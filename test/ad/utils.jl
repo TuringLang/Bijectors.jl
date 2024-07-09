@@ -3,7 +3,17 @@ const AD = get(ENV, "AD", "All")
 
 function test_ad(f, x, broken=(); rtol=1e-6, atol=1e-6)
     for b in broken
-        if !(b in (:ForwardDiff, :Zygote, :Tapir, :ReverseDiff, :Enzyme, :EnzymeForward, :EnzymeReverse))
+        if !(
+            b in (
+                :ForwardDiff,
+                :Zygote,
+                :Tapir,
+                :ReverseDiff,
+                :Enzyme,
+                :EnzymeForward,
+                :EnzymeReverse,
+            )
+        )
             error("Unknown broken AD backend: $b")
         end
     end
@@ -25,7 +35,7 @@ function test_ad(f, x, broken=(); rtol=1e-6, atol=1e-6)
         else
             ∇zygote = Zygote.gradient(f, x)[1]
             @test (all(finitediff .== 0) && ∇zygote === nothing) ||
-                  isapprox(∇zygote, finitediff; rtol=rtol, atol=atol)
+                isapprox(∇zygote, finitediff; rtol=rtol, atol=atol)
         end
     end
 
