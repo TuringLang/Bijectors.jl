@@ -21,12 +21,16 @@ jobs:
         arch:
           - x64
         AD:
+          - Enzyme
           # TODO(mhauru) Disabled temporarily for Enzyme testing
           #- ForwardDiff
+          #- Tapir
           #- Tracker
-          - ReverseDiff
+          #- ReverseDiff
           #- Zygote
-          - Enzyme
+        exclude:
+          - version: 1.6
+            AD: Tapir
     steps:
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1

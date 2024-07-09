@@ -25,7 +25,7 @@ function test_ad(f, x, broken=(); rtol=1e-6, atol=1e-6)
         else
             ∇zygote = Zygote.gradient(f, x)[1]
             @test (all(finitediff .== 0) && ∇zygote === nothing) ||
-                isapprox(∇zygote, finitediff; rtol=rtol, atol=atol)
+                  isapprox(∇zygote, finitediff; rtol=rtol, atol=atol)
         end
     end
 
@@ -73,6 +73,29 @@ function test_ad(f, x, broken=(); rtol=1e-6, atol=1e-6)
             )
             @test(
                 Enzyme.gradient(Enzyme.Reverse, f, x) ≈ finitediff, rtol = rtol, atol = atol
+            )
+        end
+    end
+
+    if (AD == "All" || AD == "Tapir") && VERSION >= v"1.10"
+        rule = Tapir.build_rrule(f, x; safety_on=false)
+        if :tapir in broken
+            @test_broken(
+                isapprox(
+                    Tapir.value_and_gradient!!(rule, f, x)[2][2],
+                    finitediff;
+                    rtol=rtol,
+                    atol=atol,
+                )
+            )
+        else
+            @test(
+                isapprox(
+                    Tapir.value_and_gradient!!(rule, f, x)[2][2],
+                    finitediff;
+                    rtol=rtol,
+                    atol=atol,
+                )
             )
         end
     end
