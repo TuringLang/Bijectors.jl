@@ -47,7 +47,7 @@ function test_ad(f, x, broken=(); rtol=1e-6, atol=1e-6)
         end
     end
 
-    if AD == "All" || AD == "Enzyme"
+    if (AD == "All" || AD == "Enzyme") && VERSION >= v"1.10"
         if :EnzymeReverse in broken
             @test(
                 collect(et, Enzyme.gradient(Enzyme.Forward, f, x)) ≈ finitediff,
