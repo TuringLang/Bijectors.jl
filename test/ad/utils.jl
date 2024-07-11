@@ -48,8 +48,12 @@ function test_ad(f, x, broken=(); rtol=1e-6, atol=1e-6)
     end
 
     if AD == "All" || AD == "Enzyme"
-        forward_broken = :EnzymeForward in broken || :Enzyme in broken || VERSION <= v"1.6"
-        reverse_broken = :EnzymeReverse in broken || :Enzyme in broken
+        # TODO(mhauru) The version bounds should be relaxed once some Enzyme issues get
+        # sorted out. I think forward mode will remain broken for versions <= 1.6 due to
+        # some Julia bug. See https://github.com/EnzymeAD/Enzyme.jl/issues/1629 and
+        # discussion in https://github.com/TuringLang/Bijectors.jl/pull/318.
+        forward_broken = :EnzymeForward in broken || :Enzyme in broken || VERSION < v"1.10"
+        reverse_broken = :EnzymeReverse in broken || :Enzyme in broken || VERSION < v"1.10"
         if forward_broken
             @test_broken(
                 collect(et, Enzyme.gradient(Enzyme.Forward, f, x)) ≈ finitediff,
