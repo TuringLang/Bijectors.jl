@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         version:
-          #- '1.6'  # TODO(mhauru) Disabled temporarily for Enzyme testing
+          - '1.6'
           - '1'
         os:
           - ubuntu-latest
@@ -30,6 +30,8 @@ jobs:
         exclude:
           - version: 1.6
             AD: Tapir
+          # TODO(mhauru) Hopefully can enable Enzyme on older versions at some point, see
+          # discussion in https://github.com/TuringLang/Bijectors.jl/pull.
           - version: 1.6
             AD: Enzyme
     steps:
