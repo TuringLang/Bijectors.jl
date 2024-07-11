@@ -25,6 +25,7 @@ Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [weakdeps]
 DistributionsAD = "ced4e74d-a319-5a8a-b0ac-84af2272839c"
+Enzyme = "7da242da-08ed-463a-9acd-ee780be4f1d9"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 LazyArrays = "5078a376-72f3-5289-bfd5-ec5146d43c02"
 ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267"
@@ -34,6 +35,7 @@ Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [extensions]
 BijectorsDistributionsADExt = "DistributionsAD"
+BijectorsEnzymeExt = "Enzyme"
 BijectorsForwardDiffExt = "ForwardDiff"
 BijectorsLazyArraysExt = "LazyArrays"
 BijectorsReverseDiffExt = "ReverseDiff"
@@ -50,6 +52,7 @@ Compat = "3.46, 4.2"
 Distributions = "0.25.33"
 DistributionsAD = "0.6"
 DocStringExtensions = "0.9"
+Enzyme = "0.12.22"
 ForwardDiff = "0.10"
 Functors = "0.1, 0.2, 0.3, 0.4"
 InverseFunctions = "0.1"
@@ -69,6 +72,7 @@ julia = "1.6"
 
 [extras]
 DistributionsAD = "ced4e74d-a319-5a8a-b0ac-84af2272839c"
+Enzyme = "7da242da-08ed-463a-9acd-ee780be4f1d9"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 LazyArrays = "5078a376-72f3-5289-bfd5-ec5146d43c02"
 ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267"

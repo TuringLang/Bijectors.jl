@@ -93,7 +93,7 @@ function transform(t::Transform, x)
     res = with_logabsdet_jacobian(t, x)
     if res isa ChangesOfVariables.NoLogAbsDetJacobian
         error(
-            "`transform` not implemented for $(typeof(f)); implement `transform` and/or `with_logabsdet_jacobian`.",
+            "`transform` not implemented for $(typeof(t)); implement `transform` and/or `with_logabsdet_jacobian`.",
         )
     end
 

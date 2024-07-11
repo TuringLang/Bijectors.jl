@@ -21,6 +21,7 @@ jobs:
         arch:
           - x64
         AD:
+          - Enzyme
           - ForwardDiff
           - Tapir
           - Tracker
@@ -29,6 +30,10 @@ jobs:
         exclude:
           - version: 1.6
             AD: Tapir
+          # TODO(mhauru) Hopefully can enable Enzyme on older versions at some point, see
+          # discussion in https://github.com/TuringLang/Bijectors.jl/pull.
+          - version: 1.6
+            AD: Enzyme
     steps:
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1
