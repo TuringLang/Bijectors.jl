@@ -223,6 +223,15 @@ end
     end
 end
 
+@testset "ProductDistribution" begin
+    d = product_distribution(fill(Dirichlet(ones(4)), 2, 3))
+    x = rand(d)
+    b = bijector(d)
+
+    @test logpdf_with_trans(d, x, false) == logpdf(d, x)
+    @test logpdf_with_trans(d, x, true) == logpdf(d, x) - logabsdetjac(b, x)
+end
+
 @testset "DistributionsAD" begin
     @testset "$dist" for dist in [
         filldist(Normal(), 2),
