@@ -135,6 +135,11 @@ invlink(d::Distribution, y) = inverse(bijector(d))(y)
 
 # To still allow `logpdf_with_trans` to work with "batches" in a similar way
 # as `logpdf` can.
+
+# Default catch-all so we can work with distributions by default and batch-support can be
+# added when needed.
+_logabsdetjac_dist(d, x) = logabsdetjac(bijector(d), x)
+
 _logabsdetjac_dist(d::UnivariateDistribution, x::Real) = logabsdetjac(bijector(d), x)
 function _logabsdetjac_dist(d::UnivariateDistribution, x::AbstractArray)
     return logabsdetjac.((bijector(d),), x)
