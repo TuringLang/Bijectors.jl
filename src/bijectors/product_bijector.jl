@@ -32,7 +32,7 @@ function _product_bijector_slices(
         slice_dims = tuple((size(x, i) for i in (1 + M - N):M)...)
         x_reshaped = reshape(x, other_dims..., prod(slice_dims))
         slices = eachslice(x_reshaped; dims=M - N + 1)
-        return reshape(slices, slice_dims)
+        return reshape(collect(slices), slice_dims)
     end
 end
 
