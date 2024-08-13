@@ -29,14 +29,17 @@ end
 
     if @isdefined Tapir
         rng = Xoshiro(123456)
-        Tapir.TestUtils.test_rrule!!(
-            rng, Bijectors.find_alpha, x, y, z; is_primitive=true, perf_flag=:none
+        Tapir.TestUtils.test_rule(
+            rng, Bijectors.find_alpha, x, y, z;
+            is_primitive=true, perf_flag=:none, interp=Tapir.TapirInterpreter()
         )
-        Tapir.TestUtils.test_rrule!!(
-            rng, Bijectors.find_alpha, x, y, 3; is_primitive=true, perf_flag=:none
+        Tapir.TestUtils.test_rule(
+            rng, Bijectors.find_alpha, x, y, 3;
+            is_primitive=true, perf_flag=:none, interp=Tapir.TapirInterpreter()
         )
-        Tapir.TestUtils.test_rrule!!(
-            rng, Bijectors.find_alpha, x, y, UInt32(3); is_primitive=true, perf_flag=:none
+        Tapir.TestUtils.test_rule(
+            rng, Bijectors.find_alpha, x, y, UInt32(3);
+            is_primitive=true, perf_flag=:none, interp=Tapir.TapirInterpreter()
         )
     end
 
