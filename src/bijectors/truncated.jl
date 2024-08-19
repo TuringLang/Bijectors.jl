@@ -72,8 +72,7 @@ function truncated_inv_logabsdetjac(y, a, b)
     y, a, b = promote(y, a, b)
     lowerbounded, upperbounded = isfinite(a), isfinite(b)
     if lowerbounded && upperbounded
-        abs_y = abs(y)
-        return log(b - a) - abs_y + 2 * LogExpFunctions.log1pexp(-abs_y)
+        return log(b - a) + y - 2 * LogExpFunctions.log1pexp(y)
     elseif lowerbounded || upperbounded
         return y
     else
