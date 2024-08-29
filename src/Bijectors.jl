@@ -164,7 +164,7 @@ function logpdf_with_trans(d::Distribution, x, transform::Bool)
     if ispd(d)
         return pd_logpdf_with_trans(d, x, transform)
     elseif isdirichlet(d)
-        l = logpdf(d, x .+ eps(eltype(x)))
+        l = logpdf(d, x .+ _eps(eltype(x)))
     else
         l = logpdf(d, x)
     end
