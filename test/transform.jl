@@ -42,18 +42,41 @@ function single_sample_tests(dist)
 
     # Check that invlink is inverse of link.
     x = rand(dist)
+    _single_sample_tests_inner(dist, x, ϵ)
 
+    # If the sample is a vector of scalars, check that we can run the tests even if the
+    # vector has the abstract element type Real. Skip type stability tests though.
+    if x isa Vector{<:Real}
+        _single_sample_tests_inner(dist, Vector{Real}(x), ϵ, false)
+    end
+end
+
+function _single_sample_tests_inner(dist, x, ϵ, test_type_stability=true)
     if dist isa LKJCholesky
         x_inv = @inferred Cholesky{Float64,Matrix{Float64}} invlink(
             dist, link(dist, copy(x))
         )
         @test x_inv.UL ≈ x.UL atol = 1e-9
     else
-        @test @inferred(invlink(dist, link(dist, copy(x)))) ≈ x atol = 1e-9
+        x_reconstructed = if test_type_stability
+            @inferred invlink(dist, link(dist, copy(x)))
+        else
+            invlink(dist, link(dist, copy(x)))
+        end
+        @test x_reconstructed ≈ x atol = 1e-9
     end
 
     # Check that link is inverse of invlink. Hopefully this just holds given the above...
-    y = @inferred(link(dist, x))
+    y = if test_type_stability
+        @inferred(link(dist, x))
+    else
+        link(dist, x)
+    end
+    y_reconstructed = if test_type_stability
+        @inferred(link(dist, invlink(dist, copy(y))))
+    else
+        link(dist, invlink(dist, copy(y)))
+    end
     if dist isa Dirichlet
         # `logit` and `logistic` are not perfect inverses. This leads to a diversion.
         # Example:
@@ -61,9 +84,9 @@ function single_sample_tests(dist)
         #    1.0
         # julia> logistic(logit(0.9999999999999998))
         # 0.9999999999999998
-        @test @inferred(link(dist, invlink(dist, copy(y)))) ≈ y atol = 0.5
+        @test y_reconstructed ≈ y atol = 0.5
     else
-        @test @inferred(link(dist, invlink(dist, copy(y)))) ≈ y atol = 1e-9
+        @test y_reconstructed ≈ y atol = 1e-9
     end
     if dist isa SimplexDistribution
         # This should probably be exact.
