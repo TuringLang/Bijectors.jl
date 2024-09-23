@@ -101,7 +101,7 @@ Similarily to the multivariate ADVI example, we could use `Stacked` to get a _bo
 ```@repl normalizing-flows
 d = MvNormal(zeros(2), ones(2));
 ibs = inverse.(bijector.((InverseGamma(2, 3), Beta())));
-sb = stack(ibs...) # == Stacked(ibs) == Stacked(ibs, [i:i for i = 1:length(ibs)]
+sb = Stacked(ibs) # == Stacked(ibs, [i:i for i = 1:length(ibs)]
 b = sb ∘ PlanarLayer(2)
 td = transformed(d, b);
 y = rand(rng, td)
