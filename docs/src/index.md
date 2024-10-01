@@ -9,7 +9,7 @@ This package implements a set of functions for transforming constrained random v
  5. `PDMatDistribution`: `Union{InverseWishart, Wishart}`, and
  6. `TransformDistribution`: `Union{T, Truncated{T}} where T<:ContinuousUnivariateDistribution`.
 
-All exported names from the [Distributions.jl](https://github.com/TuringLang/Bijectors.jl) package are reexported from `Bijectors`.
+All exported names from the [Distributions.jl](https://juliastats.org/Distributions.jl/stable/) package are reexported from `Bijectors`.
 
 Bijectors.jl also provides a nice interface for working with these maps: composition, inversion, etc.
 The following table lists mathematical operations for a bijector and the corresponding code in Bijectors.jl.
