@@ -10,7 +10,7 @@ on:
 jobs:
   test:
     runs-on: ${{ matrix.os }}
-    continue-on-error: ${{ matrix.version == 'nightly' }}
+    fail-fast: false
     strategy:
       matrix:
         version:
