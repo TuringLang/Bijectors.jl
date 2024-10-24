@@ -1,5 +1,3 @@
-using Bijectors
-
 using ChainRulesTestUtils
 using Combinatorics
 using DistributionsAD
@@ -11,6 +9,9 @@ using LogExpFunctions
 using ReverseDiff
 using Tracker
 using Zygote
+
+# Place below `using Enzyme`, see https://github.com/TuringLang/Bijectors.jl/pull/333
+using Bijectors
 
 using Random, LinearAlgebra, Test
 
