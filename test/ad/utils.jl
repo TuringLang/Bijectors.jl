@@ -79,8 +79,8 @@ function test_ad(f, x, broken=(); rtol=1e-6, atol=1e-6)
     end
 
     if (AD == "All" || AD == "Mooncake") && VERSION >= v"1.10"
-        rule = Mooncake.build_rrule(f, x; safety_on=false)
-        if :tapir in broken
+        rule = Mooncake.build_rrule(f, x)
+        if :Mooncake in broken
             @test_broken(
                 isapprox(
                     Mooncake.value_and_gradient!!(rule, f, x)[2][2],
