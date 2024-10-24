@@ -3,6 +3,7 @@ module BijectorsEnzymeExt
 if isdefined(Base, :get_extension)
     using Enzyme: @import_frule, @import_rrule
     using Bijectors: find_alpha
+    using ChainRulesCore
 else
     using ..Enzyme: @import_frule, @import_rrule
     using ..Bijectors: find_alpha
