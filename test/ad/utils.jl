@@ -7,7 +7,7 @@ function test_ad(f, x, broken=(); rtol=1e-6, atol=1e-6)
             b in (
                 :ForwardDiff,
                 :Zygote,
-                :Tapir,
+                :Mooncake,
                 :ReverseDiff,
                 :Enzyme,
                 :EnzymeForward,
@@ -78,12 +78,12 @@ function test_ad(f, x, broken=(); rtol=1e-6, atol=1e-6)
         end
     end
 
-    if (AD == "All" || AD == "Tapir") && VERSION >= v"1.10"
-        rule = Tapir.build_rrule(f, x; safety_on=false)
-        if :tapir in broken
+    if (AD == "All" || AD == "Mooncake") && VERSION >= v"1.10"
+        rule = Mooncake.build_rrule(f, x)
+        if :Mooncake in broken
             @test_broken(
                 isapprox(
-                    Tapir.value_and_gradient!!(rule, f, x)[2][2],
+                    Mooncake.value_and_gradient!!(rule, f, x)[2][2],
                     finitediff;
                     rtol=rtol,
                     atol=atol,
@@ -92,7 +92,7 @@ function test_ad(f, x, broken=(); rtol=1e-6, atol=1e-6)
         else
             @test(
                 isapprox(
-                    Tapir.value_and_gradient!!(rule, f, x)[2][2],
+                    Mooncake.value_and_gradient!!(rule, f, x)[2][2],
                     finitediff;
                     rtol=rtol,
                     atol=atol,

@@ -19,7 +19,9 @@ and on 1.11.1+, that extension is _not_ loaded before BijectorsEnzymeExt is
 loaded. (In the past, for reasons which are not fully clear,
 EnzymeChainRulesCoreExt _does_ get loaded first.)
 
-See https://github.com/TuringLang/Bijectors.jl/pull/333 for further context.
+See https://github.com/TuringLang/Bijectors.jl/pull/333 and 
+https://github.com/TuringLang/Bijectors.jl/pull/337 for further context about
+the underlying issue and the other ways that were explored to resolve it.
 
 However, on versions of Julia where the 'default' extension resolution occurs,
 we can still use the macros (see the else clause below). We do this to ensure
