@@ -1,10 +1,11 @@
-module BijectorsTapirExt
+module BijectorsMooncakeExt
 
 if isdefined(Base, :get_extension)
-    using Tapir: @is_primitive, MinimalCtx, Tapir, CoDual, primal, tangent_type, @from_rrule
+    using Mooncake:
+        @is_primitive, MinimalCtx, Mooncake, CoDual, primal, tangent_type, @from_rrule
     using Bijectors: find_alpha, ChainRulesCore
 else
-    using ..Tapir: @is_primitive, MinimalCtx, Tapir, primal, tangent_type, @from_rrule
+    using ..Mooncake: @is_primitive, MinimalCtx, Mooncake, primal, tangent_type, @from_rrule
     using ..Bijectors: find_alpha, ChainRulesCore
 end
 
@@ -19,20 +20,20 @@ end
 # unusual Integer type is encountered.
 @is_primitive(MinimalCtx, Tuple{typeof(find_alpha),P,P,Integer} where {P<:Base.IEEEFloat})
 
-function Tapir.rrule!!(
+function Mooncake.rrule!!(
     ::CoDual{typeof(find_alpha)}, x::CoDual{P}, y::CoDual{P}, z::CoDual{I}
 ) where {P<:Base.IEEEFloat,I<:Integer}
     # Require that the integer is non-differentiable.
-    if tangent_type(I) != Tapir.NoTangent
+    if tangent_type(I) != Mooncake.NoTangent
         msg = "Integer argument has tangent type $(tangent_type(I)), should be NoTangent."
         throw(ArgumentError(msg))
     end
     out, pb = ChainRulesCore.rrule(find_alpha, primal(x), primal(y), primal(z))
     function find_alpha_pb(dout::P)
         _, dx, dy, _ = pb(dout)
-        return Tapir.NoRData(), P(dx), P(dy), Tapir.NoRData()
+        return Mooncake.NoRData(), P(dx), P(dy), Mooncake.NoRData()
     end
-    return Tapir.zero_fcodual(out), find_alpha_pb
+    return Mooncake.zero_fcodual(out), find_alpha_pb
 end
 
 end
