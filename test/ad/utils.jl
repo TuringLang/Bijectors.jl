@@ -56,24 +56,28 @@ function test_ad(f, x, broken=(); rtol=1e-6, atol=1e-6)
         reverse_broken = :EnzymeReverse in broken || :Enzyme in broken
         if forward_broken
             @test_broken(
-                collect(et, Enzyme.gradient(Enzyme.Forward, f, x)) ≈ finitediff,
+                collect(et, Enzyme.gradient(Enzyme.Forward, f, x)[1]) ≈ finitediff,
                 rtol = rtol,
                 atol = atol
             )
         else
             @test(
-                collect(et, Enzyme.gradient(Enzyme.Forward, f, x)) ≈ finitediff,
+                collect(et, Enzyme.gradient(Enzyme.Forward, f, x)[1]) ≈ finitediff,
                 rtol = rtol,
                 atol = atol
             )
         end
         if reverse_broken
             @test_broken(
-                Enzyme.gradient(Enzyme.Reverse, f, x) ≈ finitediff, rtol = rtol, atol = atol
+                collect(et, Enzyme.gradient(Enzyme.Reverse, f, x)[1]) ≈ finitediff,
+                rtol = rtol,
+                atol = atol
             )
         else
             @test(
-                Enzyme.gradient(Enzyme.Reverse, f, x) ≈ finitediff, rtol = rtol, atol = atol
+                collect(et, Enzyme.gradient(Enzyme.Reverse, f, x)[1]) ≈ finitediff,
+                rtol = rtol,
+                atol = atol
             )
         end
     end
