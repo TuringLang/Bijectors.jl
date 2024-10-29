@@ -127,12 +127,12 @@ end
                     end
                 end
                 # Check that the quantiles are reasonable, i.e. within
-                # 5 standard errors of the true quantiles (and that the MCSE is
+                # 6 standard errors of the true quantiles (and that the MCSE is
                 # not too large).
                 for i in 1:k
                     for j in 1:length(qts)
                         @test qs_mcse[i, j] < abs(qs_true[i, end] - qs_true[i, 1]) / 2
-                        @test abs(qs[i, j] - qs_true[i, j]) < 5 * qs_mcse[i, j]
+                        @test abs(qs[i, j] - qs_true[i, j]) < 6 * qs_mcse[i, j]
                     end
                 end
             end

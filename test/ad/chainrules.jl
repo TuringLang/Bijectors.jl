@@ -27,9 +27,9 @@ end
     test_frule(Bijectors.find_alpha, x, y, z)
     test_rrule(Bijectors.find_alpha, x, y, z)
 
-    if @isdefined Tapir
+    if @isdefined Mooncake
         rng = Xoshiro(123456)
-        Tapir.TestUtils.test_rule(
+        Mooncake.TestUtils.test_rule(
             rng,
             Bijectors.find_alpha,
             x,
@@ -37,9 +37,9 @@ end
             z;
             is_primitive=true,
             perf_flag=:none,
-            interp=Tapir.TapirInterpreter(),
+            interp=Mooncake.MooncakeInterpreter(),
         )
-        Tapir.TestUtils.test_rule(
+        Mooncake.TestUtils.test_rule(
             rng,
             Bijectors.find_alpha,
             x,
@@ -47,9 +47,9 @@ end
             3;
             is_primitive=true,
             perf_flag=:none,
-            interp=Tapir.TapirInterpreter(),
+            interp=Mooncake.MooncakeInterpreter(),
         )
-        Tapir.TestUtils.test_rule(
+        Mooncake.TestUtils.test_rule(
             rng,
             Bijectors.find_alpha,
             x,
@@ -57,7 +57,7 @@ end
             UInt32(3);
             is_primitive=true,
             perf_flag=:none,
-            interp=Tapir.TapirInterpreter(),
+            interp=Mooncake.MooncakeInterpreter(),
         )
     end
 
