@@ -12,6 +12,10 @@ function test_ad(f, x, broken=(); rtol=1e-6, atol=1e-6)
                 :Enzyme,
                 :EnzymeForward,
                 :EnzymeReverse,
+                # The `Crash` ones indicate that the error will cause a Julia crash, and
+                # thus we can't even run `@test_broken on it.
+                :EnzymeForwardCrash,
+                :EnzymeReverseCrash,
             )
         )
             error("Unknown broken AD backend: $b")
@@ -54,31 +58,36 @@ function test_ad(f, x, broken=(); rtol=1e-6, atol=1e-6)
     if (AD == "All" || AD == "Enzyme") && VERSION >= v"1.10"
         forward_broken = :EnzymeForward in broken || :Enzyme in broken
         reverse_broken = :EnzymeReverse in broken || :Enzyme in broken
-        if forward_broken
-            @test_broken(
-                collect(et, Enzyme.gradient(Enzyme.Forward, f, x)[1]) ≈ finitediff,
-                rtol = rtol,
-                atol = atol
-            )
-        else
-            @test(
-                collect(et, Enzyme.gradient(Enzyme.Forward, f, x)[1]) ≈ finitediff,
-                rtol = rtol,
-                atol = atol
-            )
+        if !(:EnzymeForwardCrash in broken)
+            if forward_broken
+                @test_broken(
+                    collect(et, Enzyme.gradient(Enzyme.Forward, f, x)[1]) ≈ finitediff,
+                    rtol = rtol,
+                    atol = atol
+                )
+            else
+                @test(
+                    collect(et, Enzyme.gradient(Enzyme.Forward, f, x)[1]) ≈ finitediff,
+                    rtol = rtol,
+                    atol = atol
+                )
+            end
         end
-        if reverse_broken
-            @test_broken(
-                collect(et, Enzyme.gradient(Enzyme.Reverse, f, x)[1]) ≈ finitediff,
-                rtol = rtol,
-                atol = atol
-            )
-        else
-            @test(
-                collect(et, Enzyme.gradient(Enzyme.Reverse, f, x)[1]) ≈ finitediff,
-                rtol = rtol,
-                atol = atol
-            )
+
+        if !(:EnzymeReverseCrash in broken)
+            if reverse_broken
+                @test_broken(
+                    collect(et, Enzyme.gradient(Enzyme.Reverse, f, x)[1]) ≈ finitediff,
+                    rtol = rtol,
+                    atol = atol
+                )
+            else
+                @test(
+                    collect(et, Enzyme.gradient(Enzyme.Reverse, f, x)[1]) ≈ finitediff,
+                    rtol = rtol,
+                    atol = atol
+                )
+            end
         end
     end
 
