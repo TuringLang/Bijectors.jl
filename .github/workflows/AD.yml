@@ -13,7 +13,7 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          - '1.6'
+          - 'min'
           - '1'
         os:
           - ubuntu-latest
@@ -27,13 +27,6 @@ jobs:
           - Tracker
           - ReverseDiff
           - Zygote
-        exclude:
-          - version: 1.6
-            AD: Mooncake
-          # TODO(mhauru) Hopefully can enable Enzyme on older versions at some point, see
-          # discussion in https://github.com/TuringLang/Bijectors.jl/pull.
-          - version: 1.6
-            AD: Enzyme
     steps:
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1
