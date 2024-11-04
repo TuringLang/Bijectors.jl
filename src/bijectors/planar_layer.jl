@@ -173,7 +173,9 @@ function find_alpha(wt_y::T, wt_u_hat::T, b::T) where {T<:Real}
     end
 
     # Solve the root-finding problem
-    α0 = Roots.find_zero((lower, upper), Roots.ITP()) do α
+    # A value of `κ₁ = 0.2 / (upper - lower)` is suggested
+    # Ref: https://docs.rs/kurbo/0.11.1/kurbo/common/fn.solve_itp.html
+    α0 = Roots.find_zero((lower, upper), Roots.ITP(; κ₁ = inv(10 * Δ))) do α
         return α + wt_u_hat * tanh(α + b) - wt_y
     end
 
