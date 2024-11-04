@@ -4,6 +4,7 @@ using ChainRulesTestUtils
 using Combinatorics
 using DistributionsAD
 using Enzyme
+using EnzymeTestUtils
 using FiniteDifferences
 using ForwardDiff
 using Functors
@@ -68,6 +69,7 @@ end
 
 if GROUP == "All" || GROUP == "AD"
     include("ad/chainrules.jl")
+    include("ad/enzyme.jl")
     include("ad/flows.jl")
     include("ad/pd.jl")
     include("ad/corr.jl")
