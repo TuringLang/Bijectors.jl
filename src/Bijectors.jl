@@ -41,12 +41,10 @@ import ChangesOfVariables: ChangesOfVariables, with_logabsdet_jacobian
 import InverseFunctions: inverse
 
 using ChainRulesCore: ChainRulesCore
-using ChainRules: ChainRules
 using Functors: Functors
 using IrrationalConstants: IrrationalConstants
 using LogExpFunctions: LogExpFunctions
 using Roots: Roots
-using Compat: Compat
 using DocStringExtensions: TYPEDFIELDS
 
 export TransformDistribution,
@@ -78,14 +76,6 @@ export TransformDistribution,
     Coupling,
     InvertibleBatchNorm,
     elementwise
-
-if VERSION < v"1.1"
-    using Compat: eachcol
-end
-
-if VERSION < v"1.9"
-    using Compat: stack
-end
 
 const DEBUG = Bool(parse(Int, get(ENV, "DEBUG_BIJECTORS", "0")))
 _debug(str) = @debug str
@@ -276,33 +266,5 @@ include("chainrules.jl")
 # Broadcasting here breaks Tracker for some reason
 maporbroadcast(f, x::AbstractArray{<:Any,N}...) where {N} = map(f, x...)
 maporbroadcast(f, x::AbstractArray...) = f.(x...)
-
-# optional dependencies
-if !isdefined(Base, :get_extension)
-    using Requires
-end
-
-function __init__()
-    @static if !isdefined(Base, :get_extension)
-        @require LazyArrays = "5078a376-72f3-5289-bfd5-ec5146d43c02" include(
-            "../ext/BijectorsLazyArraysExt.jl"
-        )
-        @require ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210" include(
-            "../ext/BijectorsForwardDiffExt.jl"
-        )
-        @require Tracker = "9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c" include(
-            "../ext/BijectorsTrackerExt.jl"
-        )
-        @require Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f" include(
-            "../ext/BijectorsZygoteExt.jl"
-        )
-        @require ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267" include(
-            "../ext/BijectorsReverseDiffExt.jl"
-        )
-        @require DistributionsAD = "ced4e74d-a319-5a8a-b0ac-84af2272839c" include(
-            "../ext/BijectorsDistributionsADExt.jl"
-        )
-    end
-end
 
 end # module

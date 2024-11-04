@@ -1,13 +1,8 @@
 module BijectorsMooncakeExt
 
-if isdefined(Base, :get_extension)
-    using Mooncake:
-        @is_primitive, MinimalCtx, Mooncake, CoDual, primal, tangent_type, @from_rrule
-    using Bijectors: find_alpha, ChainRulesCore
-else
-    using ..Mooncake: @is_primitive, MinimalCtx, Mooncake, primal, tangent_type, @from_rrule
-    using ..Bijectors: find_alpha, ChainRulesCore
-end
+using Mooncake:
+    @is_primitive, MinimalCtx, Mooncake, CoDual, primal, tangent_type, @from_rrule
+using Bijectors: find_alpha, ChainRulesCore
 
 for P in [Float16, Float32, Float64]
     @from_rrule(MinimalCtx, Tuple{typeof(find_alpha),P,P,P})

@@ -1,38 +1,20 @@
 module BijectorsDistributionsADExt
 
-if isdefined(Base, :get_extension)
-    using Bijectors
-    using Bijectors: LinearAlgebra
-    using Bijectors.Distributions: AbstractMvLogNormal
-    using DistributionsAD:
-        TuringDirichlet,
-        TuringWishart,
-        TuringInverseWishart,
-        FillVectorOfUnivariate,
-        FillMatrixOfUnivariate,
-        MatrixOfUnivariate,
-        FillVectorOfMultivariate,
-        VectorOfMultivariate,
-        TuringScalMvNormal,
-        TuringDiagMvNormal,
-        TuringDenseMvNormal
-else
-    using ..Bijectors
-    using ..Bijectors: LinearAlgebra
-    using ..Bijectors.Distributions: AbstractMvLogNormal
-    using ..DistributionsAD:
-        TuringDirichlet,
-        TuringWishart,
-        TuringInverseWishart,
-        FillVectorOfUnivariate,
-        FillMatrixOfUnivariate,
-        MatrixOfUnivariate,
-        FillVectorOfMultivariate,
-        VectorOfMultivariate,
-        TuringScalMvNormal,
-        TuringDiagMvNormal,
-        TuringDenseMvNormal
-end
+using Bijectors
+using Bijectors: LinearAlgebra
+using Bijectors.Distributions: AbstractMvLogNormal
+using DistributionsAD:
+    TuringDirichlet,
+    TuringWishart,
+    TuringInverseWishart,
+    FillVectorOfUnivariate,
+    FillMatrixOfUnivariate,
+    MatrixOfUnivariate,
+    FillVectorOfMultivariate,
+    VectorOfMultivariate,
+    TuringScalMvNormal,
+    TuringDiagMvNormal,
+    TuringDenseMvNormal
 
 # Bijectors
 

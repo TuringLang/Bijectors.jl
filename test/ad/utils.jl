@@ -51,7 +51,7 @@ function test_ad(f, x, broken=(); rtol=1e-6, atol=1e-6)
         end
     end
 
-    if (AD == "All" || AD == "Enzyme")
+    if AD == "All" || AD == "Enzyme"
         forward_broken = :EnzymeForward in broken || :Enzyme in broken
         reverse_broken = :EnzymeReverse in broken || :Enzyme in broken
         if !(:EnzymeForwardCrash in broken)
@@ -87,7 +87,7 @@ function test_ad(f, x, broken=(); rtol=1e-6, atol=1e-6)
         end
     end
 
-    if (AD == "All" || AD == "Mooncake") && VERSION >= v"1.10"
+    if AD == "All" || AD == "Mooncake"
         try
             Mooncake.build_rrule(f, x)
         catch exc

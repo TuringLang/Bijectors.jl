@@ -1,76 +1,38 @@
 module BijectorsZygoteExt
 
-if isdefined(Base, :get_extension)
-    using Zygote: Zygote, @adjoint, pullback
-    using Bijectors:
-        Elementwise,
-        SimplexBijector,
-        simplex_link_jacobian,
-        simplex_invlink_jacobian,
-        simplex_logabsdetjac_gradient,
-        Inverse,
-        maphcat,
-        IrrationalConstants,
-        Distributions,
-        logabsdetjac,
-        _logabsdetjac_scale,
-        _simplex_bijector,
-        _simplex_inv_bijector,
-        replace_diag,
-        jacobian,
-        _transform_ordered,
-        _transform_inverse_ordered,
-        find_alpha,
-        pd_logpdf_with_trans,
-        istraining,
-        mapvcat,
-        eachcolmaphcat,
-        sumeachcol,
-        pd_link,
-        pd_from_lower,
-        lower_triangular,
-        upper_triangular,
-        getlogp
+using Zygote: Zygote, @adjoint, pullback
+using Bijectors:
+    Elementwise,
+    SimplexBijector,
+    simplex_link_jacobian,
+    simplex_invlink_jacobian,
+    simplex_logabsdetjac_gradient,
+    Inverse,
+    maphcat,
+    IrrationalConstants,
+    Distributions,
+    logabsdetjac,
+    _logabsdetjac_scale,
+    _simplex_bijector,
+    _simplex_inv_bijector,
+    replace_diag,
+    jacobian,
+    _transform_ordered,
+    _transform_inverse_ordered,
+    find_alpha,
+    pd_logpdf_with_trans,
+    istraining,
+    mapvcat,
+    eachcolmaphcat,
+    sumeachcol,
+    pd_link,
+    pd_from_lower,
+    lower_triangular,
+    upper_triangular,
+    getlogp
 
-    using Bijectors.LinearAlgebra
-    using Bijectors.Compat: eachcol
-    using Bijectors.Distributions: LocationScale
-else
-    using ..Zygote: Zygote, @adjoint, pullback
-    using ..Bijectors:
-        Elementwise,
-        SimplexBijector,
-        simplex_link_jacobian,
-        simplex_invlink_jacobian,
-        simplex_logabsdetjac_gradient,
-        Inverse,
-        maphcat,
-        IrrationalConstants,
-        Distributions,
-        logabsdetjac,
-        _logabsdetjac_scale,
-        _simplex_bijector,
-        _simplex_inv_bijector,
-        replace_diag,
-        jacobian,
-        _transform_ordered,
-        _transform_inverse_ordered,
-        find_alpha,
-        pd_logpdf_with_trans,
-        istraining,
-        mapvcat,
-        eachcolmaphcat,
-        sumeachcol,
-        pd_link,
-        pd_from_lower,
-        lower_triangular,
-        upper_triangular,
-        getlogp
-
-    using ..Bijectors.LinearAlgebra
-    using ..Bijectors.Compat: eachcol
-    using ..Bijectors.Distributions: LocationScale
-end
+using Bijectors.LinearAlgebra
+using Bijectors.Distributions: LocationScale
 
 @adjoint istraining() = true, _ -> nothing
 

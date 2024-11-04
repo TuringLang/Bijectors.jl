@@ -1,12 +1,7 @@
 module BijectorsLazyArraysExt
 
-if isdefined(Base, :get_extension)
-    import Bijectors: maporbroadcast
-    using LazyArrays: LazyArrays
-else
-    import ..Bijectors: maporbroadcast
-    using ..LazyArrays: LazyArrays
-end
+import Bijectors: maporbroadcast
+using LazyArrays: LazyArrays
 
 function maporbroadcast(f, x1::LazyArrays.BroadcastArray, x...)
     return copy(f.(x1, x...))

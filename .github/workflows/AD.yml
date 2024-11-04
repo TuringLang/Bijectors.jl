@@ -6,6 +6,12 @@ on:
       - master
   pull_request:
 
+concurrency:
+  # Skip intermediate builds: always.
+  # Cancel intermediate builds: only if it is a pull request build.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
 jobs:
   test:
     runs-on: ${{ matrix.os }}
@@ -14,12 +20,11 @@ jobs:
       matrix:
         version:
           - 'min'
+          - 'lts'
           - '1'
         os:
           - ubuntu-latest
           - macOS-latest
-        arch:
-          - x64
         AD:
           - Enzyme
           - ForwardDiff
@@ -32,9 +37,8 @@ jobs:
       - uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.version }}
-          arch: ${{ matrix.arch }}
-      - uses: julia-actions/julia-buildpkg@latest
-      - uses: julia-actions/julia-runtest@latest
+      - uses: julia-actions/julia-buildpkg@v1
+      - uses: julia-actions/julia-runtest@v1
         env:
           GROUP: AD
           AD: ${{ matrix.AD }}
