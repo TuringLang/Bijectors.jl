@@ -173,7 +173,7 @@ function find_alpha(wt_y::T, wt_u_hat::T, b::T) where {T<:Real}
     end
 
     # Solve the root-finding problem
-    α0 = Roots.find_zero((lower, upper)) do α
+    α0 = Roots.find_zero((lower, upper), Roots.ITP()) do α
         return α + wt_u_hat * tanh(α + b) - wt_y
     end
 
