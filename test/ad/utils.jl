@@ -84,7 +84,13 @@ function test_ad(f, x, broken=(); rtol=1e-6, atol=1e-6)
         catch exc
             # TODO(penelopeysm):
             # @test_throws AssertionError (expr...) doesn't work, unclear why
-            @test exc isa AssertionError
+            # We use `isdefined` here since `hasproperty` for modules is not consistent with `getproperty`
+            # Ref https://github.com/JuliaLang/julia/issues/47150
+            if isdefined(Mooncake, :MooncakeRuleCompilationError)
+                @test exc isa getproperty(Mooncake, :MooncakeRuleCompilationError)
+            else
+                @test exc isa AssertionError
+            end
         end
         # TODO: The above @test_throws happens because of 
         # https://github.com/compintell/Mooncake.jl/issues/319. If that test
