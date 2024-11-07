@@ -32,10 +32,7 @@ using Bijectors: VecCorrBijector, VecCholeskyBijector, CorrBijector
         test_bijector(b, x; test_not_identity=d != 1, changes_of_variables_test=false)
         test_bijector(bvec, x; test_not_identity=d != 1, changes_of_variables_test=false)
 
-        # TODO(mhauru) Enzyme's ForwardMode broken for the 1-dim case:
-        # https://github.com/EnzymeAD/Enzyme.jl/issues/2024
-        broken = d == 1 ? (:EnzymeForward,) : ()
-        test_ad(x -> sum(bvec(bvecinv(x))), yvec, broken)
+        test_ad(x -> sum(bvec(bvecinv(x))), yvec)
 
         # Check that output sizes are computed correctly.
         tdist = transformed(dist)
