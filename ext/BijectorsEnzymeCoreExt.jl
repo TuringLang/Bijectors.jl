@@ -124,19 +124,23 @@ function EnzymeRules.augmented_primal(
     Ω =
         if EnzymeRules.needs_primal(config) ||
             EnzymeRules.needs_shadow(config) ||
-            (RT <: Active && !(wt_y isa Const && wt_u_hat isa Const && b isa Const))
+            !(RT <: Const || (wt_y isa Const && wt_u_hat isa Const && b isa Const))
             find_alpha(wt_y.val, wt_u_hat.val, b.val)
         else
             nothing
         end
 
     tape = if RT <: Const || (wt_y isa Const && wt_u_hat isa Const && b isa Const)
-        # Trivial case: No differentiation or all partial derivatives are 0
+        # Trivial case: No differentiation or all derivatives are 0
         # Thus no tape is needed
         nothing
     else
-        # Store the partial derivatives
-        ∂find_alpha(Ω, wt_y, wt_u_hat, b)
+        # Derivatives with respect to at least one argument needed
+        # They are computed in the reverse pass, and therefore the original return is cached
+        # In principle, the partial derivatives could be computed here and be cached
+        # But Enzyme only executes the reverse pass once,
+        # thus this would not increase efficiency but instead more values would have to be cached
+        Ω
     end
 
     # Ensure that we follow the interface requirements of `augmented_primal`
@@ -159,25 +163,33 @@ function EnzymeRules.reverse(
     return map(x -> x isa Active ? zero(x.val) : nothing, (wt_y, wt_u_hat, b))
 end
 function EnzymeRules.reverse(
-    config::EnzymeRules.ConfigWidth{1},
+    ::EnzymeRules.ConfigWidth{1},
+    ::Const{typeof(find_alpha)},
+    ::Active,
+    ::Nothing,
+    ::Const,
+    ::Const,
+    ::Const,
+)
+    # Trivial case: Tape does not exist sice all partial derivatives are 0
+    return (nothing, nothing, nothing)
+end
+function EnzymeRules.reverse(
+    ::EnzymeRules.ConfigWidth{1},
     ::Const{typeof(find_alpha)},
     ΔΩ::Active,
-    tape,
+    Ω::Real,
     wt_y::Union{Const,Active},
     wt_u_hat::Union{Const,Active},
     b::Union{Const,Active},
 )
-    if wt_y isa Const && wt_u_hat isa Const && b isa Const
-        # Trivial case: All partial derivatives are 0
-        # Tape should not exist
-        @assert tape === nothing
-        return (nothing, nothing, nothing)
-    else
-        # Some partial derivatives should exist
-        @assert tape isa NTuple{3,Union{Nothing,Real}}
-        let ΔΩ_val = ΔΩ.val
-            return map(∂Ω_∂x -> ∂Ω_∂x === nothing ? nothing : ∂Ω_∂x * ΔΩ_val, tape)
-        end
+    # Tape must be `nothing` if all arguments are `Const`
+    @assert !(wt_y isa Const && wt_u_hat isa Const && b isa Const)
+
+    # Compute partial derivatives
+    ∂Ω_∂xs = ∂find_alpha(Ω, wt_y, wt_u_hat, b)
+    let ΔΩ_val = ΔΩ.val
+        return map(∂Ω_∂x -> ∂Ω_∂x === nothing ? nothing : ∂Ω_∂x * ΔΩ_val, ∂Ω_∂xs)
     end
 end
 
