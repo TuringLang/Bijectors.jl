@@ -112,6 +112,11 @@ function EnzymeRules.forward(
     end
 end
 
+struct Zero{T}
+    x::T
+end
+(f::Zero)(_) = zero(f.x)
+
 function EnzymeRules.augmented_primal(
     config::EnzymeRules.Config,
     ::Const{typeof(find_alpha)},
@@ -145,13 +150,26 @@ function EnzymeRules.augmented_primal(
 
     # Ensure that we follow the interface requirements of `augmented_primal`
     primal = EnzymeRules.needs_primal(config) ? Ω : nothing
-    shadow = EnzymeRules.needs_shadow(config) ? zero(Ω) : nothing
+    shadow = if EnzymeRules.needs_shadow(config)
+        if EnzymeRules.width(config) === 1
+            zero(Ω)
+        else
+            ntuple(Zero(Ω), Val(EnzymeRules.width(config)))
+        end
+    else
+        nothing
+    end
 
     return EnzymeRules.AugmentedReturn(primal, shadow, tape)
 end
 
+struct ZeroOrNothing{N} end
+(::ZeroOrNothing)(::Const) = nothing
+(::ZeroOrNothing{1})(x::Active) = zero(x.val)
+(::ZeroOrNothing{N})(x::Active) where {N} = ntuple(Zero(x.val), Val{N}())
+
 function EnzymeRules.reverse(
-    config::EnzymeRules.ConfigWidth{1},
+    config::EnzymeRules.Config,
     ::Const{typeof(find_alpha)},
     ::Type{<:Const},
     ::Nothing,
@@ -160,10 +178,10 @@ function EnzymeRules.reverse(
     b::Union{Const,Active},
 )
     # Trivial case: Nothing to be differentiated (return activity is `Const`)
-    return map(x -> x isa Active ? zero(x.val) : nothing, (wt_y, wt_u_hat, b))
+    return map(ZeroOrNothing{EnzymeRules.width(config)}(), (wt_y, wt_u_hat, b))
 end
 function EnzymeRules.reverse(
-    ::EnzymeRules.ConfigWidth{1},
+    ::EnzymeRules.Config,
     ::Const{typeof(find_alpha)},
     ::Active,
     ::Nothing,
@@ -174,8 +192,18 @@ function EnzymeRules.reverse(
     # Trivial case: Tape does not exist sice all partial derivatives are 0
     return (nothing, nothing, nothing)
 end
+
+struct MulPartialOrNothing{T<:Union{Real,Tuple{Vararg{Real}}}}
+    x::T
+end
+(::MulPartialOrNothing)(::Nothing) = nothing
+(f::MulPartialOrNothing{<:Real})(∂f_∂x::Real) = ∂f_∂x * f.x
+function (f::MulPartialOrNothing{<:NTuple{N,Real}})(∂f_∂x::Real) where {N}
+    return map(Base.Fix1(*, ∂f_∂x), f.x)
+end
+
 function EnzymeRules.reverse(
-    ::EnzymeRules.ConfigWidth{1},
+    ::EnzymeRules.Config,
     ::Const{typeof(find_alpha)},
     ΔΩ::Active,
     Ω::Real,
@@ -188,9 +216,7 @@ function EnzymeRules.reverse(
 
     # Compute partial derivatives
     ∂Ω_∂xs = ∂find_alpha(Ω, wt_y, wt_u_hat, b)
-    let ΔΩ_val = ΔΩ.val
-        return map(∂Ω_∂x -> ∂Ω_∂x === nothing ? nothing : ∂Ω_∂x * ΔΩ_val, ∂Ω_∂xs)
-    end
+    return map(MulPartialOrNothing(ΔΩ.val), ∂Ω_∂xs)
 end
 
 end  # module
