@@ -26,12 +26,33 @@ if v"1.10" <= VERSION < v"1.11"
             end
         end
         @testset "reverse" begin
+            # No batches
             @testset for RT in (Const, Active),
                 Tx in (Const, Active),
                 Ty in (Const, Active),
                 Tz in (Const, Active)
 
                 test_reverse(Bijectors.find_alpha, RT, (x, Tx), (y, Ty), (z, Tz))
+            end
+
+            # Batches
+            function find_alpha!(
+                out::Vector{<:Real}, x::Vector{<:Real}, y::Vector{<:Real}, z::Vector{<:Real}
+            )
+                map!(Bijectors.find_alpha, out, x, y, z)
+                return nothing
+            end
+            n = 3
+            out = zeros(n)
+            xs = randn(n)
+            ys = expm1.(randn(n))
+            zs = randn(n)
+            @testset for Tout in (Const, BatchDuplicated),
+                Tx in (Const, BatchDuplicated),
+                Ty in (Const, BatchDuplicated),
+                Tz in (Const, BatchDuplicated)
+
+                test_reverse(find_alpha!, Const, (out, Tout), (xs, Tx), (ys, Ty), (zs, Tz))
             end
         end
     end
