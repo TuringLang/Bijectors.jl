@@ -101,7 +101,7 @@ Similarily to the multivariate ADVI example, we could use `Stacked` to get a _bo
 ```@repl normalizing-flows
 d = MvNormal(zeros(2), ones(2));
 ibs = inverse.(bijector.((InverseGamma(2, 3), Beta())));
-sb = stack(ibs...) # == Stacked(ibs) == Stacked(ibs, [i:i for i = 1:length(ibs)]
+sb = Stacked(ibs) # == Stacked(ibs, [i:i for i = 1:length(ibs)]
 b = sb ∘ PlanarLayer(2)
 td = transformed(d, b);
 y = rand(rng, td)
@@ -128,7 +128,7 @@ struct NLLObjective{R,D,T}
     data::T
 end
 
-function (obj::NLLObjective)(θs...)
+function (obj::NLLObjective)(θs)
     transformed_dist = transformed(obj.basedist, obj.reconstruct(θs))
     return -sum(Base.Fix1(logpdf, transformed_dist), eachcol(obj.data))
 end
@@ -140,19 +140,19 @@ xs = randn(2, 1000);
 f = NLLObjective(reconstruct, MvNormal(2, 1), xs);
 
 # Initial loss.
-@info "Initial loss: $(f(θs...))"
+@info "Initial loss: $(f(θs))"
 
 # Train using gradient descent.
 ε = 1e-3;
 for i in 1:100
-    ∇s = Zygote.gradient(f, θs...)
-    θs = map(θs, ∇s) do θ, ∇
+    (∇s,) = Zygote.gradient(f, θs)
+    θs = fmap(θs, ∇s) do θ, ∇
         θ - ε .* ∇
     end
 end
 
 # Final loss
-@info "Finall loss: $(f(θs...))"
+@info "Final loss: $(f(θs))"
 
 # Very simple check to see if we learned something useful.
 samples = rand(transformed(f.basedist, f.reconstruct(θs)), 1000);

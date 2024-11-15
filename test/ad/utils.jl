@@ -7,7 +7,7 @@ function test_ad(f, x, broken=(); rtol=1e-6, atol=1e-6)
             b in (
                 :ForwardDiff,
                 :Zygote,
-                :Tapir,
+                :Mooncake,
                 :ReverseDiff,
                 :Enzyme,
                 :EnzymeForward,
@@ -78,27 +78,45 @@ function test_ad(f, x, broken=(); rtol=1e-6, atol=1e-6)
         end
     end
 
-    if (AD == "All" || AD == "Tapir") && VERSION >= v"1.10"
-        rule = Tapir.build_rrule(f, x; safety_on=false)
-        if :tapir in broken
-            @test_broken(
-                isapprox(
-                    Tapir.value_and_gradient!!(rule, f, x)[2][2],
-                    finitediff;
-                    rtol=rtol,
-                    atol=atol,
-                )
-            )
-        else
-            @test(
-                isapprox(
-                    Tapir.value_and_gradient!!(rule, f, x)[2][2],
-                    finitediff;
-                    rtol=rtol,
-                    atol=atol,
-                )
-            )
+    if (AD == "All" || AD == "Mooncake") && VERSION >= v"1.10"
+        try
+            Mooncake.build_rrule(f, x)
+        catch exc
+            # TODO(penelopeysm):
+            # @test_throws AssertionError (expr...) doesn't work, unclear why
+            # We use `isdefined` here since `hasproperty` for modules is not consistent with `getproperty`
+            # Ref https://github.com/JuliaLang/julia/issues/47150
+            if isdefined(Mooncake, :MooncakeRuleCompilationError)
+                @test exc isa getproperty(Mooncake, :MooncakeRuleCompilationError)
+            else
+                @test exc isa AssertionError
+            end
         end
+        # TODO: The above @test_throws happens because of 
+        # https://github.com/compintell/Mooncake.jl/issues/319. If that test
+        # fails, it probably means that the issue was fixed, in which case
+        # we can remove that block and uncomment the following instead.
+
+        # rule = Mooncake.build_rrule(f, x)
+        # if :Mooncake in broken
+        #     @test_broken (
+        #         isapprox(
+        #             Mooncake.value_and_gradient!!(rule, f, x)[2][2],
+        #             finitediff;
+        #             rtol=rtol,
+        #             atol=atol,
+        #         )
+        #     )
+        # else
+        #     @test(
+        #         isapprox(
+        #             Mooncake.value_and_gradient!!(rule, f, x)[2][2],
+        #             finitediff;
+        #             rtol=rtol,
+        #             atol=atol,
+        #         )
+        #     )
+        # end
     end
 
     return nothing
