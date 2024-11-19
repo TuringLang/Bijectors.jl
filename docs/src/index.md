@@ -1,6 +1,15 @@
 # Bijectors.jl
 
-This package implements a set of functions for transforming constrained random variables (e.g. simplexes, intervals) to Euclidean space. The 3 main functions implemented in this package are the `link`, `invlink` and `logpdf_with_trans` for a number of distributions. The distributions supported are:
+This package implements a set of functions for transforming constrained random variables (e.g. simplexes, intervals) to Euclidean space.
+The 3 main functions implemented in this package are the `link`, `invlink` and `logpdf_with_trans` for a number of distributions.
+
+```@docs
+Bijectors.link
+Bijectors.invlink
+Bijectors.logpdf_with_trans
+```
+
+The distributions supported are:
 
  1. `RealDistribution`: `Union{Cauchy, Gumbel, Laplace, Logistic, NoncentralT, Normal, NormalCanon, TDist}`,
  2. `PositiveDistribution`: `Union{BetaPrime, Chi, Chisq, Erlang, Exponential, FDist, Frechet, Gamma, InverseGamma, InverseGaussian, Kolmogorov, LogNormal, NoncentralChisq, NoncentralF, Rayleigh, Weibull}`,
