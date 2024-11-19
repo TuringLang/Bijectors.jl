@@ -79,10 +79,6 @@ export TransformDistribution,
     InvertibleBatchNorm,
     elementwise
 
-if VERSION < v"1.1"
-    using Compat: eachcol
-end
-
 if VERSION < v"1.9"
     using Compat: stack
 end
