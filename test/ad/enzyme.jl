@@ -44,29 +44,8 @@
             test_reverse(Bijectors.find_alpha, RT, (x, Tx), (y, Ty), (z, Tz))
         end
 
-        # Batches
-        function find_alpha!(
-            out::Vector{<:Real}, x::Vector{<:Real}, y::Vector{<:Real}, z::Vector{<:Real}
-        )
-            map!(Bijectors.find_alpha, out, x, y, z)
-            return nothing
-        end
-        n = 3
-        out = zeros(n)
-        xs = randn(n)
-        ys = expm1.(randn(n))
-        zs = randn(n)
-        @testset for Tout in (Const, BatchDuplicated),
-            Tx in (Const, BatchDuplicated),
-            Ty in (Const, BatchDuplicated),
-            Tz in (Const, BatchDuplicated)
-
-            if Tx <: Const && Ty <: Const && Tz <: Const
-                test_reverse(find_alpha!, Const, (out, Tout), (xs, Tx), (ys, Ty), (zs, Tz))
-            else
-                # Not supported by Enzyme: https://github.com/TuringLang/Bijectors.jl/pull/350#issuecomment-2480468728
-                @test_throws "LLVM error" test_reverse(find_alpha!, Const, (out, Tout), (xs, Tx), (ys, Ty), (zs, Tz))
-            end 
-        end
+        # TODO: Test batch mode
+        # This is a bit problematic since Enzyme does not support all combinations of activities currently
+        # https://github.com/TuringLang/Bijectors.jl/pull/350#issuecomment-2480468728
     end
 end
