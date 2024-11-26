@@ -120,7 +120,59 @@ end
 
 # Distributions
 
+"""
+    link(d::Distribution, x)
+
+Transforms the input `x` using the constrained-to-unconstrained bijector for
+distribution `d`.
+
+See also: [`invlink`](@ref).
+
+# Example
+
+```jldoctest
+julia> using Bijectors
+
+julia> d = LogNormal()   # support is (0, Inf)
+LogNormal{Float64}(μ=0.0, σ=1.0)
+
+julia> b = bijector(d)   # log function transforms to unconstrained space
+(::Base.Fix1{typeof(broadcast), typeof(log)}) (generic function with 1 method)
+
+julia> b(1.0)
+0.0
+
+julia> link(LogNormal(), 1.0)
+0.0
+```
+"""
 link(d::Distribution, x) = bijector(d)(x)
+
+"""
+    invlink(d::Distribution, y)
+
+Performs the inverse transform on a value `y` that was transformed using the
+constrained-to-unconstrained bijector for distribution `d`.
+
+It should hold that `invlink(d, link(d, x)) = x`.
+
+See also: [`link`](@ref).
+
+# Example
+
+```jldoctest
+julia> using Bijectors
+
+julia> d = LogNormal()    # support is (0, Inf)
+LogNormal{Float64}(μ=0.0, σ=1.0)
+
+julia> link(LogNormal(), 1.0)   # uses a log transform
+0.0
+
+julia> invlink(LogNormal(), 0.0)
+1.0
+```
+"""
 invlink(d::Distribution, y) = inverse(bijector(d))(y)
 
 # To still allow `logpdf_with_trans` to work with "batches" in a similar way
@@ -150,6 +202,43 @@ end
 _logabsdetjac_dist(d::LKJCholesky, x::Cholesky) = logabsdetjac(bijector(d), x)
 _logabsdetjac_dist(d::LKJCholesky, x::AbstractVector) = logabsdetjac.((bijector(d),), x)
 
+"""
+    logpdf_with_trans(d::Distribution, x, transform::Bool)
+
+If `transform` is `false`, `logpdf_with_trans` calculates the log probability
+density function (logpdf) of distribution `d` at `x`.
+
+If `transform` is `true`, `x` is transformed using the
+constrained-to-unconstrained bijector for distribution `d`, and then the logpdf
+of the resulting value is calculated with respect to the unconstrained
+(transformed) distribution. Equivalently, if `x` is distributed according to
+`d` and `y = link(d, x)` is distributed according to `td = transformed(d)`,
+then `logpdf_with_trans(d, x, true) = logpdf(td, y)`. This is accomplished
+by subtracting the log Jacobian of the transformation.
+
+# Example
+
+```jldoctest
+julia> using Bijectors
+
+julia> logpdf_with_trans(LogNormal(), ℯ, false)
+-2.4189385332046727
+
+julia> logpdf(LogNormal(), ℯ)  # Same as above
+-2.4189385332046727
+
+julia> logpdf_with_trans(LogNormal(), ℯ, true)
+-1.4189385332046727
+
+julia> # If x ~ LogNormal(), then log(x) ~ Normal()
+       logpdf(Normal(), 1.0)   
+-1.4189385332046727
+
+julia> # The difference between the two is due to the Jacobian
+       logabsdetjac(bijector(LogNormal()), ℯ)
+-1
+```
+"""
 function logpdf_with_trans(d::Distribution, x, transform::Bool)
     if ispd(d)
         return pd_logpdf_with_trans(d, x, transform)
