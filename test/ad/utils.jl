@@ -23,7 +23,6 @@ function test_ad(f, x, broken=(); rtol=1e-6, atol=1e-6)
     end
 
     finitediff = FiniteDifferences.grad(central_fdm(5, 1), f, x)[1]
-    et = eltype(finitediff)
 
     if AD == "All" || AD == "ForwardDiff"
         if :ForwardDiff in broken
@@ -38,7 +37,7 @@ function test_ad(f, x, broken=(); rtol=1e-6, atol=1e-6)
             @test_broken Zygote.gradient(f, x)[1] ≈ finitediff rtol = rtol atol = atol
         else
             ∇zygote = Zygote.gradient(f, x)[1]
-            @test (all(finitediff .== 0) && ∇zygote === nothing) ||
+            @test (all(iszero, finitediff) && ∇zygote === nothing) ||
                 isapprox(∇zygote, finitediff; rtol=rtol, atol=atol)
         end
     end
@@ -57,13 +56,13 @@ function test_ad(f, x, broken=(); rtol=1e-6, atol=1e-6)
         if !(:EnzymeForwardCrash in broken)
             if forward_broken
                 @test_broken(
-                    collect(et, Enzyme.gradient(Enzyme.Forward, f, x)[1]) ≈ finitediff,
+                    Enzyme.gradient(Enzyme.Forward, f, x)[1] ≈ finitediff,
                     rtol = rtol,
                     atol = atol
                 )
             else
                 @test(
-                    collect(et, Enzyme.gradient(Enzyme.Forward, f, x)[1]) ≈ finitediff,
+                    Enzyme.gradient(Enzyme.Forward, f, x)[1] ≈ finitediff,
                     rtol = rtol,
                     atol = atol
                 )
@@ -73,13 +72,13 @@ function test_ad(f, x, broken=(); rtol=1e-6, atol=1e-6)
         if !(:EnzymeReverseCrash in broken)
             if reverse_broken
                 @test_broken(
-                    collect(et, Enzyme.gradient(Enzyme.Reverse, f, x)[1]) ≈ finitediff,
+                    Enzyme.gradient(Enzyme.Reverse, f, x)[1] ≈ finitediff,
                     rtol = rtol,
                     atol = atol
                 )
             else
                 @test(
-                    collect(et, Enzyme.gradient(Enzyme.Reverse, f, x)[1]) ≈ finitediff,
+                    Enzyme.gradient(Enzyme.Reverse, f, x)[1] ≈ finitediff,
                     rtol = rtol,
                     atol = atol
                 )
