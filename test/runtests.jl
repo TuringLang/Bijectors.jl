@@ -4,10 +4,12 @@ using ChainRulesTestUtils
 using Combinatorics
 using DistributionsAD
 using Enzyme
+using EnzymeTestUtils
 using FiniteDifferences
 using ForwardDiff
 using Functors
 using LogExpFunctions
+using Mooncake
 using ReverseDiff
 using Tracker
 using Zygote
@@ -29,18 +31,6 @@ using Bijectors:
 using ChangesOfVariables: ChangesOfVariables
 using InverseFunctions: InverseFunctions
 using LazyArrays: LazyArrays
-
-if VERSION < v"1.9"
-    using Compat: stack
-end
-
-# Sadly, Mooncake.jl cannot be installed on version 1.6, so we have to add it if we're testing
-# on at least version 1.10.
-if VERSION >= v"1.10"
-    using Pkg
-    Pkg.add("Mooncake")
-    using Mooncake
-end
 
 const GROUP = get(ENV, "GROUP", "All")
 
@@ -68,6 +58,7 @@ end
 
 if GROUP == "All" || GROUP == "AD"
     include("ad/chainrules.jl")
+    include("ad/enzyme.jl")
     include("ad/flows.jl")
     include("ad/pd.jl")
     include("ad/corr.jl")

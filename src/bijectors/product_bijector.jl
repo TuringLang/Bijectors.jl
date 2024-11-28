@@ -23,17 +23,7 @@ function _product_bijector_slices(
     # If N < M, then the bijectors expect an input vector of dimension `M - N`.
     # To achieve this, we need to slice along the last `N` dimensions.
     slice_indices = ntuple(i -> i + (M - N), N)
-    if VERSION >= v"1.9"
-        return eachslice(x; dims=slice_indices)
-    else
-        # Earlier Julia versions can't eachslice over multiple dimensions, so reshape the
-        # slice dimensions into a single one.
-        other_dims = tuple((size(x, i) for i in 1:(M - N))...)
-        slice_dims = tuple((size(x, i) for i in (1 + M - N):M)...)
-        x_reshaped = reshape(x, other_dims..., prod(slice_dims))
-        slices = eachslice(x_reshaped; dims=M - N + 1)
-        return reshape(collect(slices), slice_dims)
-    end
+    return eachslice(x; dims=slice_indices)
 end
 
 # Specialization for case where we're just applying elementwise.

@@ -12,6 +12,10 @@ function test_ad(f, x, broken=(); rtol=1e-6, atol=1e-6)
                 :Enzyme,
                 :EnzymeForward,
                 :EnzymeReverse,
+                # The `Crash` ones indicate that the error will cause a Julia crash, and
+                # thus we can't even run `@test_broken on it.
+                :EnzymeForwardCrash,
+                :EnzymeReverseCrash,
             )
         )
             error("Unknown broken AD backend: $b")
@@ -19,7 +23,6 @@ function test_ad(f, x, broken=(); rtol=1e-6, atol=1e-6)
     end
 
     finitediff = FiniteDifferences.grad(central_fdm(5, 1), f, x)[1]
-    et = eltype(finitediff)
 
     if AD == "All" || AD == "ForwardDiff"
         if :ForwardDiff in broken
@@ -34,7 +37,7 @@ function test_ad(f, x, broken=(); rtol=1e-6, atol=1e-6)
             @test_broken Zygote.gradient(f, x)[1] ≈ finitediff rtol = rtol atol = atol
         else
             ∇zygote = Zygote.gradient(f, x)[1]
-            @test (all(finitediff .== 0) && ∇zygote === nothing) ||
+            @test (all(iszero, finitediff) && ∇zygote === nothing) ||
                 isapprox(∇zygote, finitediff; rtol=rtol, atol=atol)
         end
     end
@@ -47,38 +50,43 @@ function test_ad(f, x, broken=(); rtol=1e-6, atol=1e-6)
         end
     end
 
-    # TODO(mhauru) The version bound should be relaxed once some Enzyme issues get
-    # sorted out. I think forward mode will remain broken for versions <= 1.6 due to
-    # some Julia bug. See https://github.com/EnzymeAD/Enzyme.jl/issues/1629 and
-    # discussion in https://github.com/TuringLang/Bijectors.jl/pull/318.
-    if (AD == "All" || AD == "Enzyme") && VERSION >= v"1.10"
+    if AD == "All" || AD == "Enzyme"
         forward_broken = :EnzymeForward in broken || :Enzyme in broken
         reverse_broken = :EnzymeReverse in broken || :Enzyme in broken
-        if forward_broken
-            @test_broken(
-                collect(et, Enzyme.gradient(Enzyme.Forward, f, x)) ≈ finitediff,
-                rtol = rtol,
-                atol = atol
-            )
-        else
-            @test(
-                collect(et, Enzyme.gradient(Enzyme.Forward, f, x)) ≈ finitediff,
-                rtol = rtol,
-                atol = atol
-            )
+        if !(:EnzymeForwardCrash in broken)
+            if forward_broken
+                @test_broken(
+                    Enzyme.gradient(Enzyme.Forward, f, x)[1] ≈ finitediff,
+                    rtol = rtol,
+                    atol = atol
+                )
+            else
+                @test(
+                    Enzyme.gradient(Enzyme.Forward, f, x)[1] ≈ finitediff,
+                    rtol = rtol,
+                    atol = atol
+                )
+            end
         end
-        if reverse_broken
-            @test_broken(
-                Enzyme.gradient(Enzyme.Reverse, f, x) ≈ finitediff, rtol = rtol, atol = atol
-            )
-        else
-            @test(
-                Enzyme.gradient(Enzyme.Reverse, f, x) ≈ finitediff, rtol = rtol, atol = atol
-            )
+
+        if !(:EnzymeReverseCrash in broken)
+            if reverse_broken
+                @test_broken(
+                    Enzyme.gradient(Enzyme.Reverse, f, x)[1] ≈ finitediff,
+                    rtol = rtol,
+                    atol = atol
+                )
+            else
+                @test(
+                    Enzyme.gradient(Enzyme.Reverse, f, x)[1] ≈ finitediff,
+                    rtol = rtol,
+                    atol = atol
+                )
+            end
         end
     end
 
-    if (AD == "All" || AD == "Mooncake") && VERSION >= v"1.10"
+    if AD == "All" || AD == "Mooncake"
         try
             Mooncake.build_rrule(f, x)
         catch exc
