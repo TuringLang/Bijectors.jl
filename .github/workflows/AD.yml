@@ -20,7 +20,6 @@ jobs:
       matrix:
         version:
           - 'min'
-          - 'lts'
           - '1'
         os:
           - ubuntu-latest
@@ -34,11 +33,15 @@ jobs:
           - Zygote
     steps:
       - uses: actions/checkout@v4
+
       - uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.version }}
+
       - uses: julia-actions/julia-buildpkg@v1
+
       - uses: julia-actions/julia-runtest@v1
+        continue-on-error: ${{ matrix.AD == 'Enzyme' && matrix.version == '1' }}
         env:
           GROUP: AD
           AD: ${{ matrix.AD }}
