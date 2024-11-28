@@ -1,58 +1,29 @@
 module BijectorsTrackerExt
 
-if isdefined(Base, :get_extension)
-    using Tracker:
-        Tracker,
-        TrackedReal,
-        TrackedVector,
-        TrackedMatrix,
-        TrackedArray,
-        TrackedVecOrMat,
-        @grad,
-        track,
-        data,
-        param
+using Tracker:
+    Tracker,
+    TrackedReal,
+    TrackedVector,
+    TrackedMatrix,
+    TrackedArray,
+    TrackedVecOrMat,
+    @grad,
+    track,
+    data,
+    param
 
-    using Bijectors:
-        Elementwise,
-        SimplexBijector,
-        Inverse,
-        Stacked,
-        Bijectors,
-        ChainRulesCore,
-        LogExpFunctions,
-        _triu1_dim_from_length
+using Bijectors:
+    Elementwise,
+    SimplexBijector,
+    Inverse,
+    Stacked,
+    Bijectors,
+    ChainRulesCore,
+    LogExpFunctions,
+    _triu1_dim_from_length
 
-    using Bijectors.LinearAlgebra
-    using Bijectors.Compat: eachcol
-    using Bijectors.Distributions: LocationScale
-else
-    using ..Tracker:
-        Tracker,
-        TrackedReal,
-        TrackedVector,
-        TrackedMatrix,
-        TrackedArray,
-        TrackedVecOrMat,
-        @grad,
-        track,
-        data,
-        param
-
-    using Bijectors:
-        Elementwise,
-        SimplexBijector,
-        Inverse,
-        Stacked,
-        Bijectors,
-        ChainRulesCore,
-        LogExpFunctions,
-        _triu1_dim_from_length
-
-    using ..Bijectors.LinearAlgebra
-    using ..Bijectors.Compat: eachcol
-    using ..Bijectors.Distributions: LocationScale
-end
+using Bijectors.LinearAlgebra
+using Bijectors.Distributions: LocationScale
 
 Bijectors.maporbroadcast(f, x::TrackedArray...) = f.(x...)
 function Bijectors.maporbroadcast(
