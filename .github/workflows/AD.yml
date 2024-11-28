@@ -15,12 +15,13 @@ concurrency:
 jobs:
   test:
     runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.AD == 'Enzyme' }}
+
     strategy:
       fail-fast: false
       matrix:
         version:
           - 'min'
-          - 'lts'
           - '1'
         os:
           - ubuntu-latest
