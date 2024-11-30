@@ -191,7 +191,7 @@ function _logabsdetjac_dist(d::MultivariateDistribution, x::AbstractVector)
     return logabsdetjac(bijector(d), x)
 end
 function _logabsdetjac_dist(d::MultivariateDistribution, x::AbstractMatrix)
-    return logabsdetjac.((bijector(d),), eachcol(x))
+    return map(Base.Fix1(logabsdetjac, bijector(d)), eachcol(x))
 end
 
 _logabsdetjac_dist(d::MatrixDistribution, x::AbstractMatrix) = logabsdetjac(bijector(d), x)
