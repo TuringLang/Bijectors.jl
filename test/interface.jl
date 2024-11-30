@@ -106,7 +106,9 @@ contains(predicate::Function, b::Stacked) = any(contains.(predicate, b.bs))
         d_big = Uniform(big(-1.0), big(1.0))
         b_big = bijector(d_big)
         x_big = inverse(b_big)(big(y))
-        @test logpdf(d, x_big) + logabsdetjacinv(b, y) ≈
+        @test logpdf(d_big, x_big) + logabsdetjacinv(b, y) ≈
+            logpdf_with_trans(d_big, x_big, true) atol = 1e-14
+        @test logpdf(d_big, x_big) - logabsdetjac(b, x_big) ≈
             logpdf_with_trans(d_big, x_big, true) atol = 1e-14
     end
 end
