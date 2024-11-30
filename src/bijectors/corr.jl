@@ -353,7 +353,7 @@ function _inv_link_chol_lkj(Y::AbstractMatrix)
         for i in 1:(j - 1)
             z = tanh(Y[i, j])
             W[i, j] = z * exp(log_remainder)
-            log_remainder += log(2 / (exp(Y[i, j]) + exp(-Y[i, j])))
+            log_remainder += IrrationalConstants.logtwo + Y[i, j] - LogExpFunctions.log1pexp(2 * Y[i, j])
             logJ += log_remainder
         end
         logJ += log_remainder
@@ -380,7 +380,7 @@ function _inv_link_chol_lkj(y::AbstractVector)
         for i in 1:(j - 1)
             z = tanh(y[idx])
             W[i, j] = z * exp(log_remainder)
-            log_remainder += log(2 / (exp(y[idx]) + exp(-y[idx])))
+            log_remainder += IrrationalConstants.logtwo + y[idx] - LogExpFunctions.log1pexp(2 * y[idx])
             logJ += log_remainder
             idx += 1
         end
@@ -495,8 +495,7 @@ function _logabsdetjac_inv_chol(y::AbstractVector)
     @inbounds for j in 2:K
         tmp = zero(result)
         for _ in 1:(j - 1)
-            z = tanh(y[idx])
-            logz = 2 * log(2 / (exp(y[idx]) + exp(-y[idx])))
+            logz = 2 * (IrrationalConstants.logtwo + y[idx] - LogExpFunctions.log1pexp(2 * y[idx]))
             result += logz + (tmp / 2)
             tmp += logz
             idx += 1
