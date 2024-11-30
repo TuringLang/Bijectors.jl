@@ -78,7 +78,7 @@ end
 
     @testset "correctness" begin
         num_samples = 10_000
-        num_adapts = 1_000
+        num_adapts = 5_000
         @testset "k = $k" for k in [2, 3, 5]
             @testset "$(typeof(dist))" for dist in [
                 # Unconstrained
