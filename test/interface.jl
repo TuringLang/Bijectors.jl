@@ -97,13 +97,17 @@ contains(predicate::Function, b::Stacked) = any(contains.(predicate, b.bs))
         end
     end
 
-    @testset "numerical stability with large numbers: Bijectors.jl#325" begin
-        d = Uniform(big(-1.0), big(1.0))
+    @testset "logabsdetjac numerical stability: Bijectors.jl#325" begin
+        d = Uniform(-1, 1)
         b = bijector(d)
-        y = big(80)
-        x = inverse(b)(y)
-        @test logpdf(d, inverse(b)(y)) + logabsdetjacinv(b, y) ≈
-            logpdf_with_trans(d, x, true)
+        y = 80
+        # x needs higher precision to be calculated correctly, otherwise
+        # logpdf_with_trans returns -Inf
+        d_big = Uniform(big(-1.0), big(1.0))
+        b_big = bijector(d_big)
+        x_big = inverse(b_big)(big(y))
+        @test logpdf(d, x_big) + logabsdetjacinv(b, y) ≈
+            logpdf_with_trans(d_big, x_big, true) atol = 1e-14
     end
 end
 
