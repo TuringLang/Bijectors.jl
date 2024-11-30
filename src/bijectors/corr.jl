@@ -65,13 +65,13 @@ struct CorrBijector <: Bijector end
 
 with_logabsdet_jacobian(b::CorrBijector, x) = transform(b, x), logabsdetjac(b, x)
 
-function transform(b::CorrBijector, X::AbstractMatrix{<:Real})
+function transform(b::CorrBijector, X)
     w = cholesky_upper(X)
     r = _link_chol_lkj(w)
     return r
 end
 
-function with_logabsdet_jacobian(ib::Inverse{CorrBijector}, y::AbstractMatrix{<:Real})
+function with_logabsdet_jacobian(ib::Inverse{CorrBijector}, y)
     U, logJ = _inv_link_chol_lkj(y)
     K = size(U, 1)
     for j in 2:(K - 1)
@@ -80,8 +80,8 @@ function with_logabsdet_jacobian(ib::Inverse{CorrBijector}, y::AbstractMatrix{<:
     return pd_from_upper(U), logJ
 end
 
-logabsdetjac(::Inverse{CorrBijector}, Y::AbstractMatrix{<:Real}) = _logabsdetjac_inv_corr(Y)
-function logabsdetjac(b::CorrBijector, X::AbstractMatrix{<:Real})
+logabsdetjac(::Inverse{CorrBijector}, Y) = _logabsdetjac_inv_corr(Y)
+function logabsdetjac(b::CorrBijector, X)
     #=
     It may be more efficient if we can use un-contraint value to prevent call of b
     It's recommended to directly call 
@@ -135,7 +135,7 @@ function logabsdetjac(b::VecCorrBijector, x)
     return -logabsdetjac(inverse(b), b(x))
 end
 
-function with_logabsdet_jacobian(::Inverse{VecCorrBijector}, y::AbstractVector{<:Real})
+function with_logabsdet_jacobian(::Inverse{VecCorrBijector}, y)
     U_logJ = _inv_link_chol_lkj(y)
     # workaround for `Tracker.TrackedTuple` not supporting iteration
     U, logJ = U_logJ[1], U_logJ[2]
@@ -146,7 +146,7 @@ function with_logabsdet_jacobian(::Inverse{VecCorrBijector}, y::AbstractVector{<
     return pd_from_upper(U), logJ
 end
 
-function logabsdetjac(::Inverse{VecCorrBijector}, y::AbstractVector{<:Real})
+function logabsdetjac(::Inverse{VecCorrBijector}, y)
     return _logabsdetjac_inv_corr(y)
 end
 
