@@ -2,7 +2,7 @@
     CorrBijector <: Bijector
 
 A bijector implementation of Stan's parametrization method for Correlation matrix:
-https://mc-stan.org/docs/2_23/reference-manual/correlation-matrix-transform-section.html
+https://mc-stan.org/docs/reference-manual/transforms.html#correlation-matrix-transform.section
 
 Basically, a unconstrained strictly upper triangular matrix `y` is transformed to 
 a correlation matrix by following readable but not that efficient form:
