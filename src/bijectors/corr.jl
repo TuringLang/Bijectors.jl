@@ -461,7 +461,7 @@ function _logabsdetjac_inv_corr(Y::AbstractMatrix)
 
     result = float(zero(eltype(Y)))
     @inbounds for j in 2:K, i in 1:(j - 1)
-        result += (K - i + 1) * (-LogExpFunctions.logcosh(Y[i, j]))
+        result -= (K - i + 1) * LogExpFunctions.logcosh(Y[i, j])
     end
     return result
 end
@@ -471,13 +471,8 @@ function _logabsdetjac_inv_corr(y::AbstractVector)
 
     result = float(zero(eltype(y)))
     for (i, y_i) in enumerate(y)
-        abs_y_i = abs(y_i)
         row_idx = vec_to_triu1_row_index(i)
-        result +=
-            (K - row_idx + 1) * (
-                IrrationalConstants.logtwo -
-                (abs_y_i + LogExpFunctions.log1pexp(-2 * abs_y_i))
-            )
+        result -= (K - row_idx + 1) * LogExpFunctions.logcosh(y_i)
     end
     return result
 end
