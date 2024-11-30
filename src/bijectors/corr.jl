@@ -348,13 +348,12 @@ function _inv_link_chol_lkj(Y::AbstractMatrix)
     T = float(eltype(W))
     logJ = zero(T)
 
-    idx = 1
     @inbounds for j in 1:K
         log_remainder = zero(T)  # log of proportion of unit vector remaining
         for i in 1:(j - 1)
             z = tanh(Y[i, j])
             W[i, j] = z * exp(log_remainder)
-            log_remainder += log1p(-z^2) / 2
+            log_remainder += log(2 / (exp(Y[i, j]) + exp(-Y[i, j])))
             logJ += log_remainder
         end
         logJ += log_remainder
@@ -380,10 +379,10 @@ function _inv_link_chol_lkj(y::AbstractVector)
         log_remainder = zero(T)  # log of proportion of unit vector remaining
         for i in 1:(j - 1)
             z = tanh(y[idx])
-            idx += 1
             W[i, j] = z * exp(log_remainder)
-            log_remainder += log1p(-z^2) / 2
+            log_remainder += log(2 / (exp(y[idx]) + exp(-y[idx])))
             logJ += log_remainder
+            idx += 1
         end
         logJ += log_remainder
         W[j, j] = exp(log_remainder)
@@ -497,7 +496,7 @@ function _logabsdetjac_inv_chol(y::AbstractVector)
         tmp = zero(result)
         for _ in 1:(j - 1)
             z = tanh(y[idx])
-            logz = log(1 - z^2)
+            logz = 2 * log(2 / (exp(y[idx]) + exp(-y[idx])))
             result += logz + (tmp / 2)
             tmp += logz
             idx += 1
