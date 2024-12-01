@@ -297,11 +297,10 @@ function _link_chol_lkj(W::AbstractMatrix)
     # Some zero filling can be avoided. Though diagnoal is still needed to be filled with zero.
 
     @inbounds for j in 1:K
-        remainder_sq = one(eltype(W))
         for i in 1:(j - 1)
-            z = W[i, j] / sqrt(remainder_sq)
+            remainder_norm = norm(W[i:end, j])
+            z = W[i, j] / remainder_norm
             y[i, j] = atanh(z)
-            remainder_sq -= W[i, j]^2
         end
         for i in j:K
             y[i, j] = 0
@@ -321,11 +320,10 @@ function _link_chol_lkj_from_upper(W::AbstractMatrix)
     @inbounds for j in 2:K
         y[idx] = atanh(W[1, j])
         idx += 1
-        remainder_sq = 1 - W[1, j]^2
         for i in 2:(j - 1)
-            z = W[i, j] / sqrt(remainder_sq)
+            remainder_norm = norm(W[i:end, j])
+            z = W[i, j] / remainder_norm
             y[idx] = atanh(z)
-            remainder_sq -= W[i, j]^2
             idx += 1
         end
     end
