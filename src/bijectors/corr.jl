@@ -485,9 +485,9 @@ function _logabsdetjac_inv_chol(y::AbstractVector)
     @inbounds for j in 2:K
         tmp = zero(result)
         for _ in 1:(j - 1)
-            logz = -2 * LogExpFunctions.logcosh(y[idx])
-            result += logz + (tmp / 2)
-            tmp += logz
+            logcoshy = LogExpFunctions.logcosh(y[idx])
+            tmp -= logcoshy
+            result += tmp - logcoshy
             idx += 1
         end
     end
