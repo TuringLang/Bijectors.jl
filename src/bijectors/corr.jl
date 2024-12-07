@@ -299,9 +299,9 @@ function _link_chol_lkj(W::AbstractMatrix)
     @inbounds for j in 1:K
         remainder_sq = W[j, j]^2
         for i in (j - 1):-1:1
-            remainder_sq += W[i, j]^2
             z = W[i, j] / sqrt(remainder_sq)
-            y[i, j] = atanh(z)
+            y[i, j] = asinh(z)
+            remainder_sq += W[i, j]^2
         end
         for i in j:K
             y[i, j] = 0
@@ -323,9 +323,9 @@ function _link_chol_lkj_from_upper(W::AbstractMatrix)
         remainder_sq = W[j, j]^2
         for i in (j - 1):-1:2
             idx = starting_idx + i - 2
-            remainder_sq += W[i, j]^2
             z = W[i, j] / sqrt(remainder_sq)
-            y[idx] = atanh(z)
+            y[idx] = asinh(z)
+            remainder_sq += W[i, j]^2
         end
         starting_idx += length((j - 1):-1:2)
     end
