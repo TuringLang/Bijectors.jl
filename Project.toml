@@ -4,6 +4,7 @@ version = "0.15.4"
 
 [deps]
 ArgCheck = "dce04be8-c92d-5529-be00-80e4d2c0e197"
+ChainRules = "082447d4-558c-5d27-93f4-14fc19e9eca2"
 ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
 ChangesOfVariables = "9e997f8a-9a97-42d5-a9f1-ce6bfc15e2c0"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
@@ -42,6 +43,7 @@ BijectorsZygoteExt = "Zygote"
 
 [compat]
 ArgCheck = "1, 2"
+ChainRules = "1.72.2"
 ChainRulesCore = "0.10.11, 1"
 ChangesOfVariables = "0.1"
 Distributions = "0.25.33"
