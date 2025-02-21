@@ -51,10 +51,6 @@ BijectorsTrackerExt = "Tracker"
 BijectorsZygoteExt = "Zygote"
 
 [compat]
-GPUArrays = "=11.2.1"
-GPUCompiler = "=1.1.0"
-HypergeometricFunctions = "=0.3.25"
-IrrationalConstants = "=0.2.2"
 KernelAbstractions = "=0.9.31"
 LLVM = "=9.1.3"
 LazyArrays = "=2.3.2"
