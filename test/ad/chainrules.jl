@@ -27,10 +27,7 @@ end
     test_frule(Bijectors.find_alpha, x, y, z)
     test_rrule(Bijectors.find_alpha, x, y, z)
 
-    # MooncakeInterpreter for Mooncake >= 0.4.82 errors on
-    # Julia 1.10.0 through 1.10.7, so skip these tests on
-    # those versions
-    if (@isdefined Mooncake) && VERSION >= v"1.10.8"
+    if @isdefined Mooncake
         rng = Xoshiro(123456)
         Mooncake.TestUtils.test_rule(
             rng,
