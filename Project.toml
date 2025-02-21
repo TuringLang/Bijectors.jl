@@ -52,9 +52,7 @@ BijectorsZygoteExt = "Zygote"
 
 [compat]
 KernelAbstractions = "=0.9.31"
-LLVM = "=9.1.3"
 LazyArrays = "=2.3.2"
-Mooncake = "=0.4.78"
 ChainRulesCore = "0.10.11, 1"
 ChangesOfVariables = "0.1"
 Distributions = "=0.25.116"
