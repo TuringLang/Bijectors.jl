@@ -51,7 +51,7 @@ BijectorsTrackerExt = "Tracker"
 BijectorsZygoteExt = "Zygote"
 
 [compat]
-Mooncake = "=0.4.78"
+Mooncake = "=0.4.88"
 ChainRulesCore = "0.10.11, 1"
 ChangesOfVariables = "0.1"
 Distributions = "=0.25.116"
