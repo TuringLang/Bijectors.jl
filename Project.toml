@@ -51,12 +51,6 @@ BijectorsTrackerExt = "Tracker"
 BijectorsZygoteExt = "Zygote"
 
 [compat]
-ADTypes = "=1.11.0"
-Adapt = "=4.1.1"
-ArgCheck = "1, 2"
-ArrayLayouts = "=1.11.0"
-Atomix = "=1.0.1"
-Enzyme = "=0.13.28"
 GPUArrays = "=11.2.1"
 GPUCompiler = "=1.1.0"
 HypergeometricFunctions = "=0.3.25"
