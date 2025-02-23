@@ -7,8 +7,8 @@ using ChainRules: ChainRules
 import Bijectors: lower_triangular, upper_triangular, cholesky_lower, cholesky_upper
 
 using Bijectors.LinearAlgebra
-using Bijectors.Distributions: LocationScale
 
+cholesky_lower(X::TrackedMatrix) = track(cholesky_lower, X)
 @grad function cholesky_lower(X_tracked::TrackedMatrix)
     X = value(X_tracked)
     H, hermitian_pullback = ChainRules.rrule(Hermitian, X, :L)
@@ -26,6 +26,7 @@ using Bijectors.Distributions: LocationScale
     return lower_triangular(parent(C.L)), cholesky_lower_pullback
 end
 
+cholesky_upper(X::TrackedMatrix) = track(cholesky_upper, X)
 @grad function cholesky_upper(X_tracked::TrackedMatrix)
     X = value(X_tracked)
     H, hermitian_pullback = ChainRules.rrule(Hermitian, X, :U)

@@ -222,30 +222,21 @@ end
 @grad_from_chainrules _link_chol_lkj_from_upper(x::TrackedMatrix)
 @grad_from_chainrules _link_chol_lkj_from_lower(x::TrackedMatrix)
 
-function cholesky_lower(X::TrackedMatrix)
-    if Base.get_extension(Bijectors, :BijectorsReverseDiffChainRulesExt) === nothing
-        throw(
-            ErrorException(
-                "The gradient function for `cholesky_lower` is not available in BijectorsReverseDiffExt. " *
-                "It is implemented in BijectorsReverseDiffChainRulesExt and requires ChainRules.jl. " *
-                "Please load ChainRules to use ReverseDiff with this bijector.",
-            ),
-        )
+if isdefined(Base.Experimental, :register_error_hint)
+    function __init__()
+        Base.Experimental.register_error_hint(MethodError) do io, exc, argtypes, kwargs
+            if exc.f === ReverseDiff.track && length(argtypes) == 2 && (argtypes[1] === typeof(cholesky_lower) || argtypes[1] === typeof(cholesky_upper))
+                 print(io, lazy"\nThe gradient function for ")
+                 if argtypes[1] === typeof(cholesky_lower)
+                     print(io, "`cholesky_lower`")
+                 else
+                     print(io, "`cholesky_upper`")
+                 end
+                 print(io, " requires ChainRules.jl. ")
+                 print(io, "Please load ChainRules to use ReverseDiff with this bijector.")
+            end
+        end
     end
-    return track(cholesky_lower, X)
-end
-
-function cholesky_upper(X::TrackedMatrix)
-    if Base.get_extension(Bijectors, :BijectorsReverseDiffChainRulesExt) === nothing
-        throw(
-            ErrorException(
-                "The gradient function for `cholesky_upper` is not available in BijectorsReverseDiffExt. " *
-                "It is implemented in BijectorsReverseDiffChainRulesExt and requires ChainRules.jl. " *
-                "Please load ChainRules to use ReverseDiff with this bijector.",
-            ),
-        )
-    end
-    return track(cholesky_upper, X)
 end
 
 transpose_eager(X::TrackedMatrix) = track(transpose_eager, X)
