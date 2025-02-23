@@ -224,16 +224,24 @@ end
 
 cholesky_lower(X::TrackedMatrix) = track(cholesky_lower, X)
 @grad function cholesky_lower(X::TrackedMatrix)
-    throw(ErrorException("The gradient function for `cholesky_lower` is not available in BijectorsReverseDiffExt. " *
-        "It is implemented in BijectorsReverseDiffChainRulesExt and requires ChainRules.jl. " *
-        "Please load ChainRules to use ReverseDiff with this bijector."))
+    throw(
+        ErrorException(
+            "The gradient function for `cholesky_lower` is not available in BijectorsReverseDiffExt. " *
+            "It is implemented in BijectorsReverseDiffChainRulesExt and requires ChainRules.jl. " *
+            "Please load ChainRules to use ReverseDiff with this bijector.",
+        ),
+    )
 end
 
 cholesky_upper(X::TrackedMatrix) = track(cholesky_upper, X)
 @grad function cholesky_upper(X::TrackedMatrix)
-    throw(ErrorException("The gradient function for `cholesky_upper` is not available in BijectorsReverseDiffExt. " *
-        "It is implemented in BijectorsReverseDiffChainRulesExt and requires ChainRules.jl. " *
-        "Please load ChainRules to use ReverseDiff with this bijector."))
+    throw(
+        ErrorException(
+            "The gradient function for `cholesky_upper` is not available in BijectorsReverseDiffExt. " *
+            "It is implemented in BijectorsReverseDiffChainRulesExt and requires ChainRules.jl. " *
+            "Please load ChainRules to use ReverseDiff with this bijector.",
+        ),
+    )
 end
 
 transpose_eager(X::TrackedMatrix) = track(transpose_eager, X)
