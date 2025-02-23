@@ -1,5 +1,6 @@
 using Bijectors
 
+using ChainRules
 using ChainRulesTestUtils
 using Combinatorics
 using DistributionsAD
