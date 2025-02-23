@@ -1,4 +1,4 @@
-module BijectorsReverseDiffExt
+module BijectorsReverseDiffChainRulesExt
 
 using ReverseDiff:
     ReverseDiff,
