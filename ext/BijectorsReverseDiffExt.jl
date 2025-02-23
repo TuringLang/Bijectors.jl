@@ -225,15 +225,20 @@ end
 if isdefined(Base.Experimental, :register_error_hint)
     function __init__()
         Base.Experimental.register_error_hint(MethodError) do io, exc, argtypes, kwargs
-            if exc.f === ReverseDiff.track && length(argtypes) == 2 && (argtypes[1] === typeof(cholesky_lower) || argtypes[1] === typeof(cholesky_upper))
-                 print(io, lazy"\nThe gradient function for ")
-                 if argtypes[1] === typeof(cholesky_lower)
-                     print(io, "`cholesky_lower`")
-                 else
-                     print(io, "`cholesky_upper`")
-                 end
-                 print(io, " requires ChainRules.jl. ")
-                 print(io, "Please load ChainRules to use ReverseDiff with this bijector.")
+            if exc.f === ReverseDiff.track &&
+                length(argtypes) == 2 &&
+                (
+                    argtypes[1] === typeof(cholesky_lower) ||
+                    argtypes[1] === typeof(cholesky_upper)
+                )
+                print(io, lazy"\nThe gradient function for ")
+                if argtypes[1] === typeof(cholesky_lower)
+                    print(io, "`cholesky_lower`")
+                else
+                    print(io, "`cholesky_upper`")
+                end
+                print(io, " requires ChainRules.jl. ")
+                print(io, "Please load ChainRules to use ReverseDiff with this bijector.")
             end
         end
     end
