@@ -233,7 +233,7 @@ if isdefined(Base.Experimental, :register_error_hint)
                     argtypes[1] === typeof(cholesky_lower) ||
                     argtypes[1] === typeof(cholesky_upper)
                 )
-                print(io, lazy"\nThe gradient function for ")
+                print(io, "\nThe gradient function for ")
                 if argtypes[1] === typeof(cholesky_lower)
                     print(io, "`cholesky_lower`")
                 else

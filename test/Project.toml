@@ -1,7 +1,6 @@
 [deps]
 AbstractMCMC = "80f14c24-f653-4e6a-9b94-39d6b0f70001"
 AdvancedHMC = "0bf59076-c3b1-5ca4-86bd-e02cd72cde3d"
-ChainRules = "082447d4-558c-5d27-93f4-14fc19e9eca2"
 ChainRulesTestUtils = "cdddcdb0-9152-4a09-a978-84456f9df70a"
 ChangesOfVariables = "9e997f8a-9a97-42d5-a9f1-ce6bfc15e2c0"
 Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
@@ -29,7 +28,6 @@ Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 [compat]
 AbstractMCMC = "5"
 AdvancedHMC = "0.6"
-ChainRules = "1"
 ChainRulesTestUtils = "0.7, 1"
 ChangesOfVariables = "0.1"
 Combinatorics = "1.0.2"
