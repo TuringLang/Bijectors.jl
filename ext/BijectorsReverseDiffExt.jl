@@ -222,6 +222,8 @@ end
 @grad_from_chainrules _link_chol_lkj_from_upper(x::TrackedMatrix)
 @grad_from_chainrules _link_chol_lkj_from_lower(x::TrackedMatrix)
 
+cholesky_upper(X::TrackedMatrix) = track(cholesky_upper, X)
+cholesky_lower(X::TrackedMatrix) = track(cholesky_lower, X)
 if isdefined(Base.Experimental, :register_error_hint)
     function __init__()
         Base.Experimental.register_error_hint(MethodError) do io, exc, argtypes, kwargs
