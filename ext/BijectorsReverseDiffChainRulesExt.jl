@@ -1,19 +1,10 @@
 module BijectorsReverseDiffChainRulesExt
 
-using ReverseDiff:
-    @grad,
-    value,
-    track,
-    TrackedMatrix
+using ReverseDiff: @grad, value, track, TrackedMatrix
 
-using Bijectors:
-    ChainRulesCore
+using Bijectors: ChainRulesCore
 
-import Bijectors:
-    lower_triangular,
-    upper_triangular,
-    cholesky_lower,
-    cholesky_upper
+import Bijectors: lower_triangular, upper_triangular, cholesky_lower, cholesky_upper
 
 using Bijectors.LinearAlgebra
 using Bijectors.Distributions: LocationScale
