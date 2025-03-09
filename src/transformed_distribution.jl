@@ -149,6 +149,13 @@ function bijector(d::Distributions.ReshapedDistribution)
     return inverse(b) ∘ bijector(d.dist) ∘ b
 end
 
+function bijector(d::MixtureModel)
+    bs = map(bijector, Distributions.components(d))
+    # If they are all the same, we can just use that one. Otherwise, this is not valid.
+    all(bs[1] == b for b in bs) || error("Each component of `MixtureModel`must have the same `bijector`")
+    return bs[1]
+end
+
 ##############################
 # Distributions.jl interface #
 ##############################
