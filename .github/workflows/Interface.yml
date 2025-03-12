@@ -1,10 +1,9 @@
-
 name: Interface tests
 
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
 
 concurrency:

@@ -22,7 +22,6 @@ using Bijectors:
     find_alpha,
     pd_logpdf_with_trans,
     istraining,
-    mapvcat,
     eachcolmaphcat,
     sumeachcol,
     pd_link,
@@ -36,10 +35,6 @@ using Bijectors.Distributions: LocationScale
 
 @adjoint istraining() = true, _ -> nothing
 
-@adjoint function mapvcat(f, args...)
-    g(f, args...) = map(f, args...)
-    return pullback(g, f, args...)
-end
 @adjoint function eachcolmaphcat(f, x1, x2)
     function g(f, x1, x2)
         init = reshape(f(view(x1, :, 1), x2[1]), :, 1)
