@@ -223,47 +223,35 @@ end
 @grad_from_chainrules _link_chol_lkj_from_lower(x::TrackedMatrix)
 
 cholesky_lower(X::TrackedMatrix) = track(cholesky_lower, X)
-@grad function cholesky_lower(X_tracked::TrackedMatrix)
-    X = value(X_tracked)
-    H, hermitian_pullback = ChainRulesCore.rrule(Hermitian, X, :L)
-    C, cholesky_pullback = ChainRulesCore.rrule(cholesky, H, Val(false))
-    function cholesky_lower_pullback(ΔL)
-        ΔC = ChainRulesCore.Tangent{typeof(C)}(; factors=(C.uplo === :L ? ΔL : ΔL'))
-        ΔH = cholesky_pullback(ΔC)[2]
-        Δx = hermitian_pullback(ΔH)[2]
-        # No need to add pullback for `lower_triangular`, because the pullback
-        # for `Hermitian` already produces the correct result (i.e. the lower-triangular
-        # part zeroed out).
-        return (Δx,)
-    end
-
-    return lower_triangular(parent(C.L)), cholesky_lower_pullback
-end
-
 cholesky_upper(X::TrackedMatrix) = track(cholesky_upper, X)
-@grad function cholesky_upper(X_tracked::TrackedMatrix)
-    X = value(X_tracked)
-    H, hermitian_pullback = ChainRulesCore.rrule(Hermitian, X, :U)
-    C, cholesky_pullback = ChainRulesCore.rrule(cholesky, H, Val(false))
-    function cholesky_upper_pullback(ΔU)
-        ΔC = ChainRulesCore.Tangent{typeof(C)}(; factors=(C.uplo === :U ? ΔU : ΔU'))
-        ΔH = cholesky_pullback(ΔC)[2]
-        Δx = hermitian_pullback(ΔH)[2]
-        # No need to add pullback for `upper_triangular`, because the pullback
-        # for `Hermitian` already produces the correct result (i.e. the upper-triangular
-        # part zeroed out).
-        return (Δx,)
-    end
 
-    return upper_triangular(parent(C.U)), cholesky_upper_pullback
+if isdefined(Base.Experimental, :register_error_hint)
+    function __init__()
+        Base.Experimental.register_error_hint(MethodError) do io, exc, argtypes, kwargs
+            if exc.f === ReverseDiff.track &&
+                length(argtypes) == 2 &&
+                (
+                    argtypes[1] === typeof(cholesky_lower) ||
+                    argtypes[1] === typeof(cholesky_upper)
+                )
+                print(io, "\nThe gradient function for ")
+                if argtypes[1] === typeof(cholesky_lower)
+                    print(io, "`cholesky_lower`")
+                else
+                    print(io, "`cholesky_upper`")
+                end
+                print(io, " requires ChainRules.jl. ")
+                print(io, "Please load ChainRules to use ReverseDiff with this bijector.")
+            end
+        end
+    end
 end
 
 transpose_eager(X::TrackedMatrix) = track(transpose_eager, X)
 @grad function transpose_eager(X_tracked::TrackedMatrix)
     X = value(X_tracked)
-    y, y_pullback = ChainRulesCore.rrule(permutedims, X, (2, 1))
-    transpose_eager_pullback(Δ) = (y_pullback(Δ)[2],)
-    return y, transpose_eager_pullback
+    transpose_eager_pullback(Δ) = (transpose_eager(Δ),)
+    return transpose_eager(X), transpose_eager_pullback
 end
 
 end
