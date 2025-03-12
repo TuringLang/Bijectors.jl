@@ -96,6 +96,21 @@ contains(predicate::Function, b::Stacked) = any(contains.(predicate, b.bs))
                 logabsdetjac(inverse(b), y) atol = 1e-6
         end
     end
+
+    @testset "logabsdetjac numerical stability: Bijectors.jl#325" begin
+        d = Uniform(-1, 1)
+        b = bijector(d)
+        y = 80
+        # x needs higher precision to be calculated correctly, otherwise
+        # logpdf_with_trans returns -Inf
+        d_big = Uniform(big(-1.0), big(1.0))
+        b_big = bijector(d_big)
+        x_big = inverse(b_big)(big(y))
+        @test logpdf(d_big, x_big) + logabsdetjacinv(b, y) ≈
+            logpdf_with_trans(d_big, x_big, true) atol = 1e-14
+        @test logpdf(d_big, x_big) - logabsdetjac(b, x_big) ≈
+            logpdf_with_trans(d_big, x_big, true) atol = 1e-14
+    end
 end
 
 @testset "Truncated" begin
