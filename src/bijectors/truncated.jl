@@ -68,6 +68,28 @@ end
 
 with_logabsdet_jacobian(b::TruncatedBijector, x) = transform(b, x), logabsdetjac(b, x)
 
+function truncated_inv_logabsdetjac(y, a, b)
+    y, a, b = promote(y, a, b)
+    lowerbounded, upperbounded = isfinite(a), isfinite(b)
+    if lowerbounded && upperbounded
+        abs_y = abs(y)
+        return log(b - a) - abs_y - 2 * LogExpFunctions.log1pexp(-abs_y)
+    elseif lowerbounded || upperbounded
+        return y
+    else
+        return zero(y)
+    end
+end
+
+function logabsdetjac(ib::Inverse{<:TruncatedBijector}, y)
+    a, b = ib.orig.lb, ib.orig.ub
+    return sum(truncated_inv_logabsdetjac.(y, a, b))
+end
+
+function with_logabsdet_jacobian(ib::Inverse{<:TruncatedBijector}, y)
+    return transform(ib, y), logabsdetjac(ib, y)
+end
+
 # It's only monotonically decreasing if it's only upper-bounded.
 # In the multivariate case, we can only say something reasonable if entries are monotonic.
 function is_monotonically_increasing(b::TruncatedBijector)
