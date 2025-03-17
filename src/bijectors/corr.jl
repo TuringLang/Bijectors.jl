@@ -411,10 +411,10 @@ function _inv_link_chol_lkj_rrule(y::AbstractVector)
         log_remainder = zero(T)  # log of proportion of unit vector remaining
         for i in 1:(j - 1)
             z = z_vec[idx]
-            idx += 1
             W[i, j] = z * exp(log_remainder)
-            log_remainder += log1p(-z^2) / 2
+            log_remainder -= LogExpFunctions.logcosh(y[idx])
             logJ += log_remainder
+            idx += 1
         end
         logJ += log_remainder
         W[j, j] = exp(log_remainder)
