@@ -374,13 +374,16 @@ function _inv_link_chol_lkj(y::AbstractVector)
     T = float(eltype(W))
     logJ = zero(T)
 
+    z_vec = tanh.(y)
+    lc_vec = LogExpFunctions.logcosh.(y)
+
     idx = 1
     @inbounds for j in 1:K
         log_remainder = zero(T)  # log of proportion of unit vector remaining
         for i in 1:(j - 1)
-            z = tanh(y[idx])
+            z = z_vec[idx]
             W[i, j] = z * exp(log_remainder)
-            log_remainder -= LogExpFunctions.logcosh(y[idx])
+            log_remainder -= lc_vec[idx]
             logJ += log_remainder
             idx += 1
         end
@@ -404,6 +407,7 @@ function _inv_link_chol_lkj_rrule(y::AbstractVector)
     logJ = zero(T)
 
     z_vec = tanh.(y)
+    lc_vec = LogExpFunctions.logcosh.(y)
 
     idx = 1
     W[1, 1] = 1
@@ -412,7 +416,7 @@ function _inv_link_chol_lkj_rrule(y::AbstractVector)
         for i in 1:(j - 1)
             z = z_vec[idx]
             W[i, j] = z * exp(log_remainder)
-            log_remainder -= LogExpFunctions.logcosh(y[idx])
+            log_remainder -= lc_vec[idx]
             logJ += log_remainder
             idx += 1
         end
