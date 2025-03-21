@@ -374,8 +374,8 @@ function _inv_link_chol_lkj(y::AbstractVector)
     T = float(eltype(W))
     logJ = zero(T)
 
-    z_vec = tanh.(y)
-    lc_vec = LogExpFunctions.logcosh.(y)
+    z_vec = map(tanh, y)
+    lc_vec = map(LogExpFunctions.logcosh, y)
 
     idx = 1
     @inbounds for j in 1:K
@@ -406,8 +406,8 @@ function _inv_link_chol_lkj_rrule(y::AbstractVector)
     T = typeof(log(one(eltype(W))))
     logJ = zero(T)
 
-    z_vec = tanh.(y)
-    lc_vec = LogExpFunctions.logcosh.(y)
+    z_vec = map(tanh, y)
+    lc_vec = map(LogExpFunctions.logcosh, y)
 
     idx = 1
     W[1, 1] = 1
