@@ -215,6 +215,32 @@ end
 end
 
 @testset "LKJCholesky" begin
+    # Convert Cholesky factor to its free parameters, i.e. its off-diagonal elements
+    function chol_3by3_to_free_params(x::Cholesky)
+        if x.uplo == :U
+            return [x.U[1, 2], x.U[1, 3], x.U[2, 3]]
+        else
+            return [x.L[2, 1], x.L[3, 1], x.L[3, 2]]
+        end
+    end
+
+    # Reconstruct Cholesky factor from its free parameters
+    # Note that x[i, i] is always positive so we don't need to worry about the sign
+    function free_params_to_chol_3by3(free_params::AbstractVector, uplo::Symbol)
+        x = UpperTriangular(zeros(eltype(free_params), 3, 3))
+        x[1, 1] = 1
+        x[1, 2] = free_params[1]
+        x[1, 3] = free_params[2]
+        x[2, 2] = sqrt(1 - free_params[1]^2)
+        x[2, 3] = free_params[3]
+        x[3, 3] = sqrt(1 - free_params[2]^2 - free_params[3]^2)
+        if uplo == :U
+            return Cholesky(x)
+        else
+            return Cholesky(transpose(x))
+        end
+    end
+
     @testset "uplo: $uplo" for uplo in [:L, :U]
         dist = LKJCholesky(3, 1, uplo)
         single_sample_tests(dist)
