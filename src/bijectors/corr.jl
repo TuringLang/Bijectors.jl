@@ -293,15 +293,15 @@ which is the above implementation.
 function _link_chol_lkj(W::AbstractMatrix)
     K = LinearAlgebra.checksquare(W)
 
-    y = similar(W) # z is also UpperTriangular. 
+    y = similar(W) # W is upper triangular.
     # Some zero filling can be avoided. Though diagnoal is still needed to be filled with zero.
 
     @inbounds for j in 1:K
-        remainder_sq = one(eltype(W))
-        for i in 1:(j - 1)
+        remainder_sq = W[j, j]^2
+        for i in (j - 1):-1:1
             z = W[i, j] / sqrt(remainder_sq)
-            y[i, j] = atanh(z)
-            remainder_sq -= W[i, j]^2
+            y[i, j] = asinh(z)
+            remainder_sq += W[i, j]^2
         end
         for i in j:K
             y[i, j] = 0
@@ -317,17 +317,18 @@ function _link_chol_lkj_from_upper(W::AbstractMatrix)
 
     y = similar(W, N)
 
-    idx = 1
+    starting_idx = 1
     @inbounds for j in 2:K
-        y[idx] = atanh(W[1, j])
-        idx += 1
-        remainder_sq = 1 - W[1, j]^2
-        for i in 2:(j - 1)
+        y[starting_idx] = atanh(W[1, j])
+        starting_idx += 1
+        remainder_sq = W[j, j]^2
+        for i in (j - 1):-1:2
+            idx = starting_idx + i - 2
             z = W[i, j] / sqrt(remainder_sq)
-            y[idx] = atanh(z)
-            remainder_sq -= W[i, j]^2
-            idx += 1
+            y[idx] = asinh(z)
+            remainder_sq += W[i, j]^2
         end
+        starting_idx += length((j - 1):-1:2)
     end
 
     return y
