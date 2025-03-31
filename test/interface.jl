@@ -145,8 +145,8 @@ end
 @testset "Multivariate" begin
     vector_dists = [
         Dirichlet(2, 3),
-        Dirichlet([1000 * one(Float64), eps(Float64)]),
-        Dirichlet([eps(Float64), 1000 * one(Float64)]),
+        Dirichlet([10.0, 0.1]),
+        Dirichlet([0.1, 10.0]),
         MvNormal(randn(10), Diagonal(exp.(randn(10)))),
         MvLogNormal(MvNormal(randn(10), Diagonal(exp.(randn(10))))),
         Dirichlet([1000 * one(Float64), eps(Float64)]),
@@ -173,15 +173,7 @@ end
             # similar to what we do in test/transform.jl for Dirichlet
             if dist isa Dirichlet
                 b = Bijectors.SimplexBijector()
-                # HACK(torfjelde): Calling `rand(dist)` will sometimes lead to `[0.999..., 0.0]`
-                # which in turn will lead to differences between `ForwardDiff.jacobian`
-                # and `logabsdetjac` due to how we handle the boundary values in `SimplexBijector`.
-                # We therefore test the realizations _on_ the boundary rather if we're near the boundary.
-                x = if any(rand(dist) .> 0.9999)
-                    [0.0, 1.0][sortperm(rand(dist))]
-                else
-                    rand(dist)
-                end
+                x = rand(dist)
                 y = b(x)
                 @test b(param(x)) isa TrackedArray
                 @test logabsdet(ForwardDiff.jacobian(b, x)[:, 1:(end - 1)])[1] ≈
