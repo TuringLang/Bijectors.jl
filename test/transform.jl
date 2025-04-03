@@ -157,26 +157,6 @@ end
         for dist in vector_dists
             if dist isa Dirichlet
                 single_sample_tests(dist)
-
-                # This should fail at the minute. Not sure what the correct way to test this is.
-
-                # Workaround for intermittent test failures, result of `logpdf_with_trans(dist, x, true)`
-                # is incorrect for `x == [0.9999999999999998, 0.0]`:
-                x =
-                    if params(dist) ==
-                        params(Dirichlet([1000 * one(Float64), eps(Float64)]))
-                        [1.0, 0.0]
-                    else
-                        rand(dist)
-                    end
-                # `Dirichlet` is no longer mapping between spaces of the same dimensionality,
-                # so the block below no longer works.
-                if !(dist isa Dirichlet)
-                    logpdf_turing = logpdf_with_trans(dist, x, true)
-                    J = ForwardDiff.jacobian(x -> link(dist, x), x)
-                    @test logpdf(dist, x .+ ϵ) - _logabsdet(J) ≈ logpdf_turing
-                end
-
                 # Issue #12
                 stepsize = 1e10
                 dim = Bijectors.output_length(bijector(dist), length(dist))
