@@ -238,14 +238,14 @@ end
     @testset "uplo: $uplo" for uplo in [:L, :U]
         dist = LKJCholesky(3, 1, uplo)
         single_sample_tests(dist)
-
         x = rand(dist)
-
-        inds = [
-            LinearIndices(size(x))[I] for I in CartesianIndices(size(x)) if
-            (uplo === :L && I[2] < I[1]) || (uplo === :U && I[2] > I[1])
-        ]
         J = ForwardDiff.jacobian(z -> link(dist, Cholesky(z, x.uplo, x.info)), x.UL)
+        # Remove columns of Jacobian that are all zero (i.e. those
+        # corresponding to entries above the diagonal for uplo = :U, or below
+        # the diagonal for uplo = :L). This slightly unscientific approach
+        # based on filter() is needed to handle both ForwardDiff 0.10 and 1 as
+        # the exact indices will differ for the two versions.
+        inds = filter(i -> !all(iszero, J[:, i]), 1:size(J, 2))
         J = J[:, inds]
         logpdf_turing = logpdf_with_trans(dist, x, true)
         @test logpdf(dist, x) - _logabsdet(J) ≈ logpdf_turing
