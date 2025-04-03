@@ -149,8 +149,6 @@ end
         Dirichlet([0.1, 10.0]),
         MvNormal(randn(10), Diagonal(exp.(randn(10)))),
         MvLogNormal(MvNormal(randn(10), Diagonal(exp.(randn(10))))),
-        Dirichlet([1000 * one(Float64), eps(Float64)]),
-        Dirichlet([eps(Float64), 1000 * one(Float64)]),
         MvTDist(1, randn(10), Matrix(Diagonal(exp.(randn(10))))),
         transformed(MvNormal(randn(10), Diagonal(exp.(randn(10))))),
         transformed(MvLogNormal(MvNormal(randn(10), Diagonal(exp.(randn(10)))))),

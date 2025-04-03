@@ -153,8 +153,6 @@ end
             Dirichlet([eps(Float64), 1000 * one(Float64)]),
             MvNormal(randn(10), Diagonal(exp.(randn(10)))),
             MvLogNormal(MvNormal(randn(10), Diagonal(exp.(randn(10))))),
-            Dirichlet([1000 * one(Float64), eps(Float64)]),
-            Dirichlet([eps(Float64), 1000 * one(Float64)]),
         ]
         for dist in vector_dists
             if dist isa Dirichlet
