@@ -119,7 +119,8 @@ function _simplex_bijector(X::Union{TrackedVector,TrackedMatrix}, b::SimplexBije
 end
 @grad function _simplex_bijector(Y::AbstractVector, b::SimplexBijector)
     Yd = value(Y)
-    return _simplex_bijector(Yd, b), Δ -> (simplex_link_jacobian(Yd, b.eps_is_zero)' * Δ, nothing)
+    return _simplex_bijector(Yd, b),
+    Δ -> (simplex_link_jacobian(Yd, b.eps_is_zero)' * Δ, nothing)
 end
 
 function _simplex_inv_bijector(X::Union{TrackedVector,TrackedMatrix}, b::SimplexBijector)
@@ -127,7 +128,8 @@ function _simplex_inv_bijector(X::Union{TrackedVector,TrackedMatrix}, b::Simplex
 end
 @grad function _simplex_inv_bijector(Y::AbstractVector, b::SimplexBijector)
     Yd = value(Y)
-    return _simplex_inv_bijector(Yd, b), Δ -> (simplex_invlink_jacobian(Yd, b.eps_is_zero)' * Δ, nothing)
+    return _simplex_inv_bijector(Yd, b),
+    Δ -> (simplex_invlink_jacobian(Yd, b.eps_is_zero)' * Δ, nothing)
 end
 @grad function _simplex_inv_bijector(Y::AbstractMatrix, b::SimplexBijector)
     Yd = value(Y)
@@ -167,7 +169,8 @@ function logabsdetjac(b::SimplexBijector, x::Union{TrackedVector,TrackedMatrix})
 end
 @grad function logabsdetjac(b::SimplexBijector, x::AbstractVector)
     xd = value(x)
-    return logabsdetjac(b, xd), Δ -> begin
+    return logabsdetjac(b, xd),
+    Δ -> begin
         (nothing, simplex_logabsdetjac_gradient(xd, b.eps_is_zero) * Δ)
     end
 end

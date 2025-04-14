@@ -283,7 +283,9 @@ end
         f1 = x -> link(dist, x)
         g1 = y -> invlink(dist, y)
 
-        @test @aeq ForwardDiff.jacobian(f1, x) @inferred(Bijectors.simplex_link_jacobian(x, eps_is_zero))
+        @test @aeq ForwardDiff.jacobian(f1, x) @inferred(
+            Bijectors.simplex_link_jacobian(x, eps_is_zero)
+        )
         @test @aeq ForwardDiff.jacobian(g1, y) @inferred(
             Bijectors.simplex_invlink_jacobian(y, eps_is_zero)
         )
