@@ -351,7 +351,7 @@ function simplex_invlink_jacobian(y::AbstractVector{T}, eps_is_zero::Bool) where
 end
 # jacobian
 function jacobian(ib::Inverse{<:SimplexBijector}, y::AbstractVector{T}) where {T}
-    return simplex_invlink_jacobian(y)
+    return simplex_invlink_jacobian(y, ib.orig.eps_is_zero)
 end
 
 #=
