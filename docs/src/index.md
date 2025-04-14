@@ -27,7 +27,7 @@ The following table lists mathematical operations for a bijector and the corresp
 |:-------------------------------------------:|:-------------------------------:|:---------:|
 | `b ↦ b⁻¹`                                   | `inverse(b)`                    | ✓         |
 | `(b₁, b₂) ↦ (b₁ ∘ b₂)`                      | `b₁ ∘ b₂`                       | ✓         |
-| `(b₁, b₂) ↦ [b₁, b₂]`                       | `stack(b₁, b₂)`                 | ✓         |
+| `(b₁, b₂) ↦ [b₁, b₂]`                       | `Stacked(b₁, b₂)`               | ✓         |
 | `x ↦ b(x)`                                  | `b(x)`                          | ×         |
 | `y ↦ b⁻¹(y)`                                | `inverse(b)(y)`                 | ×         |
 | `x ↦ log｜det J(b, x)｜`                      | `logabsdetjac(b, x)`            | AD        |

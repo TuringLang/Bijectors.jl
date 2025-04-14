@@ -1,7 +1,7 @@
 """
     Stacked(bs)
     Stacked(bs, ranges)
-    stack(bs::Bijector...)
+    Stacked(bs::Bijector...)
 
 A `Bijector` which stacks bijectors together which can then be applied to a vector
 where `bs[i]::Bijector` is applied to `x[ranges[i]]::UnitRange{Int}`.
@@ -15,9 +15,10 @@ where `bs[i]::Bijector` is applied to `x[ranges[i]]::UnitRange{Int}`.
 
 # Examples
 ```
+using Bijectors: Logit, Stacked
 b1 = Logit(0.0, 1.0)
 b2 = identity
-b = stack(b1, b2)
+b = Stacked(b1, b2)
 b([0.0, 1.0]) == [b1(0.0), 1.0]  # => true
 ```
 """
