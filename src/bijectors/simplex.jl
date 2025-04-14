@@ -4,7 +4,7 @@
 struct SimplexBijector <: Bijector
     eps_is_zero::Bool
 end
-SimplexBijector() = SimplexBijector(false)
+SimplexBijector() = SimplexBijector(true)
 
 output_size(::SimplexBijector, sz::Tuple{Int}) = (first(sz) - 1,)
 output_size(::Inverse{SimplexBijector}, sz::Tuple{Int}) = (first(sz) + 1,)
