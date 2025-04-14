@@ -224,7 +224,8 @@ end
         # corresponding to entries above the diagonal for uplo = :U, or below
         # the diagonal for uplo = :L). This slightly unscientific approach
         # based on filter() is needed to handle both ForwardDiff 0.10 and 1 as
-        # the exact indices will differ for the two versions.
+        # the exact indices will differ for the two versions; see
+        # https://github.com/JuliaDiff/ForwardDiff.jl/issues/738.
         inds = filter(i -> !all(iszero, J[:, i]), 1:size(J, 2))
         J = J[:, inds]
         logpdf_turing = logpdf_with_trans(dist, x, true)
