@@ -149,12 +149,12 @@ end
 @grad function Bijectors._simplex_bijector(X::AbstractVector, b::SimplexBijector)
     Xd = data(X)
     return Bijectors._simplex_bijector(Xd, b),
-    Δ -> (Bijectors.simplex_link_jacobian(Xd)' * Δ, nothing)
+    Δ -> (Bijectors.simplex_link_jacobian(Xd, b.eps_is_zero)' * Δ, nothing)
 end
 @grad function Bijectors._simplex_inv_bijector(Y::AbstractVector, b::SimplexBijector)
     Yd = data(Y)
     return Bijectors._simplex_inv_bijector(Yd, b),
-    Δ -> (Bijectors.simplex_invlink_jacobian(Yd)' * Δ, nothing)
+    Δ -> (Bijectors.simplex_invlink_jacobian(Yd, b.eps_is_zero)' * Δ, nothing)
 end
 
 function Bijectors.replace_diag(::typeof(log), X::TrackedMatrix)
@@ -190,7 +190,7 @@ end
     xd = data(x)
     return Bijectors.logabsdetjac(b, xd),
     Δ -> begin
-        (nothing, Bijectors.simplex_logabsdetjac_gradient(xd) * Δ)
+        (nothing, Bijectors.simplex_logabsdetjac_gradient(xd, b.eps_is_zero) * Δ)
     end
 end
 

@@ -126,17 +126,17 @@ end
 # Simplex adjoints
 
 @adjoint function _simplex_bijector(X::AbstractVector, b::SimplexBijector)
-    return _simplex_bijector(X, b), Δ -> (simplex_link_jacobian(X)' * Δ, nothing)
+    return _simplex_bijector(X, b), Δ -> (simplex_link_jacobian(X, b.eps_is_zero)' * Δ, nothing)
 end
 @adjoint function _simplex_inv_bijector(Y::AbstractVector, b::SimplexBijector)
-    return _simplex_inv_bijector(Y, b), Δ -> (simplex_invlink_jacobian(Y)' * Δ, nothing)
+    return _simplex_inv_bijector(Y, b), Δ -> (simplex_invlink_jacobian(Y, b.eps_is_zero)' * Δ, nothing)
 end
 
 @adjoint function _simplex_bijector(X::AbstractMatrix, b::SimplexBijector)
     return _simplex_bijector(X, b),
     Δ -> begin
         maphcat(eachcol(X), eachcol(Δ)) do c1, c2
-            simplex_link_jacobian(c1)' * c2
+            simplex_link_jacobian(c1, b.eps_is_zero)' * c2
         end,
         nothing
     end
@@ -145,7 +145,7 @@ end
     return _simplex_inv_bijector(Y, b),
     Δ -> begin
         maphcat(eachcol(Y), eachcol(Δ)) do c1, c2
-            simplex_invlink_jacobian(c1)' * c2
+            simplex_invlink_jacobian(c1, b.eps_is_zero)' * c2
         end,
         nothing
     end
@@ -153,7 +153,7 @@ end
 
 @adjoint function logabsdetjac(b::SimplexBijector, x::AbstractVector)
     return logabsdetjac(b, x), Δ -> begin
-        (nothing, simplex_logabsdetjac_gradient(x) * Δ)
+        (nothing, simplex_logabsdetjac_gradient(x, b.eps_is_zero) * Δ)
     end
 end
 

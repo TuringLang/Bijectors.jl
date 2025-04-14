@@ -1,7 +1,10 @@
 ####################
 # Simplex bijector #
 ####################
-struct SimplexBijector <: Bijector end
+struct SimplexBijector <: Bijector
+    eps_is_zero::Bool
+end
+SimplexBijector() = SimplexBijector(false)
 
 output_size(::SimplexBijector, sz::Tuple{Int}) = (first(sz) - 1,)
 output_size(::Inverse{SimplexBijector}, sz::Tuple{Int}) = (first(sz) + 1,)
@@ -25,11 +28,11 @@ function _simplex_bijector(x::AbstractArray, b::SimplexBijector)
 end
 
 # Vector implementation.
-function _simplex_bijector!(y, x::AbstractVector, ::SimplexBijector)
+function _simplex_bijector!(y, x::AbstractVector, b::SimplexBijector)
     K = length(x)
     @assert K > 1 "x needs to be of length greater than 1"
     T = eltype(x)
-    ϵ = _eps(T)
+    ϵ = b.eps_is_zero ? zero(T) : _eps(T)
     sum_tmp = zero(T)
     @inbounds z = x[1] * (one(T) - 2ϵ) + ϵ # z ∈ [ϵ, 1-ϵ]
     @inbounds y[1] = LogExpFunctions.logit(z) + log(T(K - 1))
@@ -44,11 +47,11 @@ function _simplex_bijector!(y, x::AbstractVector, ::SimplexBijector)
 end
 
 # Matrix implementation.
-function _simplex_bijector!(Y, X::AbstractMatrix, ::SimplexBijector)
+function _simplex_bijector!(Y, X::AbstractMatrix, b::SimplexBijector)
     K, N = size(X, 1), size(X, 2)
     @assert K > 1 "x needs to be of length greater than 1"
     T = eltype(X)
-    ϵ = _eps(T)
+    ϵ = b.eps_is_zero ? zero(T) : _eps(T)
     @inbounds @simd for n in 1:size(X, 2)
         sum_tmp = zero(T)
         z = X[1, n] * (one(T) - 2ϵ) + ϵ
@@ -85,7 +88,7 @@ function _simplex_inv_bijector!(x, y::AbstractVector, b::SimplexBijector)
     K = length(y) + 1
     @assert K > 1 "x needs to be of length greater than 1"
     T = eltype(y)
-    ϵ = _eps(T)
+    ϵ = b.eps_is_zero ? zero(T) : _eps(T)
     @inbounds z = LogExpFunctions.logistic(y[1] - log(T(K - 1)))
     @inbounds x[1] = _clamp((z - ϵ) / (one(T) - 2ϵ), 0, 1)
     sum_tmp = zero(T)
@@ -103,7 +106,7 @@ function _simplex_inv_bijector!(X, Y::AbstractMatrix, b::SimplexBijector)
     K, N = size(Y, 1) + 1, size(Y, 2)
     @assert K > 1 "x needs to be of length greater than 1"
     T = eltype(Y)
-    ϵ = _eps(T)
+    ϵ = b.eps_is_zero ? zero(T) : _eps(T)
     @inbounds @simd for n in 1:size(X, 2)
         sum_tmp, z = zero(T), LogExpFunctions.logistic(Y[1, n] - log(T(K - 1)))
         X[1, n] = _clamp((z - ϵ) / (one(T) - 2ϵ), 0, 1)
@@ -120,7 +123,7 @@ function _simplex_inv_bijector!(X, Y::AbstractMatrix, b::SimplexBijector)
 end
 
 function logabsdetjac(b::SimplexBijector, x::AbstractVector{T}) where {T}
-    ϵ = _eps(T)
+    ϵ = b.eps_is_zero ? zero(T) : _eps(T)
     lp = zero(T)
 
     K = length(x)
@@ -142,9 +145,9 @@ function logabsdetjac(b::SimplexBijector, x::AbstractMatrix{<:Real})
     return sum(Base.Fix1(logabsdetjac, b), eachcol(x))
 end
 
-function simplex_logabsdetjac_gradient(x::AbstractVector)
+function simplex_logabsdetjac_gradient(x::AbstractVector, eps_is_zero::Bool)
     T = eltype(x)
-    ϵ = _eps(T)
+    ϵ = eps_is_zero ? zero(T) : _eps(T)
     K = length(x)
     g = similar(x)
     g .= 0
@@ -177,9 +180,9 @@ function simplex_logabsdetjac_gradient(x::AbstractVector)
     return g
 end
 
-function simplex_logabsdetjac_gradient(x::AbstractMatrix)
+function simplex_logabsdetjac_gradient(x::AbstractMatrix, eps_is_zero::Bool)
     T = eltype(x)
-    ϵ = _eps(T)
+    ϵ = eps_is_zero ? zero(T) : _eps(T)
     K = size(x, 1)
     g = similar(x)
     g .= 0
@@ -214,11 +217,11 @@ function simplex_logabsdetjac_gradient(x::AbstractMatrix)
     return g
 end
 
-function simplex_link_jacobian(x::AbstractVector{T}) where {T<:Real}
+function simplex_link_jacobian(x::AbstractVector{T}, eps_is_zero::Bool) where {T<:Real}
     K = length(x)
     @assert K > 1 "x needs to be of length greater than 1"
     dydxt = fill!(similar(x, K, K - 1), 0)
-    ϵ = _eps(T)
+    ϵ = eps_is_zero ? zero(T) : _eps(T)
     sum_tmp = zero(T)
 
     @inbounds z = x[1] * (one(T) - 2ϵ) + ϵ # z ∈ [ϵ, 1-ϵ]
@@ -238,7 +241,7 @@ function simplex_link_jacobian(x::AbstractVector{T}) where {T<:Real}
     return dydxt'
 end
 function jacobian(b::SimplexBijector, x::AbstractVector{T}) where {T}
-    return simplex_link_jacobian(x)
+    return simplex_link_jacobian(x, b.eps_is_zero)
 end
 
 #=
@@ -307,12 +310,12 @@ function add_simplex_link_adjoint!(
 end
 =#
 
-function simplex_invlink_jacobian(y::AbstractVector{T}) where {T<:Real}
+function simplex_invlink_jacobian(y::AbstractVector{T}, eps_is_zero::Bool) where {T<:Real}
     K = length(y) + 1
     @assert K > 1 "x needs to be of length greater than 1"
     dxdy = fill!(similar(y, K, K - 1), 0)
 
-    ϵ = _eps(T)
+    ϵ = eps_is_zero ? zero(T) : _eps(T)
     @inbounds z = LogExpFunctions.logistic(y[1] - log(T(K - 1)))
     unclamped_x = (z - ϵ) / (one(T) - 2ϵ)
     clamped_x = _clamp(unclamped_x, 0, 1)

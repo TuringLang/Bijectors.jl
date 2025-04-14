@@ -275,7 +275,7 @@ macro aeq(x, y)
 end
 
 @testset "Dirichlet Jacobians" begin
-    function test_link_and_invlink()
+    function test_link_and_invlink(eps_is_zero::Bool)
         dist = Dirichlet(4, 4)
         x = rand(dist)
         y = @inferred(link(dist, x))
@@ -283,14 +283,18 @@ end
         f1 = x -> link(dist, x)
         g1 = y -> invlink(dist, y)
 
-        @test @aeq ForwardDiff.jacobian(f1, x) @inferred(Bijectors.simplex_link_jacobian(x))
+        @test @aeq ForwardDiff.jacobian(f1, x) @inferred(Bijectors.simplex_link_jacobian(x, eps_is_zero))
         @test @aeq ForwardDiff.jacobian(g1, y) @inferred(
-            Bijectors.simplex_invlink_jacobian(y)
+            Bijectors.simplex_invlink_jacobian(y, eps_is_zero)
         )
-        @test @aeq Bijectors.simplex_link_jacobian(x) *
-            Bijectors.simplex_invlink_jacobian(y) I
+        @test @aeq Bijectors.simplex_link_jacobian(x, eps_is_zero) *
+            Bijectors.simplex_invlink_jacobian(y, eps_is_zero) I
     end
     for i in 1:4
-        test_link_and_invlink()
+        for b in [true, false]
+            @testset "eps_is_zero: $b" begin
+                test_link_and_invlink(b)
+            end
+        end
     end
 end
