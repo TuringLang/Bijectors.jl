@@ -23,18 +23,18 @@ All exported names from the [Distributions.jl](https://juliastats.org/Distributi
 Bijectors.jl also provides a nice interface for working with these maps: composition, inversion, etc.
 The following table lists mathematical operations for a bijector and the corresponding code in Bijectors.jl.
 
-| Operation                                     | Method                          | Automatic |
-|:---------------------------------------------:|:-------------------------------:|:---------:|
-| `b ↦ b⁻¹`                                     | `inverse(b)`                    | ✓         |
-| `(b₁, b₂) ↦ (b₁ ∘ b₂)`                        | `b₁ ∘ b₂`                       | ✓         |
-| `(b₁, b₂) ↦ [b₁, b₂]`                         | `Stacked(b₁, b₂)`               | ✓         |
-| `x ↦ b(x)`                                    | `b(x)`                          | ×         |
-| `y ↦ b⁻¹(y)`                                  | `inverse(b)(y)`                 | ×         |
+| Operation                                   | Method                          | Automatic |
+|:-------------------------------------------:|:-------------------------------:|:---------:|
+| `b ↦ b⁻¹`                                   | `inverse(b)`                    | ✓         |
+| `(b₁, b₂) ↦ (b₁ ∘ b₂)`                      | `b₁ ∘ b₂`                       | ✓         |
+| `(b₁, b₂) ↦ [b₁, b₂]`                       | `Stacked(b₁, b₂)`               | ✓         |
+| `x ↦ b(x)`                                  | `b(x)`                          | ×         |
+| `y ↦ b⁻¹(y)`                                | `inverse(b)(y)`                 | ×         |
 | `x ↦ log｜det J(b, x)｜`                      | `logabsdetjac(b, x)`            | AD        |
 | `x ↦ b(x), log｜det J(b, x)｜`                | `with_logabsdet_jacobian(b, x)` | ✓         |
-| `p ↦ q := b_* p`                              | `q = transformed(p, b)`         | ✓         |
-| `y ∼ q`                                       | `y = rand(q)`                   | ✓         |
-| `p ↦ b` such that `support(b_* p) = ℝᵈ`       | `bijector(p)`                   | ✓         |
+| `p ↦ q := b_* p`                            | `q = transformed(p, b)`         | ✓         |
+| `y ∼ q`                                     | `y = rand(q)`                   | ✓         |
+| `p ↦ b` such that `support(b_* p) = ℝᵈ`     | `bijector(p)`                   | ✓         |
 | `(x ∼ p, b(x), log｜det J(b, x)｜, log q(y))` | `forward(q)`                    | ✓         |
 
 In this table, `b` denotes a `Bijector`, `J(b, x)` denotes the Jacobian of `b` evaluated at `x`, `b_*` denotes the [push-forward](https://www.wikiwand.com/en/Pushforward_measure) of `p` by `b`, and `x ∼ p` denotes `x` sampled from the distribution with density `p`.
