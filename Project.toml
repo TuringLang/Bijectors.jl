@@ -1,6 +1,6 @@
 name = "Bijectors"
 uuid = "76274a88-744f-5084-9051-94815aaf08c4"
-version = "0.15.6"
+version = "0.15.7"
 
 [deps]
 ArgCheck = "dce04be8-c92d-5529-be00-80e4d2c0e197"
@@ -51,7 +51,7 @@ Distributions = "0.25.33"
 DistributionsAD = "0.6"
 DocStringExtensions = "0.9"
 EnzymeCore = "0.8.4"
-ForwardDiff = "0.10"
+ForwardDiff = "0.10, 1.0.1"
 Functors = "0.1, 0.2, 0.3, 0.4, 0.5"
 InverseFunctions = "0.1"
 IrrationalConstants = "0.1, 0.2"
