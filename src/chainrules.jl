@@ -161,21 +161,23 @@ function ChainRulesCore.rrule(::typeof(_link_chol_lkj_from_upper), W::AbstractMa
     N = ((K - 1) * K) ÷ 2
 
     z = zeros(eltype(W), N)
-    tmp_vec = similar(z)
+    remainders = similar(z)
 
-    idx = 1
+    starting_idx = 1
     @inbounds for j in 2:K
-        z[idx] = atanh(W[1, j])
-        tmp = sqrt(1 - W[1, j]^2)
-        tmp_vec[idx] = tmp
-        idx += 1
-        for i in 2:(j - 1)
-            p = W[i, j] / tmp
-            tmp *= sqrt(1 - p^2)
-            tmp_vec[idx] = tmp
-            z[idx] = atanh(p)
-            idx += 1
+        z[starting_idx] = atanh(W[1, j])
+        remainder_sq = W[j, j]^2
+        starting_idx += 1
+        for i in (j - 1):-1:2
+            idx = starting_idx + i - 2
+            remainder = sqrt(remainder_sq)
+            remainders[idx] = remainder
+            zt = W[i, j] / remainder
+            z[idx] = asinh(zt)
+            remainder_sq += W[i, j]^2
         end
+        remainders[starting_idx - 1] = sqrt(remainder_sq)
+        starting_idx += length((j - 1):-1:2)
     end
 
     function pullback_link_chol_lkj_from_upper(Δz_thunked)
@@ -190,7 +192,7 @@ function ChainRulesCore.rrule(::typeof(_link_chol_lkj_from_upper), W::AbstractMa
             ΔW[j, j] = 0
             Δtmp = zero(eltype(Δz))
             for i in (j - 1):-1:2
-                tmp = tmp_vec[idx_up_to_prev_column + i - 1]
+                tmp = remainders[idx_up_to_prev_column + i - 1]
                 p = W[i, j] / tmp
                 ftmp = sqrt(1 - p^2)
                 d_ftmp_p = -p / ftmp
@@ -216,21 +218,23 @@ function ChainRulesCore.rrule(::typeof(_link_chol_lkj_from_lower), W::AbstractMa
     N = ((K - 1) * K) ÷ 2
 
     z = zeros(eltype(W), N)
-    tmp_vec = similar(z)
+    remainders = similar(z)
 
-    idx = 1
+    starting_idx = 1
     @inbounds for i in 2:K
-        z[idx] = atanh(W[i, 1])
-        tmp = sqrt(1 - W[i, 1]^2)
-        tmp_vec[idx] = tmp
-        idx += 1
-        for j in 2:(i - 1)
-            p = W[i, j] / tmp
-            tmp *= sqrt(1 - p^2)
-            tmp_vec[idx] = tmp
-            z[idx] = atanh(p)
-            idx += 1
+        z[starting_idx] = atanh(W[i, 1])
+        remainder_sq = W[i, i]^2
+        starting_idx += 1
+        for j in (i - 1):-1:2
+            idx = starting_idx + j - 2
+            remainder = sqrt(remainder_sq)
+            remainders[idx] = remainder
+            zt = W[i, j] / remainder
+            z[idx] = asinh(zt)
+            remainder_sq += W[i, j]^2
         end
+        remainders[starting_idx - 1] = sqrt(remainder_sq)
+        starting_idx += length((i - 1):-1:2)
     end
 
     function pullback_link_chol_lkj_from_lower(Δz_thunked)
@@ -245,7 +249,7 @@ function ChainRulesCore.rrule(::typeof(_link_chol_lkj_from_lower), W::AbstractMa
             ΔW[i, i] = 0
             Δtmp = zero(eltype(Δz))
             for j in (i - 1):-1:2
-                tmp = tmp_vec[idx_up_to_prev_row + j - 1]
+                tmp = remainders[idx_up_to_prev_row + j - 1]
                 p = W[i, j] / tmp
                 ftmp = sqrt(1 - p^2)
                 d_ftmp_p = -p / ftmp
