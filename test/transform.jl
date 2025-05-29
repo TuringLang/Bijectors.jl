@@ -153,32 +153,10 @@ end
             Dirichlet([eps(Float64), 1000 * one(Float64)]),
             MvNormal(randn(10), Diagonal(exp.(randn(10)))),
             MvLogNormal(MvNormal(randn(10), Diagonal(exp.(randn(10))))),
-            Dirichlet([1000 * one(Float64), eps(Float64)]),
-            Dirichlet([eps(Float64), 1000 * one(Float64)]),
         ]
         for dist in vector_dists
             if dist isa Dirichlet
                 single_sample_tests(dist)
-
-                # This should fail at the minute. Not sure what the correct way to test this is.
-
-                # Workaround for intermittent test failures, result of `logpdf_with_trans(dist, x, true)`
-                # is incorrect for `x == [0.9999999999999998, 0.0]`:
-                x =
-                    if params(dist) ==
-                        params(Dirichlet([1000 * one(Float64), eps(Float64)]))
-                        [1.0, 0.0]
-                    else
-                        rand(dist)
-                    end
-                # `Dirichlet` is no longer mapping between spaces of the same dimensionality,
-                # so the block below no longer works.
-                if !(dist isa Dirichlet)
-                    logpdf_turing = logpdf_with_trans(dist, x, true)
-                    J = ForwardDiff.jacobian(x -> link(dist, x), x)
-                    @test logpdf(dist, x .+ ϵ) - _logabsdet(J) ≈ logpdf_turing
-                end
-
                 # Issue #12
                 stepsize = 1e10
                 dim = Bijectors.output_length(bijector(dist), length(dist))
@@ -240,14 +218,15 @@ end
     @testset "uplo: $uplo" for uplo in [:L, :U]
         dist = LKJCholesky(3, 1, uplo)
         single_sample_tests(dist)
-
         x = rand(dist)
-
-        inds = [
-            LinearIndices(size(x))[I] for I in CartesianIndices(size(x)) if
-            (uplo === :L && I[2] < I[1]) || (uplo === :U && I[2] > I[1])
-        ]
         J = ForwardDiff.jacobian(z -> link(dist, Cholesky(z, x.uplo, x.info)), x.UL)
+        # Remove columns of Jacobian that are all zero (i.e. those
+        # corresponding to entries above the diagonal for uplo = :U, or below
+        # the diagonal for uplo = :L). This slightly unscientific approach
+        # based on filter() is needed to handle both ForwardDiff 0.10 and 1 as
+        # the exact indices will differ for the two versions; see
+        # https://github.com/JuliaDiff/ForwardDiff.jl/issues/738.
+        inds = filter(i -> !all(iszero, J[:, i]), 1:size(J, 2))
         J = J[:, inds]
         logpdf_turing = logpdf_with_trans(dist, x, true)
         @test logpdf(dist, x) - _logabsdet(J) ≈ logpdf_turing

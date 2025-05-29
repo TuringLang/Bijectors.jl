@@ -86,7 +86,6 @@ _eps(::Type{<:Integer}) = eps(Float64)
 
 function _clamp(x, a, b)
     T = promote_type(typeof(x), typeof(a), typeof(b))
-    ϵ = _eps(T)
     clamped_x = ifelse(x < a, convert(T, a), ifelse(x > b, convert(T, b), x))
     DEBUG && _debug("x = $x, bounds = $((a, b)), clamped_x = $clamped_x")
     return clamped_x
