@@ -28,11 +28,11 @@
     bvec = Stacked([b1, b2], [1:4, 5:5])
     bvec_inv = inverse(bvec)
 
-    test_ad(y) do x
+    test_ad(y, (:Enzyme,)) do x
         sum(transform(bvec, binv(x)))
     end
 
-    test_ad(y) do y
+    test_ad(y, (:Enzyme,)) do y
         sum(transform(bvec_inv, y))
     end
 end
