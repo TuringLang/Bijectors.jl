@@ -112,7 +112,7 @@ y = rand(rng, td)
 Want to fit the flow?
 
 ```@repl normalizing-flows
-using Zygote
+using ForwardDiff
 
 # Construct the flow.
 b = PlanarLayer(2)
@@ -145,7 +145,7 @@ f = NLLObjective(reconstruct, MvNormal(2, 1), xs);
 # Train using gradient descent.
 ε = 1e-3;
 for i in 1:100
-    (∇s,) = Zygote.gradient(f, θs)
+    ∇s = ForwardDiff.gradient(θ -> f(θ), θs)
     θs = fmap(θs, ∇s) do θ, ∇
         θ - ε .* ∇
     end

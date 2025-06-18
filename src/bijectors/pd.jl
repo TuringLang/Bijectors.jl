@@ -1,6 +1,6 @@
 struct PDBijector <: Bijector end
 
-# This function has custom adjoints defined for Tracker, Zygote and ReverseDiff.
+# This function has custom adjoints defined for Tracker and ReverseDiff.
 # I couldn't find a mutation-free implementation that maintains TrackedArrays in Tracker
 # and ReverseDiff, hence the need for custom adjoints.
 function replace_diag(f, X)
