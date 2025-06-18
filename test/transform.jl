@@ -245,15 +245,12 @@ end
         dist = LKJCholesky(3, 1, uplo)
         single_sample_tests(dist)
         x = rand(dist)
-        J = ForwardDiff.jacobian(z -> link(dist, Cholesky(z, x.uplo, x.info)), x.UL)
-        # Remove columns of Jacobian that are all zero (i.e. those
-        # corresponding to entries above the diagonal for uplo = :U, or below
-        # the diagonal for uplo = :L). This slightly unscientific approach
-        # based on filter() is needed to handle both ForwardDiff 0.10 and 1 as
-        # the exact indices will differ for the two versions; see
-        # https://github.com/JuliaDiff/ForwardDiff.jl/issues/738.
-        inds = filter(i -> !all(iszero, J[:, i]), 1:size(J, 2))
-        J = J[:, inds]
+        # Here, we need to pass ForwardDiff only the free parameters of the
+        # Cholesky factor so that we get a square Jacobian matrix
+        free_params = chol_3by3_to_free_params(x)
+        J = ForwardDiff.jacobian(
+            z -> link(dist, free_params_to_chol_3by3(z, uplo)), free_params
+        )
         logpdf_turing = logpdf_with_trans(dist, x, true)
         @test logpdf(dist, x) - _logabsdet(J) ≈ logpdf_turing
     end
