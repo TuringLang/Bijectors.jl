@@ -1,3 +1,5 @@
+using PDMats: PDMat
+
 # `permutedims` seems to work better with AD (cf. KernelFunctions.jl)
 aT_b(a::AbstractVector{<:Real}, b::AbstractMatrix{<:Real}) = permutedims(a) * b
 # `permutedims` can't be used here since scalar output is desired
@@ -11,14 +13,8 @@ _vec(x::Real) = x
 lower_triangular(A::AbstractMatrix) = convert(typeof(A), LowerTriangular(A))
 upper_triangular(A::AbstractMatrix) = convert(typeof(A), UpperTriangular(A))
 
-function pd_from_lower(X)
-    L = lower_triangular(X)
-    return L * L'
-end
-function pd_from_upper(X)
-    U = upper_triangular(X)
-    return U' * U
-end
+pd_from_lower(X) = PDMat(Cholesky(LowerTriangular(X)))
+pd_from_upper(X) = PDMat(Cholesky(UpperTriangular(X)))
 
 # HACK: Allows us to define custom chain rules while we wait for upstream fixes.
 transpose_eager(X::AbstractMatrix) = permutedims(X)
