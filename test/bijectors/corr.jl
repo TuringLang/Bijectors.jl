@@ -1,5 +1,6 @@
 using Bijectors, DistributionsAD, LinearAlgebra, Test
 using Bijectors: VecCorrBijector, VecCholeskyBijector, CorrBijector
+using Random: Xoshiro
 
 @testset "CorrBijector & VecCorrBijector" begin
     for d in [1, 2, 5]
@@ -42,6 +43,20 @@ using Bijectors: VecCorrBijector, VecCholeskyBijector, CorrBijector
         dist_unconstrained = transformed(MvNormal(zeros(length(tdist)), I), inverse(bvec))
         @test size(dist_unconstrained) == size(x)
         @test dist_unconstrained isa MatrixDistribution
+    end
+
+    @testset "Pathological samples for invlink" begin
+        # see https://github.com/TuringLang/Bijectors.jl/issues/387
+        d = LKJ(3, 3.0)
+        for i in 1:100
+            rng = Xoshiro(i)
+            y = randn(rng, 3) * 15
+            f_inv = inverse(bijector(d))
+            x = f_inv(y)
+            @test logpdf(d, x) isa Float64 # used to crash.
+            x, _ = with_logabsdet_jacobian(f_inv, y)
+            @test logpdf(d, x) isa Float64
+        end
     end
 end
 

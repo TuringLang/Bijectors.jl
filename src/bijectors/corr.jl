@@ -77,7 +77,7 @@ function with_logabsdet_jacobian(ib::Inverse{CorrBijector}, y)
     for j in 2:(K - 1)
         logJ += (K - j) * log(U[j, j])
     end
-    return pd_from_upper(U), logJ
+    return pdmat_from_upper(U), logJ
 end
 
 logabsdetjac(::Inverse{CorrBijector}, Y) = _logabsdetjac_inv_corr(Y)
@@ -136,14 +136,12 @@ function logabsdetjac(b::VecCorrBijector, x)
 end
 
 function with_logabsdet_jacobian(::Inverse{VecCorrBijector}, y)
-    U_logJ = _inv_link_chol_lkj(y)
-    # workaround for `Tracker.TrackedTuple` not supporting iteration
-    U, logJ = U_logJ[1], U_logJ[2]
+    U, logJ = _inv_link_chol_lkj(y)
     K = size(U, 1)
     for j in 2:(K - 1)
         logJ += (K - j) * log(U[j, j])
     end
-    return pd_from_upper(U), logJ
+    return pdmat_from_upper(U), logJ
 end
 
 function logabsdetjac(::Inverse{VecCorrBijector}, y)
