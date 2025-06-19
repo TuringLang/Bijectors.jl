@@ -1,4 +1,5 @@
 using Random: Xoshiro
+using LinearAlgebra
 using ChainRulesTestUtils: ChainRulesCore
 
 # HACK: This is a workaround to test `Bijectors._inv_link_chol_lkj` which produces an
@@ -78,54 +79,104 @@ end
     test_rrule(Bijectors._transform_inverse_ordered, b(rand(5, 2)))
 
     # LKJ and LKJCholesky bijector
-    dist = LKJCholesky(3, 4)
     # Run multiple tests because we're working with `undef` entries, and so we
     # want to make sure that we hit cases where the `undef` entries have different values.
     # It's also just useful to test numerical stability for different realizations of `dist`.
+
+    # NOTE(penelopeysm): https://github.com/TuringLang/Bijectors.jl/pull/357
+    # changed the implementation of _link_chol_lkj... to improve its numerical stability.
+    # The new implementation relies on the fact that the `LKJCholesky` distribution
+    # yields samples for which each column is a unit vector. Naively using FiniteDifferences
+    # to calculate a JVP (as ChainRulesTestUtils.test_rrule does) does not work, because
+    # FD does not know about this constraint.
+    # To solve this, we run the FD part of the test with the inputs projected onto a
+    # subspace that has that constraint encoded. We have to then recover the original
+    # output by un-projecting.
+    # The PR linked above has a more detailed explanation.
     for i in 1:30
-        # Note (penelopeysm): The reimplementation of _link_chol_lkj... in
-        # https://github.com/TuringLang/Bijectors.jl/pull/357 improves its
-        # numerical stability. However, it relies on the fact that each column
-        # of the input matrix is a unit vector, which we cannot express in
-        # code. This messes very thoroughly with FiniteDifferences, which is
-        # what ChainRulesTestUtils uses to test the numerical accuracy of the
-        # rrule.
-        # To get around this, we specify the output tangent used as the input
-        # to the rrule, and scale it down to be close to zero. This helps to
-        # mitigate the numerical issues with FiniteDifferences. We also need to
-        # set an abnormally large atol (the default is 1e-9). Not ideal, but in
-        # general there is no way to get this to work nicely because there is
-        # no way to tell FiniteDifferences about the constraints on the input
-        # matrix.
-        # In practice, I am hoping that it's not a problem because AD isn't
-        # being run directly on the transformation (logabsdetjac directly
-        # returns the relevant term) and the implementation of logabsdetjac
-        # isn't touched.
+        dist = LKJCholesky(3, 4)
         rng = Xoshiro(i)
-        scale = 10
-        x = rand(rng, dist)
-        test_rrule(
-            Bijectors._link_chol_lkj_from_upper,
-            x.U;
-            testset_name="_link_chol_lkj_from_upper on $(typeof(x)) [$i]",
-            output_tangent=rand(rng, 3) / scale,
-            atol=0.15,
-        )
-        test_rrule(
-            Bijectors._link_chol_lkj_from_lower,
-            x.L;
-            testset_name="_link_chol_lkj_from_lower on $(typeof(x)) [$i]",
-            output_tangent=rand(rng, 3) / scale,
-            atol=0.15,
-        )
+        spl = rand(rng, dist)
 
-        b = bijector(dist)
-        y = b(x)
+        @testset "_inv_link_chol_lkj" begin
+            # This one doesn't need the fancy projection bits, so we can just
+            # use test_rrule as usual.
+            x = spl
+            b = bijector(dist)
+            y = b(x)
+            test_rrule(
+                _inv_link_chol_lkj_wrapper,
+                y;
+                testset_name="_inv_link_chol_lkj on $(typeof(x)) [$i]",
+            )
+        end
 
-        test_rrule(
-            _inv_link_chol_lkj_wrapper,
-            y;
-            testset_name="_inv_link_chol_lkj on $(typeof(x)) [$i]",
-        )
+        # Set up a random tangent.
+        ybar = rand(rng, 3) * 10
+        fdm = FiniteDifferences.central_fdm(5, 1)
+
+        # Functions to convert input to/from free parameters
+        to_free_params(x::UpperTriangular) = [x[1, 2], x[1, 3], x[2, 3]]
+        to_free_params(x::LowerTriangular) = [x[2, 1], x[3, 1], x[3, 2]]
+        function from_x_free(x_free::AbstractVector, uplo::Symbol)
+            x = UpperTriangular(zeros(eltype(x_free), 3, 3))
+            x[1, 1] = 1
+            x[1, 2] = x_free[1]
+            x[1, 3] = x_free[2]
+            x[2, 2] = sqrt(1 - x_free[1]^2)
+            x[2, 3] = x_free[3]
+            x[3, 3] = sqrt(1 - x_free[2]^2 - x_free[3]^2)
+            return uplo == :U ? x : transpose(x)
+        end
+        # Function to reconvert the adjoint back into a triangular matrix
+        function fd_xbar_to_cr_xbar(fd_xbar::AbstractVector, uplo::Symbol)
+            x = UpperTriangular(zeros(eltype(fd_xbar), 3, 3))
+            x[1, 2] = fd_xbar[1]
+            x[1, 3] = fd_xbar[2]
+            x[2, 3] = fd_xbar[3]
+            return uplo == :U ? x : transpose(x)
+        end
+
+        @testset "_link_chol_lkj_from_upper" begin
+            f = Bijectors._link_chol_lkj_from_upper
+            x = spl.U
+
+            # test primal is accurate
+            y = f(x)
+            cr_y, cr_pullback = ChainRulesCore.rrule(f, x)
+            @test isapprox(y, cr_y)
+
+            # test that the primal still works when going via free parameters
+            f_via_free(x_free::AbstractVector) = f(from_x_free(x_free, :U))
+            x_free = to_free_params(x)
+            y_via_free = f_via_free(x_free)
+            @test isapprox(y, y_via_free)
+
+            # test pullback
+            cr_xbar = cr_pullback(ybar)[2]
+            fd_xbar = FiniteDifferences.j′vp(fdm, f_via_free, ybar, x_free)[1]
+            @test isapprox(cr_xbar, fd_xbar_to_cr_xbar(fd_xbar, :U))
+        end
+
+        @testset "_link_chol_lkj_from_lower" begin
+            f = Bijectors._link_chol_lkj_from_lower
+            x = spl.L
+
+            # test primal is accurate
+            y = f(x)
+            cr_y, cr_pullback = ChainRulesCore.rrule(f, x)
+            @test isapprox(y, cr_y)
+
+            # test that the primal still works when going via free parameters
+            f_via_free(x_free::AbstractVector) = f(from_x_free(x_free, :L))
+            x_free = to_free_params(x)
+            y_via_free = f_via_free(x_free)
+            @test isapprox(y, y_via_free)
+
+            # test pullback
+            cr_xbar = cr_pullback(ybar)[2]
+            fd_xbar = FiniteDifferences.j′vp(fdm, f_via_free, ybar, x_free)[1]
+            @test isapprox(cr_xbar, fd_xbar_to_cr_xbar(fd_xbar, :L))
+        end
     end
 end
