@@ -9,12 +9,24 @@ aT_b(a::AbstractVector{<:Real}, b::AbstractVector{<:Real}) = dot(a, b)
 _vec(x::AbstractArray{<:Real}) = vec(x)
 _vec(x::Real) = x
 
+# using PDMats.PDMat improves numerical stability of downstream operations,
+# most notably taking the determinant
+pdmat_from_lower(X::AbstractMatrix) = PDMat(Cholesky(LowerTriangular(X)))
+pdmat_from_upper(X::AbstractMatrix) = PDMat(Cholesky(UpperTriangular(X)))
+
 # # Because `ReverseDiff` does not play well with structural matrices.
 lower_triangular(A::AbstractMatrix) = convert(typeof(A), LowerTriangular(A))
 upper_triangular(A::AbstractMatrix) = convert(typeof(A), UpperTriangular(A))
-
-pd_from_lower(X) = PDMat(Cholesky(LowerTriangular(X)))
-pd_from_upper(X) = PDMat(Cholesky(UpperTriangular(X)))
+# TODO: Replace remaining uses of `pd_from_{lower,upper}` with
+# `pdmat_from_{lower,upper}`.
+function pd_from_lower(X)
+    L = lower_triangular(X)
+    return L * L'
+end
+function pd_from_upper(X)
+    U = upper_triangular(X)
+    return U' * U
+end
 
 # HACK: Allows us to define custom chain rules while we wait for upstream fixes.
 transpose_eager(X::AbstractMatrix) = permutedims(X)

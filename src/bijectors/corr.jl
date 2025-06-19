@@ -77,7 +77,7 @@ function with_logabsdet_jacobian(ib::Inverse{CorrBijector}, y)
     for j in 2:(K - 1)
         logJ += (K - j) * log(U[j, j])
     end
-    return pd_from_upper(U), logJ
+    return pdmat_from_upper(U), logJ
 end
 
 logabsdetjac(::Inverse{CorrBijector}, Y) = _logabsdetjac_inv_corr(Y)
@@ -141,7 +141,7 @@ function with_logabsdet_jacobian(::Inverse{VecCorrBijector}, y)
     for j in 2:(K - 1)
         logJ += (K - j) * log(U[j, j])
     end
-    return pd_from_upper(U), logJ
+    return pdmat_from_upper(U), logJ
 end
 
 function logabsdetjac(::Inverse{VecCorrBijector}, y)
