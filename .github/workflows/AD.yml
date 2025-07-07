@@ -30,7 +30,6 @@ jobs:
           - Mooncake
           - Tracker
           - ReverseDiff
-          - Zygote
     steps:
       - uses: actions/checkout@v4
 
