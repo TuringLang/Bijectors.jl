@@ -1,3 +1,5 @@
+using PDMats: PDMat
+
 # `permutedims` seems to work better with AD (cf. KernelFunctions.jl)
 aT_b(a::AbstractVector{<:Real}, b::AbstractMatrix{<:Real}) = permutedims(a) * b
 # `permutedims` can't be used here since scalar output is desired
@@ -7,10 +9,16 @@ aT_b(a::AbstractVector{<:Real}, b::AbstractVector{<:Real}) = dot(a, b)
 _vec(x::AbstractArray{<:Real}) = vec(x)
 _vec(x::Real) = x
 
+# using PDMats.PDMat improves numerical stability of downstream operations,
+# most notably taking the determinant
+pdmat_from_lower(X::AbstractMatrix) = PDMat(Cholesky(LowerTriangular(X)))
+pdmat_from_upper(X::AbstractMatrix) = PDMat(Cholesky(UpperTriangular(X)))
+
 # # Because `ReverseDiff` does not play well with structural matrices.
 lower_triangular(A::AbstractMatrix) = convert(typeof(A), LowerTriangular(A))
 upper_triangular(A::AbstractMatrix) = convert(typeof(A), UpperTriangular(A))
-
+# TODO: Replace remaining uses of `pd_from_{lower,upper}` with
+# `pdmat_from_{lower,upper}`.
 function pd_from_lower(X)
     L = lower_triangular(X)
     return L * L'
@@ -35,6 +43,7 @@ rather than `LowerTriangular`.
     that returns a `Matrix` rather than `LowerTriangular`.
 """
 cholesky_lower(X::AbstractMatrix) = lower_triangular(parent(cholesky(Hermitian(X, :L)).L))
+cholesky_lower(X::PDMat) = cholesky_lower(cholesky(X))
 cholesky_lower(X::Cholesky) = X.L
 
 """
@@ -48,6 +57,7 @@ rather than `UpperTriangular`.
     that returns a `Matrix` rather than `UpperTriangular`.
 """
 cholesky_upper(X::AbstractMatrix) = upper_triangular(parent(cholesky(Hermitian(X)).U))
+cholesky_upper(X::PDMat) = cholesky_upper(cholesky(X))
 cholesky_upper(X::Cholesky) = X.U
 
 """
