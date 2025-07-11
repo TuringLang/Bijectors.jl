@@ -13,7 +13,6 @@ using LogExpFunctions
 using Mooncake
 using ReverseDiff
 using Tracker
-using Zygote
 
 using Random, LinearAlgebra, Test
 

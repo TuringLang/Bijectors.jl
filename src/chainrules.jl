@@ -290,5 +290,6 @@ function ChainRulesCore.rrule(::typeof(pd_from_upper), X::AbstractMatrix)
     end
 end
 
-# Fixes Zygote's issues with `@debug`
+# Fixes AD issues with `@debug`
 ChainRulesCore.@non_differentiable _debug(::Any)
+

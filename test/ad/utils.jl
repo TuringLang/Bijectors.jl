@@ -6,7 +6,6 @@ function test_ad(f, x, broken=(); rtol=1e-6, atol=1e-6)
         if !(
             b in (
                 :ForwardDiff,
-                :Zygote,
                 :Mooncake,
                 :ReverseDiff,
                 :Enzyme,
@@ -29,16 +28,6 @@ function test_ad(f, x, broken=(); rtol=1e-6, atol=1e-6)
             @test_broken ForwardDiff.gradient(f, x) ≈ finitediff rtol = rtol atol = atol
         else
             @test ForwardDiff.gradient(f, x) ≈ finitediff rtol = rtol atol = atol
-        end
-    end
-
-    if AD == "All" || AD == "Zygote"
-        if :Zygote in broken
-            @test_broken Zygote.gradient(f, x)[1] ≈ finitediff rtol = rtol atol = atol
-        else
-            ∇zygote = Zygote.gradient(f, x)[1]
-            @test (all(iszero, finitediff) && ∇zygote === nothing) ||
-                isapprox(∇zygote, finitediff; rtol=rtol, atol=atol)
         end
     end
 
