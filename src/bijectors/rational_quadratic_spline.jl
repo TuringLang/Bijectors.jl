@@ -177,6 +177,10 @@ function transform(b::RationalQuadraticSpline{<:AbstractMatrix}, x::AbstractVect
     ]
 end
 
+function transform(b::RationalQuadraticSpline{<:AbstractMatrix}, x::AbstractMatrix)
+	return mapreduce(b, hcat, eachcol(x))
+end
+
 ##########################
 ### Inverse evaluation ###
 ##########################
