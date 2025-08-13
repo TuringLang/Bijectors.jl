@@ -1,7 +1,7 @@
 module BijectorsMooncakeExt
 
 using Mooncake:
-    @is_primitive, MinimalCtx, Mooncake, CoDual, primal, tangent_type, @from_rrule
+    @is_primitive, MinimalCtx, Mooncake, CoDual, primal, tangent_type, @from_chainrules
 using Bijectors: find_alpha, ChainRulesCore
 
 @from_chainrules(MinimalCtx, Tuple{typeof(find_alpha),Float16,Float16,Float16})
