@@ -1,3 +1,6 @@
+# Figure out which AD backend to test
+const AD = get(ENV, "AD", "All")
+
 function test_ad(f, x, broken=(); rtol=1e-6, atol=1e-6)
     for b in broken
         if !(
