@@ -25,13 +25,13 @@ end
 
         # roundtrip
         test_ad(y -> sum(transform(b, binv(y))), y)
-        # inverse only
-        test_ad(y -> sum(transform(binv, y)), y)
-        # additionally check that cholesky_{upper,lower} is differentiable
+        # inverse (we need to tack on `cholesky_upper`/`cholesky_lower`,
+        # because directly calling `sum` on a LinearAlgebra.Cholesky doesn't
+        # give a scalar)
         if uplo == 'U'
-            test_ad(y -> sum(Bijectors.cholesky_upper(transform(b, y))), y)
+            test_ad(y -> sum(Bijectors.cholesky_upper(transform(binv, y))), y)
         else
-            test_ad(y -> sum(Bijectors.cholesky_lower(transform(b, y))), y)
+            test_ad(y -> sum(Bijectors.cholesky_lower(transform(binv, y))), y)
         end
     end
 end
