@@ -15,6 +15,7 @@ using Bijectors: find_alpha, ChainRulesCore
 # unusual Integer type is encountered.
 @is_primitive(MinimalCtx, Tuple{typeof(find_alpha),P,P,Integer} where {P<:Base.IEEEFloat})
 
+# TODO: This needs a corresponding frule!! as well for it to work on forward-mode Mooncake.
 function Mooncake.rrule!!(
     ::CoDual{typeof(find_alpha)}, x::CoDual{P}, y::CoDual{P}, z::CoDual{I}
 ) where {P<:Base.IEEEFloat,I<:Integer}
