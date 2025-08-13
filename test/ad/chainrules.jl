@@ -31,36 +31,38 @@ end
 
     if @isdefined Mooncake
         rng = Xoshiro(123456)
-        Mooncake.TestUtils.test_rule(
-            rng,
-            Bijectors.find_alpha,
-            x,
-            y,
-            z;
-            is_primitive=true,
-            perf_flag=:none,
-            interp=Mooncake.MooncakeInterpreter(),
-        )
-        Mooncake.TestUtils.test_rule(
-            rng,
-            Bijectors.find_alpha,
-            x,
-            y,
-            3;
-            is_primitive=true,
-            perf_flag=:none,
-            interp=Mooncake.MooncakeInterpreter(),
-        )
-        Mooncake.TestUtils.test_rule(
-            rng,
-            Bijectors.find_alpha,
-            x,
-            y,
-            UInt32(3);
-            is_primitive=true,
-            perf_flag=:none,
-            interp=Mooncake.MooncakeInterpreter(),
-        )
+        @testset "$mode" for mode in (Mooncake.ForwardMode(), Mooncake.ReverseMode())
+            Mooncake.TestUtils.test_rule(
+                rng,
+                Bijectors.find_alpha,
+                x,
+                y,
+                z;
+                is_primitive=true,
+                perf_flag=:none,
+                interp=Mooncake.MooncakeInterpreter(mode),
+            )
+            Mooncake.TestUtils.test_rule(
+                rng,
+                Bijectors.find_alpha,
+                x,
+                y,
+                3;
+                is_primitive=true,
+                perf_flag=:none,
+                interp=Mooncake.MooncakeInterpreter(mode),
+            )
+            Mooncake.TestUtils.test_rule(
+                rng,
+                Bijectors.find_alpha,
+                x,
+                y,
+                UInt32(3);
+                is_primitive=true,
+                perf_flag=:none,
+                interp=Mooncake.MooncakeInterpreter(mode),
+            )
+        end
     end
 
     test_rrule(
