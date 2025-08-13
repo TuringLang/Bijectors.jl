@@ -4,9 +4,9 @@ using Mooncake:
     @is_primitive, MinimalCtx, Mooncake, CoDual, primal, tangent_type, @from_rrule
 using Bijectors: find_alpha, ChainRulesCore
 
-for P in [Float16, Float32, Float64]
-    @from_rrule(MinimalCtx, Tuple{typeof(find_alpha),P,P,P})
-end
+@from_rrule(MinimalCtx, Tuple{typeof(find_alpha),Float16,Float16,Float16})
+@from_rrule(MinimalCtx, Tuple{typeof(find_alpha),Float32,Float32,Float32})
+@from_rrule(MinimalCtx, Tuple{typeof(find_alpha),Float64,Float64,Float64})
 
 # The final argument could be an Integer of some kind. This should be fine provided that
 # it has tangent type equal to `NoTangent`, which means that it's non-differentiable and
