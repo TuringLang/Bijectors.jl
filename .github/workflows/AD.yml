@@ -23,7 +23,6 @@ jobs:
           - '1'
         os:
           - ubuntu-latest
-          - macOS-latest
         AD:
           - Enzyme
           - ForwardDiff
