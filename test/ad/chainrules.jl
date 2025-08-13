@@ -40,7 +40,7 @@ end
                 z;
                 is_primitive=true,
                 perf_flag=:none,
-                interp=Mooncake.MooncakeInterpreter(mode),
+                mode=mode,
             )
             Mooncake.TestUtils.test_rule(
                 rng,
@@ -50,7 +50,7 @@ end
                 3;
                 is_primitive=true,
                 perf_flag=:none,
-                interp=Mooncake.MooncakeInterpreter(mode),
+                mode=mode,
             )
             Mooncake.TestUtils.test_rule(
                 rng,
@@ -60,7 +60,7 @@ end
                 UInt32(3);
                 is_primitive=true,
                 perf_flag=:none,
-                interp=Mooncake.MooncakeInterpreter(mode),
+                mode=mode,
             )
         end
     end
