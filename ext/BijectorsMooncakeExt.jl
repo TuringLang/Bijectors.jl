@@ -1,12 +1,12 @@
 module BijectorsMooncakeExt
 
 using Mooncake:
-    @is_primitive, MinimalCtx, Mooncake, CoDual, primal, tangent_type, @from_rrule
+    @is_primitive, MinimalCtx, Mooncake, CoDual, primal, tangent_type, @from_chainrules
 using Bijectors: find_alpha, ChainRulesCore
 
-for P in [Float16, Float32, Float64]
-    @from_rrule(MinimalCtx, Tuple{typeof(find_alpha),P,P,P})
-end
+@from_chainrules(MinimalCtx, Tuple{typeof(find_alpha),Float16,Float16,Float16})
+@from_chainrules(MinimalCtx, Tuple{typeof(find_alpha),Float32,Float32,Float32})
+@from_chainrules(MinimalCtx, Tuple{typeof(find_alpha),Float64,Float64,Float64})
 
 # The final argument could be an Integer of some kind. This should be fine provided that
 # it has tangent type equal to `NoTangent`, which means that it's non-differentiable and
@@ -15,6 +15,7 @@ end
 # unusual Integer type is encountered.
 @is_primitive(MinimalCtx, Tuple{typeof(find_alpha),P,P,Integer} where {P<:Base.IEEEFloat})
 
+# TODO: This needs a corresponding frule!! as well for it to work on forward-mode Mooncake.
 function Mooncake.rrule!!(
     ::CoDual{typeof(find_alpha)}, x::CoDual{P}, y::CoDual{P}, z::CoDual{I}
 ) where {P<:Base.IEEEFloat,I<:Integer}
