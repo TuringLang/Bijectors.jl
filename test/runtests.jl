@@ -70,7 +70,9 @@ end
 
 if GROUP == "All" || GROUP == "AD"
     include("ad/chainrules.jl")
-    include("ad/enzyme.jl")
+    if get(ENV, "AD", "All") in ("All", "Enzyme")
+        include("ad/enzyme.jl")
+    end
     include("ad/flows.jl")
     include("ad/pd.jl")
     include("ad/corr.jl")
