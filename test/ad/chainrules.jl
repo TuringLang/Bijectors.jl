@@ -31,7 +31,7 @@ end
 
     if @isdefined Mooncake
         rng = Xoshiro(123456)
-        @testset "$mode" for mode in (Mooncake.ForwardMode(), Mooncake.ReverseMode())
+        @testset "$mode" for mode in (Mooncake.ForwardMode, Mooncake.ReverseMode)
             Mooncake.TestUtils.test_rule(
                 rng,
                 Bijectors.find_alpha,
