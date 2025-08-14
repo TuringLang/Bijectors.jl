@@ -90,4 +90,3 @@ if GROUP == "All" || GROUP == "Doctests"
         Documenter.doctest(Bijectors; manual=false, doctestfilters=doctestfilters)
     end
 end
-
