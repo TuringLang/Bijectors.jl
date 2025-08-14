@@ -17,7 +17,8 @@ using Test
             Ty in (Const, Duplicated),
             Tz in (Const, Duplicated)
 
-            if VERSION >= v"1.11" && (!(RT <: Const) || (Tx <: Const && Ty <: Const && Tz <: Const))
+            if VERSION >= v"1.11" &&
+                (!(RT <: Const) || (Tx <: Const && Ty <: Const && Tz <: Const))
                 # https://github.com/EnzymeAD/Enzyme.jl/issues/2121
                 # https://github.com/TuringLang/Bijectors.jl/pull/350#issuecomment-2470766968
                 #
@@ -38,7 +39,8 @@ using Test
             Ty in (Const, BatchDuplicated),
             Tz in (Const, BatchDuplicated)
 
-            if VERSION >= v"1.11" && (!(RT <: Const) || (Tx <: Const && Ty <: Const && Tz <: Const))
+            if VERSION >= v"1.11" &&
+                (!(RT <: Const) || (Tx <: Const && Ty <: Const && Tz <: Const))
                 # See above
                 continue
             else
