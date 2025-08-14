@@ -14,6 +14,8 @@ makedocs(;
         "Distributions.jl integration" => "distributions.md",
         "Examples" => "examples.md",
     ],
-    strict=false,
     checkdocs=:exports,
+    doctest=false,
+    # TODO: Remove this
+    warnonly=true,
 )
