@@ -1,6 +1,6 @@
 _topd(x) = x * x' + I
 
-@testset "AD for PDVecBijector" begin
+@testset "PDVecBijector: $backend_name" for (backend_name, adtype) in TEST_ADTYPES
     d = 4
     b = Bijectors.PDVecBijector()
     binv = inverse(b)
@@ -9,21 +9,11 @@ _topd(x) = x * x' + I
     x = _topd(z)
     y = b(x)
 
-    test_ad(vec(z)) do x
-        sum(transform(b, _topd(reshape(x, d, d))))
-    end
+    test_ad(x -> sum(transform(b, _topd(reshape(x, d, d)))), adtype, vec(z))
+    test_ad(y -> sum(transform(binv, y)), adtype, y)
 
-    test_ad(y) do y
-        sum(transform(binv, y))
-    end
-
-    if AD == "ReverseDiff" # `AD` is defined in `test/ad/utils.jl`. 
-        test_ad(y) do y
-            sum(Bijectors.cholesky_lower(transform(binv, y)))
-        end
-
-        test_ad(y) do y
-            sum(Bijectors.cholesky_upper(transform(binv, y)))
-        end
-    end
+    # if occursin("ReverseDiff", backend_name)
+    test_ad(y -> sum(Bijectors.cholesky_lower(transform(binv, y))), adtype, y)
+    test_ad(y -> sum(Bijectors.cholesky_upper(transform(binv, y))), adtype, y)
+    # end
 end

@@ -33,6 +33,7 @@ using InverseFunctions: InverseFunctions
 using LazyArrays: LazyArrays
 
 const GROUP = get(ENV, "GROUP", "All")
+const IS_PRERELEASE = !isempty(VERSION.prerelease)
 
 # Always include this since it can be useful for other tests.
 include("ad/utils.jl")
@@ -52,7 +53,6 @@ if GROUP == "All" || GROUP == "Interface"
     include("bijectors/reshape.jl")
     include("bijectors/corr.jl")
     include("bijectors/product_bijector.jl")
-
     include("distributionsad.jl")
 
     @testset "doctests" begin
@@ -68,13 +68,20 @@ if GROUP == "All" || GROUP == "Interface"
     end
 end
 
+TEST_ADTYPES = [
+    ("ForwardDiff", AutoForwardDiff()),
+    ("ReverseDiff", AutoReverseDiff(; compile=false)),
+    ("ReverseDiffCompiled", AutoReverseDiff(; compile=true)),
+]
+if !IS_PRERELEASE
+    push!(TEST_ADTYPES, ("Mooncake", AutoMooncake()))
+end
+
 if GROUP == "All" || GROUP == "AD"
     include("ad/chainrules.jl")
-    if get(ENV, "AD", "All") in ("All", "Enzyme")
-        include("ad/enzyme.jl")
-    end
     include("ad/flows.jl")
     include("ad/pd.jl")
     include("ad/corr.jl")
     include("ad/stacked.jl")
+    include("ad/enzyme.jl")
 end

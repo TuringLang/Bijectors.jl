@@ -1,4 +1,4 @@
-name: Interface tests
+name: CI
 
 on:
   push:
@@ -23,12 +23,17 @@ jobs:
           - '1'
         os:
           - ubuntu-latest
+        group:
+          - 'Interface'
+          - 'AD'
+
     steps:
       - uses: actions/checkout@v4
       - uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.version }}
+      - uses: julia-actions/cache@v2
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
         env:
-          GROUP: Interface
+          GROUP: ${{ matrix.group }}
