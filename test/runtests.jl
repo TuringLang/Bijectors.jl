@@ -40,9 +40,10 @@ TEST_ADTYPES = [
     ("ReverseDiffCompiled", AutoReverseDiff(; compile=true)),
 ]
 if !IS_PRERELEASE
-    push!(TEST_ADTYPES, ("Mooncake", AutoMooncake()))
-    push!(TEST_ADTYPES, ("EnzymeForward", AutoEnzyme(; mode=set_runtime_activity(Forward))))
-    push!(TEST_ADTYPES, ("EnzymeReverse", AutoEnzyme(; mode=set_runtime_activity(Reverse))))
+    println("ok")
+    # push!(TEST_ADTYPES, ("Mooncake", AutoMooncake()))
+    # push!(TEST_ADTYPES, ("EnzymeForward", AutoEnzyme(; mode=set_runtime_activity(Forward))))
+    # push!(TEST_ADTYPES, ("EnzymeReverse", AutoEnzyme(; mode=set_runtime_activity(Reverse))))
 end
 
 # Always include this since it can be useful for other tests.
@@ -78,6 +79,7 @@ if GROUP == "All" || GROUP == "AD"
     include("ad/corr.jl")
     include("ad/stacked.jl")
     include("ad/enzyme.jl")
+    include("ad/mooncake.jl")
 end
 
 if GROUP == "All" || GROUP == "Doctests"

@@ -1,6 +1,10 @@
-using Random: Xoshiro
+module BijectorsChainRulesTests
+
+using Bijectors
 using LinearAlgebra
-using ChainRulesTestUtils: ChainRulesCore
+using ChainRulesTestUtils: ChainRulesCore, test_frule, test_rrule, ⊢, ChainRulesTestUtils
+using Random: Xoshiro
+using Test
 
 # HACK: This is a workaround to test `Bijectors._inv_link_chol_lkj` which produces an
 # upper-triangular `Matrix`, leading to `test_rrule` comaring the _full_ `Matrix`,
@@ -28,43 +32,6 @@ end
     z = randn()
     test_frule(Bijectors.find_alpha, x, y, z)
     test_rrule(Bijectors.find_alpha, x, y, z)
-
-    if @isdefined Mooncake
-        rng = Xoshiro(123456)
-        # TODO: Enable Mooncake.ForwardMode as well.
-        @testset "$mode" for mode in (Mooncake.ReverseMode,)
-            Mooncake.TestUtils.test_rule(
-                rng,
-                Bijectors.find_alpha,
-                x,
-                y,
-                z;
-                is_primitive=true,
-                perf_flag=:none,
-                mode=mode,
-            )
-            Mooncake.TestUtils.test_rule(
-                rng,
-                Bijectors.find_alpha,
-                x,
-                y,
-                3;
-                is_primitive=true,
-                perf_flag=:none,
-                mode=mode,
-            )
-            Mooncake.TestUtils.test_rule(
-                rng,
-                Bijectors.find_alpha,
-                x,
-                y,
-                UInt32(3);
-                is_primitive=true,
-                perf_flag=:none,
-                mode=mode,
-            )
-        end
-    end
 
     test_rrule(
         Bijectors.combine,
@@ -183,3 +150,5 @@ end
         end
     end
 end
+
+end # module BijectorsChainRulesTests
