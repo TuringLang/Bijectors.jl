@@ -14,15 +14,19 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.runner.os }}
     strategy:
       fail-fast: false
       matrix:
-        version:
-          - 'min'
-          - '1'
-        os:
-          - ubuntu-latest
+        runner:
+          - version: '1'
+            os: 'ubuntu-latest'
+          - version: '1'
+            os: 'macos-latest'
+          - version: '1'
+            os: 'windows-latest'
+          - version: 'min'
+            os: 'ubuntu-latest'
         group:
           - 'Interface'
           - 'AD'
@@ -31,7 +35,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: julia-actions/setup-julia@v2
         with:
-          version: ${{ matrix.version }}
+          version: ${{ matrix.runner.version }}
       - uses: julia-actions/cache@v2
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
