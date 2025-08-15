@@ -1,3 +1,10 @@
+module BijectorsEnzymeRulesTests
+
+using Bijectors
+using Enzyme
+using EnzymeTestUtils: test_forward, test_reverse
+using Test
+
 @testset "Enzyme: Bijectors.find_alpha" begin
     x = randn()
     y = expm1(randn())
@@ -10,13 +17,20 @@
             Ty in (Const, Duplicated),
             Tz in (Const, Duplicated)
 
-            # Rule not picked up by Enzyme on Julia 1.11?!
-            # Ref https://github.com/TuringLang/Bijectors.jl/pull/350#issuecomment-2470766968
-            if VERSION >= v"1.11" && Tx <: Const && Ty <: Const && Tz <: Const
+            if VERSION >= v"1.11" &&
+                (!(RT <: Const) || (Tx <: Const && Ty <: Const && Tz <: Const))
+                # https://github.com/EnzymeAD/Enzyme.jl/issues/2121
+                # https://github.com/TuringLang/Bijectors.jl/pull/350#issuecomment-2470766968
+                #
+                # Ideally we'd use `@test_throws`. However, that doesn't work
+                # because `test_forward` itself calls `@test`, and the error is
+                # captured by that `@test`, not our `@test_throws`.
+                # Consequently `@test_throws` doesn't actually see any error.
+                # Weird Julia behaviour.
                 continue
+            else
+                test_forward(Bijectors.find_alpha, RT, (x, Tx), (y, Ty), (z, Tz))
             end
-
-            test_forward(Bijectors.find_alpha, RT, (x, Tx), (y, Ty), (z, Tz))
         end
 
         # Batches
@@ -25,13 +39,13 @@
             Ty in (Const, BatchDuplicated),
             Tz in (Const, BatchDuplicated)
 
-            # Rule not picked up by Enzyme on Julia 1.11?!
-            # Ref https://github.com/TuringLang/Bijectors.jl/pull/350#issuecomment-2470766968
-            if VERSION >= v"1.11" && Tx <: Const && Ty <: Const && Tz <: Const
+            if VERSION >= v"1.11" &&
+                (!(RT <: Const) || (Tx <: Const && Ty <: Const && Tz <: Const))
+                # See above
                 continue
+            else
+                test_forward(Bijectors.find_alpha, RT, (x, Tx), (y, Ty), (z, Tz))
             end
-
-            test_forward(Bijectors.find_alpha, RT, (x, Tx), (y, Ty), (z, Tz))
         end
     end
     @testset "reverse" begin
@@ -41,11 +55,18 @@
             Ty in (Const, Active),
             Tz in (Const, Active)
 
-            test_reverse(Bijectors.find_alpha, RT, (x, Tx), (y, Ty), (z, Tz))
+            if VERSION >= v"1.11"
+                # See above
+                continue
+            else
+                test_reverse(Bijectors.find_alpha, RT, (x, Tx), (y, Ty), (z, Tz))
+            end
         end
 
         # TODO: Test batch mode
         # This is a bit problematic since Enzyme does not support all combinations of activities currently
         # https://github.com/TuringLang/Bijectors.jl/pull/350#issuecomment-2480468728
     end
+end
+
 end
