@@ -1,6 +1,8 @@
 using Enzyme: ForwardMode
 
 @testset "PlanarLayer: $backend_name" for (backend_name, adtype) in TEST_ADTYPES
+    ENZYME_FWD_AND_1p11 = VERSION >= v"1.11" && adtype isa AutoEnzyme{<:ForwardMode}
+
     # logpdf of a flow with a planar layer and two-dimensional inputs
     function f(θ)
         layer = PlanarLayer(θ[1:2], θ[3:4], θ[5:5])
@@ -8,7 +10,7 @@ using Enzyme: ForwardMode
         x = θ[6:7]
         return logpdf(flow.dist, x) - logabsdetjac(flow.transform, x)
     end
-    if adtype isa AutoEnzyme{<:ForwardMode}
+    if ENZYME_FWD_AND_1p11
         @test_throws Enzyme.Compiler.EnzymeInternalError test_ad(f, adtype, randn(7))
     else
         test_ad(f, adtype, randn(7))
@@ -20,7 +22,7 @@ using Enzyme: ForwardMode
         x = reshape(θ[6:end], 2, :)
         return sum(logpdf(flow.dist, x) - logabsdetjac(flow.transform, x))
     end
-    if adtype isa AutoEnzyme{<:ForwardMode}
+    if ENZYME_FWD_AND_1p11
         @test_throws Enzyme.Compiler.EnzymeInternalError test_ad(g, adtype, randn(11))
     else
         test_ad(g, adtype, randn(11))
@@ -33,7 +35,7 @@ using Enzyme: ForwardMode
         x = θ[6:7]
         return logpdf(flow.dist, x) - logabsdetjac(flow.transform, x)
     end
-    if adtype isa AutoEnzyme{<:ForwardMode}
+    if ENZYME_FWD_AND_1p11
         @test_throws Enzyme.Compiler.EnzymeInternalError test_ad(f, adtype, randn(7))
     else
         test_ad(f, adtype, randn(7))
@@ -45,7 +47,7 @@ using Enzyme: ForwardMode
         x = reshape(θ[6:end], 2, :)
         return sum(logpdf(flow.dist, x) - logabsdetjac(flow.transform, x))
     end
-    if adtype isa AutoEnzyme{<:ForwardMode}
+    if ENZYME_FWD_AND_1p11
         @test_throws Enzyme.Compiler.EnzymeInternalError test_ad(g, adtype, randn(11))
     else
         test_ad(g, adtype, randn(11))
