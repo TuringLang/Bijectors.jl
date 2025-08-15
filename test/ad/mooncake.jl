@@ -13,24 +13,10 @@ rng = Xoshiro(123456)
 # TODO: Enable Mooncake.ForwardMode as well.
 @testset "Mooncake $mode: find_alpha" for mode in (Mooncake.ReverseMode,)
     Mooncake.TestUtils.test_rule(
-        rng,
-        Bijectors.find_alpha,
-        x,
-        y,
-        z;
-        is_primitive=true,
-        perf_flag=:none,
-        mode=mode,
+        rng, Bijectors.find_alpha, x, y, z; is_primitive=true, perf_flag=:none, mode=mode
     )
     Mooncake.TestUtils.test_rule(
-        rng,
-        Bijectors.find_alpha,
-        x,
-        y,
-        3;
-        is_primitive=true,
-        perf_flag=:none,
-        mode=mode,
+        rng, Bijectors.find_alpha, x, y, 3; is_primitive=true, perf_flag=:none, mode=mode
     )
     Mooncake.TestUtils.test_rule(
         rng,

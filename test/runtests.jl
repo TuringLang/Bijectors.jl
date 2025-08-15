@@ -42,10 +42,17 @@ TEST_ADTYPES = [
 if !IS_PRERELEASE
     # Mooncake and Enzyme tend to be unstable on prerelease, so only
     # run these on stable Julia releases
-    TEST_ADTYPES = [TEST_ADTYPES...,
+    TEST_ADTYPES = [
+        TEST_ADTYPES...,
         ("Mooncake", AutoMooncake()),
-        ("EnzymeForward", AutoEnzyme(; mode=set_runtime_activity(Forward), function_annotation=Const)),
-        ("EnzymeReverse", AutoEnzyme(; mode=set_runtime_activity(Reverse), function_annotation=Const)),
+        (
+            "EnzymeForward",
+            AutoEnzyme(; mode=set_runtime_activity(Forward), function_annotation=Const),
+        ),
+        (
+            "EnzymeReverse",
+            AutoEnzyme(; mode=set_runtime_activity(Reverse), function_annotation=Const),
+        ),
     ]
 end
 
