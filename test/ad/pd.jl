@@ -11,9 +11,6 @@ _topd(x) = x * x' + I
 
     test_ad(x -> sum(transform(b, _topd(reshape(x, d, d)))), adtype, vec(z))
     test_ad(y -> sum(transform(binv, y)), adtype, y)
-
-    # if occursin("ReverseDiff", backend_name)
     test_ad(y -> sum(Bijectors.cholesky_lower(transform(binv, y))), adtype, y)
     test_ad(y -> sum(Bijectors.cholesky_upper(transform(binv, y))), adtype, y)
-    # end
 end

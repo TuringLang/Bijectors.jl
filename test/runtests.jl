@@ -5,7 +5,7 @@ using Combinatorics
 using DifferentiationInterface
 using DistributionsAD
 using Documenter: Documenter
-using Enzyme: set_runtime_activity, Forward, Reverse
+using Enzyme: Enzyme, set_runtime_activity, Forward, Reverse, Const
 using FiniteDifferences
 using ForwardDiff
 using Functors
@@ -40,10 +40,13 @@ TEST_ADTYPES = [
     ("ReverseDiffCompiled", AutoReverseDiff(; compile=true)),
 ]
 if !IS_PRERELEASE
-    println("ok")
-    # push!(TEST_ADTYPES, ("Mooncake", AutoMooncake()))
-    # push!(TEST_ADTYPES, ("EnzymeForward", AutoEnzyme(; mode=set_runtime_activity(Forward))))
-    # push!(TEST_ADTYPES, ("EnzymeReverse", AutoEnzyme(; mode=set_runtime_activity(Reverse))))
+    # Mooncake and Enzyme tend to be unstable on prerelease, so only
+    # run these on stable Julia releases
+    TEST_ADTYPES = [TEST_ADTYPES...,
+        ("Mooncake", AutoMooncake()),
+        ("EnzymeForward", AutoEnzyme(; mode=set_runtime_activity(Forward), function_annotation=Const)),
+        ("EnzymeReverse", AutoEnzyme(; mode=set_runtime_activity(Reverse), function_annotation=Const)),
+    ]
 end
 
 # Always include this since it can be useful for other tests.
@@ -67,19 +70,25 @@ if GROUP == "All" || GROUP == "Interface"
 end
 
 if GROUP == "All" || GROUP == "AD"
+    # These tests specifically check the implementation of AD backend rules.
+    include("ad/chainrules.jl")
+    if !IS_PRERELEASE
+        include("ad/enzyme.jl")
+        include("ad/mooncake.jl")
+    end
+
+    # These tests check that AD can differentiate through Bijectors
+    # functionality without explicit rules.
     const REF_BACKEND = AutoFiniteDifferences(; fdm=central_fdm(5, 1))
     function test_ad(f, backend, x; rtol=1e-6, atol=1e-6)
         ref_gradient = DifferentiationInterface.gradient(f, REF_BACKEND, x)
         gradient = DifferentiationInterface.gradient(f, backend, x)
         @test isapprox(gradient, ref_gradient; rtol=rtol, atol=atol)
     end
-    include("ad/chainrules.jl")
     include("ad/flows.jl")
     include("ad/pd.jl")
     include("ad/corr.jl")
     include("ad/stacked.jl")
-    include("ad/enzyme.jl")
-    include("ad/mooncake.jl")
 end
 
 if GROUP == "All" || GROUP == "Doctests"

@@ -3,6 +3,7 @@ module BijectorsChainRulesTests
 using Bijectors
 using LinearAlgebra
 using ChainRulesTestUtils: ChainRulesCore, test_frule, test_rrule, ⊢, ChainRulesTestUtils
+using FiniteDifferences: FiniteDifferences
 using Random: Xoshiro
 using Test
 
