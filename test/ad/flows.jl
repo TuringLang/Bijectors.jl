@@ -11,6 +11,7 @@ using Enzyme: ForwardMode
         return logpdf(flow.dist, x) - logabsdetjac(flow.transform, x)
     end
     if ENZYME_FWD_AND_1p11
+        # TODO: Report this upstream (or check if it's already been reported)
         @test_throws Enzyme.Compiler.EnzymeInternalError test_ad(f, adtype, randn(7))
     else
         test_ad(f, adtype, randn(7))
