@@ -9,17 +9,10 @@ using Enzyme: ForwardMode
         x = rand(dist)
         y = b(x)
 
-        if adtype isa AutoEnzyme{<:ForwardMode} && d == 1
-            # For d == 1, y has length 0, and DI doesn't handle this well
-            # https://github.com/JuliaDiff/DifferentiationInterface.jl/issues/802
-            @test_throws DivideError test_ad(y -> sum(transform(b, binv(y))), adtype, y)
-            @test_throws DivideError test_ad(y -> sum(transform(binv, y)), adtype, y)
-        else
-            # roundtrip
-            test_ad(y -> sum(transform(b, binv(y))), adtype, y)
-            # inverse only
-            test_ad(y -> sum(transform(binv, y)), adtype, y)
-        end
+        # roundtrip
+        test_ad(y -> sum(transform(b, binv(y))), adtype, y)
+        # inverse only
+        test_ad(y -> sum(transform(binv, y)), adtype, y)
     end
 end
 
