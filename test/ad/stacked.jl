@@ -1,4 +1,4 @@
-@testset "AD for StackedBijector" begin
+@testset "StackedBijector: $backend_name" for (backend_name, adtype) in TEST_ADTYPES
     dist1 = Dirichlet(4, 1.0)
     b1 = bijector(dist1)
 
@@ -17,22 +17,12 @@
     y = vcat(y1, [y2])
     x = binv(y)
 
-    test_ad(y) do x
-        sum(transform(b, binv(x)))
-    end
-
-    test_ad(y) do y
-        sum(transform(binv, y))
-    end
+    test_ad(y -> sum(transform(b, binv(y))), adtype, y)
+    test_ad(y -> sum(transform(binv, y)), adtype, y)
 
     bvec = Stacked([b1, b2], [1:4, 5:5])
     bvec_inv = inverse(bvec)
 
-    test_ad(y) do x
-        sum(transform(bvec, binv(x)))
-    end
-
-    test_ad(y) do y
-        sum(transform(bvec_inv, y))
-    end
+    test_ad(y -> sum(transform(bvec, binv(y))), adtype, y)
+    test_ad(y -> sum(transform(bvec_inv, y)), adtype, y)
 end
