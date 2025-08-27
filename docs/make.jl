@@ -17,3 +17,8 @@ makedocs(;
     strict=false,
     checkdocs=:exports,
 )
+
+deploydocs(;
+    repo="github.com/TuringLang/Bijectors.jl.git",
+    push_preview=true,
+)
