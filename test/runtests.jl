@@ -12,7 +12,6 @@ using Functors
 using LogExpFunctions
 using Mooncake
 using ReverseDiff
-using Tracker
 
 using Random, LinearAlgebra, Test
 
