@@ -113,7 +113,7 @@ function eachcolmaphcat(f, x)
     return reduce(hcat, drop(out, 1); init=init)
 end
 function sumeachcol(f, x1, x2)
-    # Using a view below for x1 breaks Tracker
+    # Using a view below for x1 breaks some AD backends
     return sum(f(x1[:, i], x2[i]) for i in 1:size(x1, 2))
 end
 
@@ -351,7 +351,7 @@ include("utils.jl")
 include("interface.jl")
 include("chainrules.jl")
 
-# Broadcasting here breaks Tracker for some reason
+# Broadcasting here breaks some AD backends for certain array types
 maporbroadcast(f, x::AbstractArray{<:Any,N}...) where {N} = map(f, x...)
 maporbroadcast(f, x::AbstractArray...) = f.(x...)
 

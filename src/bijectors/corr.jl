@@ -137,7 +137,7 @@ end
 
 function with_logabsdet_jacobian(::Inverse{VecCorrBijector}, y)
     U_logJ = _inv_link_chol_lkj(y)
-    # workaround for `Tracker.TrackedTuple` not supporting iteration
+    # workaround for tuples that don't support iteration in certain AD backends
     U, logJ = U_logJ[1], U_logJ[2]
     K = size(U, 1)
     for j in 2:(K - 1)
