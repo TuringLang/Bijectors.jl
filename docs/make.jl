@@ -6,9 +6,7 @@ DocMeta.setdocmeta!(Bijectors, :DocTestSetup, :(using Bijectors); recursive=true
 
 makedocs(;
     sitename="Bijectors",
-    format=Documenter.HTML(
-        edit_link="main"
-    ),
+    format=Documenter.HTML(),
     modules=[Bijectors],
     pages=[
         "Home" => "index.md",
@@ -17,9 +15,4 @@ makedocs(;
         "Examples" => "examples.md",
     ],
     checkdocs=:exports,
-)
-
-deploydocs(;
-    repo="github.com/TuringLang/Bijectors.jl.git",
-    devbranch="main",
 )
