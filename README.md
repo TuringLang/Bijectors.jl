@@ -14,34 +14,7 @@ See the [documentation](https://turinglang.github.io/Bijectors.jl) for more.
 
 ## Development
 
-### Running Tests Locally
-
-To reproduce CI test failures locally, use the following commands:
-
-```bash
-# Install dependencies
-julia --project=. -e "using Pkg; Pkg.instantiate()"
-
-# Interface tests (reproduces "Interface tests" CI workflow)
-julia --project=. -e "ENV[\"GROUP\"] = \"Interface\"; using Pkg; Pkg.test()"
-
-# AD tests with specific backend (reproduces "AD tests" CI workflow)
-# Replace "ReverseDiff" with the specific AD backend from the failing CI job
-julia --project=. -e "ENV[\"GROUP\"] = \"AD\"; ENV[\"AD\"] = \"ReverseDiff\"; using Pkg; Pkg.test()"
-
-# Other AD backends available:
-# julia --project=. -e "ENV[\"GROUP\"] = \"AD\"; ENV[\"AD\"] = \"ForwardDiff\"; using Pkg; Pkg.test()"
-# julia --project=. -e "ENV[\"GROUP\"] = \"AD\"; ENV[\"AD\"] = \"Mooncake\"; using Pkg; Pkg.test()"
-# julia --project=. -e "ENV[\"GROUP\"] = \"AD\"; ENV[\"AD\"] = \"Tracker\"; using Pkg; Pkg.test()"
-# julia --project=. -e "ENV[\"GROUP\"] = \"AD\"; ENV[\"AD\"] = \"Enzyme\"; using Pkg; Pkg.test()"
-
-# Run all tests
-julia --project=. -e "using Pkg; Pkg.test()"
-```
-
-**Note**: When reproducing CI failures, ensure you use the correct environment variables (`GROUP` and `AD`) and always include `--project=.` in your Julia commands. These are required for the tests to run in the same configuration as CI.
-
-For more detailed development instructions, see [CONTRIBUTING.md](CONTRIBUTING.md).
+For development instructions, including how to reproduce CI test failures locally, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Do you want to contribute?
 
