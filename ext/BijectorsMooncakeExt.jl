@@ -15,7 +15,33 @@ using Bijectors: find_alpha, ChainRulesCore
 # unusual Integer type is encountered.
 @is_primitive(MinimalCtx, Tuple{typeof(find_alpha),P,P,Integer} where {P<:Base.IEEEFloat})
 
-# TODO: This needs a corresponding frule!! as well for it to work on forward-mode Mooncake.
+function Mooncake.frule!!(
+    f::Mooncake.Dual{typeof(find_alpha)},
+    x::Mooncake.Dual{P},
+    y::Mooncake.Dual{P},
+    z::Mooncake.Dual{I},
+) where {P<:Base.IEEEFloat,I<:Integer}
+    # Require that the integer is non-differentiable.
+    if !(Mooncake.tangent(z) isa Mooncake.NoTangent)
+        msg = "Integer argument has tangent type $(typeof(Mooncake.tangent(z))), should be NoTangent."
+        throw(ArgumentError(msg))
+    end
+    # Convert Mooncake.NoTangent to ChainRulesCore.NoTangent for the integer argument
+    out, tangent_out = ChainRulesCore.frule(
+        (
+            ChainRulesCore.NoTangent(),
+            Mooncake.tangent(x),
+            Mooncake.tangent(y),
+            ChainRulesCore.NoTangent(),
+        ),
+        find_alpha,
+        Mooncake.primal(x),
+        Mooncake.primal(y),
+        Mooncake.primal(z),
+    )
+    return Mooncake.Dual(out, tangent_out)
+end
+
 function Mooncake.rrule!!(
     ::CoDual{typeof(find_alpha)}, x::CoDual{P}, y::CoDual{P}, z::CoDual{I}
 ) where {P<:Base.IEEEFloat,I<:Integer}
