@@ -139,7 +139,7 @@ deps(b::NamedCoupling{<:Any,Deps}) where {Deps} = Deps
     return quote
         b = nc.f($([:(x.$d) for d in deps]...))
         x_target, logjac = with_logabsdet_jacobian(b, x.$target)
-        return merge(x, ($target=x_target,)), logjac
+        return merge(x, (($target)=x_target,)), logjac
     end
 end
 
@@ -149,6 +149,6 @@ end
     return quote
         ib = inverse(ni.orig.f($([:(x.$d) for d in deps]...)))
         x_target, logjac = with_logabsdet_jacobian(ib, x.$target)
-        return merge(x, ($target=x_target,)), logjac
+        return merge(x, (($target)=x_target,)), logjac
     end
 end

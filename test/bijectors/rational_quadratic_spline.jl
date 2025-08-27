@@ -46,7 +46,7 @@ using LogExpFunctions
 
         # Outside of domain
         x = 5.0
-        test_bijector(b, -x; y=-x, logjac=0)
+        test_bijector(b, -x; y=(-x), logjac=0)
         test_bijector(b, x; y=x, logjac=0)
 
         # multivariate
