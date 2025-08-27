@@ -45,9 +45,6 @@ julia --project=. -e "ENV[\"GROUP\"] = \"AD\"; ENV[\"AD\"] = \"ForwardDiff\"; us
 # ReverseDiff  
 julia --project=. -e "ENV[\"GROUP\"] = \"AD\"; ENV[\"AD\"] = \"ReverseDiff\"; using Pkg; Pkg.test()"
 
-# Tracker
-julia --project=. -e "ENV[\"GROUP\"] = \"AD\"; ENV[\"AD\"] = \"Tracker\"; using Pkg; Pkg.test()"
-
 # Enzyme (may fail on some systems - this is expected)
 julia --project=. -e "ENV[\"GROUP\"] = \"AD\"; ENV[\"AD\"] = \"Enzyme\"; using Pkg; Pkg.test()"
 
@@ -66,7 +63,7 @@ julia --project=. -e "using Pkg; Pkg.test()"
 Our CI runs tests with the following configurations:
 
   - **Interface tests**: Core functionality tests (GROUP=Interface)
-  - **AD tests**: Automatic differentiation tests with multiple backends (GROUP=AD, AD={ForwardDiff,ReverseDiff,Tracker,Enzyme,Mooncake})
+  - **AD tests**: Automatic differentiation tests with multiple backends (GROUP=AD, AD={ForwardDiff,ReverseDiff,Enzyme,Mooncake})
 
 ### Important Notes
 
