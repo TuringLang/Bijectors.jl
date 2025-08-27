@@ -16,14 +16,14 @@ using Bijectors: find_alpha, ChainRulesCore
 @is_primitive(MinimalCtx, Tuple{typeof(find_alpha),P,P,Integer} where {P<:Base.IEEEFloat})
 
 function Mooncake.frule!!(
-    f::Mooncake.Dual{typeof(find_alpha)},
+    ::Mooncake.Dual{typeof(find_alpha)},
     x::Mooncake.Dual{P},
     y::Mooncake.Dual{P},
     z::Mooncake.Dual{I},
 ) where {P<:Base.IEEEFloat,I<:Integer}
     # Require that the integer is non-differentiable.
-    if !(Mooncake.tangent(z) isa Mooncake.NoTangent)
-        msg = "Integer argument has tangent type $(typeof(Mooncake.tangent(z))), should be NoTangent."
+    if tangent_type(I) != Mooncake.NoTangent
+        msg = "Integer argument has tangent type $(tangent_type(I)), should be NoTangent."
         throw(ArgumentError(msg))
     end
     # Convert Mooncake.NoTangent to ChainRulesCore.NoTangent for the integer argument
