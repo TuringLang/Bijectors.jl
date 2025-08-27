@@ -14,6 +14,5 @@ makedocs(;
         "Distributions.jl integration" => "distributions.md",
         "Examples" => "examples.md",
     ],
-    strict=false,
     checkdocs=:exports,
 )
