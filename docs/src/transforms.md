@@ -44,6 +44,7 @@ Without mutation:
 ```@docs
 transform
 logabsdetjac
+logabsdetjacinv
 ```
 
 ```julia
@@ -87,6 +88,7 @@ Bijectors.isclosedform(t::Bijectors.Transform)
 Bijectors.Transform
 Bijectors.Bijector
 Bijectors.Inverse
+inverse
 ```
 
 ## Bijectors
