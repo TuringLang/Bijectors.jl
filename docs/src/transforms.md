@@ -45,6 +45,7 @@ Without mutation:
 transform
 logabsdetjac
 logabsdetjacinv
+inverse
 ```
 
 ```julia
@@ -88,7 +89,6 @@ Bijectors.isclosedform(t::Bijectors.Transform)
 Bijectors.Transform
 Bijectors.Bijector
 Bijectors.Inverse
-inverse
 ```
 
 ## Bijectors
