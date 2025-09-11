@@ -44,6 +44,8 @@ Without mutation:
 ```@docs
 transform
 logabsdetjac
+logabsdetjacinv
+inverse
 ```
 
 ```julia

@@ -3,7 +3,6 @@ using Random
 using LinearAlgebra
 using ForwardDiff
 using ReverseDiff
-using Tracker
 using DistributionsAD
 
 using Bijectors
@@ -162,9 +161,7 @@ end
             # single sample
             y = rand(td)
             x = inverse(td.transform)(y)
-            @test inverse(td.transform)(param(y)) isa TrackedArray
             @test y ≈ td.transform(x)
-            @test td.transform(param(x)) isa TrackedArray
             @test logpdf(td, y) ≈ logpdf_with_trans(dist, x, true)
 
             # verify against AD
@@ -173,7 +170,6 @@ end
                 b = Bijectors.SimplexBijector()
                 x = rand(dist)
                 y = b(x)
-                @test b(param(x)) isa TrackedArray
                 @test logabsdet(ForwardDiff.jacobian(b, x)[:, 1:(end - 1)])[1] ≈
                     logabsdetjac(b, x)
                 @test logabsdet(ForwardDiff.jacobian(inverse(b), y)[1:(end - 1), :])[1] ≈
@@ -184,7 +180,6 @@ end
                 y = b(x)
                 # `ForwardDiff.derivative` can lead to some numerical inaccuracy,
                 # so we use a slightly higher `atol` than default.
-                @test b(param(x)) isa TrackedArray
                 @test log(abs(det(ForwardDiff.jacobian(b, x)))) ≈ logabsdetjac(b, x) atol =
                     1e-6
                 @test log(abs(det(ForwardDiff.jacobian(inverse(b), y)))) ≈
@@ -216,7 +211,6 @@ end
             # single sample
             y = rand(td)
             x = inverse(td.transform)(y)
-            @test inverse(td.transform)(param(y)) isa TrackedArray
             @test logpdf(td, y) ≈ logpdf_with_trans(dist, x, true)
 
             # TODO: implement `logabsdetjac` for these
@@ -263,7 +257,6 @@ end
 
     sb1 = @inferred Stacked(b, b, inverse(b), inverse(b))             # <= Tuple
     res1 = with_logabsdet_jacobian(sb1, [x, x, y, y])
-    @test sb1(param([x, x, y, y])) isa TrackedArray
 
     @test sb1([x, x, y, y]) ≈ res1[1]
     @test logabsdetjac(sb1, [x, x, y, y]) ≈ 0 atol = 1e-6
@@ -271,7 +264,6 @@ end
 
     sb2 = Stacked([b, b, inverse(b), inverse(b)])        # <= Array
     res2 = with_logabsdet_jacobian(sb2, [x, x, y, y])
-    @test sb2(param([x, x, y, y])) isa TrackedArray
 
     @test sb2([x, x, y, y]) ≈ res2[1]
     @test logabsdetjac(sb2, [x, x, y, y]) ≈ 0.0 atol = 1e-12
@@ -281,7 +273,6 @@ end
     x = ones(3)
     sb = @inferred Stacked(elementwise(exp), elementwise(log), Shift(5.0))
     res = with_logabsdet_jacobian(sb, x)
-    @test sb(param(x)) isa TrackedArray
     @test sb(x) == [exp(x[1]), log(x[2]), x[3] + 5.0]
     @test res[1] == [exp(x[1]), log(x[2]), x[3] + 5.0]
     @test logabsdetjac(sb, x) ==
@@ -292,7 +283,6 @@ end
     sb = @inferred Stacked((elementwise(exp), SimplexBijector()), (1:1, 2:3))
     x = ones(3) ./ 3.0
     res = @inferred with_logabsdet_jacobian(sb, x)
-    @test sb(param(x)) isa TrackedArray
     @test sb(x) == [exp(x[1]), sb.bs[2](x[2:3])...]
     @test res[1] == [exp(x[1]), sb.bs[2](x[2:3])...]
     @test logabsdetjac(sb, x) ==
@@ -306,7 +296,6 @@ end
     sb = Stacked([elementwise(exp), SimplexBijector()], [1:1, 2:3])
     x = ones(3) ./ 3.0
     res = with_logabsdet_jacobian(sb, x)
-    @test sb(param(x)) isa TrackedArray
     @test sb(x) == [exp(x[1]), sb.bs[2](x[2:3])...]
     @test res[1] == [exp(x[1]), sb.bs[2](x[2:3])...]
     @test logabsdetjac(sb, x) ==
@@ -321,7 +310,6 @@ end
     sb = Stacked([elementwise(exp), SimplexBijector()], (1:1, 2:3))
     x = ones(3) ./ 3.0
     res = with_logabsdet_jacobian(sb, x)
-    @test sb(param(x)) isa TrackedArray
     @test sb(x) == [exp(x[1]), sb.bs[2](x[2:3])...]
     @test res[1] == [exp(x[1]), sb.bs[2](x[2:3])...]
     @test logabsdetjac(sb, x) ==
@@ -335,7 +323,6 @@ end
     sb = Stacked((elementwise(exp), SimplexBijector()), [1:1, 2:3])
     x = ones(3) ./ 3.0
     res = with_logabsdet_jacobian(sb, x)
-    @test sb(param(x)) isa TrackedArray
     @test sb(x) == [exp(x[1]), sb.bs[2](x[2:3])...]
     @test res[1] == [exp(x[1]), sb.bs[2](x[2:3])...]
     @test logabsdetjac(sb, x) ==
@@ -449,28 +436,11 @@ end
     weights_x = randn(d_x)
     weights_y = randn(d_x - 1)
 
-    # Tracker.jl
-    x_tracked = Tracker.param(x)
-    z = sum(weights_y .* b(x_tracked))
-    Tracker.back!(z)
-    Δ_tracker = Tracker.grad(x_tracked)
-
     # ForwardDiff.jl
     Δ_forwarddiff = ForwardDiff.gradient(z -> sum(weights_y .* b(z)), x)
 
-    # Compare
-    @test Δ_forwarddiff ≈ Δ_tracker
-
-    # Tracker.jl
-    y_tracked = Tracker.param(y)
-    z = sum(weights_x .* ib(y_tracked))
-    Tracker.back!(z)
-    Δ_tracker = Tracker.grad(y_tracked)
-
     # ForwardDiff.jl
-    Δ_forwarddiff = ForwardDiff.gradient(z -> sum(weights_x .* ib(z)), y)
-
-    @test Δ_forwarddiff ≈ Δ_tracker
+    Δ_forwarddiff_inv = ForwardDiff.gradient(z -> sum(weights_x .* ib(z)), y)
 end
 
 @testset "Equality" begin

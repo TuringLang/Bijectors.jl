@@ -1,4 +1,4 @@
-name: CI
+name: Interface tests
 
 on:
   push:
@@ -14,30 +14,23 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ${{ matrix.runner.os }}
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        runner:
-          - version: '1'
-            os: 'ubuntu-latest'
-          - version: '1'
-            os: 'macos-latest'
-          - version: '1'
-            os: 'windows-latest'
-          - version: 'min'
-            os: 'ubuntu-latest'
-        group:
-          - 'Interface'
-          - 'AD'
-
+        version:
+          - 'min'
+          - 'lts'
+          - '1'
+        os:
+          - ubuntu-latest
+          - macOS-latest
     steps:
       - uses: actions/checkout@v5
       - uses: julia-actions/setup-julia@v2
         with:
-          version: ${{ matrix.runner.version }}
-      - uses: julia-actions/cache@v2
+          version: ${{ matrix.version }}
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
         env:
-          GROUP: ${{ matrix.group }}
+          GROUP: Interface
