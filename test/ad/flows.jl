@@ -1,6 +1,7 @@
 using Enzyme: ForwardMode
 
 @testset "PlanarLayer: $backend_name" for (backend_name, adtype) in TEST_ADTYPES
+    # https://github.com/TuringLang/Bijectors.jl/issues/415
     ENZYME_FWD_AND_1p11 = VERSION >= v"1.11" && adtype isa AutoEnzyme{<:ForwardMode}
 
     # logpdf of a flow with a planar layer and two-dimensional inputs
@@ -11,7 +12,6 @@ using Enzyme: ForwardMode
         return logpdf(flow.dist, x) - logabsdetjac(flow.transform, x)
     end
     if ENZYME_FWD_AND_1p11
-        # TODO: Report this upstream (or check if it's already been reported)
         @test_throws Enzyme.Compiler.EnzymeInternalError test_ad(f, adtype, randn(7))
     else
         test_ad(f, adtype, randn(7))
