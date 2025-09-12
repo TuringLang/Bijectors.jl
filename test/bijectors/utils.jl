@@ -108,19 +108,3 @@ function test_functor(x, xs)
     @test x == re(_xs)
     @test _xs == xs
 end
-
-function test_bijector_parameter_gradient(b::Bijectors.Transform, x, y=b(x))
-    args, re = Functors.functor(b)
-    recon(k, param) = re(merge(args, NamedTuple{(k,)}((param,))))
-
-    # Compute the gradient wrt. one argument at the time.
-    for (k, v) in pairs(args)
-        test_ad(p -> sum(transform(recon(k, p), x)), v)
-        test_ad(p -> logabsdetjac(recon(k, p), x), v)
-
-        if Bijectors.isinvertible(b)
-            test_ad(p -> sum(transform(inv(recon(k, p)), y)), v)
-            test_ad(p -> logabsdetjac(inv(recon(k, p)), y), v)
-        end
-    end
-end

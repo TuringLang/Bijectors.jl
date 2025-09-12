@@ -1,4 +1,4 @@
-name: AD tests
+name: CI
 
 on:
   push:
@@ -14,33 +14,30 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.runner.os }}
     strategy:
       fail-fast: false
       matrix:
-        version:
-          - 'min'
-          - '1'
-        os:
-          - ubuntu-latest
-          - macOS-latest
-        AD:
-          - Enzyme
-          - ForwardDiff
-          - Mooncake
-          - Tracker
-          - ReverseDiff
+        runner:
+          - version: '1'
+            os: 'ubuntu-latest'
+          - version: '1'
+            os: 'macos-latest'
+          - version: '1'
+            os: 'windows-latest'
+          - version: 'min'
+            os: 'ubuntu-latest'
+        group:
+          - 'Interface'
+          - 'AD'
+
     steps:
       - uses: actions/checkout@v5
-
       - uses: julia-actions/setup-julia@v2
         with:
-          version: ${{ matrix.version }}
-
+          version: ${{ matrix.runner.version }}
+      - uses: julia-actions/cache@v2
       - uses: julia-actions/julia-buildpkg@v1
-
       - uses: julia-actions/julia-runtest@v1
-        continue-on-error: ${{ matrix.AD == 'Enzyme' && matrix.version == '1' }}
         env:
-          GROUP: AD
-          AD: ${{ matrix.AD }}
+          GROUP: ${{ matrix.group }}
