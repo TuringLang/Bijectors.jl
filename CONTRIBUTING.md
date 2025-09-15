@@ -83,7 +83,7 @@ We use JuliaFormatter.jl for consistent code formatting:
 
 ```bash
 # Install formatter (one-time setup)
-julia --project=. -e "using Pkg; Pkg.add(\"JuliaFormatter\")"
+julia --project=. -e "using Pkg; Pkg.add(PackageSpec(name=\"JuliaFormatter\", version=\"1\"))"
 
 # Format code
 julia --project=. -e "using JuliaFormatter; format(\".\")"
