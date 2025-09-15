@@ -16,6 +16,4 @@ makedocs(;
     ],
     checkdocs=:exports,
     doctest=false,
-    # TODO: Remove this
-    warnonly=true,
 )
