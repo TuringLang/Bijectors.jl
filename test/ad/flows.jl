@@ -37,9 +37,9 @@ using Enzyme: ForwardMode
         return logpdf(flow.dist, x) - logabsdetjac(flow.transform, x)
     end
     if ENZYME_FWD_AND_1p11
-        @test_throws Enzyme.Compiler.EnzymeInternalError test_ad(f, adtype, randn(7))
+        @test_throws Enzyme.Compiler.EnzymeInternalError test_ad(finv, adtype, randn(7))
     else
-        test_ad(f, adtype, randn(7))
+        test_ad(finv, adtype, randn(7))
     end
 
     function ginv(θ)
@@ -49,8 +49,8 @@ using Enzyme: ForwardMode
         return sum(logpdf(flow.dist, x) - logabsdetjac(flow.transform, x))
     end
     if ENZYME_FWD_AND_1p11
-        @test_throws Enzyme.Compiler.EnzymeInternalError test_ad(g, adtype, randn(11))
+        @test_throws Enzyme.Compiler.EnzymeInternalError test_ad(ginv, adtype, randn(11))
     else
-        test_ad(g, adtype, randn(11))
+        test_ad(ginv, adtype, randn(11))
     end
 end
