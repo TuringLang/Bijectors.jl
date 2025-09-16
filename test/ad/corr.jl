@@ -1,6 +1,8 @@
 using Enzyme: ForwardMode
 
 @testset "VecCorrBijector: $backend_name" for (backend_name, adtype) in TEST_ADTYPES
+    ENZYME_FWD_AND_1p11 = VERSION >= v"1.11" && adtype isa AutoEnzyme{<:Enzyme.ForwardMode}
+
     @testset "d = $d" for d in (1, 2, 4)
         dist = LKJ(d, 2.0)
         b = bijector(dist)
@@ -9,10 +11,19 @@ using Enzyme: ForwardMode
         x = rand(dist)
         y = b(x)
 
-        # roundtrip
-        test_ad(y -> sum(transform(b, binv(y))), adtype, y)
-        # inverse only
-        test_ad(y -> sum(transform(binv, y)), adtype, y)
+        roundtrip(y) = sum(transform(b, binv(y)))
+        inverse_only(y) = sum(transform(binv, y))
+        if d == 4 && ENZYME_FWD_AND_1p11
+            @test_throws Enzyme.Compiler.EnzymeNoDerivativeError test_ad(
+                roundtrip, adtype, y
+            )
+            @test_throws Enzyme.Compiler.EnzymeNoDerivativeError test_ad(
+                inverse_only, adtype, y
+            )
+        else
+            test_ad(roundtrip, adtype, y)
+            test_ad(inverse_only, adtype, y)
+        end
     end
 end
 
@@ -27,11 +38,12 @@ end
         cholesky_to_triangular =
             uplo == 'U' ? Bijectors.cholesky_upper : Bijectors.cholesky_lower
 
-        # roundtrip
-        test_ad(y -> sum(transform(b, binv(y))), adtype, y)
-        # inverse (we need to tack on `cholesky_upper`/`cholesky_lower`,
-        # because directly calling `sum` on a LinearAlgebra.Cholesky doesn't
-        # give a scalar)
-        test_ad(y -> sum(cholesky_to_triangular(transform(binv, y))), adtype, y)
+        roundtrip(y) = sum(transform(b, binv(y)))
+        test_ad(roundtrip, adtype, y)
+
+        # we need to tack on `cholesky_upper`/`cholesky_lower`, because directly calling
+        # `sum` on a LinearAlgebra.Cholesky doesn't give a scalar
+        inverse_only(y) = sum(cholesky_to_triangular(transform(binv, y)))
+        test_ad(inverse_only, adtype, y)
     end
 end
