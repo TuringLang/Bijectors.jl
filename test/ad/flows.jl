@@ -1,8 +1,9 @@
-using Enzyme: ForwardMode
+using Enzyme: Enzyme
 
 @testset "PlanarLayer: $backend_name" for (backend_name, adtype) in TEST_ADTYPES
     # https://github.com/TuringLang/Bijectors.jl/issues/415
-    ENZYME_FWD_AND_1p11 = VERSION >= v"1.11" && adtype isa AutoEnzyme{<:ForwardMode}
+    ENZYME_FWD_AND_1p11 = VERSION >= v"1.11" && adtype isa AutoEnzyme{<:Enzyme.ForwardMode}
+    ENZYME_RVS_AND_1p11 = VERSION >= v"1.11" && adtype isa AutoEnzyme{<:Enzyme.ReverseMode}
 
     # logpdf of a flow with a planar layer and two-dimensional inputs
     function f(θ)
@@ -24,7 +25,8 @@ using Enzyme: ForwardMode
         return sum(logpdf(flow.dist, x) - logabsdetjac(flow.transform, x))
     end
     if ENZYME_FWD_AND_1p11
-        @test_throws Enzyme.Compiler.EnzymeInternalError test_ad(g, adtype, randn(11))
+        @warn "Skipping forward-mode Enzyme for `g` on 1.11 due to segfault"
+        # @test_throws Enzyme.Compiler.EnzymeInternalError test_ad(g, adtype, randn(11))
     else
         test_ad(g, adtype, randn(11))
     end
@@ -37,7 +39,9 @@ using Enzyme: ForwardMode
         return logpdf(flow.dist, x) - logabsdetjac(flow.transform, x)
     end
     if ENZYME_FWD_AND_1p11
-        @test_throws Enzyme.Compiler.EnzymeInternalError test_ad(finv, adtype, randn(7))
+        @warn "Skipping forward-mode Enzyme for `finv` on 1.11 due to segfault"
+    elseif ENZYME_RVS_AND_1p11
+        @test_throws Enzyme.LLVM.LLVMException test_ad(finv, adtype, randn(7))
     else
         test_ad(finv, adtype, randn(7))
     end
@@ -48,8 +52,10 @@ using Enzyme: ForwardMode
         x = reshape(θ[6:end], 2, :)
         return sum(logpdf(flow.dist, x) - logabsdetjac(flow.transform, x))
     end
-    if ENZYME_FWD_AND_1p11
-        @test_throws Enzyme.Compiler.EnzymeInternalError test_ad(ginv, adtype, randn(11))
+    if ENZYME_FWD_AND_1p11 || ENZYME_RVS_AND_1p11
+        @warn "Skipping forward-mode Enzyme for `ginv` on 1.11 due to segfault"
+    elseif ENZYME_RVS_AND_1p11
+        @test_throws Enzyme.LLVM.LLVMException test_ad(finv, adtype, randn(7))
     else
         test_ad(ginv, adtype, randn(11))
     end
