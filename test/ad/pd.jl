@@ -31,7 +31,7 @@ _topd(x) = x * x' + I
         )
     else
         test_ad(forward_only, adtype, vec(z))
-        test_ad(inverse_only, adtype, vec(z))
+        test_ad(inverse_only, adtype, z)
         test_ad(inverse_chol_lower, adtype, y)
         test_ad(inverse_chol_upper, adtype, y)
     end
