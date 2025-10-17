@@ -15,4 +15,5 @@ makedocs(;
         "Examples" => "examples.md",
     ],
     checkdocs=:exports,
+    doctest=false,
 )

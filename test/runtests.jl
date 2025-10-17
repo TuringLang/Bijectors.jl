@@ -2,10 +2,10 @@ using Bijectors
 
 using ChainRulesTestUtils
 using Combinatorics
+using DifferentiationInterface
 using DistributionsAD
 using Documenter: Documenter
-using Enzyme
-using EnzymeTestUtils
+using Enzyme: Enzyme, set_runtime_activity, Forward, Reverse, Const
 using FiniteDifferences
 using ForwardDiff
 using Functors
@@ -32,9 +32,30 @@ using InverseFunctions: InverseFunctions
 using LazyArrays: LazyArrays
 
 const GROUP = get(ENV, "GROUP", "All")
+const IS_PRERELEASE = !isempty(VERSION.prerelease)
+TEST_ADTYPES = [
+    ("ForwardDiff", AutoForwardDiff()),
+    ("ReverseDiff", AutoReverseDiff(; compile=false)),
+    ("ReverseDiffCompiled", AutoReverseDiff(; compile=true)),
+]
+if !IS_PRERELEASE
+    # Mooncake and Enzyme tend to be unstable on prerelease, so only
+    # run these on stable Julia releases
+    TEST_ADTYPES = [
+        TEST_ADTYPES...,
+        ("Mooncake", AutoMooncake()),
+        (
+            "EnzymeForward",
+            AutoEnzyme(; mode=set_runtime_activity(Forward), function_annotation=Const),
+        ),
+        (
+            "EnzymeReverse",
+            AutoEnzyme(; mode=set_runtime_activity(Reverse), function_annotation=Const),
+        ),
+    ]
+end
 
 # Always include this since it can be useful for other tests.
-include("ad/utils.jl")
 include("bijectors/utils.jl")
 
 if GROUP == "All" || GROUP == "Interface"
@@ -51,9 +72,33 @@ if GROUP == "All" || GROUP == "Interface"
     include("bijectors/reshape.jl")
     include("bijectors/corr.jl")
     include("bijectors/product_bijector.jl")
-
     include("distributionsad.jl")
+end
 
+if GROUP == "All" || GROUP == "AD"
+    # These tests specifically check the implementation of AD backend rules.
+    include("ad/chainrules.jl")
+    if !IS_PRERELEASE
+        include("ad/enzyme.jl")
+        include("ad/mooncake.jl")
+    end
+
+    # These tests check that AD can differentiate through Bijectors
+    # functionality without explicit rules.
+    const REF_BACKEND = AutoFiniteDifferences(; fdm=central_fdm(5, 1))
+    function test_ad(f, backend, x; rtol=1e-6, atol=1e-6)
+        @info "testing AD for function $f with $backend"
+        ref_gradient = DifferentiationInterface.gradient(f, REF_BACKEND, x)
+        gradient = DifferentiationInterface.gradient(f, backend, x)
+        @test isapprox(gradient, ref_gradient; rtol=rtol, atol=atol)
+    end
+    include("ad/flows.jl")
+    include("ad/pd.jl")
+    include("ad/corr.jl")
+    include("ad/stacked.jl")
+end
+
+if GROUP == "All" || GROUP == "Doctests"
     @testset "doctests" begin
         Documenter.DocMeta.setdocmeta!(
             Bijectors, :DocTestSetup, :(using Bijectors); recursive=true
@@ -65,15 +110,4 @@ if GROUP == "All" || GROUP == "Interface"
         ]
         Documenter.doctest(Bijectors; manual=false, doctestfilters=doctestfilters)
     end
-end
-
-if GROUP == "All" || GROUP == "AD"
-    include("ad/chainrules.jl")
-    if get(ENV, "AD", "All") in ("All", "Enzyme")
-        include("ad/enzyme.jl")
-    end
-    include("ad/flows.jl")
-    include("ad/pd.jl")
-    include("ad/corr.jl")
-    include("ad/stacked.jl")
 end
