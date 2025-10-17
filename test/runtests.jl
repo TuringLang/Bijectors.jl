@@ -10,6 +10,7 @@ using ForwardDiff
 using Functors
 using LogExpFunctions
 using ReverseDiff
+using Pkg
 
 using Random, LinearAlgebra, Test
 
