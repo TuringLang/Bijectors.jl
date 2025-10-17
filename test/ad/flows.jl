@@ -1,9 +1,9 @@
-using Enzyme: Enzyme
-
 @testset "PlanarLayer: $backend_name" for (backend_name, adtype) in TEST_ADTYPES
-    # https://github.com/TuringLang/Bijectors.jl/issues/415
-    ENZYME_FWD_AND_1p11 = VERSION >= v"1.11" && adtype isa AutoEnzyme{<:Enzyme.ForwardMode}
-    ENZYME_RVS_AND_1p11 = VERSION >= v"1.11" && adtype isa AutoEnzyme{<:Enzyme.ReverseMode}
+    # Enzyme is tested separately as these tests are flaky
+    # TODO(penelopeysm): Fix upstream and re-enable.
+    if adtype isa AutoEnzyme
+        continue
+    end
 
     # logpdf of a flow with a planar layer and two-dimensional inputs
     function f(θ)
@@ -12,11 +12,7 @@ using Enzyme: Enzyme
         x = θ[6:7]
         return logpdf(flow.dist, x) - logabsdetjac(flow.transform, x)
     end
-    if ENZYME_FWD_AND_1p11
-        @test_throws Enzyme.Compiler.EnzymeInternalError test_ad(f, adtype, randn(7))
-    else
-        test_ad(f, adtype, randn(7))
-    end
+    test_ad(f, adtype, randn(7))
 
     function g(θ)
         layer = PlanarLayer(θ[1:2], θ[3:4], θ[5:5])
@@ -24,12 +20,7 @@ using Enzyme: Enzyme
         x = reshape(θ[6:end], 2, :)
         return sum(logpdf(flow.dist, x) - logabsdetjac(flow.transform, x))
     end
-    if ENZYME_FWD_AND_1p11
-        @warn "Skipping forward-mode Enzyme for `g` on 1.11 due to segfault"
-        # @test_throws Enzyme.Compiler.EnzymeInternalError test_ad(g, adtype, randn(11))
-    else
-        test_ad(g, adtype, randn(11))
-    end
+    test_ad(g, adtype, randn(11))
 
     # logpdf of a flow with the inverse of a planar layer and two-dimensional inputs
     function finv(θ)
@@ -38,13 +29,7 @@ using Enzyme: Enzyme
         x = θ[6:7]
         return logpdf(flow.dist, x) - logabsdetjac(flow.transform, x)
     end
-    if ENZYME_FWD_AND_1p11
-        @warn "Skipping forward-mode Enzyme for `finv` on 1.11 due to segfault"
-    elseif ENZYME_RVS_AND_1p11
-        @test_throws Enzyme.LLVM.LLVMException test_ad(finv, adtype, randn(7))
-    else
-        test_ad(finv, adtype, randn(7))
-    end
+    test_ad(finv, adtype, randn(7))
 
     function ginv(θ)
         layer = PlanarLayer(θ[1:2], θ[3:4], θ[5:5])
@@ -52,11 +37,5 @@ using Enzyme: Enzyme
         x = reshape(θ[6:end], 2, :)
         return sum(logpdf(flow.dist, x) - logabsdetjac(flow.transform, x))
     end
-    if ENZYME_FWD_AND_1p11 || ENZYME_RVS_AND_1p11
-        @warn "Skipping forward-mode Enzyme for `ginv` on 1.11 due to segfault"
-    elseif ENZYME_RVS_AND_1p11
-        @test_throws Enzyme.LLVM.LLVMException test_ad(finv, adtype, randn(7))
-    else
-        test_ad(ginv, adtype, randn(11))
-    end
+    test_ad(ginv, adtype, randn(11))
 end

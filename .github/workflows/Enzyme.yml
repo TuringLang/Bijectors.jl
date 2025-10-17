@@ -1,15 +1,10 @@
-# We want to only run doctests on a single version of Julia, because
-# things like error messages / output can change between versions and
-# is fragile to test against.
-name: Doctests
+name: Enzyme AD tests
 
 on:
   push:
     branches:
       - main
   pull_request:
-  merge_group:
-    types: [checks_requested]
 
 # needed to allow julia-actions/cache to delete old caches that it has created
 permissions:
@@ -22,20 +17,19 @@ concurrency:
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 
 jobs:
-  test:
+  enzyme:
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: julia-actions/setup-julia@v2
         with:
-          version: '1'
+          version: "1.11"
 
       - uses: julia-actions/cache@v2
 
-      - uses: julia-actions/julia-buildpkg@v1
-
-      - uses: julia-actions/julia-runtest@v1
-        env:
-          GROUP: Doctests
+      - name: Run flaky Enzyme tests
+        working-directory: test/integration/enzyme
+        run: |
+          julia --project=. --color=yes -e 'using Pkg; Pkg.instantiate()'
+          julia --project=. --color=yes main.jl

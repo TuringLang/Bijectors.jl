@@ -136,7 +136,7 @@ julia> d = LogNormal()   # support is (0, Inf)
 LogNormal{Float64}(μ=0.0, σ=1.0)
 
 julia> b = bijector(d)   # log function transforms to unconstrained space
-(::Base.Fix1{typeof(broadcast), typeof(log)}) (generic function with 1 method)
+(::Base.Fix1{typeof(broadcast), typeof(log)}) (generic function with 2 methods)
 
 julia> b(1.0)
 0.0

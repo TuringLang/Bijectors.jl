@@ -1,7 +1,9 @@
-using Enzyme: ForwardMode
-
 @testset "VecCorrBijector: $backend_name" for (backend_name, adtype) in TEST_ADTYPES
-    ENZYME_FWD_AND_1p11 = VERSION >= v"1.11" && adtype isa AutoEnzyme{<:Enzyme.ForwardMode}
+    # Enzyme is tested separately as these tests are flaky
+    # TODO(penelopeysm): Fix upstream and re-enable.
+    if adtype isa AutoEnzyme
+        continue
+    end
 
     @testset "d = $d" for d in (1, 2, 4)
         dist = LKJ(d, 2.0)
@@ -13,17 +15,8 @@ using Enzyme: ForwardMode
 
         roundtrip(y) = sum(transform(b, binv(y)))
         inverse_only(y) = sum(transform(binv, y))
-        if d == 4 && ENZYME_FWD_AND_1p11
-            @test_throws Enzyme.Compiler.EnzymeNoDerivativeError test_ad(
-                roundtrip, adtype, y
-            )
-            @test_throws Enzyme.Compiler.EnzymeNoDerivativeError test_ad(
-                inverse_only, adtype, y
-            )
-        else
-            test_ad(roundtrip, adtype, y)
-            test_ad(inverse_only, adtype, y)
-        end
+        test_ad(roundtrip, adtype, y)
+        test_ad(inverse_only, adtype, y)
     end
 end
 
