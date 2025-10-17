@@ -44,7 +44,8 @@ end
         ),
     ]
 
-    @testset "product distribution $i" for (i, (is_typestable, d)) in enumerate(test_dists)
+    @testset "transforms product distribution $i" for (i, (is_typestable, d)) in
+                                                      enumerate(test_dists)
         b = bijector(d)
         if is_typestable
             @inferred bijector(d)
@@ -62,6 +63,67 @@ end
         @inferred binv(y)
 
         @test isapprox_nested(x, x2)
+    end
+
+    @testset "jacobians" begin
+        @testset "non-nested" begin
+            dist = product_distribution((a=Normal(), b=LogNormal()))
+            b = bijector(dist)
+            x = rand(dist)
+            y, logjac = with_logabsdet_jacobian(b, x)
+            @inferred with_logabsdet_jacobian(b, x)
+
+            # since bijector(Normal()) is identity, the only Jacobian term should
+            # come from LogNormal
+            expected_logjac = logabsdetjac(b.transforms.b, x.b)
+            @test isapprox(logjac, expected_logjac)
+
+            x2, inv_logjac = with_logabsdet_jacobian(inverse(b), y)
+            @inferred with_logabsdet_jacobian(inverse(b), y)
+            @test isapprox_nested(x, x2)
+            @test isapprox(inv_logjac, -expected_logjac)
+
+            # check logabsdetjac as well
+            @test isapprox(logabsdetjac(b, x), expected_logjac)
+            @test isapprox(logabsdetjac(inverse(b), y), -expected_logjac)
+        end
+
+        @testset "nested" begin
+            dist = product_distribution((
+                a=LogNormal(), b=product_distribution((x=LogNormal(), y=InverseGamma(2, 3)))
+            ))
+            b = bijector(dist)
+            x = rand(dist)
+            y, logjac = with_logabsdet_jacobian(b, x)
+            @inferred with_logabsdet_jacobian(b, x)
+
+            expected_logjac =
+                logabsdetjac(b.transforms.a, x.a) +
+                logabsdetjac(b.transforms.b.transforms.x, x.b.x) +
+                logabsdetjac(b.transforms.b.transforms.y, x.b.y)
+            @test isapprox(logjac, expected_logjac)
+
+            x2, inv_logjac = with_logabsdet_jacobian(inverse(b), y)
+            @inferred with_logabsdet_jacobian(inverse(b), y)
+            @test isapprox_nested(x, x2)
+            @test isapprox(inv_logjac, -expected_logjac)
+
+            # check logabsdetjac as well
+            @test isapprox(logabsdetjac(b, x), expected_logjac)
+            @test isapprox(logabsdetjac(inverse(b), y), -expected_logjac)
+        end
+    end
+
+    @testset "output size on ProductNamedTupleDistribution" begin
+        d = product_distribution((a=Normal(), b=LogNormal()))
+        b = bijector(d)
+        @test output_size(b, d) == (2,)
+
+        d = product_distribution((
+            a=LogNormal(), b=product_distribution((x=LogNormal(), y=InverseGamma(2, 3)))
+        ))
+        b = bijector(d)
+        @test output_size(b, d) == (3,)
     end
 end
 

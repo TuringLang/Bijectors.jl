@@ -24,12 +24,8 @@ isinvertible(::NamedStacked) = true
 # here. This enables us to nest PNTDists within each other.
 # NOTE: For the outputs of this function to be correct, `trf` MUST be equal to
 # bijector(dist).
-function _pnt_output_size(trf, dist::Distribution)
-    # Default fallback
-    return output_size(trf, size(dist))
-end
-function _pnt_output_size(trf::NamedStacked, ::Distributions.ProductNamedTupleDistribution)
-    return sum(length, trf.ranges)
+function output_size(trf::NamedStacked, ::Distributions.ProductNamedTupleDistribution)
+    return (sum(length, trf.ranges),)
 end
 
 @generated function bijector(
@@ -42,7 +38,7 @@ end
     for n in names
         push!(exprs, :(dist = d.dists.$n))
         push!(exprs, :(trf = bijector(dist)))
-        push!(exprs, :(output_sz_tuple = _pnt_output_size(trf, dist)))
+        push!(exprs, :(output_sz_tuple = output_size(trf, dist)))
         push!(
             exprs,
             :(
@@ -77,8 +73,30 @@ end
     return Expr(:block, exprs...)
 end
 
+@generated function with_logabsdet_jacobian(
+    ns::NamedStacked{names}, x::NamedTuple{names}
+) where {names}
+    exprs = []
+    # TODO: Not a fan of initialising this as Float64 but otherwise not sure how to make it
+    # type stable as it would depend on the type of the distributions?
+    push!(exprs, :(output = Float64[]))
+    push!(exprs, :(logjac = 0.0))
+    for n in names
+        push!(
+            exprs,
+            quote
+                next_out, next_logjac = with_logabsdet_jacobian(ns.transforms.$n, x.$n)
+                output = vcat(output, next_out)
+                logjac += next_logjac
+            end,
+        )
+    end
+    push!(exprs, :(return output, logjac))
+    return Expr(:block, exprs...)
+end
+
 @generated function transform(
-    nsi::Inverse{<:NamedStacked{names}}, x::AbstractVector
+    nsi::Inverse{<:NamedStacked{names}}, y::AbstractVector
 ) where {names}
     exprs = []
     push!(exprs, :(output = NamedTuple()))
@@ -87,11 +105,33 @@ end
             exprs,
             :(
                 output = merge(
-                    output, ($n=inverse(nsi.orig.transforms.$n)(x[nsi.orig.ranges.$n]),)
+                    output, ($n=inverse(nsi.orig.transforms.$n)(y[nsi.orig.ranges.$n]),)
                 )
             ),
         )
     end
     push!(exprs, :(return output))
+    return Expr(:block, exprs...)
+end
+
+@generated function with_logabsdet_jacobian(
+    nsi::Inverse{<:NamedStacked{names}}, y::AbstractVector
+) where {names}
+    exprs = []
+    push!(exprs, :(output = NamedTuple()))
+    push!(exprs, :(logjac = 0.0))
+    for n in names
+        push!(
+            exprs,
+            quote
+                next_out, next_logjac = with_logabsdet_jacobian(
+                    inverse(nsi.orig.transforms.$n), y[nsi.orig.ranges.$n]
+                )
+                output = merge(output, ($n=next_out,))
+                logjac += next_logjac
+            end,
+        )
+    end
+    push!(exprs, :(return output, logjac))
     return Expr(:block, exprs...)
 end

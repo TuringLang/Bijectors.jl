@@ -75,7 +75,8 @@ export TransformDistribution,
     RadialLayer,
     Coupling,
     InvertibleBatchNorm,
-    elementwise
+    elementwise,
+    output_size
 
 const DEBUG = Bool(parse(Int, get(ENV, "DEBUG_BIJECTORS", "0")))
 _debug(str) = @debug str
