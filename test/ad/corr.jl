@@ -1,5 +1,3 @@
-using Enzyme: ForwardMode
-
 @testset "VecCorrBijector: $backend_name" for (backend_name, adtype) in TEST_ADTYPES
     # Enzyme is tested separately as these tests are flaky
     # TODO(penelopeysm): Fix upstream and re-enable.
