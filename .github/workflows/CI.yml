@@ -19,11 +19,11 @@ jobs:
       fail-fast: false
       matrix:
         runner:
-          - version: '1'
+          - version: '1.11'
             os: 'ubuntu-latest'
-          - version: '1'
+          - version: '1.11'
             os: 'macos-latest'
-          - version: '1'
+          - version: '1.11'
             os: 'windows-latest'
           - version: 'min'
             os: 'ubuntu-latest'
