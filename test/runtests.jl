@@ -41,6 +41,7 @@ TEST_ADTYPES = [
 ]
 if TEST_ENZYME_AND_MOONCAKE
     Pkg.add("Enzyme")
+    Pkg.add("EnzymeTestUtils")
     Pkg.add("Mooncake")
     using Enzyme: Enzyme, set_runtime_activity, Forward, Reverse, Const
     using Mooncake
