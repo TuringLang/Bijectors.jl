@@ -96,11 +96,16 @@ end
 
 @generated function transform(ns::NamedStacked{names}, x::NamedTuple{names}) where {names}
     exprs = []
-    # TODO: Not a fan of initialising this as Float64 but otherwise not sure how to make it
-    # type stable as it would depend on the type of the distributions?
-    push!(exprs, :(output = Float64[]))
-    for n in names
-        push!(exprs, :(output = vcat(output, ns.transforms.$n(x.$n))))
+    # Note that `names` cannot be empty as `product_distribution(NamedTuple())` errors, so
+    # we don't need to handle that case.
+    for (i, n) in enumerate(names)
+        if i == 1
+            # need a vcat in case there's only one transform and it returns a scalar -- we
+            # always want transform to return a vector.
+            push!(exprs, :(output = vcat(ns.transforms.$n(x.$n))))
+        else
+            push!(exprs, :(output = vcat(output, ns.transforms.$n(x.$n))))
+        end
     end
     push!(exprs, :(return output))
     return Expr(:block, exprs...)
@@ -110,19 +115,30 @@ end
     ns::NamedStacked{names}, x::NamedTuple{names}
 ) where {names}
     exprs = []
-    # TODO: Not a fan of initialising this as Float64 but otherwise not sure how to make it
-    # type stable as it would depend on the type of the distributions?
-    push!(exprs, :(output = Float64[]))
-    push!(exprs, :(logjac = 0.0))
-    for n in names
-        push!(
-            exprs,
-            quote
-                next_out, next_logjac = with_logabsdet_jacobian(ns.transforms.$n, x.$n)
-                output = vcat(output, next_out)
-                logjac += next_logjac
-            end,
-        )
+    # Note that `names` cannot be empty as `product_distribution(NamedTuple())` errors, so
+    # we don't need to handle that case.
+    for (i, n) in enumerate(names)
+        if i == 1
+            push!(
+                exprs,
+                quote
+                    first_out, first_logjac = with_logabsdet_jacobian(
+                        ns.transforms.$n, x.$n
+                    )
+                    output = vcat(first_out)
+                    logjac = first_logjac
+                end,
+            )
+        else
+            push!(
+                exprs,
+                quote
+                    next_out, next_logjac = with_logabsdet_jacobian(ns.transforms.$n, x.$n)
+                    output = vcat(output, next_out)
+                    logjac += next_logjac
+                end,
+            )
+        end
     end
     push!(exprs, :(return output, logjac))
     return Expr(:block, exprs...)
@@ -133,15 +149,22 @@ end
 ) where {names}
     exprs = []
     push!(exprs, :(output = NamedTuple()))
-    for n in names
-        push!(
-            exprs,
-            :(
-                output = merge(
-                    output, ($n=inverse(nsi.orig.transforms.$n)(y[nsi.orig.ranges.$n]),)
-                )
-            ),
-        )
+    for (i, n) in enumerate(names)
+        if i == 1
+            push!(
+                exprs,
+                :(output = ($n=inverse(nsi.orig.transforms.$n)(y[nsi.orig.ranges.$n]),)),
+            )
+        else
+            push!(
+                exprs,
+                :(
+                    output = merge(
+                        output, ($n=inverse(nsi.orig.transforms.$n)(y[nsi.orig.ranges.$n]),)
+                    )
+                ),
+            )
+        end
     end
     push!(exprs, :(return output))
     return Expr(:block, exprs...)
@@ -151,19 +174,30 @@ end
     nsi::Inverse{<:NamedStacked{names}}, y::AbstractVector
 ) where {names}
     exprs = []
-    push!(exprs, :(output = NamedTuple()))
-    push!(exprs, :(logjac = 0.0))
-    for n in names
-        push!(
-            exprs,
-            quote
-                next_out, next_logjac = with_logabsdet_jacobian(
-                    inverse(nsi.orig.transforms.$n), y[nsi.orig.ranges.$n]
-                )
-                output = merge(output, ($n=next_out,))
-                logjac += next_logjac
-            end,
-        )
+    for (i, n) in enumerate(names)
+        if i == 1
+            push!(
+                exprs,
+                quote
+                    first_out, first_logjac = with_logabsdet_jacobian(
+                        inverse(nsi.orig.transforms.$n), y[nsi.orig.ranges.$n]
+                    )
+                    output = ($n=first_out,)
+                    logjac = first_logjac
+                end,
+            )
+        else
+            push!(
+                exprs,
+                quote
+                    next_out, next_logjac = with_logabsdet_jacobian(
+                        inverse(nsi.orig.transforms.$n), y[nsi.orig.ranges.$n]
+                    )
+                    output = merge(output, ($n=next_out,))
+                    logjac += next_logjac
+                end,
+            )
+        end
     end
     push!(exprs, :(return output, logjac))
     return Expr(:block, exprs...)
