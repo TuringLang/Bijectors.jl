@@ -20,6 +20,18 @@ end
 # isinvertible(b)...
 isinvertible(::NamedStacked) = true
 
+# Base.size doesn't work on ProductNamedTupleDistribution, so we need some custom machinery
+# here. This enables us to nest PNTDists within each other.
+# NOTE: For the outputs of this function to be correct, `trf` MUST be equal to
+# bijector(dist).
+function _pnt_output_size(trf, dist::Distribution)
+    # Default fallback
+    return output_size(trf, size(dist))
+end
+function _pnt_output_size(trf::NamedStacked, ::Distributions.ProductNamedTupleDistribution)
+    return sum(length, trf.ranges)
+end
+
 @generated function bijector(
     d::Distributions.ProductNamedTupleDistribution{names}
 ) where {names}
@@ -30,7 +42,7 @@ isinvertible(::NamedStacked) = true
     for n in names
         push!(exprs, :(dist = d.dists.$n))
         push!(exprs, :(trf = bijector(dist)))
-        push!(exprs, :(output_sz_tuple = output_size(trf, size(dist))))
+        push!(exprs, :(output_sz_tuple = _pnt_output_size(trf, dist)))
         push!(
             exprs,
             :(
