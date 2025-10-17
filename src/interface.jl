@@ -300,6 +300,7 @@ end
 # General
 include("bijectors/composed.jl")
 include("bijectors/stacked.jl")
+include("bijectors/named_stacked.jl")
 include("bijectors/reshape.jl")
 
 # Specific
