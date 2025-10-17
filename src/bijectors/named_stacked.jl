@@ -1,12 +1,45 @@
 """
-    NamedStacked(transforms::NamedTuple)
+    NamedStacked{names}(transforms::NamedTuple, ranges::NamedTuple)
+
+A bijector that contains a `NamedTuple` of bijectors. This is meant primarily for transforming
+`Distributions.ProductNamedTupleDistribution` and samples from them.
+
+The arguments `transforms` and `ranges` must be `NamedTuple`s with the same field names, and
+these must also match the field names of the `ProductNamedTupleDistribution` that this bijector
+corresponds to.
+
+`ranges` specifies the index or indices in the output vector that correspond to the output of
+each individual bijector in `transforms`. Its elements should be either `UnitRange`s or integers.
+UnitRanges are necessary when the output of a transform is not a scalar. If the output is a
+scalar then an integer should be used.
+
+## Example
+
+```jldoctest
+julia> using Bijectors, LinearAlgebra
+
+julia> d = Distributions.ProductNamedTupleDistribution((
+           a = LogNormal(),
+           b = InverseGamma(2, 3),
+           c = MvNormal(zeros(2), I),
+       ));
+
+julia> b = bijector(d)
+Bijectors.NamedStacked{(:a, :b, :c), @NamedTuple{a::Base.Fix1{typeof(broadcast), typeof(log)}, b::Base.Fix1{typeof(broadcast), typeof(log)}, c::typeof(identity)}, @NamedTuple{a::Int64, b::Int64, c::UnitRange{Int64}}}((a = Base.Fix1{typeof(broadcast), typeof(log)}(broadcast, log), b = Base.Fix1{typeof(broadcast), typeof(log)}(broadcast, log), c = identity), (a = 1, b = 2, c = 3:4))
+
+julia> b.transforms.a == bijector(d.dists.a)
+true
+
+julia> x = (a = 1.0, b = 2.0, c = [0.5, -0.5]);
+
+julia> y, logjac = with_logabsdet_jacobian(b, x)
+([0.0, 0.6931471805599453, 0.5, -0.5], -0.6931471805599453)
+```
 """
 struct NamedStacked{names,Ttrf<:NamedTuple{names},Trng<:NamedTuple{names}} <: Transform
     # This should be a NamedTuple of bijectors
     transforms::Ttrf
     # This should be a NamedTuple of UnitRanges OR integers.
-    # UnitRanges are necessary when the output of a transform is not a scalar. If the output
-    # is a scalar then an integer should be used.
     ranges::Trng
 
     function NamedStacked{names}(
