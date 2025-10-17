@@ -5,12 +5,10 @@ using Combinatorics
 using DifferentiationInterface
 using DistributionsAD
 using Documenter: Documenter
-using Enzyme: Enzyme, set_runtime_activity, Forward, Reverse, Const
 using FiniteDifferences
 using ForwardDiff
 using Functors
 using LogExpFunctions
-using Mooncake
 using ReverseDiff
 
 using Random, LinearAlgebra, Test
@@ -32,15 +30,19 @@ using InverseFunctions: InverseFunctions
 using LazyArrays: LazyArrays
 
 const GROUP = get(ENV, "GROUP", "All")
-const IS_PRERELEASE = !isempty(VERSION.prerelease)
+# Mooncake and Enzyme don't work on 1.12 yet
+const TEST_ENZYME_AND_MOONCAKE = VERSION < v"1.12.0"
+
 TEST_ADTYPES = [
     ("ForwardDiff", AutoForwardDiff()),
     ("ReverseDiff", AutoReverseDiff(; compile=false)),
     ("ReverseDiffCompiled", AutoReverseDiff(; compile=true)),
 ]
-if !IS_PRERELEASE
-    # Mooncake and Enzyme tend to be unstable on prerelease, so only
-    # run these on stable Julia releases
+if TEST_ENZYME_AND_MOONCAKE
+    Pkg.add("Enzyme")
+    Pkg.add("Mooncake")
+    using Enzyme: Enzyme, set_runtime_activity, Forward, Reverse, Const
+    using Mooncake
     TEST_ADTYPES = [
         TEST_ADTYPES...,
         ("Mooncake", AutoMooncake()),
@@ -78,7 +80,7 @@ end
 if GROUP == "All" || GROUP == "AD"
     # These tests specifically check the implementation of AD backend rules.
     include("ad/chainrules.jl")
-    if !IS_PRERELEASE
+    if TEST_ENZYME_AND_MOONCAKE
         include("ad/enzyme.jl")
         include("ad/mooncake.jl")
     end
