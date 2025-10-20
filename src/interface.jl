@@ -54,6 +54,7 @@ By default this just calls `output_size(f, size(dist))`, but this can be overloa
 specific distributions.
 """
 output_size(f, dist::Distribution) = output_size(f, size(dist))
+output_size(f::ComposedFunction, dist::Distribution) = output_size(f, size(dist))
 
 """
     output_length(f, len::Int)
