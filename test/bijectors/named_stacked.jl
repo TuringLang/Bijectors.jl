@@ -63,6 +63,8 @@ end
         @inferred binv(y)
 
         @test isapprox_nested(x, x2)
+
+        @test transformed(d) isa Distribution
     end
 
     @testset "jacobians" begin
