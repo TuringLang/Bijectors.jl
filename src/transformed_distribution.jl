@@ -1,6 +1,5 @@
 function variateform(d::Distribution, b)
-    sz_in = size(d)
-    sz_out = output_size(b, sz_in)
+    sz_out = output_size(b, d)
     return ArrayLikeVariate{length(sz_out)}
 end
 

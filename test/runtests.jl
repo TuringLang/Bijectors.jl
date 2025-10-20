@@ -76,6 +76,7 @@ if GROUP == "All" || GROUP == "Interface"
     include("bijectors/reshape.jl")
     include("bijectors/corr.jl")
     include("bijectors/product_bijector.jl")
+    include("bijectors/named_stacked.jl")
     include("distributionsad.jl")
 end
 

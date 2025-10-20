@@ -78,6 +78,7 @@ Bijectors.transformed(d::Distribution, b::Bijector)
 ## Utilities
 
 ```@docs
+Bijectors.output_size
 Bijectors.elementwise
 Bijectors.isinvertible
 Bijectors.isclosedform(t::Bijectors.Transform)

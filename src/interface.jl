@@ -43,6 +43,18 @@ Returns the output size of `f` given the input size `sz`.
 """
 output_size(f, sz) = sz
 output_size(f::ComposedFunction, sz) = output_size(f.outer, output_size(f.inner, sz))
+"""
+    output_size(f, dist::Distribution)
+
+Returns the output size of `f` given the input distribution `dist`. This is useful when
+Base.size(dist) is not defined, e.g. for `ProductNamedTupleDistribution` and in particular
+is used by DynamicPPL when generating new random values for transformed distributions.
+
+By default this just calls `output_size(f, size(dist))`, but this can be overloaded for
+specific distributions.
+"""
+output_size(f, dist::Distribution) = output_size(f, size(dist))
+output_size(f::ComposedFunction, dist::Distribution) = output_size(f, size(dist))
 
 """
     output_length(f, len::Int)
@@ -300,6 +312,7 @@ end
 # General
 include("bijectors/composed.jl")
 include("bijectors/stacked.jl")
+include("bijectors/named_stacked.jl")
 include("bijectors/reshape.jl")
 
 # Specific
