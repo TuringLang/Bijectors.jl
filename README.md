@@ -12,6 +12,10 @@ This package is used heavily in the probabilistic programming language Turing.jl
 
 See the [documentation](https://turinglang.github.io/Bijectors.jl) for more.
 
+## Development
+
+For development instructions, including how to reproduce CI test failures locally, see [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Do you want to contribute?
 
 If you feel you have some relevant skills and are interested in contributing, please get in touch!
