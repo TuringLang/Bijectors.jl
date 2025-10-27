@@ -1,3 +1,7 @@
+# 0.15.12
+
+Improved implementation of the Enzyme rule for `Bijectors.find_alpha`.
+
 # 0.15.11
 
 Bijectors for ProductNamedTupleDistribution are now implemented.

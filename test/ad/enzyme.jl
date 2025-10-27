@@ -15,45 +15,43 @@ using Test
 # `@test`, not our `@test_throws`. Consequently `@test_throws` doesn't actually
 # see any error. Weird Julia behaviour.
 
-@static if VERSION < v"1.11"
-    @testset "Enzyme: Bijectors.find_alpha" begin
-        x = randn()
-        y = expm1(randn())
-        z = randn()
+@testset "Enzyme: Bijectors.find_alpha" begin
+    x = randn()
+    y = expm1(randn())
+    z = randn()
 
-        @testset "forward" begin
-            # No batches
-            @testset for RT in (Const, Duplicated, DuplicatedNoNeed),
-                Tx in (Const, Duplicated),
-                Ty in (Const, Duplicated),
-                Tz in (Const, Duplicated)
+    @testset "forward" begin
+        # No batches
+        @testset for RT in (Const, Duplicated, DuplicatedNoNeed),
+            Tx in (Const, Duplicated),
+            Ty in (Const, Duplicated),
+            Tz in (Const, Duplicated)
 
-                test_forward(Bijectors.find_alpha, RT, (x, Tx), (y, Ty), (z, Tz))
-            end
-
-            # Batches
-            @testset for RT in (Const, BatchDuplicated, BatchDuplicatedNoNeed),
-                Tx in (Const, BatchDuplicated),
-                Ty in (Const, BatchDuplicated),
-                Tz in (Const, BatchDuplicated)
-
-                test_forward(Bijectors.find_alpha, RT, (x, Tx), (y, Ty), (z, Tz))
-            end
+            test_forward(Bijectors.find_alpha, RT, (x, Tx), (y, Ty), (z, Tz))
         end
-        @testset "reverse" begin
-            # No batches
-            @testset for RT in (Const, Active),
-                Tx in (Const, Active),
-                Ty in (Const, Active),
-                Tz in (Const, Active)
 
-                test_reverse(Bijectors.find_alpha, RT, (x, Tx), (y, Ty), (z, Tz))
-            end
+        # Batches
+        @testset for RT in (Const, BatchDuplicated, BatchDuplicatedNoNeed),
+            Tx in (Const, BatchDuplicated),
+            Ty in (Const, BatchDuplicated),
+            Tz in (Const, BatchDuplicated)
 
-            # TODO: Test batch mode
-            # This is a bit problematic since Enzyme does not support all combinations of activities currently
-            # https://github.com/TuringLang/Bijectors.jl/pull/350#issuecomment-2480468728
+            test_forward(Bijectors.find_alpha, RT, (x, Tx), (y, Ty), (z, Tz))
         end
+    end
+    @testset "reverse" begin
+        # No batches
+        @testset for RT in (Const, Active),
+            Tx in (Const, Active),
+            Ty in (Const, Active),
+            Tz in (Const, Active)
+
+            test_reverse(Bijectors.find_alpha, RT, (x, Tx), (y, Ty), (z, Tz))
+        end
+
+        # TODO: Test batch mode
+        # This is a bit problematic since Enzyme does not support all combinations of activities currently
+        # https://github.com/TuringLang/Bijectors.jl/pull/350#issuecomment-2480468728
     end
 end
 
