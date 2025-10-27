@@ -9,11 +9,19 @@ using Test
 #
 # https://github.com/EnzymeAD/Enzyme.jl/issues/2121
 # https://github.com/TuringLang/Bijectors.jl/pull/350#issuecomment-2470766968
+# 
+# The fix to this needs to be made in Julia itself: it seems that this has already been done
+# in https://github.com/JuliaLang/llvm-project/pull/49 although whether this will be
+# incorporated into the built Julia version itself seems unclear. See
+# https://github.com/JuliaLang/julia/pull/59521#issuecomment-3300480633.
 #
-# Ideally we'd use `@test_throws`. However, that doesn't work because
-# `test_forward` itself calls `@test`, and the error is captured by that
-# `@test`, not our `@test_throws`. Consequently `@test_throws` doesn't actually
-# see any error. Weird Julia behaviour.
+# If this does not end up being backported to 1.11, then we may have to permanently skip
+# these tests.
+#
+# On another note: Ideally we'd use `@test_throws`. However, that doesn't work because
+# `test_forward` itself calls `@test`, and the error is captured by that `@test`, not our
+# `@test_throws`. Consequently `@test_throws` doesn't actually see any error. Weird Julia
+# behaviour.
 
 @testset "Enzyme: Bijectors.find_alpha" begin
     x = randn()
