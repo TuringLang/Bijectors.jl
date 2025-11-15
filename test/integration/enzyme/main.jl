@@ -81,7 +81,6 @@ BACKENDS = [
         end
         if ENZYME_FWD_AND_1p11
             @warn "Skipping forward-mode Enzyme for `g` on 1.11 due to segfault"
-            # test_ad(g, adtype, randn(11))
         else
             test_ad(g, adtype, randn(11))
         end
