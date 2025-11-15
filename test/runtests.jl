@@ -9,6 +9,7 @@ using FiniteDifferences
 using ForwardDiff
 using Functors
 using LogExpFunctions
+using Mooncake
 using ReverseDiff
 using Pkg
 
@@ -31,23 +32,21 @@ using InverseFunctions: InverseFunctions
 using LazyArrays: LazyArrays
 
 const GROUP = get(ENV, "GROUP", "All")
-# Mooncake and Enzyme don't work on 1.12 yet
-const TEST_ENZYME_AND_MOONCAKE = VERSION < v"1.12.0"
+# Enzyme doesn't work on 1.12 yet
+const TEST_ENZYME = VERSION < v"1.12.0"
 
 TEST_ADTYPES = [
     ("ForwardDiff", AutoForwardDiff()),
     ("ReverseDiff", AutoReverseDiff(; compile=false)),
     ("ReverseDiffCompiled", AutoReverseDiff(; compile=true)),
+    ("Mooncake", AutoMooncake()),
 ]
-if TEST_ENZYME_AND_MOONCAKE
+if TEST_ENZYME
     Pkg.add("Enzyme")
     Pkg.add("EnzymeTestUtils")
-    Pkg.add("Mooncake")
     using Enzyme: Enzyme, set_runtime_activity, Forward, Reverse, Const
-    using Mooncake
     TEST_ADTYPES = [
         TEST_ADTYPES...,
-        ("Mooncake", AutoMooncake()),
         (
             "EnzymeForward",
             AutoEnzyme(; mode=set_runtime_activity(Forward), function_annotation=Const),
@@ -83,9 +82,9 @@ end
 if GROUP == "All" || GROUP == "AD"
     # These tests specifically check the implementation of AD backend rules.
     include("ad/chainrules.jl")
-    if TEST_ENZYME_AND_MOONCAKE
+    include("ad/mooncake.jl")
+    if TEST_ENZYME
         include("ad/enzyme.jl")
-        include("ad/mooncake.jl")
     end
 
     # These tests check that AD can differentiate through Bijectors
