@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Transforms · Bijectors</title><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body>
+<!-- NAVBAR START -->
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Source+Sans+Pro&display=swap');
+
+    /* Documenter.jl CSS Overrides */
+    html {
+        scroll-padding-top: calc(var(--navbar-height) + 1rem);
+    }
+    .docs-sidebar, #documenter {
+        margin-top: var(--navbar-height);
+    }
+    .docs-version-selector {
+        margin-bottom: 60px !important;
+    }
+    @media screen and (max-width: 1056px) {
+        .docs-version-selector {
+            margin-bottom: 60px !important;
+        }
+        .docs-sidebar {
+            margin-top: 0 !important;
+        }
+    }
+    /* End of Documenter.jl Tweaks */
+
+    /* Color and Font Variables */
+    :root {
+        --heading-color: #6c757d;
+        --item-color: rgb(165, 165, 165);
+        --primary-bg: white;
+        --hover-color: #8faad2;
+        --deprecated-bg: #ff4d4d;
+        --deprecated-text: white;
+        --icon-color: #6c757d;
+        --shadow-color: rgba(0, 0, 0, 0.1);
+        --dropdown-hover-bg: #e9ecef;
+        
+        /* Typography */
+        --font-family: "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+        --nav-link-font-size: 1.0625rem;
+        --turing-title-font-size: 21.25px;
+        --icon-font-size: 1.25rem;
+        --dropdown-arrow-font-size: 0.6875rem;
+        --badge-font-size: 0.75rem;
+
+        /* Sizing and Spacing */
+        --navbar-height: 3.75rem;
+        --logo-height: 31px;
+        --logo-width: auto;
+        --logo-padding-top: 7px;
+        --logo-margin-left: 0.8rem;
+        --title-margin-left: 0.4px;
+        --title-nav-spacing: 1.1rem;
+        --nav-item-margin-left: 1.3rem;
+        --icon-margin-left: 1rem;
+        --dropdown-padding: 1.875rem;
+        --dropdown-item-width: 12.5rem;
+        --dropdown-subitem-width: 15.625rem;
+        --dropdown-subitem-padding: 0.125rem 0.625rem;
+    }
+
+    /* Dark Theme Variable Overrides */
+    html.theme--documenter-dark {
+        --heading-color: #e0e0e0;
+        --item-color: #bdbdbd;
+        --primary-bg: #1f2424;
+        --hover-color: #ffffff;
+        --icon-color: #e0e0e0;
+        --shadow-color: rgba(255, 255, 255, 0.1);
+        --dropdown-hover-bg: #424242;
+    }
+
+    /* Catppuccin Theme Overrides */
+    html.theme--catppuccin-latte {
+        --heading-color: #4c4f69;
+        --primary-bg: #eff1f5;
+        --icon-color: #4c4f69;
+        --shadow-color: rgba(0, 0, 0, 0.1);
+        --dropdown-hover-bg: #e6e9ef;
+    }
+    html.theme--catppuccin-frappe {
+        --heading-color: #c6d0f5;
+        --primary-bg: #303446;
+        --icon-color: #c6d0f5;
+        --shadow-color: rgba(255, 255, 255, 0.1);
+        --dropdown-hover-bg: #51576d;
+    }
+    html.theme--catppuccin-macchiato {
+        --heading-color: #cad3f5;
+        --primary-bg: #24273a;
+        --icon-color: #cad3f5;
+        --shadow-color: rgba(255, 255, 255, 0.1);
+        --dropdown-hover-bg: #494d64;
+    }
+    html.theme--catppuccin-mocha {
+        --heading-color: #cad3f5;
+        --primary-bg: #1e1e2e;
+        --icon-color: #cad3f5;
+        --shadow-color: rgba(255, 255, 255, 0.1);
+        --dropdown-hover-bg: #45475a;
+    }
+
+
+    /* Main Navigation Bar */
+    .ext-navigation {
+        font-family: var(--font-family);
+        position: fixed;
+        height: var(--navbar-height);
+        top: 0;
+        width: 100%;
+        background-color: var(--primary-bg);
+        z-index: 1000;
+        box-shadow: 0 2px 4px var(--shadow-color);
+        display: flex;
+        align-items: center;
+        padding: 0 1.0625rem;
+        transition: transform 0.3s, background-color 0.3s;
+    }
+
+    nav.ext-navigation .ext-navbar-logo {
+        margin-left: var(--logo-margin-left);
+        height: auto;
+        max-height: var(--logo-height);
+        width: auto;
+        padding-top: var(--logo-padding-top);
+    }
+    
+    /* Theme-aware logo text color */
+    .ext-navbar-logo .logo-text {
+        fill: var(--heading-color);
+    }
+    
+    .ext-navbar-title {
+        color: var(--heading-color) !important;
+        font-size: var(--turing-title-font-size) !important;
+        margin-left: var(--title-margin-left);
+        text-decoration: none;
+        transition: color 0.2s ease;
+    }
+    
+    .ext-navbar-title:hover {
+        color: var(--hover-color) !important;
+    }
+
+    .ext-nav-links {
+        display: flex;
+        align-items: center;
+        list-style-type: none;
+        margin: 0;
+        padding: 0;
+        flex-grow: 1;
+        margin-left: var(--title-nav-spacing);
+    }
+
+    .ext-nav-links li:first-child {
+        margin-left: 0 !important;
+    }
+
+    .ext-nav-links li {
+        margin-left: var(--nav-item-margin-left) !important;
+    }
+
+    .ext-nav-link {
+        color: var(--heading-color) !important;
+        text-decoration: none;
+        font-size: var(--nav-link-font-size) !important;
+        transition: color 0.2s ease;
+        cursor: pointer;
+    }
+
+    .ext-nav-link:hover,
+    .ext-navbar-item-single a:hover,
+    .ext-navbar-icons a:hover {
+        color: var(--hover-color) !important;
+    }
+
+    .ext-navbar-item-single a {
+        color: var(--heading-color) !important;
+    }
+    
+    .ext-navbar-icons {
+        display: flex;
+        align-items: center;
+    }
+
+    .ext-navbar-icons a {
+        color: var(--icon-color) !important;
+        font-size: var(--icon-font-size) !important;
+        transition: color 0.2s ease;
+        margin-left: var(--icon-margin-left);
+    }
+
+    .ext-menu-toggle {
+        display: none;
+        font-size: 1.5rem;
+        color: var(--heading-color);
+        cursor: pointer;
+    }
+
+    .ext-dropdown {
+        display: none;
+        grid-template-columns: 1fr 1fr 1fr 1fr;
+        padding: var(--dropdown-padding);
+        position: absolute;
+        top: var(--navbar-height);
+        width: 100%;
+        left: 0;
+        background-color: var(--primary-bg);
+        line-height: 1.875rem;
+        opacity: 0;
+        transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out, background-color 0.3s;
+        transform: translateY(-0.625rem);
+        box-shadow: 0 4px 6px var(--shadow-color);
+    }
+
+    #library-handler::after {
+        content: "▼";
+        font-size: var(--dropdown-arrow-font-size);
+        margin-left: 0.3125rem;
+        transition: transform 0.3s ease-in-out;
+    }
+
+    #library-handler.open::after {
+        content: "▲";
+    }
+
+    .ext-dropdown.show {
+        display: grid;
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .ext-dropdown ul {
+        width: var(--dropdown-item-width);
+        margin-bottom: 1.25rem;
+    }
+
+    .ext-dropdown ul li {
+        text-align: left;
+        display: flex;
+        align-items: center;
+    }
+
+    .ext-dropdown ul a li {
+        color: var(--item-color);
+        width: var(--dropdown-subitem-width);
+        border-radius: 3px;
+        padding: var(--dropdown-subitem-padding);
+        transition: background-color 0.2s ease;
+    }
+
+    .ext-dropdown ul a li:hover {
+        background-color: var(--dropdown-hover-bg);
+    }
+
+    .ext-dropdown-item-heading {
+        color: var(--heading-color);
+        text-align: center;
+    }
+
+    .deprecated-badge {
+        background-color: var(--deprecated-bg);
+        color: var(--deprecated-text);
+        font-size: var(--badge-font-size);
+        padding: .1rem;
+        border-radius: 3px;
+        margin-left: 0.5rem;
+        line-height: 1;
+    }
+
+    @media (max-width: 966px) {
+        .ext-dropdown {
+            grid-template-columns: 1fr 1fr 1fr;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .ext-nav-links {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            background-color: var(--primary-bg);
+            position: absolute;
+            top: var(--navbar-height);
+            left: 0;
+            padding: 0.625rem 0;
+            height: auto;
+            overflow-y: auto;
+            box-shadow: 0 4px 6px var(--shadow-color);
+            margin-left: 0;
+        }
+
+        .ext-nav-links.show {
+            display: flex;
+        }
+
+        .ext-nav-links li {
+            margin: 0.625rem 0 !important;
+            text-align: center;
+        }
+        
+        .ext-menu-toggle {
+            display: block;
+            margin-left: auto;
+        }
+
+        .ext-navigation.hide {
+            transform: translateY(calc(-1 * var(--navbar-height)));
+        }
+
+        .ext-dropdown {
+            position: static;
+            display: block;
+            opacity: 1;
+            transform: none;
+            box-shadow: none;
+            grid-template-columns: 1fr;
+            padding: 0.625rem;
+            text-align: center;
+        }
+
+        .ext-dropdown ul {
+            width: auto;
+            display: inline-block;
+            margin: 0 auto 0.3125rem;
+            text-align: left;
+        }
+    }
+</style>
+<nav class="ext-navigation">
+    <a href="https://turinglang.org/">
+        <svg width="4333" height="1145" viewBox="0 0 4333 1145" fill="none" xmlns="http://www.w3.org/2000/svg" class="ext-navbar-logo">
+            <path class="logo-text" d="M0.44603 193.181V66.9868H663.471V193.181H406.62V898H257.297V193.181H0.44603ZM1097.24 635.874V274.74H1244.13V898H1101.7V787.225H1095.21C1081.14 822.121 1058.01 850.66 1025.82 872.842C993.902 895.024 954.542 906.115 907.744 906.115C866.896 906.115 830.783 897.053 799.403 878.929C768.295 860.534 743.948 833.889 726.365 798.993C708.782 763.826 699.99 721.356 699.99 671.581V274.74H846.878V648.858C846.878 688.353 857.699 719.733 879.34 742.997C900.981 766.261 929.385 777.893 964.551 777.893C986.192 777.893 1007.16 772.618 1027.45 762.068C1047.73 751.518 1064.37 735.828 1077.35 714.999C1090.61 693.899 1097.24 667.524 1097.24 635.874ZM1395.17 898V274.74H1537.6V378.617H1544.09C1555.45 342.639 1574.93 314.911 1602.52 295.434C1630.38 275.687 1662.17 265.813 1697.88 265.813C1705.99 265.813 1715.05 266.219 1725.06 267.031C1735.34 267.572 1743.86 268.518 1750.63 269.871V404.992C1744.4 402.828 1734.53 400.934 1721 399.311C1707.75 397.417 1694.9 396.471 1682.46 396.471C1655.68 396.471 1631.6 402.287 1610.23 413.919C1589.13 425.28 1572.49 441.105 1560.32 461.393C1548.15 481.682 1542.06 505.081 1542.06 531.591V898H1395.17ZM1848.21 898V274.74H1995.1V898H1848.21ZM1922.06 186.283C1898.8 186.283 1878.78 178.573 1862.01 163.154C1845.24 147.464 1836.85 128.664 1836.85 106.752C1836.85 84.5701 1845.24 65.7695 1862.01 50.3503C1878.78 34.6606 1898.8 26.8158 1922.06 26.8158C1945.6 26.8158 1965.61 34.6606 1982.12 50.3503C1998.89 65.7695 2007.27 84.5701 2007.27 106.752C2007.27 128.664 1998.89 147.464 1982.12 163.154C1965.61 178.573 1945.6 186.283 1922.06 186.283ZM2293.04 532.809V898H2146.15V274.74H2286.54V380.646H2293.85C2308.18 345.75 2331.04 318.022 2362.42 297.463C2394.07 276.904 2433.16 266.625 2479.69 266.625C2522.7 266.625 2560.17 275.822 2592.09 294.217C2624.28 312.612 2649.17 339.257 2666.75 374.153C2684.6 409.049 2693.39 451.385 2693.12 501.159V898H2546.24V523.882C2546.24 482.223 2535.41 449.626 2513.77 426.092C2492.4 402.557 2462.78 390.79 2424.91 390.79C2399.21 390.79 2376.35 396.471 2356.34 407.832C2336.59 418.923 2321.03 435.019 2309.67 456.119C2298.58 477.218 2293.04 502.782 2293.04 532.809ZM3113.5 1144.71C3060.75 1144.71 3015.44 1137.54 2977.57 1123.2C2939.7 1109.13 2909.26 1090.2 2886.27 1066.39C2863.28 1042.59 2847.32 1016.21 2838.39 987.269L2970.67 955.213C2976.62 967.386 2985.28 979.424 2996.64 991.327C3008 1003.5 3023.28 1013.51 3042.49 1021.35C3061.97 1029.47 3086.45 1033.53 3115.93 1033.53C3157.59 1033.53 3192.08 1023.38 3219.4 1003.09C3246.73 983.076 3260.39 950.074 3260.39 904.087V786.008H3253.08C3245.51 801.157 3234.42 816.711 3219.81 832.671C3205.47 848.632 3186.4 862.022 3162.6 872.842C3139.06 883.663 3109.44 889.073 3073.73 889.073C3025.85 889.073 2982.44 877.847 2943.48 855.394C2904.8 832.671 2873.96 798.857 2850.97 753.952C2828.24 708.777 2816.88 652.24 2816.88 584.341C2816.88 515.902 2828.24 458.147 2850.97 411.078C2873.96 363.739 2904.93 327.896 2943.89 303.55C2982.84 278.933 3026.26 266.625 3074.14 266.625C3110.66 266.625 3140.69 272.847 3164.22 285.29C3188.03 297.463 3206.96 312.206 3221.03 329.519C3235.09 346.561 3245.78 362.657 3253.08 377.805H3261.2V274.74H3406.06V908.144C3406.06 961.435 3393.34 1005.53 3367.92 1040.42C3342.49 1075.32 3307.73 1101.43 3263.63 1118.74C3219.54 1136.05 3169.5 1144.71 3113.5 1144.71ZM3114.72 773.835C3145.83 773.835 3172.34 766.261 3194.25 751.112C3216.16 735.963 3232.79 714.187 3244.16 685.783C3255.52 657.379 3261.2 623.295 3261.2 583.53C3261.2 544.305 3255.52 509.95 3244.16 480.465C3233.07 450.979 3216.56 428.12 3194.65 411.89C3173.01 395.389 3146.37 387.138 3114.72 387.138C3081.98 387.138 3054.66 395.659 3032.75 412.701C3010.84 429.744 2994.34 453.143 2983.25 482.899C2972.16 512.385 2966.61 545.929 2966.61 583.53C2966.61 621.672 2972.16 655.08 2983.25 683.754C2994.61 712.158 3011.25 734.34 3033.16 750.3C3055.34 765.99 3082.53 773.835 3114.72 773.835ZM3647.08 906.927C3622.47 906.927 3601.37 898.271 3583.78 880.958C3566.2 863.645 3557.54 842.545 3557.82 817.658C3557.54 793.312 3566.2 772.482 3583.78 755.17C3601.37 737.857 3622.47 729.2 3647.08 729.2C3670.89 729.2 3691.58 737.857 3709.17 755.17C3727.02 772.482 3736.08 793.312 3736.35 817.658C3736.08 834.159 3731.75 849.173 3723.37 862.698C3715.25 876.224 3704.43 887.044 3690.91 895.16C3677.65 903.004 3663.04 906.927 3647.08 906.927ZM3888.01 274.74H4034.9V933.708C4034.9 978.613 4026.38 1015.67 4009.33 1044.89C3992.29 1074.1 3967.67 1095.88 3935.48 1110.22C3903.29 1124.55 3864.2 1131.72 3818.22 1131.72C3812.81 1131.72 3807.8 1131.59 3803.2 1131.32C3798.6 1131.32 3793.6 1131.18 3788.19 1130.91V1011.21C3792.25 1011.48 3795.9 1011.62 3799.15 1011.62C3802.39 1011.89 3805.77 1012.02 3809.29 1012.02C3837.42 1012.02 3857.58 1005.12 3869.75 991.327C3881.92 977.801 3888.01 957.918 3888.01 931.679V274.74ZM3961.05 186.283C3937.51 186.283 3917.36 178.573 3900.59 163.154C3884.09 147.464 3875.84 128.664 3875.84 106.752C3875.84 84.5701 3884.09 65.7695 3900.59 50.3503C3917.36 34.6606 3937.51 26.8158 3961.05 26.8158C3984.31 26.8158 4004.19 34.6606 4020.7 50.3503C4037.47 65.7695 4045.85 84.5701 4045.85 106.752C4045.85 128.664 4037.47 147.464 4020.7 163.154C4004.19 178.573 3984.31 186.283 3961.05 186.283ZM4332.83 66.9868V898H4185.94V66.9868H4332.83Z" fill="currentColor"/>
+            <path d="M4076 108.5C4076 168.424 4027.42 217 3967.5 217C3907.58 217 3859 168.424 3859 108.5C3859 48.5762 3907.58 0 3967.5 0C4027.42 0 4076 48.5762 4076 108.5Z" fill="#389725"/>
+            <path d="M3755 814.5C3755 874.424 3706.42 923 3646.5 923C3586.58 923 3538 874.424 3538 814.5C3538 754.576 3586.58 706 3646.5 706C3706.42 706 3755 754.576 3755 814.5Z" fill="#9457B1"/>
+            <path d="M2030 108.5C2030 168.424 1981.42 217 1921.5 217C1861.58 217 1813 168.424 1813 108.5C1813 48.5762 1861.58 0 1921.5 0C1981.42 0 2030 48.5762 2030 108.5Z" fill="#CA3B33"/>
+        </svg>
+    </a>
+    <!-- <a class="ext-navbar-title" href="https://turinglang.org/">Turing.jl</a> -->
+    
+    <ul class="ext-nav-links">
+        <li><a class="ext-nav-link" href="https://turinglang.org/docs/getting-started/">Get Started</a></li>
+        <li><a class="ext-nav-link" href="https://turinglang.org/docs/tutorials/">Tutorials</a></li>
+        <li><a class="ext-nav-link" href="https://turinglang.org/docs/faq/">FAQ</a></li>
+        <li>
+            <p class="ext-nav-link" id="library-handler">Libraries</p>
+            <div class="ext-dropdown" id="ext-dropdown-items">
+                <ul>
+                    <li class="ext-dropdown-item-heading">Modelling Languages</li>
+                    <a href="https://turinglang.org/DynamicPPL.jl/"><li>DynamicPPL</li></a>
+                    <a href="https://turinglang.org/JuliaBUGS.jl/"><li>JuliaBUGS</li></a>
+                    <a href="https://turinglang.org/TuringGLM.jl/"><li>TuringGLM</li></a>
+                </ul>
+                <ul>
+                    <li class="ext-dropdown-item-heading">MCMC</li>
+                    <a href="https://turinglang.org/AdvancedHMC.jl/"><li>AdvancedHMC</li></a>
+                    <a href="https://turinglang.org/AbstractMCMC.jl/"><li>AbstractMCMC</li></a>
+                    <a href="https://github.com/theogf/ThermodynamicIntegration.jl"><li>ThermodynamicIntegration</li></a>
+                    <a href="https://turinglang.org/AdvancedPS.jl/"><li>AdvancedPS</li></a>
+                    <a href="https://turinglang.org/SliceSampling.jl/"><li>SliceSampling</li></a>
+                    <a href="https://turinglang.org/EllipticalSliceSampling.jl/"><li>EllipticalSliceSampling</li></a>
+                </ul>
+                <ul>
+                    <li class="ext-dropdown-item-heading">Diagnostics</li>
+                    <a href="https://turinglang.org/MCMCChains.jl/"><li>MCMCChains</li></a>
+                    <a href="https://turinglang.org/MCMCDiagnosticTools.jl/"><li>MCMCDiagnosticTools</li></a>
+                    <a href="https://turinglang.org/ParetoSmooth.jl/"><li>ParetoSmooth</li></a>
+                </ul>
+                <ul>
+                    <li class="ext-dropdown-item-heading">Gaussian Processes</li>
+                    <a href="https://juliagaussianprocesses.github.io/AbstractGPs.jl/"><li>AbstractGPs</li></a>
+                    <a href="https://juliagaussianprocesses.github.io/KernelFunctions.jl/"><li>KernelFunctions</li></a>
+                    <a href="https://juliagaussianprocesses.github.io/ApproximateGPs.jl/"><li>ApproximateGPs</li></a>
+                </ul>
+                <ul><li class="ext-dropdown-item-heading ext-navbar-item-single"><a href="https://turinglang.org/Bijectors.jl/">Bijectors</a></li></ul>
+                <ul><li class="ext-dropdown-item-heading ext-navbar-item-single"><a href="https://turinglang.org/TuringCallbacks.jl/">TuringCallbacks</a></li></ul>
+                <ul><li class="ext-dropdown-item-heading ext-navbar-item-single"><a href="https://turinglang.org/Deprecated/TuringBenchmarking/">TuringBenchmarking</a><span class="deprecated-badge">Deprecated</span></li></ul>
+            </div>
+        </li>
+        <li><a class="ext-nav-link" href="https://turinglang.org/news/">News</a></li>
+        <li><a class="ext-nav-link" href="https://turinglang.org/team/">Team</a></li>
+    </ul>
+
+    <div class="ext-navbar-icons">
+        <a href="https://x.com/TuringLang" aria-label="Turing on X"><i class="fa-brands fa-x-twitter"></i></a>
+        <a href="https://discourse.julialang.org/c/domain/probprog/48" aria-label="Turing on Discourse"><i class="fa-brands fa-discourse"></i></a>
+        <a href="https://julialang.slack.com/archives/CCYDC34A0" aria-label="Turing on Slack"><i class="fa-brands fa-slack"></i></a>
+        <a href="https://github.com/TuringLang/" aria-label="Turing.jl on GitHub"><i class="fa-brands fa-github"></i></a>
+    </div>
+
+    <span class="ext-menu-toggle"><i class="fa-solid fa-bars"></i></span>
+</nav>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const menuToggle = document.querySelector(".ext-menu-toggle");
+        const navLinks = document.querySelector(".ext-nav-links");
+        const nav = document.querySelector(".ext-navigation");
+        const libraryHandler = document.getElementById("library-handler");
+        const dropdownContainer = document.getElementById("ext-dropdown-items");
+        let lastScrollY = window.scrollY;
+
+        function closeDropdown() {
+            if (dropdownContainer.classList.contains("show")) {
+                libraryHandler.classList.remove("open");
+                dropdownContainer.classList.remove("show");
+                setTimeout(() => {
+                    if (!dropdownContainer.classList.contains("show")) {
+                        dropdownContainer.style.display = "none";
+                    }
+                }, 300);
+            }
+        }
+
+        function openDropdown() {
+            dropdownContainer.style.display = "grid";
+            libraryHandler.classList.add("open");
+            setTimeout(() => {
+                dropdownContainer.classList.add("show");
+            }, 10);
+        }
+
+        function setAppropriateHeight() {
+            if (window.innerWidth <= 768) {
+                const viewportHeight = window.innerHeight;
+                const navHeight = nav.offsetHeight;
+                navLinks.style.maxHeight = `${viewportHeight - navHeight}px`;
+                navLinks.style.overflowY = "auto";
+            } else {
+                navLinks.style.maxHeight = "";
+                navLinks.style.overflowY = "";
+            }
+        }
+
+        menuToggle.addEventListener("click", (event) => {
+            event.stopPropagation();
+            navLinks.classList.toggle("show");
+            if (navLinks.classList.contains("show")) {
+                setAppropriateHeight();
+                closeDropdown();
+                dropdownContainer.style.display = "none";
+            }
+        });
+
+        libraryHandler.addEventListener("click", (event) => {
+            event.stopPropagation();
+            event.preventDefault();
+            if (dropdownContainer.classList.contains("show")) {
+                closeDropdown();
+            } else {
+                openDropdown();
+            }
+            setAppropriateHeight();
+        });
+
+        // Close all menus if a click is registered outside the navigation bar.
+        document.addEventListener("click", (event) => {
+            if (!nav.contains(event.target)) {
+                navLinks.classList.remove("show");
+                closeDropdown();
+            }
+        });
+
+        // Hide navigation bar on scroll down in mobile view.
+        window.addEventListener("scroll", () => {
+            if (window.innerWidth <= 768) {
+                if (window.scrollY > lastScrollY && window.scrollY > nav.offsetHeight){
+                    nav.classList.add("hide");
+                } else {
+                    nav.classList.remove("hide");
+                }
+                lastScrollY = window.scrollY;
+            }
+        });
+
+        window.addEventListener("resize", setAppropriateHeight);
+    });
+</script>
+<!-- NAVBAR END -->
+
+
+
+<div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">Bijectors</a></span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li class="is-active"><a class="tocitem" href>Transforms</a><ul class="internal"><li><a class="tocitem" href="#Usage"><span>Usage</span></a></li><li><a class="tocitem" href="#User-facing-methods"><span>User-facing methods</span></a></li><li><a class="tocitem" href="#Implementing-a-transformation"><span>Implementing a transformation</span></a></li><li><a class="tocitem" href="#Working-with-Distributions.jl"><span>Working with Distributions.jl</span></a></li><li><a class="tocitem" href="#Utilities"><span>Utilities</span></a></li><li><a class="tocitem" href="#API"><span>API</span></a></li><li><a class="tocitem" href="#Bijectors"><span>Bijectors</span></a></li></ul></li><li><a class="tocitem" href="../distributions/">Distributions.jl integration</a></li><li><a class="tocitem" href="../examples/">Examples</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Transforms</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Transforms</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/TuringLang/Bijectors.jl/blob/master/docs/src/transforms.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h2 id="Usage"><a class="docs-heading-anchor" href="#Usage">Usage</a><a id="Usage-1"></a><a class="docs-heading-anchor-permalink" href="#Usage" title="Permalink"></a></h2><p>A very simple example of a &quot;bijector&quot;/diffeomorphism, i.e. a differentiable transformation with a differentiable inverse, is the <code>exp</code> function:</p><ul><li>The inverse of <code>exp</code> is <code>log</code>.</li><li>The derivative of <code>exp</code> at an input <code>x</code> is simply <code>exp(x)</code>, hence <code>logabsdetjac</code> is simply <code>x</code>.</li></ul><pre><code class="language-julia-repl hljs" style="display:block;">julia&gt; using Bijectors</code><code class="nohighlight hljs ansi" style="display:block;"></code><br/><code class="language-julia-repl hljs" style="display:block;">julia&gt; transform(exp, 1.0)</code><code class="nohighlight hljs ansi" style="display:block;">2.718281828459045</code><br/><code class="language-julia-repl hljs" style="display:block;">julia&gt; logabsdetjac(exp, 1.0)</code><code class="nohighlight hljs ansi" style="display:block;">1.0</code><br/><code class="language-julia-repl hljs" style="display:block;">julia&gt; with_logabsdet_jacobian(exp, 1.0)</code><code class="nohighlight hljs ansi" style="display:block;">(2.718281828459045, 1.0)</code></pre><p>Some transformations are well-defined for different types of inputs, e.g. <code>exp</code> can also act elementwise on an <code>N</code>-dimensional <code>Array{&lt;:Real,N}</code>. To specify that a transformation should act elementwise, we use the <a href="#Bijectors.elementwise"><code>elementwise</code></a> method:</p><pre><code class="language-julia-repl hljs" style="display:block;">julia&gt; x = ones(2, 2)</code><code class="nohighlight hljs ansi" style="display:block;">2×2 Matrix{Float64}:
+ 1.0  1.0
+ 1.0  1.0</code><br/><code class="language-julia-repl hljs" style="display:block;">julia&gt; transform(elementwise(exp), x)</code><code class="nohighlight hljs ansi" style="display:block;">2×2 Matrix{Float64}:
+ 2.71828  2.71828
+ 2.71828  2.71828</code><br/><code class="language-julia-repl hljs" style="display:block;">julia&gt; logabsdetjac(elementwise(exp), x)</code><code class="nohighlight hljs ansi" style="display:block;">4.0</code><br/><code class="language-julia-repl hljs" style="display:block;">julia&gt; with_logabsdet_jacobian(elementwise(exp), x)</code><code class="nohighlight hljs ansi" style="display:block;">([2.718281828459045 2.718281828459045; 2.718281828459045 2.718281828459045], 4.0)</code></pre><p>These methods also work nicely for compositions of transformations:</p><pre><code class="language-julia-repl hljs" style="display:block;">julia&gt; transform(elementwise(log ∘ exp), x)</code><code class="nohighlight hljs ansi" style="display:block;">2×2 Matrix{Float64}:
+ 1.0  1.0
+ 1.0  1.0</code></pre><p>Unlike <code>exp</code>, some transformations have parameters affecting the resulting transformation they represent, e.g. <code>Logit</code> has two parameters <code>a</code> and <code>b</code> representing the lower- and upper-bound, respectively, of its domain:</p><pre><code class="language-julia-repl hljs" style="display:block;">julia&gt; using Bijectors: Logit</code><code class="nohighlight hljs ansi" style="display:block;"></code><br/><code class="language-julia-repl hljs" style="display:block;">julia&gt; f = Logit(0.0, 1.0)</code><code class="nohighlight hljs ansi" style="display:block;">Bijectors.Logit{Float64, Float64}(0.0, 1.0)</code><br/><code class="language-julia-repl hljs" style="display:block;">julia&gt; f(rand()) # takes us from `(0, 1)` to `(-∞, ∞)`</code><code class="nohighlight hljs ansi" style="display:block;">0.031722009754143764</code></pre><h2 id="User-facing-methods"><a class="docs-heading-anchor" href="#User-facing-methods">User-facing methods</a><a id="User-facing-methods-1"></a><a class="docs-heading-anchor-permalink" href="#User-facing-methods" title="Permalink"></a></h2><p>Without mutation:</p><article class="docstring"><header><a class="docstring-binding" id="Bijectors.transform" href="#Bijectors.transform"><code>Bijectors.transform</code></a> — <span class="docstring-category">Function</span></header><section><div><pre><code class="language-julia hljs">transform(b, x)</code></pre><p>Transform <code>x</code> using <code>b</code>, treating <code>x</code> as a single input.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/TuringLang/Bijectors.jl/blob/55501ae8e6fbb414b743fdf10be34f3275616464/src/interface.jl#L86-L90">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="Bijectors.logabsdetjac" href="#Bijectors.logabsdetjac"><code>Bijectors.logabsdetjac</code></a> — <span class="docstring-category">Function</span></header><section><div><pre><code class="language-julia hljs">logabsdetjac(b, x)</code></pre><p>Return <code>log(abs(det(J(b, x))))</code>, where <code>J(b, x)</code> is the jacobian of <code>b</code> at <code>x</code>.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/TuringLang/Bijectors.jl/blob/55501ae8e6fbb414b743fdf10be34f3275616464/src/interface.jl#L113-L117">source</a></section></article><pre><code class="language-julia hljs">with_logabsdet_jacobian</code></pre><p>With mutation:</p><article class="docstring"><header><a class="docstring-binding" id="Bijectors.transform!" href="#Bijectors.transform!"><code>Bijectors.transform!</code></a> — <span class="docstring-category">Function</span></header><section><div><pre><code class="language-julia hljs">transform!(b, x[, y])</code></pre><p>Transform <code>x</code> using <code>b</code>, storing the result in <code>y</code>.</p><p>If <code>y</code> is not provided, <code>x</code> is used as the output.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/TuringLang/Bijectors.jl/blob/55501ae8e6fbb414b743fdf10be34f3275616464/src/interface.jl#L103-L109">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="Bijectors.logabsdetjac!" href="#Bijectors.logabsdetjac!"><code>Bijectors.logabsdetjac!</code></a> — <span class="docstring-category">Function</span></header><section><div><pre><code class="language-julia hljs">logabsdetjac!(b, x[, logjac])</code></pre><p>Compute <code>log(abs(det(J(b, x))))</code> and store the result in <code>logjac</code>, where <code>J(b, x)</code> is the jacobian of <code>b</code> at <code>x</code>.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/TuringLang/Bijectors.jl/blob/55501ae8e6fbb414b743fdf10be34f3275616464/src/interface.jl#L129-L133">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="Bijectors.with_logabsdet_jacobian!" href="#Bijectors.with_logabsdet_jacobian!"><code>Bijectors.with_logabsdet_jacobian!</code></a> — <span class="docstring-category">Function</span></header><section><div><pre><code class="language-julia hljs">with_logabsdet_jacobian!(b, x[, y, logjac])</code></pre><p>Compute <code>transform(b, x)</code> and <code>logabsdetjac(b, x)</code>, storing the result in <code>y</code> and <code>logjac</code>, respetively.</p><p>If <code>y</code> is not provided, then <code>x</code> will be used in its place.</p><p>Defaults to calling <code>with_logabsdet_jacobian(b, x)</code> and updating <code>y</code> and <code>logjac</code> with the result.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/TuringLang/Bijectors.jl/blob/55501ae8e6fbb414b743fdf10be34f3275616464/src/interface.jl#L137-L146">source</a></section></article><h2 id="Implementing-a-transformation"><a class="docs-heading-anchor" href="#Implementing-a-transformation">Implementing a transformation</a><a id="Implementing-a-transformation-1"></a><a class="docs-heading-anchor-permalink" href="#Implementing-a-transformation" title="Permalink"></a></h2><p>Any callable can be made into a bijector by providing an implementation of <code>ChangeOfVariables.with_logabsdet_jacobian(b, x)</code>.</p><p>You can also optionally implement <a href="#Bijectors.transform"><code>transform</code></a> and <a href="#Bijectors.logabsdetjac"><code>logabsdetjac</code></a> to avoid redundant computations. This is usually only worth it if you expect <code>transform</code> or <code>logabsdetjac</code> to be used heavily without the other.</p><p>Similarly with the mutable versions <a href="#Bijectors.with_logabsdet_jacobian!"><code>with_logabsdet_jacobian!</code></a>, <a href="#Bijectors.transform!"><code>transform!</code></a>, and <a href="#Bijectors.logabsdetjac!"><code>logabsdetjac!</code></a>.</p><h2 id="Working-with-Distributions.jl"><a class="docs-heading-anchor" href="#Working-with-Distributions.jl">Working with Distributions.jl</a><a id="Working-with-Distributions.jl-1"></a><a class="docs-heading-anchor-permalink" href="#Working-with-Distributions.jl" title="Permalink"></a></h2><article class="docstring"><header><a class="docstring-binding" id="Bijectors.bijector" href="#Bijectors.bijector"><code>Bijectors.bijector</code></a> — <span class="docstring-category">Function</span></header><section><div><pre><code class="language-julia hljs">bijector(d::Distribution)</code></pre><p>Returns the constrained-to-unconstrained bijector for distribution <code>d</code>.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/TuringLang/Bijectors.jl/blob/55501ae8e6fbb414b743fdf10be34f3275616464/src/transformed_distribution.jl#L41-L45">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="Bijectors.transformed-Tuple{Distribution, Bijector}" href="#Bijectors.transformed-Tuple{Distribution, Bijector}"><code>Bijectors.transformed</code></a> — <span class="docstring-category">Method</span></header><section><div><pre><code class="language-julia hljs">transformed(d::Distribution)
+transformed(d::Distribution, b::Bijector)</code></pre><p>Couples distribution <code>d</code> with the bijector <code>b</code> by returning a <code>TransformedDistribution</code>.</p><p>If no bijector is provided, i.e. <code>transformed(d)</code> is called, then  <code>transformed(d, bijector(d))</code> is returned.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/TuringLang/Bijectors.jl/blob/55501ae8e6fbb414b743fdf10be34f3275616464/src/transformed_distribution.jl#L29-L37">source</a></section></article><h2 id="Utilities"><a class="docs-heading-anchor" href="#Utilities">Utilities</a><a id="Utilities-1"></a><a class="docs-heading-anchor-permalink" href="#Utilities" title="Permalink"></a></h2><article class="docstring"><header><a class="docstring-binding" id="Bijectors.elementwise" href="#Bijectors.elementwise"><code>Bijectors.elementwise</code></a> — <span class="docstring-category">Function</span></header><section><div><pre><code class="language-julia hljs">elementwise(f)</code></pre><p>Alias for <code>Base.Fix1(broadcast, f)</code>.</p><p>In the case where <code>f::ComposedFunction</code>, the result is <code>Base.Fix1(broadcast, f.outer) ∘ Base.Fix1(broadcast, f.inner)</code> rather than <code>Base.Fix1(broadcast, f)</code>.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/TuringLang/Bijectors.jl/blob/55501ae8e6fbb414b743fdf10be34f3275616464/src/interface.jl#L7-L15">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="Bijectors.isinvertible" href="#Bijectors.isinvertible"><code>Bijectors.isinvertible</code></a> — <span class="docstring-category">Function</span></header><section><div><pre><code class="language-julia hljs">isinvertible(t)</code></pre><p>Return <code>true</code> if <code>t</code> is invertible, and <code>false</code> otherwise.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/TuringLang/Bijectors.jl/blob/55501ae8e6fbb414b743fdf10be34f3275616464/src/interface.jl#L168-L172">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="Bijectors.isclosedform-Tuple{Bijectors.Transform}" href="#Bijectors.isclosedform-Tuple{Bijectors.Transform}"><code>Bijectors.isclosedform</code></a> — <span class="docstring-category">Method</span></header><section><div><pre><code class="language-julia hljs">isclosedform(b::Transform)::bool
+isclosedform(b⁻¹::Inverse{&lt;:Transform})::bool</code></pre><p>Returns <code>true</code> or <code>false</code> depending on whether or not evaluation of <code>b</code> has a closed-form implementation.</p><p>Most transformations have closed-form evaluations, but there are cases where this is not the case. For example the <em>inverse</em> evaluation of <code>PlanarLayer</code> requires an iterative procedure to evaluate.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/TuringLang/Bijectors.jl/blob/55501ae8e6fbb414b743fdf10be34f3275616464/src/interface.jl#L155-L165">source</a></section></article><h2 id="API"><a class="docs-heading-anchor" href="#API">API</a><a id="API-1"></a><a class="docs-heading-anchor-permalink" href="#API" title="Permalink"></a></h2><article class="docstring"><header><a class="docstring-binding" id="Bijectors.Transform" href="#Bijectors.Transform"><code>Bijectors.Transform</code></a> — <span class="docstring-category">Type</span></header><section><div><p>Abstract type for a transformation.</p><p><strong>Implementing</strong></p><p>A subtype of <code>Transform</code> of should at least implement <a href="#Bijectors.transform"><code>transform(b, x)</code></a>.</p><p>If the <code>Transform</code> is also invertible:</p><ul><li>Required:<ul><li><em>Either</em> of the following:<ul><li><code>transform(::Inverse{&lt;:MyTransform}, x)</code>: the <code>transform</code> for its inverse.</li><li><code>InverseFunctions.inverse(b::MyTransform)</code>: returns an existing <code>Transform</code>.</li></ul></li><li><a href="#Bijectors.logabsdetjac"><code>logabsdetjac</code></a>: computes the log-abs-det jacobian factor.</li></ul></li><li>Optional:<ul><li><code>with_logabsdet_jacobian</code>: <code>transform</code> and <code>logabsdetjac</code> combined. Useful in cases where we can exploit shared computation in the two.</li></ul></li></ul><p>For the above methods, there are mutating versions which can <em>optionally</em> be implemented:</p><ul><li><a href="#Bijectors.with_logabsdet_jacobian!"><code>with_logabsdet_jacobian!</code></a></li><li><a href="#Bijectors.logabsdetjac!"><code>logabsdetjac!</code></a></li><li><a href="#Bijectors.with_logabsdet_jacobian!"><code>with_logabsdet_jacobian!</code></a></li></ul></div><a class="docs-sourcelink" target="_blank" href="https://github.com/TuringLang/Bijectors.jl/blob/55501ae8e6fbb414b743fdf10be34f3275616464/src/interface.jl#L57-L79">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="Bijectors.Bijector" href="#Bijectors.Bijector"><code>Bijectors.Bijector</code></a> — <span class="docstring-category">Type</span></header><section><div><p>Abstract type of a bijector, i.e. differentiable bijection with differentiable inverse.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/TuringLang/Bijectors.jl/blob/55501ae8e6fbb414b743fdf10be34f3275616464/src/interface.jl#L205">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="Bijectors.Inverse" href="#Bijectors.Inverse"><code>Bijectors.Inverse</code></a> — <span class="docstring-category">Type</span></header><section><div><pre><code class="language-julia hljs">inverse(b::Transform)
+Inverse(b::Transform)</code></pre><p>A <code>Transform</code> representing the inverse transform of <code>b</code>.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/TuringLang/Bijectors.jl/blob/55501ae8e6fbb414b743fdf10be34f3275616464/src/interface.jl#L175-L180">source</a></section></article><h2 id="Bijectors"><a class="docs-heading-anchor" href="#Bijectors">Bijectors</a><a id="Bijectors-1"></a><a class="docs-heading-anchor-permalink" href="#Bijectors" title="Permalink"></a></h2><article class="docstring"><header><a class="docstring-binding" id="Bijectors.CorrBijector" href="#Bijectors.CorrBijector"><code>Bijectors.CorrBijector</code></a> — <span class="docstring-category">Type</span></header><section><div><pre><code class="language-julia hljs">CorrBijector &lt;: Bijector</code></pre><p>A bijector implementation of Stan&#39;s parametrization method for Correlation matrix: https://mc-stan.org/docs/2_23/reference-manual/correlation-matrix-transform-section.html</p><p>Basically, a unconstrained strictly upper triangular matrix <code>y</code> is transformed to  a correlation matrix by following readable but not that efficient form:</p><pre><code class="nohighlight hljs">K = size(y, 1)
+z = tanh.(y)
+
+for j=1:K, i=1:K
+    if i&gt;j
+        w[i,j] = 0
+    elseif 1==i==j
+        w[i,j] = 1
+    elseif 1&lt;i==j
+        w[i,j] = prod(sqrt(1 .- z[1:i-1, j].^2))
+    elseif 1==i&lt;j
+        w[i,j] = z[i,j]
+    elseif 1&lt;i&lt;j
+        w[i,j] = z[i,j] * prod(sqrt(1 .- z[1:i-1, j].^2))
+    end
+end</code></pre><p>It is easy to see that every column is a unit vector, for example:</p><pre><code class="nohighlight hljs">w3&#39; w3 ==
+w[1,3]^2 + w[2,3]^2 + w[3,3]^2 ==
+z[1,3]^2 + (z[2,3] * sqrt(1 - z[1,3]^2))^2 + (sqrt(1-z[1,3]^2) * sqrt(1-z[2,3]^2))^2 ==
+z[1,3]^2 + z[2,3]^2 * (1-z[1,3]^2) + (1-z[1,3]^2) * (1-z[2,3]^2) ==
+z[1,3]^2 + z[2,3]^2 - z[2,3]^2 * z[1,3]^2 + 1 -z[1,3]^2 - z[2,3]^2 + z[1,3]^2 * z[2,3]^2 ==
+1</code></pre><p>And diagonal elements are positive, so <code>w</code> is a cholesky factor for a positive matrix.</p><pre><code class="nohighlight hljs">x = w&#39; * w</code></pre><p>Consider block matrix representation for <code>x</code></p><pre><code class="nohighlight hljs">x = [w1&#39;; w2&#39;; ... wn&#39;] * [w1 w2 ... wn] == 
+[w1&#39;w1 w1&#39;w2 ... w1&#39;wn;
+ w2&#39;w1 w2&#39;w2 ... w2&#39;wn;
+ ...
+]</code></pre><p>The diagonal elements are given by <code>wk&#39;wk = 1</code>, thus <code>x</code> is a correlation matrix.</p><p>Every step is invertible, so this is a bijection(bijector).</p><p>Note: The implementation doesn&#39;t follow their &quot;manageable expression&quot; directly, because their equation seems wrong (7/30/2020). Insteadly it follows definition  above the &quot;manageable expression&quot; directly, which is also described in above doc.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/TuringLang/Bijectors.jl/blob/55501ae8e6fbb414b743fdf10be34f3275616464/src/bijectors/corr.jl#L1-L63">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="Bijectors.LeakyReLU" href="#Bijectors.LeakyReLU"><code>Bijectors.LeakyReLU</code></a> — <span class="docstring-category">Type</span></header><section><div><pre><code class="language-julia hljs">LeakyReLU{T}(α::T) &lt;: Bijector</code></pre><p>Defines the invertible mapping</p><pre><code class="nohighlight hljs">x ↦ x if x ≥ 0 else αx</code></pre><p>where α &gt; 0.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/TuringLang/Bijectors.jl/blob/55501ae8e6fbb414b743fdf10be34f3275616464/src/bijectors/leaky_relu.jl#L1-L9">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="Bijectors.Stacked" href="#Bijectors.Stacked"><code>Bijectors.Stacked</code></a> — <span class="docstring-category">Type</span></header><section><div><pre><code class="language-julia hljs">Stacked(bs)
+Stacked(bs, ranges)
+stack(bs::Bijector...)</code></pre><p>A <code>Bijector</code> which stacks bijectors together which can then be applied to a vector where <code>bs[i]::Bijector</code> is applied to <code>x[ranges[i]]::UnitRange{Int}</code>.</p><p><strong>Arguments</strong></p><ul><li><code>bs</code> can be either a <code>Tuple</code> or an <code>AbstractArray</code> of 0- and/or 1-dimensional bijectors<ul><li>If <code>bs</code> is a <code>Tuple</code>, implementations are type-stable using generated functions</li><li>If <code>bs</code> is an <code>AbstractArray</code>, implementations are <em>not</em> type-stable and use iterative methods</li></ul></li><li><code>ranges</code> needs to be an iterable consisting of <code>UnitRange{Int}</code><ul><li><code>length(bs) == length(ranges)</code> needs to be true.</li></ul></li></ul><p><strong>Examples</strong></p><pre><code class="nohighlight hljs">b1 = Logit(0.0, 1.0)
+b2 = identity
+b = stack(b1, b2)
+b([0.0, 1.0]) == [b1(0.0), 1.0]  # =&gt; true</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/TuringLang/Bijectors.jl/blob/55501ae8e6fbb414b743fdf10be34f3275616464/src/bijectors/stacked.jl#L1-L23">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="Bijectors.RationalQuadraticSpline" href="#Bijectors.RationalQuadraticSpline"><code>Bijectors.RationalQuadraticSpline</code></a> — <span class="docstring-category">Type</span></header><section><div><pre><code class="language-julia hljs">RationalQuadraticSpline{T} &lt;: Bijector</code></pre><p>Implementation of the Rational Quadratic Spline flow [1].</p><ul><li>Outside of the interval <code>[minimum(widths), maximum(widths)]</code>, this mapping is given  by the identity map. </li><li>Inside the interval it&#39;s given by a monotonic spline (i.e. monotonic polynomials  connected at intermediate points) with endpoints fixed so as to continuously transform into the identity map.</li></ul><p>For the sake of efficiency, there are separate implementations for 0-dimensional and 1-dimensional inputs.</p><p><strong>Notes</strong></p><p>There are two constructors for <code>RationalQuadraticSpline</code>:</p><ul><li><code>RationalQuadraticSpline(widths, heights, derivatives)</code>: it is assumed that <code>widths</code>, </li></ul><p><code>heights</code>, and <code>derivatives</code> satisfy the constraints that makes this a valid bijector, i.e.</p><ul><li><code>widths</code>: monotonically increasing and <code>length(widths) == K</code>,</li><li><code>heights</code>: monotonically increasing and <code>length(heights) == K</code>,</li><li><code>derivatives</code>: non-negative and <code>derivatives[1] == derivatives[end] == 1</code>.</li><li><code>RationalQuadraticSpline(widths, heights, derivatives, B)</code>: other than than the lengths,  no assumptions are made on parameters. Therefore we will transform the parameters s.t.:</li><li><code>widths_new</code> ∈ [-B, B]ᴷ⁺¹, where <code>K == length(widths)</code>,</li><li><code>heights_new</code> ∈ [-B, B]ᴷ⁺¹, where <code>K == length(heights)</code>,</li><li><code>derivatives_new</code> ∈ (0, ∞)ᴷ⁺¹ with <code>derivatives_new[1] == derivates_new[end] == 1</code>,  where <code>(K - 1) == length(derivatives)</code>.</li></ul><p><strong>Examples</strong></p><p><strong>Univariate</strong></p><pre><code class="language-julia-repl hljs">julia&gt; using StableRNGs: StableRNG; rng = StableRNG(42);  # For reproducibility.
+
+julia&gt; using Bijectors: RationalQuadraticSpline
+
+julia&gt; K = 3; B = 2;
+
+julia&gt; # Monotonic spline on &#39;[-B, B]&#39; with `K` intermediate knots/&quot;connection points&quot;.
+       b = RationalQuadraticSpline(randn(rng, K), randn(rng, K), randn(rng, K - 1), B);
+
+julia&gt; b(0.5) # inside of `[-B, B]` → transformed
+1.1943325397834206
+
+julia&gt; b(5.) # outside of `[-B, B]` → not transformed
+5.0
+
+julia&gt; b = RationalQuadraticSpline(b.widths, b.heights, b.derivatives);
+
+julia&gt; b(0.5) # inside of `[-B, B]` → transformed
+1.1943325397834206
+
+julia&gt; d = 2; K = 3; B = 2;
+
+julia&gt; b = RationalQuadraticSpline(randn(rng, d, K), randn(rng, d, K), randn(rng, d, K - 1), B);
+
+julia&gt; b([-1., 1.])
+2-element Vector{Float64}:
+ -1.5660106244288925
+  0.5384702734738573
+
+julia&gt; b([-5., 5.])
+2-element Vector{Float64}:
+ -5.0
+  5.0
+
+julia&gt; b([-1., 5.])
+2-element Vector{Float64}:
+ -1.5660106244288925
+  5.0</code></pre><p><strong>References</strong></p><p>[1] Durkan, C., Bekasov, A., Murray, I., &amp; Papamakarios, G., Neural Spline Flows, CoRR, arXiv:1906.04032 [stat.ML],  (2019). </p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/TuringLang/Bijectors.jl/blob/55501ae8e6fbb414b743fdf10be34f3275616464/src/bijectors/rational_quadratic_spline.jl#L1-L74">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="Bijectors.Coupling" href="#Bijectors.Coupling"><code>Bijectors.Coupling</code></a> — <span class="docstring-category">Type</span></header><section><div><pre><code class="language-julia hljs">Coupling{F, M}(θ::F, mask::M)</code></pre><p>Implements a coupling-layer as defined in [1].</p><p><strong>Examples</strong></p><pre><code class="language-julia-repl hljs">julia&gt; using Bijectors: Shift, Coupling, PartitionMask, coupling, couple
+
+julia&gt; m = PartitionMask(3, [1], [2]); # &lt;= going to use x[2] to parameterize transform of x[1]
+
+julia&gt; cl = Coupling(Shift, m); # &lt;= will do `y[1:1] = x[1:1] + x[2:2]`;
+
+julia&gt; x = [1., 2., 3.];
+
+julia&gt; cl(x)
+3-element Vector{Float64}:
+ 3.0
+ 2.0
+ 3.0
+
+julia&gt; inverse(cl)(cl(x))
+3-element Vector{Float64}:
+ 1.0
+ 2.0
+ 3.0
+
+julia&gt; coupling(cl) # get the `Bijector` map `θ -&gt; b(⋅, θ)`
+Shift
+
+julia&gt; couple(cl, x) # get the `Bijector` resulting from `x`
+Shift{Vector{Float64}}([2.0])
+
+julia&gt; with_logabsdet_jacobian(cl, x)
+([3.0, 2.0, 3.0], 0.0)</code></pre><p><strong>References</strong></p><p>[1] Kobyzev, I., Prince, S., &amp; Brubaker, M. A., Normalizing flows: introduction and ideas, CoRR, (),  (2019). </p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/TuringLang/Bijectors.jl/blob/55501ae8e6fbb414b743fdf10be34f3275616464/src/bijectors/coupling.jl#L138-L177">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="Bijectors.OrderedBijector" href="#Bijectors.OrderedBijector"><code>Bijectors.OrderedBijector</code></a> — <span class="docstring-category">Type</span></header><section><div><pre><code class="language-julia hljs">OrderedBijector()</code></pre><p>A bijector mapping unordered vectors in ℝᵈ to ordered vectors in ℝᵈ.</p><p><strong>See also</strong></p><ul><li><a href="https://mc-stan.org/docs/2_27/reference-manual/ordered-vector.html">Stan&#39;s documentation</a><ul><li>Note that this transformation and its inverse are the <em>opposite</em> of in this reference.</li></ul></li></ul></div><a class="docs-sourcelink" target="_blank" href="https://github.com/TuringLang/Bijectors.jl/blob/55501ae8e6fbb414b743fdf10be34f3275616464/src/bijectors/ordered.jl#L9-L17">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="Bijectors.NamedTransform" href="#Bijectors.NamedTransform"><code>Bijectors.NamedTransform</code></a> — <span class="docstring-category">Type</span></header><section><div><pre><code class="language-julia hljs">NamedTransform &lt;: AbstractNamedTransform</code></pre><p>Wraps a <code>NamedTuple</code> of key -&gt; <code>Bijector</code> pairs, implementing evaluation, inversion, etc.</p><p><strong>Examples</strong></p><pre><code class="language-julia-repl hljs">julia&gt; using Bijectors: NamedTransform, Scale
+
+julia&gt; b = NamedTransform((a = Scale(2.0), b = exp));
+
+julia&gt; x = (a = 1., b = 0., c = 42.);
+
+julia&gt; b(x)
+(a = 2.0, b = 1.0, c = 42.0)
+
+julia&gt; (a = 2 * x.a, b = exp(x.b), c = x.c)
+(a = 2.0, b = 1.0, c = 42.0)</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/TuringLang/Bijectors.jl/blob/55501ae8e6fbb414b743fdf10be34f3275616464/src/bijectors/named_bijector.jl#L7-L26">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="Bijectors.NamedCoupling" href="#Bijectors.NamedCoupling"><code>Bijectors.NamedCoupling</code></a> — <span class="docstring-category">Type</span></header><section><div><pre><code class="language-julia hljs">NamedCoupling{target, deps, F} &lt;: AbstractNamedTransform</code></pre><p>Implements a coupling layer for named bijectors.</p><p>See also: <a href="#Bijectors.Coupling"><code>Coupling</code></a></p><p><strong>Examples</strong></p><pre><code class="language-julia-repl hljs">julia&gt; using Bijectors: NamedCoupling, Scale
+
+julia&gt; b = NamedCoupling(:b, (:a, :c), (a, c) -&gt; Scale(a + c));
+
+julia&gt; x = (a = 1., b = 2., c = 3.);
+
+julia&gt; b(x)
+(a = 1.0, b = 8.0, c = 3.0)
+
+julia&gt; (a = x.a, b = (x.a + x.c) * x.b, c = x.c)
+(a = 1.0, b = 8.0, c = 3.0)</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/TuringLang/Bijectors.jl/blob/55501ae8e6fbb414b743fdf10be34f3275616464/src/bijectors/named_bijector.jl#L97-L118">source</a></section></article></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Home</a><a class="docs-footer-nextpage" href="../distributions/">Distributions.jl integration »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Saturday 30 November 2024 14:35">Saturday 30 November 2024</span>. Using Julia version 1.11.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+
