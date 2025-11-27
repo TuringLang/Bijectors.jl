@@ -1,5 +1,5 @@
+<h1 align="center">Bijectors.jl</h1>
 <p align="center">
-<h1>Bijectors.jl</h1>
 <a href="https://turinglang.github.io/Bijectors.jl"><img src="https://img.shields.io/badge/docs-stable-blue.svg" alt="Documentation for latest stable release"></a>
 <a href="https://turinglang.github.io/Bijectors.jl/dev"><img src="https://img.shields.io/badge/docs-dev-blue.svg" alt="Documentation for development version"></a>
 <a href="https://github.com/TuringLang/Bijectors.jl/actions/workflows/CI.yml"><img src="https://github.com/TuringLang/Bijectors.jl/actions/workflows/CI.yml/badge.svg" alt="CI"></a>
