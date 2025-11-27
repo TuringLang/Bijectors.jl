@@ -51,7 +51,9 @@ Represents a function `f` which is applied to each column of an input.
 ```jldoctest; setup = :(using Bijectors)
 julia> x = [4.0 5.0 6.0; 1.0 2.0 3.0];
 
-julia> f = columnwise(reverse);
+julia> my_reverse(v) = reverse(v);  # To avoid type piracy.
+
+julia> f = columnwise(my_reverse);
 
 julia> f(x)
 2×3 Matrix{Float64}:
@@ -59,8 +61,8 @@ julia> f(x)
  4.0  5.0  6.0
 
 julia> # We can't use `with_logabsdet_jacobian` on `f` until we define it
-       # for `reverse`, since we need to sum over columns.
-       Bijectors.with_logabsdet_jacobian(reverse, xs) = reverse(xs), 0.0;
+       # for `my_reverse`, since we need to sum over columns.
+       Bijectors.with_logabsdet_jacobian(::typeof(my_reverse), xs) = my_reverse(xs), 0.0;
 
 julia> with_logabsdet_jacobian(f, x)
 ([1.0 2.0 3.0; 4.0 5.0 6.0], 0.0)
