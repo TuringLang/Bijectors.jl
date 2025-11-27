@@ -52,9 +52,11 @@ export TransformDistribution,
     UnitDistribution,
     SimplexDistribution,
     PDMatDistribution,
+    # basic interface
     link,
     invlink,
     logpdf_with_trans,
+    isinvertible,
     isclosedform,
     transform,
     transform!,
@@ -64,19 +66,25 @@ export TransformDistribution,
     logabsdetjac,
     logabsdetjac!,
     logabsdetjacinv,
-    Bijector,
-    Inverse,
-    Stacked,
     bijector,
     transformed,
+    # types and specific bijectors
+    Bijector,
     UnivariateTransformed,
     MultivariateTransformed,
+    Inverse,
+    # specific bijectors
+    Stacked,
     PlanarLayer,
     RadialLayer,
     Coupling,
     InvertibleBatchNorm,
+    # transform wrappers
     elementwise,
-    output_size
+    columnwise,
+    # utilities
+    output_size,
+    ordered
 
 const DEBUG = Bool(parse(Int, get(ENV, "DEBUG_BIJECTORS", "0")))
 _debug(str) = @debug str

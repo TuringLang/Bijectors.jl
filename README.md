@@ -1,20 +1,35 @@
 # Bijectors.jl
 
-[![Docs - Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://turinglang.github.io/Bijectors.jl/stable)
-[![Docs - Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://turinglang.github.io/Bijectors.jl/dev)
-[![Interface tests](https://github.com/TuringLang/Bijectors.jl/workflows/Interface%20tests/badge.svg?branch=main)](https://github.com/TuringLang/Bijectors.jl/actions?query=workflow%3A%22Interface+tests%22+branch%3Amain)
-[![AD tests](https://github.com/TuringLang/Bijectors.jl/workflows/AD%20tests/badge.svg?branch=main)](https://github.com/TuringLang/Bijectors.jl/actions?query=workflow%3A%22AD+tests%22+branch%3Amain)
+[![Documentation for latest stable release](https://img.shields.io/badge/docs-stable-blue.svg)](https://turinglang.github.io/Bijectors.jl)
+[![Documentation for development version](https://img.shields.io/badge/docs-dev-blue.svg)](https://turinglang.github.io/Bijectors.jl/dev)
+[![CI](https://github.com/TuringLang/Bijectors.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/TuringLang/Bijectors.jl/actions/workflows/CI.yml)
 
-*A package for transforming distributions, used by [Turing.jl](https://github.com/TuringLang/Turing.jl).*
+Bijectors.jl implements functions for transforming random variables and probability distributions.
 
-Bijectors.jl implements both an interface for transforming distributions from Distributions.jl and many transformations needed in this context.
-This package is used heavily in the probabilistic programming language Turing.jl.
+A quick overview of some of the key functionality is provided below:
 
-See the [documentation](https://turinglang.github.io/Bijectors.jl) for more.
+```julia
+julia> using Bijectors;
+       dist = LogNormal();
+LogNormal{Float64}(μ=0.0, σ=1.0)
 
-## Do you want to contribute?
+julia> x = rand(dist)      # Constrained to (0, ∞)
+0.6471106974390148
 
-If you feel you have some relevant skills and are interested in contributing, please get in touch!
-You can find us in the #turing channel on the [Julia Slack](https://julialang.org/slack/) or [Discourse](https://discourse.julialang.org).
-If you're having any problems, please open a Github issue, even if the problem seems small (like help figuring out an error message).
-Every issue you open helps us to improve the library!
+julia> b = bijector(dist)  # This maps from (0, ∞) to ℝ
+(::Base.Fix1{typeof(broadcast), typeof(log)}) (generic function with 1 method)
+
+julia> y = b(x)            # Unconstrained value in ℝ
+-0.43523790570180304
+
+julia> # Log-absolute determinant of the Jacobian at x.
+       with_logabsdet_jacobian(b, x)
+(-0.43523790570180304, 0.43523790570180304)
+```
+
+Please see the [documentation](https://turinglang.github.io/Bijectors.jl) for more information.
+
+## Get in touch
+
+If you have any questions, please feel free to [post on Julia Slack](https://julialang.slack.com/archives/CCYDC34A0) or [Discourse](https://discourse.julialang.org/).
+We also very much welcome GitHub issues or pull requests!
