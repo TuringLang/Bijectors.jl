@@ -23,7 +23,7 @@ julia> b = bijector(dist)  # This maps from (0, ∞) to ℝ
 julia> y = b(x)            # Unconstrained value in ℝ
 -0.43523790570180304
 
-julia> # Log-absolute determinant of the Jacobian at x.
+julia> # Returns b(x), and the log-absolute determinant of the Jacobian at x.
        with_logabsdet_jacobian(b, x)
 (-0.43523790570180304, 0.43523790570180304)
 ```
