@@ -56,6 +56,7 @@ Bijectors.invlink
 Bijectors.logpdf_with_trans
 Bijectors.output_size
 Bijectors.transformed(d::Distribution, b::Bijector)
+Bijectors.ordered
 ```
 
 ## Utilities
