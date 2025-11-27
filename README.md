@@ -9,8 +9,9 @@ Bijectors.jl implements functions for transforming random variables and probabil
 A quick overview of some of the key functionality is provided below:
 
 ```julia
-julia> using Bijectors;
-       dist = LogNormal();
+julia> using Bijectors
+
+julia> dist = LogNormal()
 LogNormal{Float64}(μ=0.0, σ=1.0)
 
 julia> x = rand(dist)      # Constrained to (0, ∞)

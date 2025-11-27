@@ -1,6 +1,6 @@
 # 0.15.13
 
-Exports extra functionality that should probably have been exported, namely `ordered`, `isinvertible`, and `columnwise`, from Bijectors.jl
+Exports extra functionality that should probably have been exported, namely `ordered`, `isinvertible`, and `columnwise`, from Bijectors.jl.
 
 The docs have been thoroughly restructured.
 
