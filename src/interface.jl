@@ -12,20 +12,59 @@ Alias for `Base.Fix1(broadcast, f)`.
 In the case where `f::ComposedFunction`, the result is
 `Base.Fix1(broadcast, f.outer) ∘ Base.Fix1(broadcast, f.inner)` rather than
 `Base.Fix1(broadcast, f)`.
+
+# Examples
+
+```jldoctest; setup = :(using Bijectors)
+julia> x = [1.0, 2.0, 3.0];
+
+julia> f = elementwise(exp);
+
+julia> f(x)
+3-element Vector{Float64}:
+  2.718281828459045
+  7.38905609893065
+ 20.085536923187668
+
+julia> with_logabsdet_jacobian(f, x)
+([2.718281828459045, 7.38905609893065, 20.085536923187668], 6.0)
+```
 """
 elementwise(f) = Base.Fix1(broadcast, f)
-elementwise(f::typeof(identity)) = identity
+elementwise(::typeof(identity)) = identity
 # TODO: This is makes dispatching quite a bit easier, but uncertain if this is really
 # the way to go.
 function elementwise(f::ComposedFunction)
     return ComposedFunction(elementwise(f.outer), elementwise(f.inner))
 end
+
 const Columnwise{F} = Base.Fix1{typeof(eachcolmaphcat),F}
 """
+    columnwise(f)
 
 Alias for `Base.Fix1(eachcolmaphcat, f)`.
 
 Represents a function `f` which is applied to each column of an input.
+
+# Examples
+
+```jldoctest; setup = :(using Bijectors)
+julia> x = [4.0 5.0 6.0; 1.0 2.0 3.0];
+
+julia> f = columnwise(reverse);
+
+julia> f(x)
+2×3 Matrix{Float64}:
+ 1.0  2.0  3.0
+ 4.0  5.0  6.0
+
+julia> # We can't use `with_logabsdet_jacobian` on `f` until we define it
+       # for `reverse`, since we need to sum over columns.
+       Bijectors.with_logabsdet_jacobian(reverse, xs) = reverse(xs), 0.0;
+
+julia> with_logabsdet_jacobian(f, x)
+([1.0 2.0 3.0; 4.0 5.0 6.0], 0.0)
+```
 """
 columnwise(f) = Base.Fix1(eachcolmaphcat, f)
 inverse(f::Columnwise) = columnwise(inverse(f.x))
@@ -39,19 +78,19 @@ with_logabsdet_jacobian(f::Columnwise, x::AbstractMatrix) = (f(x), logabsdetjac(
 """
     output_size(f, sz)
 
-Returns the output size of `f` given the input size `sz`.
+Returns the size of `f(x)` when given an input `x` of size `sz`.
 """
 output_size(f, sz) = sz
 output_size(f::ComposedFunction, sz) = output_size(f.outer, output_size(f.inner, sz))
 """
     output_size(f, dist::Distribution)
 
-Returns the output size of `f` given the input distribution `dist`. This is useful when
-Base.size(dist) is not defined, e.g. for `ProductNamedTupleDistribution` and in particular
-is used by DynamicPPL when generating new random values for transformed distributions.
+Returns the output size of `f` given an input drawn from the distribution `dist`.
 
 By default this just calls `output_size(f, size(dist))`, but this can be overloaded for
-specific distributions.
+specific distributions. This is useful when `Base.size(dist)` is not defined, e.g. for
+`ProductNamedTupleDistribution` and in particular is used by DynamicPPL when generating new
+random values for transformed distributions.
 """
 output_size(f, dist::Distribution) = output_size(f, size(dist))
 output_size(f::ComposedFunction, dist::Distribution) = output_size(f, size(dist))
@@ -59,7 +98,7 @@ output_size(f::ComposedFunction, dist::Distribution) = output_size(f, size(dist)
 """
     output_length(f, len::Int)
 
-Returns the output length of `f` given the input length `len`.
+Returns the length of `f(x)` given a vector input `x` of length `len`.
 """
 output_length(f, len::Int) = only(output_size(f, (len,)))
 
@@ -93,12 +132,24 @@ abstract type Transform end
 
 (t::Transform)(x) = transform(t, x)
 
+"""
+    with_logabsdet_jacobian(t::Transform, x)
+
+Semantically, this must return a tuple of `(y, logabsdetjac)`, where `y = transform(t, x)`
+and `logabsdetjac = logabsdetjac(t, x)`. However, you can implement this function to exploit
+shared computation between the two quantities.
+"""
+function with_logabsdet_jacobian end
+
 Broadcast.broadcastable(b::Transform) = Ref(b)
 
 """
     transform(b, x)
 
-Transform `x` using `b`, treating `x` as a single input.
+Transform `x` using `b`.
+
+If `with_logabsdet_jacobian` is already implemented for `b`, the default implementation of
+`transform` will call `first(with_logabsdet_jacobian(b, x))`.
 """
 transform(f::F, x) where {F<:Function} = f(x)
 function transform(t::Transform, x)
