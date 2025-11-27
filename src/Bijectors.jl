@@ -83,7 +83,8 @@ export TransformDistribution,
     elementwise,
     columnwise,
     # utilities
-    output_size
+    output_size,
+    ordered
 
 const DEBUG = Bool(parse(Int, get(ENV, "DEBUG_BIJECTORS", "0")))
 _debug(str) = @debug str

@@ -1,3 +1,9 @@
+# 0.15.13
+
+Exports extra functionality that should probably have been exported, namely `ordered`, `isinvertible`, and `columnwise`, from Bijectors.jl
+
+The docs have been thoroughly restructured.
+
 # 0.15.12
 
 Improved implementation of the Enzyme rule for `Bijectors.find_alpha`.
