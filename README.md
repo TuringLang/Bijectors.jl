@@ -1,9 +1,8 @@
-<h1 align="center">Bijectors.jl</h1>
-<p align="center">
-<a href="https://turinglang.github.io/Bijectors.jl"><img src="https://img.shields.io/badge/docs-stable-blue.svg" alt="Documentation for latest stable release"></a>
-<a href="https://turinglang.github.io/Bijectors.jl/dev"><img src="https://img.shields.io/badge/docs-dev-blue.svg" alt="Documentation for development version"></a>
-<a href="https://github.com/TuringLang/Bijectors.jl/actions/workflows/CI.yml"><img src="https://github.com/TuringLang/Bijectors.jl/actions/workflows/CI.yml/badge.svg" alt="CI"></a>
-</p>
+# Bijectors.jl
+
+[![Documentation for latest stable release](https://img.shields.io/badge/docs-stable-blue.svg)](https://turinglang.github.io/Bijectors.jl)
+[![Documentation for development version](https://img.shields.io/badge/docs-dev-blue.svg)](https://turinglang.github.io/Bijectors.jl/dev)
+[![CI](https://github.com/TuringLang/Bijectors.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/TuringLang/Bijectors.jl/actions/workflows/CI.yml)
 
 Bijectors.jl implements functions for transforming random variables and probability distributions.
 
