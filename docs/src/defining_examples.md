@@ -58,7 +58,9 @@ We can do so by creating a new method, but we would have to make a choice as to 
 Here, we will choose `Float64`:
 
 ```@example cyclic
-function Bijectors.with_logabsdet_jacobian(b::CircShift, x::AbstractVector)
+import ChangesOfVariables: with_logabsdet_jacobian
+
+function with_logabsdet_jacobian(b::CircShift, x::AbstractVector)
     y = circshift(x, b.shift)
     return y, 0.0
 end
@@ -82,6 +84,8 @@ But, if we used this default definition, we would have to also define `with_loga
 We can save ourselves this hassle by overloading the method:
 
 ```@example cyclic
+import InverseFunctions: inverse
+
 inverse(b::CircShift) = CircShift(-b.shift)
 ```
 
@@ -91,6 +95,11 @@ Now we can use the inverse bijector:
 y = b(x)
 inverse(b)(y) == x
 ```
+
+!!! note
+    
+    Bijectors re-exports both `with_logabsdet_jacobian` as well as `inverse`, so you don't need to import them separately if Bijectors is already a dependency.
+    Conversely, if you don't want to depend on Bijectors.jl directly, you can just import these functions from their respective packages.
 
 ## Stereographic projection
 
