@@ -219,7 +219,7 @@ logabsdetjac(StereographicProj(), x)
 You can also rerun the code blocks above with `sgn = -1` to verify that our `logabsdetjac` implementation does indeed behave correctly for both positive and negative values of $x_3$.
 
 When writing unit tests for a new bijector, it is a good idea to include comparisons like this to verify that the Jacobian is computed correctly.
-The strategy used above to get square Jacobians is quite generally applicable, and is used for testing the bijectors for (e.g.) simplex and Cholesky factors.
+The strategy used above to get square Jacobians is quite generally applicable, and is used for testing the bijectors for (e.g.) simplices and Cholesky factors.
 
 Returning to the Bijectors interface, because we have defined the forward transform as well as `logabsdetjac`, we can just use these to implement `with_logabsdet_jacobian`:
 
@@ -266,7 +266,7 @@ Then, we could define
 Bijectors.bijector(::UnitSphere) = StereographicProj()
 
 # Not strictly needed for this example, but other usage may require it
-Bijectors.output_size(::StereographicProj, ::UnitSphere) = 2
+Bijectors.output_size(::StereographicProj, ::UnitSphere) = (2,)
 ```
 
 and that would allow us to construct, for example, transformed distributions:
