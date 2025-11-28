@@ -11,9 +11,10 @@ makedocs(;
     pages=[
         "index.md",
         "interface.md",
-        "defining.md",
         "distributions.md",
         "types.md",
+        "defining.md",
+        "defining_examples.md",
         "advi.md",
         "flows.md",
     ],
