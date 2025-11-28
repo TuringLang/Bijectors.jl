@@ -250,14 +250,14 @@ Of course, this alone is unlikely to save any meaningful amount of time, but oth
 The inverse bijector can be implemented in a very similar way (Wikipedia has the formulae as well), but is left as an exercise for the very willing reader!
 
 Finally, suppose we had a distribution `UnitSphere`, where `rand(UnitSphere())` returned a random point on the unit sphere.
-This technically exists in Manifolds.jl, but we can also define a hacky version ourselves:
+Something similar to this technically exists in Manifolds.jl, but we can also define a hacky version ourselves:
 
 ```@example stereographic
 using Distributions
 
 struct UnitSphere <: Distributions.ContinuousMultivariateDistribution end
 Base.size(::UnitSphere) = (3,)
-Base.rand(::UnitSphere) = normalize(randn(3))
+Base.rand(::UnitSphere) = normalize(rand(3))
 ```
 
 Then, we could define
@@ -275,3 +275,5 @@ and that would allow us to construct, for example, transformed distributions:
 td = transformed(UnitSphere())
 rand(td)  # returns a random point in ℝ²
 ```
+
+We didn't define `logpdf` for `UnitSphere`, but if we had, then we would also be able to make use of `logpdf(td, y)` and `Bijectors.logpdf_with_trans`.
