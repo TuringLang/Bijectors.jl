@@ -35,11 +35,8 @@ $$J = \begin{bmatrix}
 
 In general, the Jacobian of such a transformation is a [permutation matrix](https://en.wikipedia.org/wiki/Permutation_matrix).
 The determinant of a permutation matrix is either `1` or `-1`, depending on whether the permutation is even or odd.
+(In this case, it is even; but it could be odd for other shifts and/or input sizes.)
 This means that the log-absolute determinant of the Jacobian is always `0`.
-
-!!! note
-    
-    In our case, the permutation is always even, since we are performing a cyclic shift. However, since we only need the log-*absolute* determinant, we don't even need to worry about knowing this.
 
 We can now implement `with_logabsdet_jacobian`.
 
