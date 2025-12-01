@@ -1,3 +1,7 @@
+# 0.15.14
+
+Added a new documentation page describing how to implement custom bijectors (this release contains no code changes; it only exists to make sure that the 'stable' docs are updated).
+
 # 0.15.13
 
 Exports extra functionality that should probably have been exported, namely `ordered`, `isinvertible`, and `columnwise`, from Bijectors.jl.
