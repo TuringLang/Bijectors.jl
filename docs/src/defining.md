@@ -26,6 +26,10 @@ The most efficient way to implement a bijector is to provide an implementation o
 Bijectors.with_logabsdet_jacobian
 ```
 
+!!! note
+    
+    `with_logabsdet_jacobian` is re-exported from ChangesOfVariables.jl, so if you want to avoid importing Bijectors.jl, you can implement `ChangesOfVariables.with_logabsdet_jacobian` instead.
+
 If you define `with_logabsdet_jacobian(b, x)`, then you will automatically get default implementations of both `transform(b, x)` and `logabsdetjac(b, x)`, which respectively return the first and second value of that tuple.
 So, in fact, you can implement a bijector by defining only `with_logabsdet_jacobian`.
 
@@ -54,6 +58,10 @@ To do so, you will have to implement:
 ```@docs; canonical=false
 Bijectors.inverse
 ```
+
+!!! note
+    
+    `inverse` is re-exported from InverseFunctions.jl, so the same note as for `with_logabsdet_jacobian` applies.
 
 If `b` is a bijector, then `inverse(b)` should return the inverse bijector $b^{-1}$.
 
