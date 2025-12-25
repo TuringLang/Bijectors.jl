@@ -16,14 +16,8 @@ function test_ad(f, backend, x; rtol=1e-6, atol=1e-6)
 end
 
 BACKENDS = [
-    (
-        "EnzymeForward",
-        AutoEnzyme(; mode=set_runtime_activity(Forward), function_annotation=Const),
-    ),
-    (
-        "EnzymeReverse",
-        AutoEnzyme(; mode=set_runtime_activity(Reverse), function_annotation=Const),
-    ),
+    ("EnzymeForward", AutoEnzyme(; mode=Forward)),
+    ("EnzymeReverse", AutoEnzyme(; mode=Reverse)),
 ]
 
 @testset "$backend" for (backend, adtype) in BACKENDS
