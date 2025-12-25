@@ -7,5 +7,8 @@ FiniteDifferences = "26cc04aa-876d-5657-8c51-4c34ba976000"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
+[compat]
+Enzyme = "0.13.111"
+
 [sources]
 Bijectors = {path = "../../../"}

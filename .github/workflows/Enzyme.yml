@@ -28,7 +28,7 @@ jobs:
 
       - uses: julia-actions/cache@v2
 
-      - name: Run flaky Enzyme tests
+      - name: Run Enzyme tests
         working-directory: test/integration/enzyme
         run: |
           julia --project=. --color=yes -e 'using Pkg; Pkg.instantiate()'
