@@ -17,6 +17,7 @@ makedocs(;
         "defining_examples.md",
         "advi.md",
         "flows.md",
+        "vector.md",
     ],
     checkdocs=:exports,
     doctest=false,
