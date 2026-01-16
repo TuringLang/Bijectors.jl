@@ -7,15 +7,15 @@ function replace_diag(f, X)
     g(i, j) = ifelse(i == j, f(X[i, i]), X[i, j])
     return g.(1:size(X, 1), (1:size(X, 2))')
 end
-transform(b::PDBijector, X::AbstractMatrix{<:Real}) = pd_link(X)
+transform(::PDBijector, X) = pd_link(X)
 pd_link(X) = replace_diag(log, cholesky_lower(X))
 
-function transform(ib::Inverse{PDBijector}, Y::AbstractMatrix{<:Real})
+function transform(::Inverse{PDBijector}, Y)
     X = replace_diag(exp, Y)
     return pd_from_lower(X)
 end
 
-function logabsdetjac(b::PDBijector, X::AbstractMatrix{<:Real})
+function logabsdetjac(::PDBijector, X::AbstractMatrix{<:Real})
     L = cholesky_lower(X)
     return logabsdetjac_pdbijector_chol(L)
 end
@@ -26,18 +26,18 @@ function logabsdetjac_pdbijector_chol(X::AbstractMatrix)
     return -(z + d * oftype(z, IrrationalConstants.logtwo))
 end
 
-function with_logabsdet_jacobian(b::PDBijector, X)
+function with_logabsdet_jacobian(::PDBijector, X)
     L = cholesky_lower(X)
     return replace_diag(log, L), logabsdetjac_pdbijector_chol(L)
 end
 
 struct PDVecBijector <: Bijector end
 
-transform(::PDVecBijector, X::AbstractMatrix{<:Real}) = pd_vec_link(X)
+transform(::PDVecBijector, X) = pd_vec_link(X)
 # TODO: Implement `tril_to_vec` and remove `permutedims`.
 pd_vec_link(X) = triu_to_vec(transpose_eager(pd_link(X)))
 
-function transform(::Inverse{PDVecBijector}, y::AbstractVector{<:Real})
+function transform(::Inverse{PDVecBijector}, y)
     Y = transpose_eager(vec_to_triu(y))
     return transform(inverse(PDBijector()), Y)
 end
