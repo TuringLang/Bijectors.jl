@@ -19,6 +19,8 @@ function (p::PosDef)(x::AbstractMatrix{T}) where {T<:Real}
     return first(with_logabsdet_jacobian(p, x))
 end
 function with_logabsdet_jacobian(p::PosDef, x::AbstractMatrix{T}) where {T<:Real}
+    Base.require_one_based_indexing(x)
+    LA.checksquare(x)
     d = p.original_size
     yvec = zeros(T, div(d * (d + 1), 2))
     L = LA.cholesky(LA.Hermitian(x, :L)).L
