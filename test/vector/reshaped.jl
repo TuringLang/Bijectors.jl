@@ -21,7 +21,8 @@ reshaped = [
     reshape(MvNormal(zeros(2), I), (2, 1, 1)),
     reshape(MvNormal(zeros(4), I), (2, 2)),
     reshape(Dirichlet(ones(6)), (2, 3)),
-    # TODO: test reshaped matrix distributions
+    reshape(Wishart(7, Matrix{Float64}(I, 4, 4)), 16),
+    reshape(Wishart(7, Matrix{Float64}(I, 4, 4)), 1, 1, 4, 1, 4),
 ]
 
 @testset "Reshaped distributions" begin
