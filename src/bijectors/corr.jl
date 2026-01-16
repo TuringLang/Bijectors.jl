@@ -236,7 +236,7 @@ function logabsdetjac(b::VecCholeskyBijector, x)
     return -logabsdetjac(inverse(b), b(x))
 end
 
-function with_logabsdet_jacobian(b::Inverse{VecCholeskyBijector}, y::AbstractVector{<:Real})
+function with_logabsdet_jacobian(b::Inverse{VecCholeskyBijector}, y)
     factors, logJ = _inv_link_chol_lkj(y)
     if b.orig.mode === :U
         # This Cholesky constructor is compatible with Julia v1.6
@@ -249,7 +249,7 @@ function with_logabsdet_jacobian(b::Inverse{VecCholeskyBijector}, y::AbstractVec
     end
 end
 
-function logabsdetjac(::Inverse{VecCholeskyBijector}, y::AbstractVector{<:Real})
+function logabsdetjac(::Inverse{VecCholeskyBijector}, y)
     return _logabsdetjac_inv_chol(y)
 end
 
