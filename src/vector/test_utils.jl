@@ -138,7 +138,7 @@ function to_vec_for_logjac_test(d::Union{D.MatrixBeta,D.Wishart,D.InverseWishart
     n = first(size(d))
     return x -> begin
         vec_len = div(n * (n + 1), 2)
-        xvec = Vector{eltype(x)}(undef, vec_len)
+        xvec = zeros(eltype(x), vec_len)
         idx = 1
         for i in 1:n, j in 1:i
             xvec[idx] = x[i, j]
@@ -153,6 +153,34 @@ function from_vec_for_logjac_test(d::Union{D.MatrixBeta,D.Wishart,D.InverseWisha
         x = zeros(eltype(xvec), n, n)
         idx = 1
         for i in 1:n, j in 1:i
+            x[i, j] = xvec[idx]
+            x[j, i] = xvec[idx]
+            idx += 1
+        end
+        return x
+    end
+end
+
+# These are correlation matrices - they are symmetric and the diagonal is all ones
+function to_vec_for_logjac_test(d::D.LKJ)
+    n = first(size(d))
+    return x -> begin
+        vec_len = div(n * (n - 1), 2)
+        xvec = zeros(eltype(x), vec_len)
+        idx = 1
+        for i in 1:n, j in 1:(i - 1)
+            xvec[idx] = x[i, j]
+            idx += 1
+        end
+        return xvec
+    end
+end
+function from_vec_for_logjac_test(d::D.LKJ)
+    n = first(size(d))
+    return xvec -> begin
+        x = ones(eltype(xvec), n, n)
+        idx = 1
+        for i in 1:n, j in 1:(i - 1)
             x[i, j] = xvec[idx]
             x[j, i] = xvec[idx]
             idx += 1
