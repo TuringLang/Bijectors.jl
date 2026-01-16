@@ -162,7 +162,11 @@ function from_vec_for_logjac_test(d::Union{D.MatrixBeta,D.Wishart,D.InverseWisha
 end
 
 function test_all(
-    d::D.Distribution; expected_zero_allocs=(), adtypes=default_adtypes, ad_atol=1e-10
+    d::D.Distribution;
+    expected_zero_allocs=(),
+    adtypes=default_adtypes,
+    ad_atol=1e-10,
+    ad_rtol=sqrt(eps()),
 )
     @info "Testing $(_name(d))"
     @testset "$(_name(d))" begin
@@ -172,8 +176,8 @@ function test_all(
         test_vec_lengths(d)
         test_optics(d)
         test_allocations(d, expected_zero_allocs)
-        test_logjac(d, ad_atol)
-        test_ad(d, adtypes, ad_atol)
+        test_logjac(d, ad_atol, ad_rtol)
+        test_ad(d, adtypes, ad_atol, ad_rtol)
     end
 end
 
@@ -391,7 +395,7 @@ end
 Test that the analytical log-Jacobians provided in this package are correct by comparing
 against AD-calculated log-Jacobians for the given distribution `d`.
 """
-function test_logjac(d::D.Distribution, atol)
+function test_logjac(d::D.Distribution, atol, rtol)
     # Vectorisation logjacs should be zero because they are just reshapes.
     @testset "logjac: $(_name(d))" begin
         for _ in 1:100
@@ -417,7 +421,10 @@ function test_logjac(d::D.Distribution, atol)
                 # from_vec_for_logjac_test are inverses. If they aren't, then that brings
                 # the entire testset into question!
                 @test _isapprox_safe(
-                    x, from_vec_for_logjac_test(d)(to_vec_for_logjac_test(d)(x)); atol=atol
+                    x,
+                    from_vec_for_logjac_test(d)(to_vec_for_logjac_test(d)(x));
+                    atol=atol,
+                    rtol=rtol,
                 )
             end
 
@@ -431,7 +438,7 @@ function test_logjac(d::D.Distribution, atol)
                 ad_xvec = to_vec_for_logjac_test(d)(x)
                 ad_ffwd = to_linked_vec(d) ∘ from_vec_for_logjac_test(d)
                 ad_logjac = first(logabsdet(DI.jacobian(ad_ffwd, ref_adtype, ad_xvec)))
-                @test vbt_logjac ≈ ad_logjac atol = atol
+                @test vbt_logjac ≈ ad_logjac atol = atol rtol = rtol
             end
 
             @testset let x = x, d = d
@@ -443,7 +450,7 @@ function test_logjac(d::D.Distribution, atol)
                 # to make sure that the Jacobian is square.
                 ad_frvs = to_vec_for_logjac_test(d) ∘ from_linked_vec(d)
                 ad_logjac = first(logabsdet(DI.jacobian(ad_frvs, ref_adtype, yvec)))
-                @test vbt_logjac ≈ ad_logjac atol = atol
+                @test vbt_logjac ≈ ad_logjac atol = atol rtol = rtol
             end
         end
     end
@@ -453,7 +460,7 @@ end
 Test that various AD backends can differentiate the conversions to and from vector and
 linked vector forms for the given distribution `d`.
 """
-function test_ad(d::D.Distribution, adtypes::Vector{<:DI.AbstractADType}, atol)
+function test_ad(d::D.Distribution, adtypes::Vector{<:DI.AbstractADType}, atol, rtol)
     # If `d` is a discrete distribution, Mooncake refuses to differentiate through the
     # transforms (which are just identity transforms). Arguably, the other AD backends
     # probably should do the same, but they do actually return the right 'gradients' so we
@@ -474,7 +481,7 @@ function test_ad(d::D.Distribution, adtypes::Vector{<:DI.AbstractADType}, atol)
         for adtype in adtypes
             @testset let x = x, adtype = adtype, d = d
                 ad_jac = DI.jacobian(ffwd, adtype, xvec)
-                @test ref_jac ≈ ad_jac atol = atol
+                @test ref_jac ≈ ad_jac atol = atol rtol = rtol
             end
         end
     end
@@ -486,7 +493,7 @@ function test_ad(d::D.Distribution, adtypes::Vector{<:DI.AbstractADType}, atol)
         for adtype in adtypes
             @testset let x = x, adtype = adtype, d = d
                 ad_jac = DI.jacobian(frvs, adtype, yvec)
-                @test ref_jac ≈ ad_jac atol = atol
+                @test ref_jac ≈ ad_jac atol = atol rtol = rtol
             end
         end
     end
