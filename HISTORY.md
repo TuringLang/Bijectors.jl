@@ -1,6 +1,6 @@
 # 0.15.15
 
-Fixed a case where calling `inverse(VecCholeskyBijector())` on a wrong input would cause a stack overflow instead of a more normal error.
+Fixed a case where calling various combinations of `VecCholeskyBijector`, `PDBijector`, `PDVecBijector`, and their inverses on a wrong input would cause a stack overflow instead of a more normal error.
 
 # 0.15.14
 
