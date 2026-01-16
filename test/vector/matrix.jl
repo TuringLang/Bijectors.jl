@@ -17,6 +17,8 @@ matrix_dists = [
     InverseWishart(7, Matrix{Float64}(I, 4, 4)),
     MatrixBeta(3, 3, 1000),
     MatrixBeta(5, 8, 1000),
+    LKJ(3, 1.0),
+    LKJ(7, 1.0),
 ]
 
 @testset "Matrix distributions" begin

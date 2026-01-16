@@ -34,6 +34,7 @@ include("multivariate/simplex.jl")
 
 include("matrix/matrix.jl")
 include("matrix/posdef.jl")
+include("matrix/lkj.jl")
 
 include("order/order.jl")
 include("reshaped/reshaped.jl")
