@@ -9,12 +9,14 @@ using ReverseDiff: ReverseDiff
 using Mooncake: Mooncake
 
 matrix_dists = [
-    # Wishart(7, Matrix{Float64}(I, 2, 2)),
-    # Wishart(7, Matrix{Float64}(I, 4, 4)),
-    # InverseWishart(7, Matrix{Float64}(I, 2, 2)),
-    # InverseWishart(7, Matrix{Float64}(I, 4, 4)),
-    # MatrixBeta(3, 3, 1000),
-    # MatrixBeta(5, 8, 1000),
+    MatrixNormal(2, 4),
+    MatrixNormal(3, 5),
+    Wishart(7, Matrix{Float64}(I, 2, 2)),
+    Wishart(7, Matrix{Float64}(I, 4, 4)),
+    InverseWishart(7, Matrix{Float64}(I, 2, 2)),
+    InverseWishart(7, Matrix{Float64}(I, 4, 4)),
+    MatrixBeta(3, 3, 1000),
+    MatrixBeta(5, 8, 1000),
     LKJ(3, 1.0),
     LKJ(7, 1.0),
 ]
