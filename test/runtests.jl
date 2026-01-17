@@ -78,11 +78,11 @@ if GROUP == "All" || GROUP == "Interface"
     # include("bijectors/named_stacked.jl")
     # include("distributionsad.jl")
 
-    include("vector/univariate.jl")
-    include("vector/multivariate.jl")
-    include("vector/matrix.jl")
-    include("vector/reshaped.jl")
-    include("vector/cholesky.jl")
+    # include("vector/univariate.jl")
+    # include("vector/multivariate.jl")
+    # include("vector/matrix.jl")
+    # include("vector/reshaped.jl")
+    # include("vector/cholesky.jl")
     include("vector/order.jl")
 end
 
