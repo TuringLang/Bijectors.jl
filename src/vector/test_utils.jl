@@ -51,7 +51,7 @@ function _isapprox_safe(x::Cholesky, y::Cholesky; kwargs...)
     if x.uplo != y.uplo || size(x.UL) != size(y.UL)
         return false
     end
-    return isapprox(x.UL, y.UL, kwargs...)
+    return isapprox(x.UL, y.UL; kwargs...)
 end
 
 # When testing logjac for distributions where `vec_length(d) != linked_vec_length(d)`, if
