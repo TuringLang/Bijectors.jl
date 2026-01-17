@@ -199,11 +199,12 @@ function test_all(
     ad_rtol=sqrt(eps()),
     roundtrip_atol=1e-10,
     roundtrip_rtol=sqrt(eps()),
+    test_in_support=(_get_value_support(d) <: D.Continuous),
 )
     @info "Testing $(_name(d))"
     @testset "$(_name(d))" begin
         test_roundtrip(d)
-        test_roundtrip_inverse(d, roundtrip_atol, roundtrip_rtol)
+        test_roundtrip_inverse(d, test_in_support, roundtrip_atol, roundtrip_rtol)
         test_type_stability(d)
         test_vec_lengths(d)
         test_optics(d)
@@ -245,7 +246,7 @@ end
 Test that from_linked_vec and to_linked_vec are inverses, and that they actually
 do map random vectors to the support of the distribution.
 """
-function test_roundtrip_inverse(d::D.Distribution, atol, rtol)
+function test_roundtrip_inverse(d::D.Distribution, test_in_support, atol, rtol)
     # TODO: Use smarter test generation e.g. with property-based testing or at least
     # generate random parameters across the support
     @testset "roundtrip inverse (linked): $(_name(d))" begin
@@ -257,8 +258,10 @@ function test_roundtrip_inverse(d::D.Distribution, atol, rtol)
                 x = frvs(y)
                 # If the distribution is not continuous, we can't really check this (in fact
                 # the test is quite meaningless). So for discrete distributions this
-                # basically only checks that the ffwd and frvs are inverses.
-                if _get_value_support(d) <: D.Continuous
+                # basically only checks that the ffwd and frvs are inverses. There are also
+                # other occasions where we disable this because of e.g. numerical issues,
+                # like for LKJ.
+                if test_in_support
                     @test D.insupport(d, x)
                 end
                 @test y ≈ ffwd(x) atol = atol rtol = rtol
