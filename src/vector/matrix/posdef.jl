@@ -8,7 +8,13 @@
 import LinearAlgebra as LA
 import IrrationalConstants: logtwo
 
-const PDMatrixDistribution = Union{D.MatrixBeta,D.Wishart,D.InverseWishart}
+# TODO(penelopeysm): MatrixBeta also generates positive definite matrices. However, it is
+# even more specific than Wishart/InverseWishart in that it generates positive definite
+# matrices `M` such that `I - M` is also positive definite. This means that the
+# transformation implemented here is not suitable for MatrixBeta, as
+# from_linked_vec(d)(randn(...)) may not be in the support of MatrixBeta, and thus sampling
+# from a linked vector with e.g. NUTS may fail. Hence, we do not include MatrixBeta here.
+const PDMatrixDistribution = Union{D.Wishart,D.InverseWishart}
 
 struct PosDef
     original_size::Int
