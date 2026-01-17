@@ -134,9 +134,22 @@ function from_vec_for_logjac_test(d::D.LKJCholesky)
     return CholeskyFromVecForLogjac(first(size(d)), d.uplo)
 end
 
+function to_vec_for_logjac_test(d::D.ReshapedDistribution)
+    return rx -> begin
+        x = VectorBijectors._reshape_or_only(rx, size(d.dist))
+        return to_vec_for_logjac_test(d.dist)(x)
+    end
+end
+function from_vec_for_logjac_test(d::D.ReshapedDistribution)
+    return yvec -> begin
+        x = from_vec_for_logjac_test(d.dist)(yvec)
+        return VectorBijectors._reshape_or_only(x, size(d))
+    end
+end
+
 # These are positive (semi)definite matrix distributions, which are symmetric, so we will
 # just vectorise the lower-triangular part.
-function to_vec_for_logjac_test(d::Union{D.MatrixBeta,D.Wishart,D.InverseWishart})
+function to_vec_for_logjac_test(d::Union{D.Wishart,D.InverseWishart})
     n = first(size(d))
     return x -> begin
         vec_len = div(n * (n + 1), 2)
@@ -149,7 +162,7 @@ function to_vec_for_logjac_test(d::Union{D.MatrixBeta,D.Wishart,D.InverseWishart
         return xvec
     end
 end
-function from_vec_for_logjac_test(d::Union{D.MatrixBeta,D.Wishart,D.InverseWishart})
+function from_vec_for_logjac_test(d::Union{D.Wishart,D.InverseWishart})
     n = first(size(d))
     return xvec -> begin
         x = zeros(eltype(xvec), n, n)
