@@ -14,6 +14,8 @@ const default_adtypes = [
     DI.AutoMooncakeForward(),
 ]
 
+_get_value_support(::D.Distribution{<:Any,VS}) where {VS<:D.ValueSupport} = VS
+
 # Pretty-printing distributions. Otherwise things like MvNormal are super ugly.
 _name(d::D.Distribution) = nameof(typeof(d))
 _name(d::D.Censored) = "censored $(_name(d.uncensored)) [$(d.lower),$(d.upper)]"
@@ -195,11 +197,13 @@ function test_all(
     adtypes=default_adtypes,
     ad_atol=1e-10,
     ad_rtol=sqrt(eps()),
+    roundtrip_atol=1e-10,
+    roundtrip_rtol=sqrt(eps()),
 )
     @info "Testing $(_name(d))"
     @testset "$(_name(d))" begin
         test_roundtrip(d)
-        test_roundtrip_inverse(d)
+        test_roundtrip_inverse(d, roundtrip_atol, roundtrip_rtol)
         test_type_stability(d)
         test_vec_lengths(d)
         test_optics(d)
@@ -238,31 +242,26 @@ function test_roundtrip(d::D.Distribution)
 end
 
 """
-Test that from_vec and to_vec are inverses, and likewise for from_linked_vec and
-to_linked_vec. This test composes the two functions in the opposite order to
-`test_roundtrip`, i.e., it checks `y ≈ to_vec(d)(from_vec(d)(y))` for random vectors `y`
-(and likewise for linked vectors).
+Test that from_linked_vec and to_linked_vec are inverses, and that they actually
+do map random vectors to the support of the distribution.
 """
-function test_roundtrip_inverse(d::D.Distribution)
+function test_roundtrip_inverse(d::D.Distribution, atol, rtol)
     # TODO: Use smarter test generation e.g. with property-based testing or at least
     # generate random parameters across the support
-    @testset "roundtrip inverse: $(_name(d))" begin
-        len = vec_length(d)
-        for _ in 1:100
-            @testset let y = randn(len), d = d
-                frvs = from_vec(d)
-                ffwd = to_vec(d)
-                @test y ≈ ffwd(frvs(y))
-            end
-        end
-    end
     @testset "roundtrip inverse (linked): $(_name(d))" begin
         len = linked_vec_length(d)
         for _ in 1:100
             @testset let y = randn(len), d = d
                 ffwd = to_linked_vec(d)
                 frvs = from_linked_vec(d)
-                @test y ≈ ffwd(frvs(y))
+                x = frvs(y)
+                # If the distribution is not continuous, we can't really check this (in fact
+                # the test is quite meaningless). So for discrete distributions this
+                # basically only checks that the ffwd and frvs are inverses.
+                if _get_value_support(d) <: D.Continuous
+                    @test D.insupport(d, x)
+                end
+                @test y ≈ ffwd(x) atol = atol rtol = rtol
             end
         end
     end

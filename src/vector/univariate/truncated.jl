@@ -18,6 +18,8 @@ struct Truncate{L<:Real,U<:Real} <: ScalarToScalarBijector
     lower::L
     upper::U
 end
+B.is_monotonically_increasing(t::Truncate) = !B.is_monotonically_decreasing(t)
+B.is_monotonically_decreasing(t::Truncate) = !isfinite(t.lower) && isfinite(t.upper)
 function (t::Truncate)(y::Real)
     lbounded, ubounded = isfinite(t.lower), isfinite(t.upper)
     return if lbounded && ubounded
@@ -65,6 +67,8 @@ struct Untruncate{L<:Real,U<:Real} <: ScalarToScalarBijector
     lower::L
     upper::U
 end
+B.is_monotonically_increasing(t::Untruncate) = !B.is_monotonically_decreasing(t)
+B.is_monotonically_decreasing(t::Untruncate) = !isfinite(t.lower) && isfinite(t.upper)
 function (u::Untruncate)(x::Real)
     lbounded, ubounded = isfinite(u.lower), isfinite(u.upper)
     return if lbounded && ubounded
