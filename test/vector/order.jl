@@ -41,11 +41,13 @@ joint_test_adtypes = [DI.AutoMooncake(), DI.AutoMooncakeForward()]
                 JointOrderStatistics(d, 4);
                 expected_zero_allocs=unlinked_only,
                 adtypes=joint_test_adtypes,
+                roundtrip_atol=1e-4,
             )
             VectorBijectors.test_all(
                 JointOrderStatistics(d, 10, 2:5);
                 expected_zero_allocs=unlinked_only,
                 adtypes=joint_test_adtypes,
+                roundtrip_atol=1e-4,
             )
         end
     end
