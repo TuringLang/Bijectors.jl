@@ -33,6 +33,7 @@ include("multivariate/mvlognormal.jl")
 include("multivariate/simplex.jl")
 
 include("matrix/matrix.jl")
+include("matrix/normal.jl")
 include("matrix/posdef.jl")
 include("matrix/lkj.jl")
 
