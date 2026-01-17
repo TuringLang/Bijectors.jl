@@ -24,6 +24,7 @@ lkj_test_adtypes = [DI.AutoMooncake(), DI.AutoMooncakeForward()]
 # The reason is because the inverse bijector for LKJ causes the diagonal
 # entries to be not exactly 1 due to numerical precision issues. This
 # should in principle be fixed, but for now we skip the test.
+# https://github.com/TuringLang/Bijectors.jl/issues/435
 test_in_support(d) = !(d isa LKJ)
 
 matrix_dists = [
