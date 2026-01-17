@@ -262,7 +262,21 @@ function test_roundtrip_inverse(d::D.Distribution, test_in_support, atol, rtol)
                 # other occasions where we disable this because of e.g. numerical issues,
                 # like for LKJ.
                 if test_in_support
-                    @test D.insupport(d, x)
+                    in_support = D.insupport(d, x)
+                    if in_support isa Bool
+                        @test in_support
+                    elseif in_support isa AbstractArray{Bool,0}
+                        # This happens sometimes:
+                        # https://github.com/JuliaStats/Distributions.jl/issues/2026
+                        @test in_support[]
+                    else
+                        # We _could_ just check `all(in_support)`, but I don't want to be
+                        # caught off-guard by any bugs in the bijector's implementation that
+                        # returns a wrong shape/type of `x`.
+                        error(
+                            "Distributions.insupport returned unexpected type: $(typeof(in_support))",
+                        )
+                    end
                 end
                 @test y ≈ ffwd(x) atol = atol rtol = rtol
             end
