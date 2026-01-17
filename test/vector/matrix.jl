@@ -8,6 +8,11 @@ using ForwardDiff: ForwardDiff
 using ReverseDiff: ReverseDiff
 using Mooncake: Mooncake
 
+# TODO(penelopeysm): ReverseDiff gives wrong results when differentiating
+# through VecCorrBijector. Correctness tests are disabled for now.
+# https://github.com/TuringLang/Bijectors.jl/issues/434
+lkj_test_adtypes = [DI.AutoMooncake(), DI.AutoMooncakeForward()]
+
 matrix_dists = [
     MatrixNormal(2, 4),
     MatrixNormal(3, 5),
@@ -23,7 +28,11 @@ matrix_dists = [
 
 @testset "Matrix distributions" begin
     for d in matrix_dists
-        VectorBijectors.test_all(d; expected_zero_allocs=())
+        if d isa LKJ
+            VectorBijectors.test_all(d; expected_zero_allocs=(), adtypes=lkj_test_adtypes)
+        else
+            VectorBijectors.test_all(d; expected_zero_allocs=())
+        end
     end
 end
 
