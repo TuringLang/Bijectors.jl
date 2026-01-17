@@ -4,6 +4,7 @@ using Distributions
 using LinearAlgebra
 using Test
 using PDMats
+import DifferentiationInterface as DI
 using Bijectors.VectorBijectors
 using ForwardDiff: ForwardDiff
 using ReverseDiff: ReverseDiff
