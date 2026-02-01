@@ -1,3 +1,12 @@
+# 0.15.16
+
+Adds a new module, `Bijectors.VectorBijectors`.
+This module implements bijectors that _always_ return vectors as the output of a linking operation.
+This provides additional guarantees over the existing Bijectors interface, which in general will return some collection of values that are in Euclidean space, but whose shape is not generally a vector (it could be a scalar or a multidimensional array).
+The intention is to make it easier to implement bijectors that are compatible with libraries that use vector inputs, such as LogDensityProblems.jl (which is in turn heavily used in the Turing ecosystem).
+
+Please see the documentation for further information.
+
 # 0.15.15
 
 Fixed a case where calling various combinations of `VecCholeskyBijector`, `PDBijector`, `PDVecBijector`, and their inverses on a wrong input would cause a stack overflow instead of a more normal error.
