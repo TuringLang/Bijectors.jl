@@ -1,3 +1,7 @@
+# 0.15.16
+
+Added compatibility with Mooncake.jl v0.5.
+
 # 0.15.15
 
 Fixed a case where calling various combinations of `VecCholeskyBijector`, `PDBijector`, `PDVecBijector`, and their inverses on a wrong input would cause a stack overflow instead of a more normal error.
