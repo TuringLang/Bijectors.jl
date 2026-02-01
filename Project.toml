@@ -35,8 +35,8 @@ BijectorsEnzymeCoreExt = "EnzymeCore"
 BijectorsForwardDiffExt = "ForwardDiff"
 BijectorsLazyArraysExt = "LazyArrays"
 BijectorsMooncakeExt = "Mooncake"
-BijectorsReverseDiffChainRulesExt = ["ChainRules", "ReverseDiff"]
 BijectorsReverseDiffExt = "ReverseDiff"
+BijectorsReverseDiffChainRulesExt = ["ChainRules", "ReverseDiff"]
 
 [compat]
 ArgCheck = "1, 2"
