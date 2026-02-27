@@ -57,68 +57,71 @@ if TEST_ENZYME
         ),
     ]
 end
+const REF_BACKEND = AutoFiniteDifferences(; fdm=central_fdm(5, 1))
+
+function test_ad(f, backend, x; rtol=1e-6, atol=1e-6)
+    @info "testing AD for function $f with $backend"
+    ref_gradient = DifferentiationInterface.gradient(f, REF_BACKEND, x)
+    gradient = DifferentiationInterface.gradient(f, backend, x)
+    @test isapprox(gradient, ref_gradient; rtol=rtol, atol=atol)
+end
 
 # Always include this since it can be useful for other tests.
 include("bijectors/utils.jl")
 
-if GROUP == "All" || GROUP == "Interface"
-    include("interface.jl")
-    include("transform.jl")
-    include("norm_flows.jl")
-    include("bijectors/permute.jl")
-    include("bijectors/rational_quadratic_spline.jl")
-    include("bijectors/named_bijector.jl")
-    include("bijectors/leaky_relu.jl")
-    include("bijectors/coupling.jl")
-    include("bijectors/ordered.jl")
-    include("bijectors/pd.jl")
-    include("bijectors/reshape.jl")
-    include("bijectors/corr.jl")
-    include("bijectors/product_bijector.jl")
-    include("bijectors/named_stacked.jl")
-    include("distributionsad.jl")
+@testset "Bijectors.jl" begin
+    if GROUP == "All" || GROUP == "Interface"
+        include("interface.jl")
+        include("transform.jl")
+        include("norm_flows.jl")
+        include("bijectors/permute.jl")
+        include("bijectors/rational_quadratic_spline.jl")
+        include("bijectors/named_bijector.jl")
+        include("bijectors/leaky_relu.jl")
+        include("bijectors/coupling.jl")
+        include("bijectors/ordered.jl")
+        include("bijectors/pd.jl")
+        include("bijectors/reshape.jl")
+        include("bijectors/corr.jl")
+        include("bijectors/product_bijector.jl")
+        include("bijectors/named_stacked.jl")
+        include("distributionsad.jl")
 
-    include("vector/univariate.jl")
-    include("vector/multivariate.jl")
-    include("vector/matrix.jl")
-    include("vector/reshaped.jl")
-    include("vector/cholesky.jl")
-    include("vector/order.jl")
-    include("vector/product.jl")
-end
-
-if GROUP == "All" || GROUP == "AD"
-    # These tests specifically check the implementation of AD backend rules.
-    include("ad/chainrules.jl")
-    include("ad/mooncake.jl")
-    if TEST_ENZYME
-        include("ad/enzyme.jl")
+        include("vector/univariate.jl")
+        include("vector/multivariate.jl")
+        include("vector/matrix.jl")
+        include("vector/reshaped.jl")
+        include("vector/cholesky.jl")
+        include("vector/order.jl")
+        include("vector/product.jl")
     end
 
-    # These tests check that AD can differentiate through Bijectors # functionality without explicit rules.
-    const REF_BACKEND = AutoFiniteDifferences(; fdm=central_fdm(5, 1))
-    function test_ad(f, backend, x; rtol=1e-6, atol=1e-6)
-        @info "testing AD for function $f with $backend"
-        ref_gradient = DifferentiationInterface.gradient(f, REF_BACKEND, x)
-        gradient = DifferentiationInterface.gradient(f, backend, x)
-        @test isapprox(gradient, ref_gradient; rtol=rtol, atol=atol)
-    end
-    include("ad/flows.jl")
-    include("ad/pd.jl")
-    include("ad/corr.jl")
-    include("ad/stacked.jl")
-end
+    if GROUP == "All" || GROUP == "AD"
+        # These tests specifically check the implementation of AD backend rules.
+        include("ad/chainrules.jl")
+        include("ad/mooncake.jl")
+        if TEST_ENZYME
+            include("ad/enzyme.jl")
+        end
 
-if GROUP == "All" || GROUP == "Doctests"
-    @testset "doctests" begin
-        Documenter.DocMeta.setdocmeta!(
-            Bijectors, :DocTestSetup, :(using Bijectors); recursive=true
-        )
-        doctestfilters = [
-            # Ignore the source of a warning in the doctest output, since this is dependent
-            # on host. This is a line that starts with "└ @ " and ends with the line number.
-            r"└ @ .+:[0-9]+",
-        ]
-        Documenter.doctest(Bijectors; manual=false, doctestfilters=doctestfilters)
+        # These tests check that AD can differentiate through Bijectors # functionality without explicit rules.
+        include("ad/flows.jl")
+        include("ad/pd.jl")
+        include("ad/corr.jl")
+        include("ad/stacked.jl")
+    end
+
+    if GROUP == "All" || GROUP == "Doctests"
+        @testset "doctests" begin
+            Documenter.DocMeta.setdocmeta!(
+                Bijectors, :DocTestSetup, :(using Bijectors); recursive=true
+            )
+            doctestfilters = [
+                # Ignore the source of a warning in the doctest output, since this is dependent
+                # on host. This is a line that starts with "└ @ " and ends with the line number.
+                r"└ @ .+:[0-9]+",
+            ]
+            Documenter.doctest(Bijectors; manual=false, doctestfilters=doctestfilters)
+        end
     end
 end

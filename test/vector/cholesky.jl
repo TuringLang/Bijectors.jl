@@ -4,10 +4,22 @@ using Distributions
 using LinearAlgebra
 using Test
 using Bijectors.VectorBijectors
-using Enzyme: Enzyme
+import DifferentiationInterface as DI
 using ForwardDiff: ForwardDiff
 using ReverseDiff: ReverseDiff
 using Mooncake: Mooncake
+# using Enzyme: Enzyme
+
+# Need runtime activity for some reason.
+# TODO(penelopeysm): Report upstream
+const adtypes = [
+    DI.AutoReverseDiff(),
+    DI.AutoReverseDiff(; compile=true),
+    DI.AutoMooncake(),
+    DI.AutoMooncakeForward(),
+    DI.AutoEnzyme(; mode=EC.set_runtime_activity(EC.Forward), function_annotation=EC.Const),
+    DI.AutoEnzyme(; mode=EC.set_runtime_activity(EC.Reverse), function_annotation=EC.Const),
+]
 
 dists = [
     # Note: can't test LKJCholesky(1, ...) because its linked vector is length-zero and
@@ -20,8 +32,8 @@ dists = [
 
 @testset "Cholesky" begin
     for d in dists
-        VectorBijectors.test_all(d; expected_zero_allocs=())
+        VectorBijectors.test_all(d; adtypes=adtypes, expected_zero_allocs=())
     end
 end
 
-end # module VBMultivariateTests
+end # module VBCholeskyTests

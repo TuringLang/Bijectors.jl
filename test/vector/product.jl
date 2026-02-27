@@ -9,6 +9,17 @@ using ForwardDiff: ForwardDiff
 using ReverseDiff: ReverseDiff
 using Mooncake: Mooncake
 
+# Need runtime activity for some reason.
+# TODO(penelopeysm): Report upstream
+const adtypes = [
+    DI.AutoReverseDiff(),
+    DI.AutoReverseDiff(; compile=true),
+    DI.AutoMooncake(),
+    DI.AutoMooncakeForward(),
+    DI.AutoEnzyme(; mode=EC.set_runtime_activity(EC.Forward), function_annotation=EC.Const),
+    DI.AutoEnzyme(; mode=EC.set_runtime_activity(EC.Reverse), function_annotation=EC.Const),
+]
+
 # These are purposely chosen because the vec_length output is the same but
 # linked_vec_length differs.
 m2 = MvNormal(zeros(2), I)
@@ -66,12 +77,12 @@ heterogeneous_products = [
 
 @testset "Product distributions" begin
     for d in products
-        VectorBijectors.test_all(d; expected_zero_allocs=())
+        VectorBijectors.test_all(d; adtypes=adtypes, expected_zero_allocs=())
     end
 
     for d in heterogeneous_products
         VectorBijectors.test_all(
-            d; expected_zero_allocs=(), test_construction_type_stable=false
+            d; adtypes=adtypes, expected_zero_allocs=(), test_construction_type_stable=false
         )
     end
 end

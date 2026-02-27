@@ -12,8 +12,8 @@ const default_adtypes = [
     DI.AutoReverseDiff(; compile=true),
     DI.AutoMooncake(),
     DI.AutoMooncakeForward(),
-    DI.AutoEnzyme(; mode=EC.Forward),
-    DI.AutoEnzyme(; mode=EC.Reverse),
+    DI.AutoEnzyme(; mode=EC.Forward, function_annotation=EC.Const),
+    DI.AutoEnzyme(; mode=EC.Reverse, function_annotation=EC.Const),
 ]
 
 _get_value_support(::D.Distribution{<:Any,VS}) where {VS<:D.ValueSupport} = VS
@@ -586,12 +586,18 @@ linked vector forms for the given distribution `d`.
 """
 function test_ad(d::D.Distribution, adtypes::Vector{<:DI.AbstractADType}, atol, rtol)
     # If `d` is a discrete distribution, Mooncake refuses to differentiate through the
-    # transforms (which are just identity transforms). Arguably, the other AD backends
-    # probably should do the same, but they do actually return the right 'gradients' so we
-    # can test them.
+    # transforms (which are just identity transforms). Likewise, Enzyme will throw an
+    # error saying that the output is Const but was not marked as such.
+    #
+    # Arguably, the other AD backends probably should also refuse to differentiate it, but
+    # they do actually return the right 'gradients' so we can test them.
     adtypes = if d isa D.Distribution{<:Any,D.Discrete}
         filter(adtypes) do adtype
-            !(adtype isa DI.AutoMooncake || adtype isa DI.AutoMooncakeForward)
+            !(
+                adtype isa DI.AutoMooncake ||
+                adtype isa DI.AutoMooncakeForward ||
+                adtype isa DI.AutoEnzyme
+            )
         end
     else
         adtypes
