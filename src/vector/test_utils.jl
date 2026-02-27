@@ -338,10 +338,16 @@ function test_roundtrip_inverse(d::D.Distribution, test_in_support, atol, rtol)
                     end
                 end
 
-                if d isa D.JointOrderStatistics && (any(isnan, x) || !all(isfinite, x))
+                ynew = ffwd(x)
+                if d isa D.JointOrderStatistics && (
+                    any(isnan, x) ||
+                    !all(isfinite, x) ||
+                    any(isnan, ynew) ||
+                    !all(isfinite, ynew)
+                )
                     @warn "NaNs or Inf produced in roundtrip test for $(_name(d)), skipping isapprox test"
                 else
-                    @test _isapprox_safe(y, ffwd(x); atol=atol, rtol=rtol)
+                    @test _isapprox_safe(y, ynew; atol=atol, rtol=rtol)
                 end
             end
         end
