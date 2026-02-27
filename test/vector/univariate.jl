@@ -88,13 +88,8 @@ univariates = [
     PoissonBinomial([0.2, 0.5, 0.3]),
     Skellam(2.0, 3.0),
     Soliton(100, 60, 0.2),
-    # Mixture models.
-    # Note that the eltypes here are mandatory to retain zero allocations -- otherwise if
-    # you let the eltype be Any, (I think) it can't infer the type of minimum(d) and
-    # maximum(d).
+    # Univariate mixture models
     MixtureModel([Normal(-2.0, 1.2), Normal(0.0, 1.0), Normal(3.0, 2.5)], [0.2, 0.5, 0.3]),
-    MixtureModel(Union{Normal,Exponential}[Normal(0, 1), Exponential(1)], [0.4, 0.6]),
-    MixtureModel(Union{Gamma,Exponential}[Gamma(2, 1), Exponential(3)], [0.5, 0.5]),
     MixtureModel([Normal(0, 1)], [1.0]),
     MixtureModel([Beta(2, 2), Beta(5, 1)], [0.5, 0.5]),
     # Shifted / scaled distributions
@@ -118,9 +113,25 @@ univariates = [
     truncated(Beta(2, 5) * -4; lower=-3.0, upper=-1.0),
 ]
 
+heterogeneous_mixtures = [
+    # Because of the abstract eltype, there's some loss of inference somewhere that causes
+    # allocations on < 1.12, so for these we skip the zero-allocation tests.
+    MixtureModel(Union{Normal,Exponential}[Normal(0, 1), Exponential(1)], [0.4, 0.6]),
+    MixtureModel(Union{Gamma,Exponential}[Gamma(2, 1), Exponential(3)], [0.5, 0.5]),
+]
+
 @testset "Univariates" begin
     for d in univariates
         VectorBijectors.test_all(d; expected_zero_allocs=(from_vec, from_linked_vec))
+    end
+
+    for d in heterogeneous_mixtures
+        expected_zero_allocs = @static if VERSION >= v"1.12-"
+            (from_vec, from_linked_vec)
+        else
+            ()
+        end
+        VectorBijectors.test_all(d; expected_zero_allocs=expected_zero_allocs)
     end
 end
 

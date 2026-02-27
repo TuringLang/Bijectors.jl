@@ -273,7 +273,14 @@ function test_roundtrip(d::D.Distribution)
             @testset let x = rand(d), d = d
                 ffwd = to_linked_vec(d)
                 frvs = from_linked_vec(d)
-                @test _isapprox_safe(x, frvs(ffwd(x)))
+                xnew = frvs(ffwd(x))
+                # https://github.com/TuringLang/Bijectors.jl/issues/441
+                if d isa D.JointOrderStatistics &&
+                    (any(isnan, xnew) || !all(isfinite, xnew))
+                    @warn "NaNs or Inf produced in roundtrip test for $(_name(d)), skipping isapprox test"
+                else
+                    @test _isapprox_safe(x, xnew)
+                end
             end
         end
     end
@@ -505,10 +512,13 @@ function test_logjac(d::D.Distribution, atol, rtol)
         for _ in 1:100
             @testset let x = rand(d), d = d
                 ffwd = to_vec(d)
-                @test iszero(last(with_logabsdet_jacobian(ffwd, x)))
-                y = ffwd(x)
+                y, logjac = with_logabsdet_jacobian(ffwd, x)
+                @test _isapprox_safe(y, ffwd(x); atol=atol, rtol=rtol)
+                @test iszero(logjac)
                 frvs = from_vec(d)
-                @test iszero(last(with_logabsdet_jacobian(frvs, y)))
+                x_recon, logjac = with_logabsdet_jacobian(frvs, y)
+                @test _isapprox_safe(x_recon, frvs(y); atol=atol, rtol=rtol)
+                @test iszero(logjac)
             end
         end
     end
@@ -536,7 +546,8 @@ function test_logjac(d::D.Distribution, atol, rtol)
                 # Forward
                 xvec = to_vec(d)(x)
                 ffwd = to_linked_vec(d) ∘ from_vec(d)
-                vbt_logjac = last(with_logabsdet_jacobian(ffwd, xvec))
+                y, vbt_logjac = with_logabsdet_jacobian(ffwd, xvec)
+                @test _isapprox_safe(y, ffwd(xvec); atol=atol, rtol=rtol)
                 # For the AD calculation we need to use to/from_vec_for_logjac_test instead,
                 # to make sure that the Jacobian is square.
                 ad_xvec = to_vec_for_logjac_test(d)(x)
@@ -549,7 +560,8 @@ function test_logjac(d::D.Distribution, atol, rtol)
                 # Reverse
                 yvec = to_linked_vec(d)(x)
                 vbt_frvs = to_vec(d) ∘ from_linked_vec(d)
-                vbt_logjac = last(with_logabsdet_jacobian(vbt_frvs, yvec))
+                x, vbt_logjac = with_logabsdet_jacobian(vbt_frvs, yvec)
+                @test _isapprox_safe(x, vbt_frvs(yvec); atol=atol, rtol=rtol)
                 # For the AD calculation we need to use to/from_vec_for_logjac_test instead,
                 # to make sure that the Jacobian is square.
                 ad_frvs = to_vec_for_logjac_test(d) ∘ from_linked_vec(d)
