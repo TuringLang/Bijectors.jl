@@ -88,6 +88,15 @@ univariates = [
     PoissonBinomial([0.2, 0.5, 0.3]),
     Skellam(2.0, 3.0),
     Soliton(100, 60, 0.2),
+    # Mixture models.
+    # Note that the eltypes here are mandatory to retain zero allocations -- otherwise if
+    # you let the eltype be Any, (I think) it can't infer the type of minimum(d) and
+    # maximum(d).
+    MixtureModel([Normal(-2.0, 1.2), Normal(0.0, 1.0), Normal(3.0, 2.5)], [0.2, 0.5, 0.3]),
+    MixtureModel(Union{Normal,Exponential}[Normal(0, 1), Exponential(1)], [0.4, 0.6]),
+    MixtureModel(Union{Gamma,Exponential}[Gamma(2, 1), Exponential(3)], [0.5, 0.5]),
+    MixtureModel([Normal(0, 1)], [1.0]),
+    MixtureModel([Beta(2, 2), Beta(5, 1)], [0.5, 0.5]),
     # Shifted / scaled distributions
     # Identity
     Logistic() + 2,
@@ -114,7 +123,5 @@ univariates = [
         VectorBijectors.test_all(d; expected_zero_allocs=(from_vec, from_linked_vec))
     end
 end
-
-# TODO: discrete univariates
 
 end # module VBUnivariateTests
