@@ -1,4 +1,10 @@
-# Product distributions of tuples and arrays.
+# Product distributions of tuples, arrays, and NamedTuples.
+#
+# There is a LOT of code repetition here! Unfortunately that's because most of these
+# functions have to be generated functions in order to ensure type stability (particularly
+# for NamedTuples; for the Tuple case, we can often get away with a non-generated function
+# since Julia performs union splitting, but that causes issues with Enzyme; so we just make
+# everything a generated function).
 
 struct ProductVecTransform{TTrf,Trng,D}
     "A collection of vectorisation transforms, one for each component of the product
@@ -59,25 +65,78 @@ function _get_val_iterator(
     return eachslice(x; dims=dims)
 end
 
-# TODO(penelopeysm): The `xvec[r] .= xr` is inefficient. We could do better by having
-# mutating versions of bijectors.
+@generated function with_logabsdet_jacobian(
+    t::ProductVecTransform{<:NTuple{P,Any},<:NTuple{P,Any},<:NTuple{N,Int}},
+    x::AbstractArray{T},
+) where {P,N,T}
+    # P = number of distributions in the product distribution
+    # N = dimension of each distribution
+    exprs = []
+    push!(exprs, :(total_length = sum(length, t.ranges)))
+    push!(exprs, :(logjac = _fzero(T)))
+    push!(exprs, :(y = Vector{T}(undef, total_length)))
+    colons = fill(:, N)
+    y_syms = Symbol.(:y, 1:P)
+    logjac_syms = Symbol.(:lj, 1:P)
+    for (i, (y_sym, lj_sym)) in enumerate(zip(y_syms, logjac_syms))
+        if N == 0
+            push!(
+                exprs,
+                :(($y_sym, $lj_sym) = with_logabsdet_jacobian(t.transforms[$i], x[$i])),
+            )
+        else
+            push!(
+                exprs,
+                :(
+                    ($y_sym, $lj_sym) = with_logabsdet_jacobian(
+                        t.transforms[$i], view(x, $colons..., $i)
+                    )
+                ),
+            )
+        end
+        push!(exprs, :(y[t.ranges[$i]] .= $y_sym))
+        push!(exprs, :(logjac += $lj_sym))
+    end
+    push!(exprs, :(return (y, logjac)))
+    return Expr(:block, exprs...)
+end
+@generated function (
+    t::ProductVecTransform{<:NTuple{P,Any},<:NTuple{P,Any},<:NTuple{N,Int}}
+)(
+    x::AbstractArray{T}
+) where {P,N,T}
+    exprs = []
+    push!(exprs, :(total_length = sum(length, t.ranges)))
+    push!(exprs, :(y = Vector{T}(undef, total_length)))
+    colons = fill(:, N)
+    for i in 1:P
+        if N == 0
+            push!(exprs, :(y[t.ranges[$i]] = t.transforms[$i](x[$i])))
+        else
+            push!(exprs, :(y[t.ranges[$i]] .= t.transforms[$i](view(x, $colons..., $i))))
+        end
+    end
+    push!(exprs, :(return y))
+    return Expr(:block, exprs...)
+end
+
 function with_logabsdet_jacobian(
-    t::ProductVecTransform{<:Union{<:Tuple,<:AbstractArray}}, x::AbstractArray{T}
+    t::ProductVecTransform{<:AbstractArray}, x::AbstractArray{T}
 ) where {T}
     total_length = sum(length, t.ranges)
     logjac = _fzero(T)
     y = Vector{T}(undef, total_length)
     val_iterator = _get_val_iterator(t, x)
     for (trf, r, val) in zip(t.transforms, t.ranges, val_iterator)
+        # TODO(penelopeysm): The `xvec[r] .= xr` is inefficient. We could do better by having
+        # mutating versions of bijectors.
         xr, lj = with_logabsdet_jacobian(trf, val)
         y[r] .= xr
         logjac += lj
     end
     return y, logjac
 end
-function (t::ProductVecTransform{<:Union{<:Tuple,<:AbstractArray}})(
-    x::AbstractArray{T}
-) where {T}
+function (t::ProductVecTransform{<:AbstractArray})(x::AbstractArray{T}) where {T}
     total_length = sum(length, t.ranges)
     y = Vector{T}(undef, total_length)
     val_iterator = _get_val_iterator(t, x)
@@ -117,17 +176,59 @@ end
         x[$colons..., i.I...] = val
     end
 end
-# Generalisation of size to include tuples.
-_sz(::NTuple{N,Any}) where {N} = (N,)
-_sz(x::AbstractArray) = size(x)
+
 # Generalisation of CartesianIndices to include tuples.
 _cartesian_indices(::NTuple{N,Any}) where {N} = CartesianIndices((N,))
 _cartesian_indices(x::AbstractArray) = CartesianIndices(x)
 
+@generated function with_logabsdet_jacobian(
+    t::ProductVecInvTransform{<:NTuple{P,Any},<:NTuple{P,Any},<:NTuple{N,Int}},
+    y::AbstractVector{T},
+) where {P,N,T}
+    # P = number of distributions in the product distribution
+    # N = dimension of each distribution
+    exprs = []
+    push!(exprs, :(x = Array{T}(undef, t.base_size..., P)))
+    push!(exprs, :(logjac = _fzero(T)))
+    colons = fill(:, N)
+    x_syms = Symbol.(:x, 1:P)
+    lj_syms = Symbol.(:lj, 1:P)
+    for (i, (x_sym, lj_sym)) in enumerate(zip(x_syms, lj_syms))
+        push!(
+            exprs,
+            :(
+                ($x_sym, $lj_sym) = with_logabsdet_jacobian(
+                    t.transforms[$i], view(y, t.ranges[$i])
+                )
+            ),
+        )
+        push!(exprs, :(x[$colons..., $i] = $x_sym))
+        push!(exprs, :(logjac += $lj_sym))
+    end
+    push!(exprs, :(return (x, logjac)))
+    return Expr(:block, exprs...)
+end
+@generated function (
+    t::ProductVecInvTransform{<:NTuple{P,Any},<:NTuple{P,Any},<:NTuple{N,Int}}
+)(
+    y::AbstractVector{T}
+) where {P,N,T}
+    # P = number of distributions in the product distribution
+    # N = dimension of each distribution
+    exprs = []
+    push!(exprs, :(x = Array{T}(undef, t.base_size..., P)))
+    colons = fill(:, N)
+    for i in 1:P
+        push!(exprs, :(x[$colons..., $i] = t.transforms[$i](view(y, t.ranges[$i]))))
+    end
+    push!(exprs, :(return x))
+    return Expr(:block, exprs...)
+end
+
 function with_logabsdet_jacobian(
-    t::ProductVecInvTransform{<:Union{<:Tuple,<:AbstractArray}}, y::AbstractVector{T}
+    t::ProductVecInvTransform{<:AbstractArray}, y::AbstractVector{T}
 ) where {T}
-    x = Array{T}(undef, t.base_size..., _sz(t.transforms)...)
+    x = Array{T}(undef, t.base_size..., size(t.transforms)...)
     logjac = _fzero(T)
     idxs = _cartesian_indices(t.transforms)
     for (idx, trf, r) in zip(idxs, t.transforms, t.ranges)
@@ -137,10 +238,8 @@ function with_logabsdet_jacobian(
     end
     return x, logjac
 end
-function (t::ProductVecInvTransform{<:Union{<:Tuple,<:AbstractArray}})(
-    y::AbstractVector{T}
-) where {T}
-    x = Array{T}(undef, t.base_size..., _sz(t.transforms)...)
+function (t::ProductVecInvTransform{<:AbstractArray})(y::AbstractVector{T}) where {T}
+    x = Array{T}(undef, t.base_size..., size(t.transforms)...)
     idxs = _cartesian_indices(t.transforms)
     for (idx, trf, r) in zip(idxs, t.transforms, t.ranges)
         xr = trf(view(y, r))
