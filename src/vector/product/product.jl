@@ -100,11 +100,18 @@ end
     push!(exprs, :(return (y, logjac)))
     return Expr(:block, exprs...)
 end
-@generated function (
-    t::ProductVecTransform{<:NTuple{P,Any},<:NTuple{P,Any},<:NTuple{N,Int}}
-)(
+
+# Regarding formatting: the autoformatter will turn this into
+#     @generated function (
+#         t::...
+#     )(x::...)
+# which is broken on 1.12 because of a parser bug.
+# https://github.com/JuliaLang/JuliaSyntax.jl/pull/580
+#! format: off
+@generated function (t::ProductVecTransform{<:NTuple{P,Any},<:NTuple{P,Any},<:NTuple{N,Int}})(
     x::AbstractArray{T}
 ) where {P,N,T}
+#! format: on
     exprs = []
     push!(exprs, :(total_length = sum(length, t.ranges)))
     push!(exprs, :(y = Vector{T}(undef, total_length)))
@@ -158,9 +165,12 @@ end
     push!(exprs, :(return (vcat($(vcat_args...)), +($(lj_args...)))))
     return Expr(:block, exprs...)
 end
+# See above for note about formatting
+#! format: off
 @generated function (t::ProductVecTransform{<:NamedTuple{names}})(
     x::NamedTuple{names}
 ) where {names}
+#! format: on
     expr = Expr(:tuple)
     for nm in names
         push!(expr.args, :(t.transforms.$nm(x.$nm)))
@@ -208,11 +218,13 @@ _cartesian_indices(x::AbstractArray) = CartesianIndices(x)
     push!(exprs, :(return (x, logjac)))
     return Expr(:block, exprs...)
 end
-@generated function (
-    t::ProductVecInvTransform{<:NTuple{P,Any},<:NTuple{P,Any},<:NTuple{N,Int}}
-)(
+
+# See above for note about formatting
+#! format: off
+@generated function (t::ProductVecInvTransform{<:NTuple{P,Any},<:NTuple{P,Any},<:NTuple{N,Int}})(
     y::AbstractVector{T}
 ) where {P,N,T}
+#! format: on
     # P = number of distributions in the product distribution
     # N = dimension of each distribution
     exprs = []
