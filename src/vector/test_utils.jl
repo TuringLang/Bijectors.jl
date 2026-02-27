@@ -42,9 +42,18 @@ _rand_safe_ad(d::D.Censored) = begin
     end
 end
 
-# isapprox is not defined for some samples (specifically Cholesky), so we need to patch that
+# isapprox is not defined for some samples (specifically Cholesky and NTs), so we need to
+# patch that
 function _isapprox_safe(x, y; kwargs...)
     return isapprox(x, y; kwargs...)
+end
+function _isapprox_safe(x::NamedTuple{names}, y::NamedTuple{names}; kwargs...) where {names}
+    for name in names
+        if !_isapprox_safe(x[name], y[name]; kwargs...)
+            return false
+        end
+    end
+    return true
 end
 function _isapprox_safe(x::Cholesky, y::Cholesky; kwargs...)
     if x.uplo != y.uplo || size(x.UL) != size(y.UL)
@@ -68,15 +77,19 @@ to_vec_for_logjac_test(d::D.Distribution) = to_vec(d)
 from_vec_for_logjac_test(d::D.Distribution) = from_vec(d)
 to_vec_for_logjac_test(::Union{D.Dirichlet,D.MvLogitNormal}) = x -> x[1:(end - 1)]
 from_vec_for_logjac_test(::Union{D.Dirichlet,D.MvLogitNormal}) = y -> vcat(y, 1 - sum(y))
-function to_vec_for_logjac_test(d::D.ProductDistribution)
+function to_vec_for_logjac_test(
+    d::Union{<:D.ProductDistribution,<:D.ProductNamedTupleDistribution}
+)
     # Internal function, but we use this to avoid a LOT of code duplication
     return VectorBijectors._make_transform(
-        d, to_vec_for_logjac_test, linked_vec_length, ProductVecTransform
+        d.dists, to_vec_for_logjac_test, linked_vec_length, ProductVecTransform
     )
 end
-function from_vec_for_logjac_test(d::D.ProductDistribution)
+function from_vec_for_logjac_test(
+    d::Union{<:D.ProductDistribution,<:D.ProductNamedTupleDistribution}
+)
     return VectorBijectors._make_transform(
-        d, from_vec_for_logjac_test, linked_vec_length, ProductVecInvTransform
+        d.dists, from_vec_for_logjac_test, linked_vec_length, ProductVecInvTransform
     )
 end
 function to_vec_for_logjac_test(

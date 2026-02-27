@@ -3,7 +3,11 @@
 struct ProductVecTransform{TTrf,Trng,D}
     "A collection of vectorisation transforms, one for each component of the product
     distribution. These may either be `to_vec` or `to_linked_vec` transforms, which in turn
-    determines the overall behaviour of this transform."
+    determines the overall behaviour of this transform.
+
+    The collection type (e.g. Tuple, Array, or NamedTuple) reflects the underlying structure
+    of the product distribution. It should always be the case that the collection type of
+    `transforms` is the same as the collection type of `ranges`."
     transforms::TTrf
     "A collection of ranges which specify the output range for each component of the product
     distribution's bijectors."
@@ -57,7 +61,9 @@ end
 
 # TODO(penelopeysm): The `xvec[r] .= xr` is inefficient. We could do better by having
 # mutating versions of bijectors.
-function with_logabsdet_jacobian(t::ProductVecTransform, x::AbstractArray{T}) where {T}
+function with_logabsdet_jacobian(
+    t::ProductVecTransform{<:Union{<:Tuple,<:AbstractArray}}, x::AbstractArray{T}
+) where {T}
     total_length = sum(length, t.ranges)
     logjac = _fzero(T)
     y = Vector{T}(undef, total_length)
@@ -69,7 +75,9 @@ function with_logabsdet_jacobian(t::ProductVecTransform, x::AbstractArray{T}) wh
     end
     return y, logjac
 end
-function (t::ProductVecTransform)(x::AbstractArray{T}) where {T}
+function (t::ProductVecTransform{<:Union{<:Tuple,<:AbstractArray}})(
+    x::AbstractArray{T}
+) where {T}
     total_length = sum(length, t.ranges)
     y = Vector{T}(undef, total_length)
     val_iterator = _get_val_iterator(t, x)
@@ -77,6 +85,28 @@ function (t::ProductVecTransform)(x::AbstractArray{T}) where {T}
         y[r] .= trf(val)
     end
     return y
+end
+
+@generated function with_logabsdet_jacobian(
+    t::ProductVecTransform{<:NamedTuple{names}}, x::NamedTuple{names}
+) where {names}
+    vcat_args = [Symbol("y_$nm") for nm in names]
+    lj_args = [Symbol("lj_$nm") for nm in names]
+    exprs = []
+    for (nm, y_nm, lj_nm) in zip(names, vcat_args, lj_args)
+        push!(exprs, :(($y_nm, $lj_nm) = with_logabsdet_jacobian(t.transforms.$nm, x.$nm)))
+    end
+    push!(exprs, :(return (vcat($(vcat_args...)), +($(lj_args...)))))
+    return Expr(:block, exprs...)
+end
+@generated function (t::ProductVecTransform{<:NamedTuple{names}})(
+    x::NamedTuple{names}
+) where {names}
+    expr = Expr(:tuple)
+    for nm in names
+        push!(expr.args, :(t.transforms.$nm(x.$nm)))
+    end
+    return :(vcat($expr...))
 end
 
 @generated function _set_lastindex!(
@@ -93,7 +123,10 @@ _sz(x::AbstractArray) = size(x)
 # Generalisation of CartesianIndices to include tuples.
 _cartesian_indices(::NTuple{N,Any}) where {N} = CartesianIndices((N,))
 _cartesian_indices(x::AbstractArray) = CartesianIndices(x)
-function with_logabsdet_jacobian(t::ProductVecInvTransform, y::AbstractVector{T}) where {T}
+
+function with_logabsdet_jacobian(
+    t::ProductVecInvTransform{<:Union{<:Tuple,<:AbstractArray}}, y::AbstractVector{T}
+) where {T}
     x = Array{T}(undef, t.base_size..., _sz(t.transforms)...)
     logjac = _fzero(T)
     idxs = _cartesian_indices(t.transforms)
@@ -104,7 +137,9 @@ function with_logabsdet_jacobian(t::ProductVecInvTransform, y::AbstractVector{T}
     end
     return x, logjac
 end
-function (t::ProductVecInvTransform)(y::AbstractVector{T}) where {T}
+function (t::ProductVecInvTransform{<:Union{<:Tuple,<:AbstractArray}})(
+    y::AbstractVector{T}
+) where {T}
     x = Array{T}(undef, t.base_size..., _sz(t.transforms)...)
     idxs = _cartesian_indices(t.transforms)
     for (idx, trf, r) in zip(idxs, t.transforms, t.ranges)
@@ -114,67 +149,130 @@ function (t::ProductVecInvTransform)(y::AbstractVector{T}) where {T}
     return x
 end
 
-# These must be generated functions for type stability.
+@generated function with_logabsdet_jacobian(
+    t::ProductVecInvTransform{<:NamedTuple{names}}, y::AbstractVector{T}
+) where {names,T}
+    expr = Expr(:block)
+    push!(expr.args, :(x = (;)))
+    push!(expr.args, :(logjac = _fzero($T)))
+    for nm in names
+        push!(
+            expr.args,
+            :((xr, lj) = with_logabsdet_jacobian(t.transforms.$nm, view(y, t.ranges.$nm))),
+        )
+        push!(expr.args, :(x = (x..., $nm=xr)))
+        push!(expr.args, :(logjac += lj))
+    end
+    push!(expr.args, :(return x, logjac))
+    return expr
+end
+@generated function (t::ProductVecInvTransform{<:NamedTuple{names}})(
+    y::AbstractVector{T}
+) where {names,T}
+    expr = Expr(:tuple)
+    for nm in names
+        push!(expr.args, :($nm = t.transforms.$nm(view(y, t.ranges.$nm))))
+    end
+    return expr
+end
+
 @generated function _make_transform(
-    d::D.ProductDistribution{M,N,<:NTuple{NDists,D.Distribution}},
-    indiv_transform_fn,
-    length_fn,
-    struct_type,
-) where {M,N,NDists}
+    dists::NamedTuple{names}, indiv_transform_fn, length_fn, struct_type
+) where {names}
+    exprs = []
+    trfms = Expr(:tuple)
+    for nm in names
+        push!(trfms.args, :($nm = indiv_transform_fn(dists.$nm)))
+    end
+    push!(exprs, :(trfms = $trfms))
+    push!(exprs, :(ranges = ()))
+    push!(exprs, :(offset = 1))
+    for nm in names
+        push!(exprs, :(this_length = length_fn(dists.$nm)))
+        push!(exprs, :(ranges = (ranges..., $nm=offset:(offset + this_length - 1))))
+        push!(exprs, :(offset += this_length))
+    end
+    push!(exprs, :(return struct_type(trfms, ranges, size(dists[1]))))
+    return Expr(:block, exprs...)
+end
+
+@generated function _make_transform(
+    dists::NTuple{NDists,D.Distribution}, indiv_transform_fn, length_fn, struct_type
+) where {NDists}
     exprs = []
     trfms = Expr(:tuple)
     for i in 1:NDists
-        push!(trfms.args, :(indiv_transform_fn(d.dists[$i])))
+        push!(trfms.args, :(indiv_transform_fn(dists[$i])))
     end
     push!(exprs, :(trfms = $trfms))
     push!(exprs, :(ranges = ()))
     push!(exprs, :(offset = 1))
     for i in 1:NDists
-        push!(exprs, :(this_length = length_fn(d.dists[$i])))
+        push!(exprs, :(this_length = length_fn(dists[$i])))
         push!(exprs, :(ranges = (ranges..., offset:(offset + this_length - 1))))
         push!(exprs, :(offset += this_length))
     end
-    push!(exprs, :(return struct_type(trfms, ranges, size(d.dists[1]))))
+    push!(exprs, :(return struct_type(trfms, ranges, size(dists[1]))))
     return Expr(:block, exprs...)
 end
 
 function _make_transform(
-    d::D.ProductDistribution{M,N,<:AbstractArray{<:D.Distribution}},
-    indiv_transform_fn,
-    length_fn,
-    struct_type,
-) where {M,N}
-    trfms = map(indiv_transform_fn, d.dists)
-    ranges = Array{UnitRange{Int}}(undef, size(d.dists)...)
+    dists::AbstractArray{<:D.Distribution}, indiv_transform_fn, length_fn, struct_type
+)
+    trfms = map(indiv_transform_fn, dists)
+    ranges = Array{UnitRange{Int}}(undef, size(dists)...)
     offset = 1
-    for (i, dist) in enumerate(d.dists)
+    for (i, dist) in enumerate(dists)
         this_length = length_fn(dist)
         ranges[i] = offset:(offset + this_length - 1)
         offset += this_length
     end
-    return struct_type(trfms, ranges, size(d.dists[1]))
+    return struct_type(trfms, ranges, size(dists[1]))
 end
 
-function from_vec(d::D.ProductDistribution)
-    return _make_transform(d, from_vec, vec_length, ProductVecInvTransform)
-end
-function from_linked_vec(d::D.ProductDistribution)
-    return _make_transform(d, from_linked_vec, linked_vec_length, ProductVecInvTransform)
-end
-function to_vec(d::D.ProductDistribution)
-    return _make_transform(d, to_vec, vec_length, ProductVecTransform)
-end
-function to_linked_vec(d::D.ProductDistribution)
-    return _make_transform(d, to_linked_vec, linked_vec_length, ProductVecTransform)
+for (product_type, dist_field) in (
+    (D.ProductNamedTupleDistribution, :dists),
+    (D.ProductDistribution, :dists),
+    # Annoyingly, vectors of univariate distributions become D.Product rather than
+    # D.ProductDistribution (which handles all other tuple/arrays).
+    (D.Product, :v),
+)
+    @eval begin
+        function from_vec(d::$product_type)
+            return _make_transform(
+                d.$dist_field, from_vec, vec_length, ProductVecInvTransform
+            )
+        end
+        function from_linked_vec(d::$product_type)
+            return _make_transform(
+                d.$dist_field, from_linked_vec, linked_vec_length, ProductVecInvTransform
+            )
+        end
+        function to_vec(d::$product_type)
+            return _make_transform(d.$dist_field, to_vec, vec_length, ProductVecTransform)
+        end
+        function to_linked_vec(d::$product_type)
+            return _make_transform(
+                d.$dist_field, to_linked_vec, linked_vec_length, ProductVecTransform
+            )
+        end
+
+        vec_length(d::$product_type) = sum(vec_length, d.$dist_field)
+        linked_vec_length(d::$product_type) = sum(linked_vec_length, d.$dist_field)
+    end
 end
 
-vec_length(d::D.ProductDistribution) = sum(vec_length, d.dists)
-linked_vec_length(d::D.ProductDistribution) = sum(linked_vec_length, d.dists)
+"""
+Add extra indices to the end of an optic.
 
-# This is conceptually what we need to do, but we need to also correct for the internal structure of the product distribution
-# optic_vec(d::D.ProductDistribution) = mapreduce(optic_vec, vcat, d.dists)
-# linked_optic_vec(d::D.ProductDistribution) = mapreduce(linked_optic_vec, vcat, d.dists)
+For example, if `i` is `(1, 2)`, this does
 
+```julia
+x    ->  x[1, 2]
+x.a  ->  x.a[1, 2]
+x[3] ->  x[3, 1, 2]
+```
+"""
 append_index(::Nothing, i) = nothing
 append_index(::AbstractPPL.Iden, i) = @opticof(_[i])
 function append_index(p::AbstractPPL.Property{sym}, i) where {sym}
@@ -188,26 +286,35 @@ function append_index(p::AbstractPPL.Index, i)
     end
 end
 
-function optic_vec(d::D.ProductDistribution)
-    optics = Union{}[]
-    idxs = _cartesian_indices(d.dists)
-    for (idx, dist) in zip(idxs, d.dists)
-        this_dist_optics = optic_vec(dist)
-        for optic in this_dist_optics
-            optics = vcat(optics, append_index(optic, idx))
-        end
-    end
-    return optics
-end
+# Add an extra symbol to the front of an optic.
+prepend_symbol(s::Symbol, optic::AbstractPPL.AbstractOptic) = AbstractPPL.Property{s}(optic)
+prepend_symbol(::Symbol, nothing) = nothing
 
-function linked_optic_vec(d::D.ProductDistribution)
-    optics = Union{}[]
-    idxs = _cartesian_indices(d.dists)
-    for (idx, dist) in zip(idxs, d.dists)
-        this_dist_optics = linked_optic_vec(dist)
-        for optic in this_dist_optics
-            optics = vcat(optics, append_index(optic, idx))
+for f in (:optic_vec, :linked_optic_vec)
+    for (product_type, dist_field) in ((D.Product, :v), (D.ProductDistribution, :dists))
+        @eval begin
+            function $f(d::$product_type)
+                optics = Union{}[]
+                idxs = _cartesian_indices(d.$dist_field)
+                for (idx, dist) in zip(idxs, d.$dist_field)
+                    this_dist_optics = $f(dist)
+                    new_optics = map(optic -> append_index(optic, idx), this_dist_optics)
+                    optics = vcat(optics, new_optics)
+                end
+                return optics
+            end
         end
     end
-    return optics
+
+    @eval begin
+        function $f(d::D.ProductNamedTupleDistribution)
+            optics = Union{}[]
+            for (nm, dist) in pairs(d.dists)
+                this_dist_optics = $f(dist)
+                new_optics = map(optic -> prepend_symbol(nm, optic), this_dist_optics)
+                optics = vcat(optics, new_optics)
+            end
+            return optics
+        end
+    end
 end
