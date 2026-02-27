@@ -39,26 +39,26 @@ _fzero(@nospecialize(T)) = 0.0
 Return an object that can be iterated over to obtain the values for each distribution
 in the product distribution.
 """
-function _get_val_iterator(::ProductVecTransform{<:Tuple,<:Tuple,Tuple{}}, x::AbstractArray)
+function _get_val_iterator(::ProductVecTransform{<:Any,<:Any,Tuple{}}, x::AbstractArray)
     # if the base_size is an empty tuple, then it's a univariate distribution,
     # and the values are just the elements of `x`.
     return x
 end
 function _get_val_iterator(
-    ::ProductVecTransform{<:Tuple,<:Tuple,NTuple{N,Int}}, x::AbstractArray{T,MplusN}
+    ::ProductVecTransform{<:Any,<:Any,NTuple{N,Int}}, x::AbstractArray{T,MplusN}
 ) where {T,MplusN,N}
-    # Multivariate case.
+    # Multivariate case. The distribution itself has dimension N, and has been expanded
+    # by M extra dimensions (e.g. fill(MvNormal(...), 3, 3, 3) would have M=3 and N=2).
+    # In the sample, the N dimensions come first, followed by the M dimensions.
     M = MplusN - N
-    dims = ntuple(i -> i + M, N)
+    dims = ntuple(i -> i + N, M)
     return eachslice(x; dims=dims)
 end
 
 # TODO(penelopeysm): The `xvec[r] .= xr` is inefficient. We could do better by having
 # mutating versions of bijectors.
-function with_logabsdet_jacobian(
-    t::ProductVecTransform{<:Tuple,<:Tuple}, x::AbstractArray{T}
-) where {T}
-    total_length = sum(length.(t.ranges))
+function with_logabsdet_jacobian(t::ProductVecTransform, x::AbstractArray{T}) where {T}
+    total_length = sum(length, t.ranges)
     logjac = _fzero(T)
     y = Vector{T}(undef, total_length)
     val_iterator = _get_val_iterator(t, x)
@@ -69,8 +69,8 @@ function with_logabsdet_jacobian(
     end
     return y, logjac
 end
-function (t::ProductVecTransform{<:Tuple,<:Tuple})(x::AbstractArray{T}) where {T}
-    total_length = sum(length.(t.ranges))
+function (t::ProductVecTransform)(x::AbstractArray{T}) where {T}
+    total_length = sum(length, t.ranges)
     y = Vector{T}(undef, total_length)
     val_iterator = _get_val_iterator(t, x)
     for (trf, r, val) in zip(t.transforms, t.ranges, val_iterator)
@@ -79,31 +79,37 @@ function (t::ProductVecTransform{<:Tuple,<:Tuple})(x::AbstractArray{T}) where {T
     return y
 end
 
-@generated function _set_lastindex!(x::AbstractArray{T,N}, i::Int, val) where {T,N}
-    colons = fill(:, N - 1)
+@generated function _set_lastindex!(
+    x::AbstractArray{T,N}, i::CartesianIndex{M}, val
+) where {T,M,N}
+    colons = fill(:, N - M)
     return quote
-        x[$colons..., i] = val
+        x[$colons..., i.I...] = val
     end
 end
-function with_logabsdet_jacobian(
-    t::ProductVecInvTransform{<:Tuple,<:Tuple}, y::AbstractVector{T}
-) where {T}
-    ndists = length(t.transforms)
-    x = Array{T}(undef, t.base_size..., ndists)
+# Generalisation of size to include tuples.
+_sz(::NTuple{N,Any}) where {N} = (N,)
+_sz(x::AbstractArray) = size(x)
+# Generalisation of CartesianIndices to include tuples.
+_cartesian_indices(::NTuple{N,Any}) where {N} = CartesianIndices((N,))
+_cartesian_indices(x::AbstractArray) = CartesianIndices(x)
+function with_logabsdet_jacobian(t::ProductVecInvTransform, y::AbstractVector{T}) where {T}
+    x = Array{T}(undef, t.base_size..., _sz(t.transforms)...)
     logjac = _fzero(T)
-    for (i, (trf, r)) in enumerate(zip(t.transforms, t.ranges))
+    idxs = _cartesian_indices(t.transforms)
+    for (idx, trf, r) in zip(idxs, t.transforms, t.ranges)
         xr, lj = with_logabsdet_jacobian(trf, view(y, r))
-        _set_lastindex!(x, i, xr)
+        _set_lastindex!(x, idx, xr)
         logjac += lj
     end
     return x, logjac
 end
-function (t::ProductVecInvTransform{<:Tuple,<:Tuple})(y::AbstractVector{T}) where {T}
-    ndists = length(t.transforms)
-    x = Array{T}(undef, t.base_size..., ndists)
-    for (i, (trf, r)) in enumerate(zip(t.transforms, t.ranges))
+function (t::ProductVecInvTransform)(y::AbstractVector{T}) where {T}
+    x = Array{T}(undef, t.base_size..., _sz(t.transforms)...)
+    idxs = _cartesian_indices(t.transforms)
+    for (idx, trf, r) in zip(idxs, t.transforms, t.ranges)
         xr = trf(view(y, r))
-        _set_lastindex!(x, i, xr)
+        _set_lastindex!(x, idx, xr)
     end
     return x
 end
@@ -131,24 +137,34 @@ end
     push!(exprs, :(return struct_type(trfms, ranges, size(d.dists[1]))))
     return Expr(:block, exprs...)
 end
-function from_vec(
-    d::D.ProductDistribution{M,N,<:NTuple{NDists,D.Distribution}}
-) where {M,N,NDists}
+
+function _make_transform(
+    d::D.ProductDistribution{M,N,<:AbstractArray{<:D.Distribution}},
+    indiv_transform_fn,
+    length_fn,
+    struct_type,
+) where {M,N}
+    trfms = map(indiv_transform_fn, d.dists)
+    ranges = Array{UnitRange{Int}}(undef, size(d.dists)...)
+    offset = 1
+    for (i, dist) in enumerate(d.dists)
+        this_length = length_fn(dist)
+        ranges[i] = offset:(offset + this_length - 1)
+        offset += this_length
+    end
+    return struct_type(trfms, ranges, size(d.dists[1]))
+end
+
+function from_vec(d::D.ProductDistribution)
     return _make_transform(d, from_vec, vec_length, ProductVecInvTransform)
 end
-function from_linked_vec(
-    d::D.ProductDistribution{M,N,<:NTuple{NDists,D.Distribution}}
-) where {M,N,NDists}
+function from_linked_vec(d::D.ProductDistribution)
     return _make_transform(d, from_linked_vec, linked_vec_length, ProductVecInvTransform)
 end
-function to_vec(
-    d::D.ProductDistribution{M,N,<:NTuple{NDists,D.Distribution}}
-) where {M,N,NDists}
+function to_vec(d::D.ProductDistribution)
     return _make_transform(d, to_vec, vec_length, ProductVecTransform)
 end
-function to_linked_vec(
-    d::D.ProductDistribution{M,N,<:NTuple{NDists,D.Distribution}}
-) where {M,N,NDists}
+function to_linked_vec(d::D.ProductDistribution)
     return _make_transform(d, to_linked_vec, linked_vec_length, ProductVecTransform)
 end
 
@@ -174,10 +190,11 @@ end
 
 function optic_vec(d::D.ProductDistribution)
     optics = Union{}[]
-    for (i, dist) in enumerate(d.dists)
+    idxs = _cartesian_indices(d.dists)
+    for (idx, dist) in zip(idxs, d.dists)
         this_dist_optics = optic_vec(dist)
         for optic in this_dist_optics
-            optics = vcat(optics, append_index(optic, i))
+            optics = vcat(optics, append_index(optic, idx))
         end
     end
     return optics
@@ -185,10 +202,11 @@ end
 
 function linked_optic_vec(d::D.ProductDistribution)
     optics = Union{}[]
-    for (i, dist) in enumerate(d.dists)
+    idxs = _cartesian_indices(d.dists)
+    for (idx, dist) in zip(idxs, d.dists)
         this_dist_optics = linked_optic_vec(dist)
         for optic in this_dist_optics
-            optics = vcat(optics, append_index(optic, i))
+            optics = vcat(optics, append_index(optic, idx))
         end
     end
     return optics

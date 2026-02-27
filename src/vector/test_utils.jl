@@ -68,18 +68,13 @@ to_vec_for_logjac_test(d::D.Distribution) = to_vec(d)
 from_vec_for_logjac_test(d::D.Distribution) = from_vec(d)
 to_vec_for_logjac_test(::Union{D.Dirichlet,D.MvLogitNormal}) = x -> x[1:(end - 1)]
 from_vec_for_logjac_test(::Union{D.Dirichlet,D.MvLogitNormal}) = y -> vcat(y, 1 - sum(y))
-function to_vec_for_logjac_test(
-    d::D.ProductDistribution{M,N,<:NTuple{NDists,D.Distribution}}
-) where {M,N,NDists}
+function to_vec_for_logjac_test(d::D.ProductDistribution)
     # Internal function, but we use this to avoid a LOT of code duplication
     return VectorBijectors._make_transform(
         d, to_vec_for_logjac_test, linked_vec_length, ProductVecTransform
     )
 end
-function from_vec_for_logjac_test(
-    d::D.ProductDistribution{M,N,<:NTuple{NDists,D.Distribution}}
-) where {M,N,NDists}
-    # Internal function, but we use this to avoid a LOT of code duplication
+function from_vec_for_logjac_test(d::D.ProductDistribution)
     return VectorBijectors._make_transform(
         d, from_vec_for_logjac_test, linked_vec_length, ProductVecInvTransform
     )
@@ -228,12 +223,13 @@ function test_all(
     roundtrip_atol=1e-10,
     roundtrip_rtol=sqrt(eps()),
     test_in_support=(_get_value_support(d) <: D.Continuous),
+    test_construction_type_stable=true,
 )
     @info "Testing $(_name(d))"
     @testset "$(_name(d))" begin
         test_roundtrip(d)
         test_roundtrip_inverse(d, test_in_support, roundtrip_atol, roundtrip_rtol)
-        test_type_stability(d)
+        test_type_stability(d, test_construction_type_stable)
         test_vec_lengths(d)
         test_optics(d)
         test_allocations(d, expected_zero_allocs)
@@ -327,13 +323,20 @@ end
 """
 Test that the conversions to and from vector and linked vector forms for the given
 distribution `d` are type-stable.
+
+Sometimes the *creation* of the bijector itself is not type-stable (e.g. for product
+distributions with heterogeneous components), but once the bijector is created, the
+conversions should be type stable. To disable type stability checks for the construction,
+set `test_construction_type_stable=false`.
 """
-function test_type_stability(d::D.Distribution)
+function test_type_stability(d::D.Distribution, test_construction_type_stable=true)
     x = rand(d)
     @testset "type stability: $(_name(d))" begin
         @testset let x = x, d = d
-            @inferred to_vec(d)
-            @inferred from_vec(d)
+            if test_construction_type_stable
+                @inferred to_vec(d)
+                @inferred from_vec(d)
+            end
             ffwd = to_vec(d)
             frvs = from_vec(d)
             @inferred ffwd(x)
@@ -343,8 +346,10 @@ function test_type_stability(d::D.Distribution)
     end
     @testset "type stability (linked): $(_name(d))" begin
         @testset let x = x, d = d
-            @inferred to_linked_vec(d)
-            @inferred from_linked_vec(d)
+            if test_construction_type_stable
+                @inferred to_linked_vec(d)
+                @inferred from_linked_vec(d)
+            end
             ffwd = to_linked_vec(d)
             frvs = from_linked_vec(d)
             @inferred ffwd(x)
