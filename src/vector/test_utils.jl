@@ -69,6 +69,22 @@ from_vec_for_logjac_test(d::D.Distribution) = from_vec(d)
 to_vec_for_logjac_test(::Union{D.Dirichlet,D.MvLogitNormal}) = x -> x[1:(end - 1)]
 from_vec_for_logjac_test(::Union{D.Dirichlet,D.MvLogitNormal}) = y -> vcat(y, 1 - sum(y))
 function to_vec_for_logjac_test(
+    d::D.ProductDistribution{M,N,<:NTuple{NDists,D.Distribution}}
+) where {M,N,NDists}
+    # Internal function, but we use this to avoid a LOT of code duplication
+    return VectorBijectors._make_transform(
+        d, to_vec_for_logjac_test, linked_vec_length, ProductVecTransform
+    )
+end
+function from_vec_for_logjac_test(
+    d::D.ProductDistribution{M,N,<:NTuple{NDists,D.Distribution}}
+) where {M,N,NDists}
+    # Internal function, but we use this to avoid a LOT of code duplication
+    return VectorBijectors._make_transform(
+        d, from_vec_for_logjac_test, linked_vec_length, ProductVecInvTransform
+    )
+end
+function to_vec_for_logjac_test(
     ::D.ReshapedDistribution{<:Any,<:D.ValueSupport,<:Union{D.Dirichlet,D.MvLogitNormal}}
 )
     return x -> vec(x)[1:(end - 1)]
@@ -255,24 +271,36 @@ function test_roundtrip(d::D.Distribution)
 end
 
 """
-Test that from_linked_vec and to_linked_vec are inverses, and that they actually
-do map random vectors to the support of the distribution.
+Test that from_linked_vec and to_linked_vec are inverses.
+
+If `test_in_support`, then this additionally also tests that `from_linked_vec(dist)`
+actually does map random vectors to the support of the distribution (i.e., `finv(y)` for
+some random `y` is in the support of `d`).
+
+If the distribution is not continuous, we can't really check this (in fact the test is quite
+meaningless). So for discrete distributions this test is skipped. There are also other
+occasions where we disable this because of e.g. numerical issues, like for LKJ.
 """
 function test_roundtrip_inverse(d::D.Distribution, test_in_support, atol, rtol)
     # TODO: Use smarter test generation e.g. with property-based testing or at least
     # generate random parameters across the support
     @testset "roundtrip inverse (linked): $(_name(d))" begin
         len = linked_vec_length(d)
+
+        # Check that Distributions.jl can actually run insupport. Sometimes it can't, e.g.
+        # with product_distribution(MvNormal(), MvNormal()), even though that function is
+        # well-defined.
+        x = rand(d)
+        if test_in_support && (!hasmethod(D.insupport, Tuple{typeof(d),typeof(x)}))
+            @info "No method for Distributions.insupport($(typeof(d)), $(typeof(x))), skipping in-support test"
+            test_in_support = false
+        end
+
         for _ in 1:100
             @testset let y = randn(len), d = d
                 ffwd = to_linked_vec(d)
                 frvs = from_linked_vec(d)
                 x = frvs(y)
-                # If the distribution is not continuous, we can't really check this (in fact
-                # the test is quite meaningless). So for discrete distributions this
-                # basically only checks that the ffwd and frvs are inverses. There are also
-                # other occasions where we disable this because of e.g. numerical issues,
-                # like for LKJ.
                 if test_in_support
                     in_support = D.insupport(d, x)
                     if in_support isa Bool
@@ -336,7 +364,9 @@ function test_optics(d::D.Distribution)
         x = rand(d)
         v = to_vec(d)(x)
         for (optic, value) in zip(o, v)
-            @test optic(x) == value
+            if optic !== nothing
+                @test optic(x) == value
+            end
         end
     end
 
