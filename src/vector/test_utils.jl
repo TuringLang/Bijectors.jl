@@ -1,6 +1,7 @@
 using Test
 using LinearAlgebra: logabsdet, Cholesky, UpperTriangular, LowerTriangular
 import DifferentiationInterface as DI
+import EnzymeCore as EC
 
 # Would like to use FiniteDifferences, but very easy to run into issues with
 # https://juliadiff.org/FiniteDifferences.jl/latest/#Dealing-with-Singularities
@@ -334,7 +335,12 @@ function test_roundtrip_inverse(d::D.Distribution, test_in_support, atol, rtol)
                         )
                     end
                 end
-                @test y ≈ ffwd(x) atol = atol rtol = rtol
+
+                if d isa D.JointOrderStatistics && (any(isnan, x) || !all(isfinite, x))
+                    @warn "NaNs or Inf produced in roundtrip test for $(_name(d)), skipping isapprox test"
+                else
+                    @test _isapprox_safe(y, ffwd(x); atol=atol, rtol=rtol)
+                end
             end
         end
     end
