@@ -159,5 +159,37 @@ linked_vec_length(d::D.ProductDistribution) = sum(linked_vec_length, d.dists)
 # optic_vec(d::D.ProductDistribution) = mapreduce(optic_vec, vcat, d.dists)
 # linked_optic_vec(d::D.ProductDistribution) = mapreduce(linked_optic_vec, vcat, d.dists)
 
-optic_vec(d::D.ProductDistribution) = fill(nothing, vec_length(d))
-linked_optic_vec(d::D.ProductDistribution) = fill(nothing, linked_vec_length(d))
+append_index(::Nothing, i) = nothing
+append_index(::AbstractPPL.Iden, i) = @opticof(_[i])
+function append_index(p::AbstractPPL.Property{sym}, i) where {sym}
+    return AbstractPPL.Property{sym}(append_index(p.child, i))
+end
+function append_index(p::AbstractPPL.Index, i)
+    return if p.child isa AbstractPPL.Iden
+        AbstractPPL.Index((p.ix..., i), p.kw, p.child)
+    else
+        AbstractPPL.Index(p.ix, p.kw, append_index(p.child, i))
+    end
+end
+
+function optic_vec(d::D.ProductDistribution)
+    optics = Union{}[]
+    for (i, dist) in enumerate(d.dists)
+        this_dist_optics = optic_vec(dist)
+        for optic in this_dist_optics
+            optics = vcat(optics, append_index(optic, i))
+        end
+    end
+    return optics
+end
+
+function linked_optic_vec(d::D.ProductDistribution)
+    optics = Union{}[]
+    for (i, dist) in enumerate(d.dists)
+        this_dist_optics = linked_optic_vec(dist)
+        for optic in this_dist_optics
+            optics = vcat(optics, append_index(optic, i))
+        end
+    end
+    return optics
+end

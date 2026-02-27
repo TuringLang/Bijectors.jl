@@ -1,6 +1,6 @@
 module VectorBijectors
 
-using AbstractPPL: AbstractPPL
+using AbstractPPL: AbstractPPL, @opticof
 using ..Bijectors: Bijectors as B
 using Distributions: Distributions
 const D = Distributions
