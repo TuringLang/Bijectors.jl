@@ -22,7 +22,7 @@ a sensible result (i.e. a Float64) even if `x` is not a numeric vector.
 struct TypedIdentity <: ScalarToScalarBijector end
 B.is_monotonically_increasing(::TypedIdentity) = true
 B.is_monotonically_decreasing(::TypedIdentity) = false
-(::TypedIdentity)(@nospecialize(x)) = x
+(::TypedIdentity)(x) = x
 function with_logabsdet_jacobian(::TypedIdentity, x::AbstractArray{T}) where {T<:Number}
     return (x, zero(T))
 end

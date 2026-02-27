@@ -132,7 +132,9 @@ function linked_optic_vec(d::D.ReshapedDistribution)
     mapped_optics = map(original_optics) do opt
         if opt isa AbstractPPL.Index
             if !isempty(opt.kw)
-                error("optic_vec for ReshapedDistribution only supports simple Index optics")
+                error(
+                    "linked_optic_vec for ReshapedDistribution only supports simple Index optics",
+                )
             end
             linear_index = linear_indices_original[opt.ix...]
             new_cartesian_index = cartesian_indices_reshaped[linear_index]
@@ -141,7 +143,7 @@ function linked_optic_vec(d::D.ReshapedDistribution)
             # ... but we just need to make sure to forward any `nothing`s.
             return nothing
         else
-            error("optic_vec for ReshapedDistribution only supports Index optics")
+            error("linked_optic_vec for ReshapedDistribution only supports Index optics")
         end
     end
     return mapped_optics

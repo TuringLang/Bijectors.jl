@@ -1,5 +1,5 @@
 struct MapLog end
-(::MapLog)(@nospecialize(x)) = map(log, x)
+(::MapLog)(x) = map(log, x)
 function with_logabsdet_jacobian(::MapLog, x::AbstractArray{T}) where {T<:Number}
     y = map(log, x)
     return (y, -sum(y))
@@ -7,7 +7,7 @@ end
 inverse(::MapLog) = MapExp()
 
 struct MapExp end
-(::MapExp)(@nospecialize(x)) = map(exp, x)
+(::MapExp)(x) = map(exp, x)
 function with_logabsdet_jacobian(::MapExp, x::AbstractArray{T}) where {T<:Number}
     y = map(exp, x)
     return (y, sum(x))

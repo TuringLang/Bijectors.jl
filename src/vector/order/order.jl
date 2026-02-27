@@ -37,7 +37,7 @@ function with_logabsdet_jacobian(m::JointOrderWrap, x::AbstractVector{T}) where 
         for i in eachindex(y)[2:end]
             temp = y[i]
             y[i] = log(temp - shift)
-            logjac -= log(temp - shift)
+            logjac -= y[i]
             shift = temp
         end
     end
