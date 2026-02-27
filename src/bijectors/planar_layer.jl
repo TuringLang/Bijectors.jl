@@ -184,3 +184,10 @@ end
 
 logabsdetjac(flow::PlanarLayer, x) = last(with_logabsdet_jacobian(flow, x))
 isclosedform(b::Inverse{<:PlanarLayer}) = false
+
+using EnzymeCore: EnzymeCore
+EnzymeCore.EnzymeRules.@easy_rule(
+    find_alpha(wt_y::Real, wt_u_hat::Real, b::Real),
+    @setup(x = inv(1 + wt_u_hat * sech(Ω + b)^2),),
+    (x, -tanh(Ω + b) * x, x - 1),
+)

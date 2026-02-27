@@ -12,6 +12,8 @@ const default_adtypes = [
     DI.AutoReverseDiff(; compile=true),
     DI.AutoMooncake(),
     DI.AutoMooncakeForward(),
+    DI.AutoEnzyme(; mode=EC.Forward),
+    DI.AutoEnzyme(; mode=EC.Reverse),
 ]
 
 _get_value_support(::D.Distribution{<:Any,VS}) where {VS<:D.ValueSupport} = VS
