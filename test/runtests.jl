@@ -70,7 +70,7 @@ end
 include("bijectors/utils.jl")
 
 @testset "Bijectors.jl" begin
-    if GROUP == "All" || GROUP == "Interface"
+    if GROUP == "All" || GROUP == "Classic"
         include("interface.jl")
         include("transform.jl")
         include("norm_flows.jl")
@@ -87,16 +87,6 @@ include("bijectors/utils.jl")
         include("bijectors/named_stacked.jl")
         include("distributionsad.jl")
 
-        include("vector/univariate.jl")
-        include("vector/multivariate.jl")
-        include("vector/matrix.jl")
-        include("vector/reshaped.jl")
-        include("vector/cholesky.jl")
-        include("vector/order.jl")
-        include("vector/product.jl")
-    end
-
-    if GROUP == "All" || GROUP == "AD"
         # These tests specifically check the implementation of AD backend rules.
         include("ad/chainrules.jl")
         include("ad/mooncake.jl")
@@ -109,6 +99,17 @@ include("bijectors/utils.jl")
         include("ad/pd.jl")
         include("ad/corr.jl")
         include("ad/stacked.jl")
+    end
+
+    if GROUP == "All" || GROUP == "Vector"
+        # VectorBijectors module.
+        include("vector/univariate.jl")
+        include("vector/multivariate.jl")
+        include("vector/matrix.jl")
+        include("vector/reshaped.jl")
+        include("vector/cholesky.jl")
+        include("vector/order.jl")
+        include("vector/product.jl")
     end
 
     if GROUP == "All" || GROUP == "Doctests"

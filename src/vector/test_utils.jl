@@ -614,22 +614,40 @@ function test_ad(d::D.Distribution, adtypes::Vector{<:DI.AbstractADType}, atol, 
         xvec = to_vec(d)(x)
         ffwd = to_linked_vec(d) ∘ from_vec(d)
         ref_jac = DI.jacobian(ffwd, ref_adtype, xvec)
+
+        ladj(xvec) = last(with_logabsdet_jacobian(ffwd, xvec))
+        ref_grad_ladj = DI.gradient(ladj, ref_adtype, xvec)
+
         for adtype in adtypes
             @testset let x = x, adtype = adtype, d = d
                 ad_jac = DI.jacobian(ffwd, adtype, xvec)
                 @test ref_jac ≈ ad_jac atol = atol rtol = rtol
             end
+            @testset let x = x, adtype = adtype, d = d
+                ad_grad_ladj = DI.gradient(ladj, adtype, xvec)
+                @test ref_grad_ladj ≈ ad_grad_ladj atol = atol rtol = rtol
+            end
         end
     end
+
     @testset "AD reverse: $(_name(d))" begin
         x = _rand_safe_ad(d)
         yvec = to_linked_vec(d)(x)
         frvs = to_vec(d) ∘ from_linked_vec(d)
         ref_jac = DI.jacobian(frvs, ref_adtype, yvec)
+
+        ladj(yvec) = last(with_logabsdet_jacobian(frvs, yvec))
+        ref_grad_ladj = DI.gradient(ladj, ref_adtype, yvec)
+
         for adtype in adtypes
             @testset let x = x, adtype = adtype, d = d
                 ad_jac = DI.jacobian(frvs, adtype, yvec)
                 @test ref_jac ≈ ad_jac atol = atol rtol = rtol
+            end
+
+            @testset let x = x, adtype = adtype, d = d
+                ad_grad_ladj = DI.gradient(ladj, adtype, yvec)
+                @test ref_grad_ladj ≈ ad_grad_ladj atol = atol rtol = rtol
             end
         end
     end
