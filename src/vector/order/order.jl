@@ -89,5 +89,6 @@ end
 # Since D.JointOrderStatistics is a subtype of MultivariateDistribution, we can use the
 # default definitions for vec_length and optic_vec.
 linked_vec_length(d::D.JointOrderStatistics) = vec_length(d)
-# Technically, the first element can be @opticof(_[1]) so this is not technically correct.
+# TODO: Technically, the first element can be @opticof(_[1]) so this is not technically
+# correct.
 linked_optic_vec(d::D.JointOrderStatistics) = fill(nothing, vec_length(d))

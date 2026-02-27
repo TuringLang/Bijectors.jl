@@ -37,11 +37,10 @@ function with_logabsdet_jacobian(t::Truncate, y::Real)
     return if lbounded && ubounded
         bma = t.upper - t.lower
         res = (bma * logistic(y)) + t.lower
-        # TODO: Bijectors uses this:
+        # Bijectors uses this:
         #    absy = abs(y)
         #    return log(bma) - absy - (2 * log1pexp(-absy))
-        # Check if it's more numerically stable. Don't immediately see a reason why, but I
-        # assume there's a reason for it.
+        # but I checked and this is not any more numerically stable.
         logjac = log(bma) + y - (2 * log1pexp(y))
         res, logjac
     elseif lbounded
@@ -57,8 +56,8 @@ inverse(t::Truncate) = Untruncate(t.lower, t.upper)
 """
    Untruncate(a, b) <: ScalarToScalarBijector
 
-Callable struct, defined such that `(::Untruncate(a, b))(x)` converts `x` from `(a, b)`
-to a singleton vector whose element lies in `(-Inf, Inf)`.
+Callable struct, defined such that `(::Untruncate(a, b))(x)` maps a scalar `x` from `(a, b)`
+to `(-Inf, Inf)`.
 
 !!! warning
     This does not check whether the input is a scalar in `(a, b)`.

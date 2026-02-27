@@ -28,4 +28,4 @@ products = [
     end
 end
 
-end # module VBReshapedTests
+end # module VBProductTests

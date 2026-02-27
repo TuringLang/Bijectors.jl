@@ -1,5 +1,4 @@
 using Test
-using AbstractPPL: @varname
 using LinearAlgebra: logabsdet, Cholesky, UpperTriangular, LowerTriangular
 import DifferentiationInterface as DI
 

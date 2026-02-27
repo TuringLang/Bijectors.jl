@@ -4,7 +4,7 @@
 # wrap it.
 struct Vec end
 (::Vec)(x::AbstractArray) = vec(x)
-function with_logabsdet_jacobian(::Vec, x::AbstractArray{N,T}) where {N,T<:Number}
+function with_logabsdet_jacobian(::Vec, x::AbstractArray{T,N}) where {T<:Number,N}
     return vec(x), zero(T)
 end
 function with_logabsdet_jacobian(::Vec, x::AbstractArray)
@@ -15,7 +15,7 @@ struct Reshape{N,T<:NTuple{N,Int}}
     size::T
 end
 (r::Reshape)(x::AbstractArray) = reshape(x, r.size)
-function with_logabsdet_jacobian(r::Reshape, x::AbstractArray{N,T}) where {N,T<:Number}
+function with_logabsdet_jacobian(r::Reshape, x::AbstractArray{T,N}) where {T<:Number,N}
     return reshape(x, r.size), zero(T)
 end
 function with_logabsdet_jacobian(r::Reshape, x::AbstractArray)
