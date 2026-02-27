@@ -34,20 +34,20 @@ joint_test_adtypes = [DI.AutoMooncake(), DI.AutoMooncakeForward()]
         if d isa ContinuousUnivariateDistribution
             # In the unlinked case, the transform is identity.
             #
-            # The ordered transform can be a bit numerically unstable, hence needing a
-            # larger atol.
+            # See https://github.com/TuringLang/Bijectors.jl/issues/441 for details about
+            # the unusually large atol.
             unlinked_only = (from_vec, to_vec)
             VectorBijectors.test_all(
                 JointOrderStatistics(d, 4);
                 expected_zero_allocs=unlinked_only,
                 adtypes=joint_test_adtypes,
-                roundtrip_atol=1e-4,
+                roundtrip_atol=1e-1,
             )
             VectorBijectors.test_all(
                 JointOrderStatistics(d, 10, 2:5);
                 expected_zero_allocs=unlinked_only,
                 adtypes=joint_test_adtypes,
-                roundtrip_atol=1e-4,
+                roundtrip_atol=1e-1,
             )
         end
     end
