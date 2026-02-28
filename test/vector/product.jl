@@ -10,16 +10,22 @@ using ReverseDiff: ReverseDiff
 using Mooncake: Mooncake
 using Enzyme: Enzyme, set_runtime_activity, Const, Forward, Reverse
 
-# Need runtime activity for some reason.
-# TODO(penelopeysm): Report upstream
-const adtypes = [
+adtypes = [
     DI.AutoReverseDiff(),
     DI.AutoReverseDiff(; compile=true),
     DI.AutoMooncake(),
     DI.AutoMooncakeForward(),
+    # Need runtime activity for some reason.
+    # TODO(penelopeysm): Report upstream
     DI.AutoEnzyme(; mode=set_runtime_activity(Forward), function_annotation=Const),
     DI.AutoEnzyme(; mode=set_runtime_activity(Reverse), function_annotation=Const),
 ]
+
+# Enzyme segfaults on 1.12 + Windows.
+# https://github.com/EnzymeAD/Enzyme.jl/issues/2986
+if VERSION >= v"1.12-" && Sys.iswindows()
+    filter!(a -> !(a isa DI.AutoEnzyme), adtypes)
+end
 
 # These are purposely chosen because the vec_length output is the same but
 # linked_vec_length differs.
