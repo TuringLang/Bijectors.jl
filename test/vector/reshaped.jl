@@ -4,6 +4,7 @@ using Distributions
 using LinearAlgebra
 using Test
 using Bijectors.VectorBijectors
+import DifferentiationInterface as DI
 using Enzyme: Enzyme
 using ForwardDiff: ForwardDiff
 using ReverseDiff: ReverseDiff
@@ -33,7 +34,7 @@ adtypes_no_enz_rvs = [
     DI.AutoReverseDiff(; compile=true),
     DI.AutoMooncake(),
     DI.AutoMooncakeForward(),
-    DI.AutoEnzyme(; mode=EC.Forward, function_annotation=EC.Const),
+    DI.AutoEnzyme(; mode=Enzyme.Forward, function_annotation=Enzyme.Const),
 ]
 reshaped_no_enzyme = [reshape(Beta(2, 2), (1, 1, 1, 1, 1))]
 
