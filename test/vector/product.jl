@@ -51,7 +51,6 @@ products = [
     product_distribution((a=Normal(), b=Beta(2, 2))),
     product_distribution((a=Normal(), b=Dirichlet(ones(2)))),
     product_distribution((a=Normal(), b=product_distribution(fill(Beta(2, 2), 2)))),
-    product_distribution((a=Normal(), b=product_distribution((c=Normal(), d=Beta(2, 2))))),
     # Nested
     product_distribution(fill(p1t, 2)),
     product_distribution(fill(p1t, 2, 2)),
@@ -63,6 +62,13 @@ products = [
     product_distribution(p2a, p2a, p2a),
     product_distribution(fill(p2a, 2)),
     product_distribution(fill(p2a, 2, 2)),
+]
+
+nested_product_namedtuple = [
+    # This one is very weird: on Julia 1.10 (and only on Julia 1.10), @inferred to_vec(d)
+    # fails, but @code_warntype to_vec(d) is completely type stable. Almost certainly a
+    # Julia bug or at least a weird quirk
+    product_distribution((a=Normal(), b=product_distribution((c=Normal(), d=Beta(2, 2))))),
 ]
 
 heterogeneous_products = [
@@ -83,6 +89,15 @@ enzyme_failures = [
 @testset "Product distributions" begin
     for d in products
         VectorBijectors.test_all(d; adtypes=adtypes, expected_zero_allocs=())
+    end
+
+    for d in nested_product_namedtuple
+        VectorBijectors.test_all(
+            d;
+            adtypes=adtypes,
+            expected_zero_allocs=(),
+            test_construction_type_stable=(VERSION >= v"1.11-"),
+        )
     end
 
     for d in heterogeneous_products
