@@ -27,6 +27,16 @@ struct ReshapeWrapper{N1,N2,T1<:NTuple{N1,Int},T2<:NTuple{N2,Int},B}
     original_size::T2
     bijector::B
 end
+function Base.:(==)(r1::ReshapeWrapper, r2::ReshapeWrapper)
+    return (r1.reshaped_size == r2.reshaped_size) &
+           (r1.original_size == r2.original_size) &
+           (r1.bijector == r2.bijector)
+end
+function Base.isequal(r1::ReshapeWrapper, r2::ReshapeWrapper)
+    return isequal(r1.reshaped_size, r2.reshaped_size) &&
+           isequal(r1.original_size, r2.original_size) &&
+           isequal(r1.bijector, r2.bijector)
+end
 function with_logabsdet_jacobian(
     r::ReshapeWrapper{N1}, rx::AbstractArray{T,N1}
 ) where {T,N1}
@@ -50,6 +60,16 @@ struct InvReshapeWrapper{N1,N2,T1<:NTuple{N1,Int},T2<:NTuple{N2,Int},B}
     reshaped_size::T1
     original_size::T2
     inv_bijector::B
+end
+function Base.:(==)(r1::InvReshapeWrapper, r2::InvReshapeWrapper)
+    return (r1.reshaped_size == r2.reshaped_size) &
+           (r1.original_size == r2.original_size) &
+           (r1.inv_bijector == r2.inv_bijector)
+end
+function Base.isequal(r1::InvReshapeWrapper, r2::InvReshapeWrapper)
+    return isequal(r1.reshaped_size, r2.reshaped_size) &&
+           isequal(r1.original_size, r2.original_size) &&
+           isequal(r1.inv_bijector, r2.inv_bijector)
 end
 function with_logabsdet_jacobian(r::InvReshapeWrapper, x::AbstractVector)
     rx, ladj = with_logabsdet_jacobian(r.inv_bijector, x)

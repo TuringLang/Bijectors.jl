@@ -40,6 +40,18 @@ end
 function inverse(t::ProductVecInvTransform)
     return ProductVecTransform(inverse.(t.transforms), t.ranges, t.base_size)
 end
+for struct_type in (:ProductVecTransform, :ProductVecInvTransform)
+    @eval begin
+        Base.:(==)(t1::$struct_type, t2::$struct_type) =
+            (t1.transforms == t2.transforms) &
+            (t1.ranges == t2.ranges) &
+            (t1.base_size == t2.base_size)
+        Base.isequal(t1::$struct_type, t2::$struct_type) =
+            isequal(t1.transforms, t2.transforms) &&
+            isequal(t1.ranges, t2.ranges) &&
+            isequal(t1.base_size, t2.base_size)
+    end
+end
 
 # zero(T) but with fallback for non-numeric T.
 _fzero(::Type{T}) where {T<:Number} = zero(T)
