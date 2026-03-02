@@ -6,6 +6,17 @@
 # since Julia performs union splitting, but that causes issues with Enzyme; so we just make
 # everything a generated function).
 
+# You can't map over NamedTuples, and you can't broadcast over NamedTuples...
+_map_inverse(t::Tuple) = inverse.(t)
+_map_inverse(t::AbstractArray) = inverse.(t)
+@generated function _map_inverse(t::NamedTuple{names}) where {names}
+    expr = Expr(:tuple)
+    for nm in names
+        push!(expr.args, :($nm = inverse(t.$nm)))
+    end
+    return expr
+end
+
 struct ProductVecTransform{TTrf,Trng,D}
     "A collection of vectorisation transforms, one for each component of the product
     distribution. These may either be `to_vec` or `to_linked_vec` transforms, which in turn
@@ -35,10 +46,10 @@ struct ProductVecInvTransform{TTrf,Trng,D}
     base_size::D
 end
 function inverse(t::ProductVecTransform)
-    return ProductVecInvTransform(inverse.(t.transforms), t.ranges, t.base_size)
+    return ProductVecInvTransform(_map_inverse(t.transforms), t.ranges, t.base_size)
 end
 function inverse(t::ProductVecInvTransform)
-    return ProductVecTransform(inverse.(t.transforms), t.ranges, t.base_size)
+    return ProductVecTransform(_map_inverse(t.transforms), t.ranges, t.base_size)
 end
 for struct_type in (:ProductVecTransform, :ProductVecInvTransform)
     @eval begin
