@@ -330,7 +330,9 @@ end
 function _make_transform(
     dists::AbstractArray{<:D.Distribution}, indiv_transform_fn, length_fn, struct_type
 )
-    trfms = map(indiv_transform_fn, dists)
+    # map(indiv_transform_fn, dists) causes some Enzyme errors when used with DPPL
+    # https://github.com/TuringLang/DynamicPPL.jl/issues/1304
+    trfms = indiv_transform_fn.(dists)
     ranges = Array{UnitRange{Int}}(undef, size(dists)...)
     offset = 1
     for (i, dist) in enumerate(dists)
