@@ -66,18 +66,11 @@ const POSITIVE_UNIVARIATES = Union{
     D.StudentizedRange,
     D.Weibull,
 }
-VectorBijectors.from_linked_vec(d::POSITIVE_UNIVARIATES) = OnlyWrap(Exp(minimum(d), 1))
-VectorBijectors.to_linked_vec(d::POSITIVE_UNIVARIATES) = VectWrap(Log(minimum(d), 1))
+VectorBijectors.scalar_to_scalar_bijector(d::POSITIVE_UNIVARIATES) = Log(minimum(d), 1)
 
-function VectorBijectors.from_linked_vec(
+function VectorBijectors.scalar_to_scalar_bijector(
     d::D.AffineDistribution{<:Any,<:Any,<:POSITIVE_UNIVARIATES}
 )
     s = sign(D.scale(d))
-    return OnlyWrap(Exp(s > 0 ? minimum(d) : maximum(d), s))
-end
-function VectorBijectors.to_linked_vec(
-    d::D.AffineDistribution{<:Any,<:Any,<:POSITIVE_UNIVARIATES}
-)
-    s = sign(D.scale(d))
-    return VectWrap(Log(s > 0 ? minimum(d) : maximum(d), s))
+    return Log(s > 0 ? minimum(d) : maximum(d), s)
 end

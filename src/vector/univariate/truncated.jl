@@ -100,9 +100,6 @@ end
 inverse(u::Untruncate) = Truncate(u.lower, u.upper)
 
 # This is the fallback option for all other univariate continuous distributions.
-function VectorBijectors.to_linked_vec(d::D.ContinuousUnivariateDistribution)
-    return VectWrap(Untruncate(minimum(d), maximum(d)))
-end
-function VectorBijectors.from_linked_vec(d::D.ContinuousUnivariateDistribution)
-    return OnlyWrap(Truncate(minimum(d), maximum(d)))
+function VectorBijectors.scalar_to_scalar_bijector(d::D.ContinuousUnivariateDistribution)
+    return Untruncate(minimum(d), maximum(d))
 end
