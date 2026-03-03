@@ -15,9 +15,9 @@ This is used to represent the vector bijector for homogeneous product distributi
 the same transform is applied to each component. By using a `Elementwise`, we can compute
 the transform once and reuse it, rather than computing it separately for each component.
 """
-struct Elementwise{T,M}
+struct Elementwise{T,N}
     value::T
-    size::Dims{M}
+    size::N
 
     Elementwise(value::T, size::NTuple{N,Int}) where {T,N} = new{T,N}(value, size)
 
@@ -101,7 +101,7 @@ function with_logabsdet_jacobian(
     end
 end
 
-function (t::ProductVecInvTransform{<:Elementwise{F,M},Nothing,Dims{N}})(
+function (t::ProductVecInvTransform{<:Elementwise{F,Dims{M}},Nothing,Dims{N}})(
     y::AbstractVector{T}
 ) where {F,M,N,T}
     return if N == 0
@@ -117,7 +117,8 @@ function (t::ProductVecInvTransform{<:Elementwise{F,M},Nothing,Dims{N}})(
 end
 
 function with_logabsdet_jacobian(
-    t::ProductVecInvTransform{<:Elementwise{F,M},Nothing,Dims{N}}, y::AbstractVector{T}
+    t::ProductVecInvTransform{<:Elementwise{F,Dims{M}},Nothing,Dims{N}},
+    y::AbstractVector{T},
 ) where {F,M,N,T}
     trf = t.transforms.value
     return if N == 0
