@@ -56,14 +56,14 @@ _has_constant_vec_bijector(::Type{<:D.AbstractMvLogNormal}) = true
 _has_constant_vec_bijector(::Type{<:SIMPLEX_MULTIVARIATES}) = true
 _has_constant_vec_bijector(::Type{<:D.DiscreteMultivariateDistribution}) = true
 
-function (t::ProductVecTransform{<:Elementwise,Nothing,Dims{N}})(
-    x::AbstractArray{T,MplusN}
-) where {N,T,MplusN}
+function (t::ProductVecTransform{<:Elementwise{F,Dims{M}},Nothing,Dims{N}})(
+    x::AbstractArray{T}
+) where {F,M,N,T}
     trf = t.transforms.value
     return if N == 0
         vec(trf.(x))
     else
-        dims = ntuple(i -> i + N, Val(MplusN - N))
+        dims = ntuple(i -> i + N, Val(M))
         vec(stack(map(trf, eachslice(x; dims=dims))))
     end
 end
@@ -83,8 +83,8 @@ function (w::WithLogabsdetjac{T,R})(x::AbstractArray{N}) where {T,R,N}
 end
 
 function with_logabsdet_jacobian(
-    t::ProductVecTransform{<:Elementwise,Nothing,Dims{N}}, x::AbstractArray{T,MplusN}
-) where {N,T,MplusN}
+    t::ProductVecTransform{<:Elementwise{F,Dims{M}},Nothing,Dims{N}}, x::AbstractArray{T}
+) where {F,M,N,T}
     trf = t.transforms.value
     return if N == 0
         # univariate. This is a tiny bit faster than the mutable WithLogabsdetjac approach
@@ -96,7 +96,7 @@ function with_logabsdet_jacobian(
         end
         y, logjac
     else
-        dims = ntuple(i -> i + N, Val(MplusN - N))
+        dims = ntuple(i -> i + N, Val(M))
         lj = WithLogabsdetjac(trf, _fzero(T))
         y = vec(stack(map(lj, eachslice(x; dims=dims))))
         y, lj.logjac
