@@ -89,8 +89,7 @@ function _get_val_iterator(
 end
 
 @generated function with_logabsdet_jacobian(
-    t::ProductVecTransform{<:NTuple{P,Any},<:NTuple{P,Any},<:NTuple{N,Int}},
-    x::AbstractArray{T},
+    t::ProductVecTransform{<:NTuple{P,Any},<:NTuple{P,Any},Dims{N}}, x::AbstractArray{T}
 ) where {P,N,T}
     # P = number of distributions in the product distribution
     # N = dimension of each distribution
@@ -98,6 +97,7 @@ end
     push!(exprs, :(total_length = sum(length, t.ranges)))
     push!(exprs, :(logjac = _fzero(T)))
     push!(exprs, :(y = Vector{T}(undef, total_length)))
+    push!(exprs, :(@assert size(x) == (t.base_size..., P)))
     colons = fill(:, N)
     y_syms = Symbol.(:y, 1:P)
     logjac_syms = Symbol.(:lj, 1:P)
@@ -138,6 +138,7 @@ end
     exprs = []
     push!(exprs, :(total_length = sum(length, t.ranges)))
     push!(exprs, :(y = Vector{T}(undef, total_length)))
+    push!(exprs, :(@assert size(x) == (t.base_size..., P)))
     colons = fill(:, N)
     for i in 1:P
         if N == 0
@@ -153,6 +154,7 @@ end
 function with_logabsdet_jacobian(
     t::ProductVecTransform{<:AbstractArray}, x::AbstractArray{T}
 ) where {T}
+    @assert size(x) == (t.base_size..., size(t.transforms)...)
     total_length = sum(length, t.ranges)
     logjac = _fzero(T)
     y = Vector{T}(undef, total_length)
@@ -167,6 +169,7 @@ function with_logabsdet_jacobian(
     return y, logjac
 end
 function (t::ProductVecTransform{<:AbstractArray})(x::AbstractArray{T}) where {T}
+    @assert size(x) == (t.base_size..., size(t.transforms)...)
     total_length = sum(length, t.ranges)
     y = Vector{T}(undef, total_length)
     val_iterator = _get_val_iterator(t, x)
@@ -222,6 +225,8 @@ _cartesian_indices(x::AbstractArray) = CartesianIndices(x)
     # N = dimension of each distribution
     exprs = []
     push!(exprs, :(x = Array{T}(undef, t.base_size..., P)))
+    push!(exprs, :(total_length = sum(length, t.ranges)))
+    push!(exprs, :(@assert length(y) == total_length))
     push!(exprs, :(logjac = _fzero(T)))
     colons = fill(:, N)
     x_syms = Symbol.(:x, 1:P)
@@ -252,6 +257,8 @@ end
     # N = dimension of each distribution
     exprs = []
     push!(exprs, :(x = Array{T}(undef, t.base_size..., P)))
+    push!(exprs, :(total_length = sum(length, t.ranges)))
+    push!(exprs, :(@assert length(y) == total_length))
     colons = fill(:, N)
     for i in 1:P
         push!(exprs, :(x[$colons..., $i] = t.transforms[$i](view(y, t.ranges[$i]))))
@@ -263,6 +270,7 @@ end
 function with_logabsdet_jacobian(
     t::ProductVecInvTransform{<:AbstractArray}, y::AbstractVector{T}
 ) where {T}
+    @assert length(y) == sum(length, t.ranges)
     x = Array{T}(undef, t.base_size..., size(t.transforms)...)
     logjac = _fzero(T)
     idxs = _cartesian_indices(t.transforms)
@@ -274,6 +282,7 @@ function with_logabsdet_jacobian(
     return x, logjac
 end
 function (t::ProductVecInvTransform{<:AbstractArray})(y::AbstractVector{T}) where {T}
+    @assert length(y) == sum(length, t.ranges)
     x = Array{T}(undef, t.base_size..., size(t.transforms)...)
     idxs = _cartesian_indices(t.transforms)
     for (idx, trf, r) in zip(idxs, t.transforms, t.ranges)
