@@ -14,18 +14,15 @@ const IDENTITY_UNIVARIATES = Union{
     D.SkewedExponentialPower,
     D.SkewNormal,
     D.TDist,
+    # For discrete distributions, we can't really do any 'transformation'
+    D.DiscreteUnivariateDistribution,
 }
-VectorBijectors.from_linked_vec(::IDENTITY_UNIVARIATES) = OnlyWrap(TypedIdentity())
-VectorBijectors.to_linked_vec(::IDENTITY_UNIVARIATES) = VectWrap(TypedIdentity())
 
-# Scaling and shifting doesn't affect the support of these distributions
-function VectorBijectors.from_linked_vec(
+VectorBijectors.scalar_to_scalar_bijector(::IDENTITY_UNIVARIATES) = TypedIdentity()
+
+# Furthermore, scaling and shifting doesn't affect the support of these distributions
+function VectorBijectors.scalar_to_scalar_bijector(
     ::D.AffineDistribution{<:Any,<:Any,<:IDENTITY_UNIVARIATES}
 )
-    return OnlyWrap(TypedIdentity())
-end
-function VectorBijectors.to_linked_vec(
-    ::D.AffineDistribution{<:Any,<:Any,<:IDENTITY_UNIVARIATES}
-)
-    return VectWrap(TypedIdentity())
+    return TypedIdentity()
 end

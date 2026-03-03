@@ -12,8 +12,6 @@ function with_logabsdet_jacobian(w::OnlyWrap, x::AbstractVector)
     return with_logabsdet_jacobian(w.bijector, x[])
 end
 inverse(w::OnlyWrap) = VectWrap(inverse(w.bijector))
-# Internal helper function to unify access to the wrapped bijector
-get_inner_bijector(w::OnlyWrap) = w.bijector
 
 """
     VectWrap{B<:ScalarToScalarBijector}
@@ -30,18 +28,20 @@ function with_logabsdet_jacobian(w::VectWrap, x::Number)
     return ([y], ladj)
 end
 inverse(w::VectWrap) = OnlyWrap(inverse(w.bijector))
-get_inner_bijector(w::VectWrap) = w.bijector
 
 # For all univariate distributions, from_vec and to_vec are simple
 VectorBijectors.from_vec(::D.UnivariateDistribution) = OnlyWrap(TypedIdentity())
 VectorBijectors.to_vec(::D.UnivariateDistribution) = VectWrap(TypedIdentity())
 
-# For discrete univariate distributions, we really can't transform the 'support'
-function VectorBijectors.from_linked_vec(::D.DiscreteUnivariateDistribution)
-    return OnlyWrap(TypedIdentity())
+# For the linked transformations, we start by defining the scalar to scalar bijector that
+# maps from the support of the distribution to the real line, and then wrap it in `OnlyWrap`
+# and `VectWrap` to get the vector to scalar and scalar to vector bijectors, respectively.
+function scalar_to_scalar_bijector end
+function VectorBijectors.from_linked_vec(d::D.UnivariateDistribution)
+    return OnlyWrap(inverse(scalar_to_scalar_bijector(d)))
 end
-function VectorBijectors.to_linked_vec(::D.DiscreteUnivariateDistribution)
-    return VectWrap(TypedIdentity())
+function VectorBijectors.to_linked_vec(d::D.UnivariateDistribution)
+    return VectWrap(scalar_to_scalar_bijector(d))
 end
 
 # vect_length and linked_vec_length are trivial

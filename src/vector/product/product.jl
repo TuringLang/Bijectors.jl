@@ -339,7 +339,7 @@ end
     return Expr(:block, exprs...)
 end
 
-@generated function _make_transform(
+@generated function _make_transform_inner(
     dists::NTuple{NDists,D.Distribution}, indiv_transform_fn, length_fn, struct_type
 ) where {NDists}
     exprs = []
@@ -359,7 +359,7 @@ end
     return Expr(:block, exprs...)
 end
 
-function _make_transform(
+function _make_transform_inner(
     dists::AbstractArray{<:D.Distribution}, indiv_transform_fn, length_fn, struct_type
 )
     # map(indiv_transform_fn, dists) causes some Enzyme errors when used with DPPL
@@ -373,6 +373,25 @@ function _make_transform(
         offset += this_length
     end
     return struct_type(trfms, ranges, size(dists[1]))
+end
+
+_sz(t::Tuple) = (length(t),)
+_sz(t::AbstractArray) = size(t)
+
+function _make_transform(
+    dists::Union{Tuple,AbstractArray}, indiv_transform_fn, length_fn, struct_type
+)
+    return if _has_constant_vec_bijector(eltype(dists))
+        # Performance optimisation when all distributions have the same bijector type. (Note
+        # that, for univariate distributions, the constructor of Elementwise will unwrap the
+        # OnlyWrap or VectWrap wrappers that wrap the internal scalar-to-scalar bijector.)
+        d = first(dists)
+        trf = indiv_transform_fn(d)
+        trfms = Elementwise(trf, _sz(dists))
+        struct_type(trfms, nothing, size(d))
+    else
+        _make_transform_inner(dists, indiv_transform_fn, length_fn, struct_type)
+    end
 end
 
 for (product_type, dist_field) in (

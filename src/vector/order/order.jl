@@ -75,16 +75,16 @@ function with_logabsdet_jacobian(
 end
 inverse(m::InverseJointOrderWrap) = JointOrderWrap(inverse(m.bijector))
 
-# Here, because `d.dist` isa UnivariateDistribution, `to_vec(d.dist)` or `from_vec(d.dist)`
-# returns an OnlyWrap or a VectWrap, whose inner bijector maps scalars to scalars.
-# We can then rewrap that inner bijector into a JointOrderWrap to get the desired behavior.
+# Here, because `d.dist` isa UnivariateDistribution, we can get its scalar-to-scalar
+# bijector and then rewrap that inner bijector into a JointOrderWrap to get the desired
+# behavior.
 to_vec(::D.JointOrderStatistics) = TypedIdentity()
 function to_linked_vec(d::D.JointOrderStatistics)
-    return JointOrderWrap(get_inner_bijector(to_linked_vec(d.dist)))
+    return JointOrderWrap(scalar_to_scalar_bijector(d.dist))
 end
 from_vec(::D.JointOrderStatistics) = TypedIdentity()
 function from_linked_vec(d::D.JointOrderStatistics)
-    return InverseJointOrderWrap(get_inner_bijector(from_linked_vec(d.dist)))
+    return InverseJointOrderWrap(inverse(scalar_to_scalar_bijector(d.dist)))
 end
 # Since D.JointOrderStatistics is a subtype of MultivariateDistribution, we can use the
 # default definitions for vec_length and optic_vec.
