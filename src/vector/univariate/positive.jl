@@ -5,7 +5,7 @@
     Exp(bound, sign) <: ScalarToScalarBijector
 
 Callable struct, defined such that `(e::Exp)(y) = ((e.sign * exp(y)) + e.bound)`. The sign
-is determined by the `negative` field.
+is determined by the `sign` field.
 """
 struct Exp{L<:Real} <: ScalarToScalarBijector
     bound::L
@@ -24,7 +24,7 @@ inverse(e::Exp) = Log(e.bound, e.sign)
    Log(bound, sign) <: ScalarToScalarBijector
 
 Callable struct, defined such that `(l::Log)(x) = log(l.sign * (x - l.bound))`. The sign is
-determined by the `negative` field.
+determined by the `sign` field.
 
 !!! warning
     This does not check whether the input is the domain of the transformation.
