@@ -74,7 +74,7 @@ mutable struct WithLogabsdetjac{T,R}
     trf::T
     logjac::R
 end
-function (w::WithLogabsdetjac{T,R})(x::AbstractArray{N}) where {T,R,N}
+function (w::WithLogabsdetjac)(x::AbstractArray)
     y, lj = with_logabsdet_jacobian(w.trf, x)
     # mutate the logjac in place; we'll pick it up later
     w.logjac += lj
