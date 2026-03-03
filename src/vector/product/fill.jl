@@ -6,7 +6,7 @@
 # from 731 ns to 59 ns, and to_linked_vec(d)(x) from 278 ns to 75 ns.
 
 """
-    Elementwise{T,N}
+    Elementwise{T,M}
 
 Similar in principle to a `FillArrays.Fill`: this represents an array of size `size` where
 all entries are `value`. However, this does not subtype AbstractArray.
@@ -15,9 +15,9 @@ This is used to represent the vector bijector for homogeneous product distributi
 the same transform is applied to each component. By using a `Elementwise`, we can compute
 the transform once and reuse it, rather than computing it separately for each component.
 """
-struct Elementwise{T,N}
+struct Elementwise{T,M}
     value::T
-    size::NTuple{N,Int}
+    size::Dims{M}
 
     Elementwise(value::T, size::NTuple{N,Int}) where {T,N} = new{T,N}(value, size)
 
@@ -55,35 +55,34 @@ _has_constant_vec_bijector(::Type{<:SIMPLEX_MULTIVARIATES}) = true
 _has_constant_vec_bijector(::Type{<:D.DiscreteMultivariateDistribution}) = true
 
 function (t::ProductVecTransform{<:Elementwise,Nothing,Dims{N}})(
-    x::AbstractArray{T}
-) where {N,T}
+    x::AbstractArray{T,MplusN}
+) where {N,T,MplusN}
+    trf = t.transforms.value
     return if N == 0
-        # univariate
-        vec(t.transforms.value.(x))
+        vec(trf.(x))
     else
-        trf = t.transforms.value
-        dims = ntuple(identity, Val(N))
-        vec(mapslices(trf, x; dims=dims))
+        dims = ntuple(i -> i + N, Val(MplusN - N))
+        vec(stack(map(trf, eachslice(x; dims=dims))))
     end
 end
 
-# Tiny struct that allows us to use mapslices directly instead of a manual loop inside
+# Tiny struct that allows us to use map(eachslices) directly instead of a manual loop inside
 # with_logabsdet_jacobian.
 mutable struct WithLogabsdetjac{T,R}
     trf::T
     logjac::R
 end
-function (w::WithLogabsdetjac)(x)
+function (w::WithLogabsdetjac{T,R})(x::AbstractArray{N}) where {T,R,N}
     y, lj = with_logabsdet_jacobian(w.trf, x)
     # mutate the logjac in place; we'll pick it up later
     w.logjac += lj
-    # output the thing that mapslices expects
+    # output the thing that map expects
     return y
 end
 
 function with_logabsdet_jacobian(
-    t::ProductVecTransform{<:Elementwise,Nothing,Dims{N}}, x::AbstractArray{T}
-) where {N,T}
+    t::ProductVecTransform{<:Elementwise,Nothing,Dims{N}}, x::AbstractArray{T,MplusN}
+) where {N,T,MplusN}
     trf = t.transforms.value
     return if N == 0
         # univariate. This is a tiny bit faster than the mutable WithLogabsdetjac approach
@@ -95,30 +94,31 @@ function with_logabsdet_jacobian(
         end
         y, logjac
     else
-        dims = ntuple(identity, Val(N))
+        dims = ntuple(i -> i + N, Val(MplusN - N))
         lj = WithLogabsdetjac(trf, _fzero(T))
-        y = vec(mapslices(lj, x; dims=dims))
+        y = vec(stack(map(lj, eachslice(x; dims=dims))))
         y, lj.logjac
     end
 end
 
-function (t::ProductVecInvTransform{<:Elementwise,Nothing,Dims{N}})(
+function (t::ProductVecInvTransform{<:Elementwise{F,M},Nothing,Dims{N}})(
     y::AbstractVector{T}
-) where {N,T}
+) where {F,M,N,T}
     return if N == 0
         # univariate -- we just need to apply the transform to everything, and
         # then reshape back into the original shape
         reshape(t.transforms.value.(y), t.transforms.size)
     else
+        # dim 1 is the input for the inverse transform
         reshaped_y = reshape(y, :, t.transforms.size...)
-        dims = ntuple(identity, Val(N))
-        mapslices(t.transforms.value, reshaped_y; dims=dims)
+        dims = ntuple(i -> i + 1, Val(M))
+        stack(map(t.transforms.value, eachslice(reshaped_y; dims=dims)))
     end
 end
 
 function with_logabsdet_jacobian(
-    t::ProductVecInvTransform{<:Elementwise,Nothing,Dims{N}}, y::AbstractVector{T}
-) where {N,T}
+    t::ProductVecInvTransform{<:Elementwise{F,M},Nothing,Dims{N}}, y::AbstractVector{T}
+) where {F,M,N,T}
     trf = t.transforms.value
     return if N == 0
         # univariate
@@ -131,9 +131,9 @@ function with_logabsdet_jacobian(
         x, logjac
     else
         reshaped_y = reshape(y, :, t.transforms.size...)
-        dims = ntuple(identity, Val(N))
+        dims = ntuple(i -> i + 1, Val(M))
         lj = WithLogabsdetjac(trf, _fzero(T))
-        x = mapslices(lj, reshaped_y; dims=dims)
+        x = stack(map(lj, eachslice(reshaped_y; dims=dims)))
         x, lj.logjac
     end
 end
