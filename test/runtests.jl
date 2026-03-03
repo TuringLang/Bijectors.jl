@@ -109,6 +109,10 @@ include("bijectors/utils.jl")
         include("vector/reshaped.jl")
         include("vector/cholesky.jl")
         include("vector/order.jl")
+    end
+
+    if GROUP == "All" || GROUP == "VectorProduct"
+        # VectorBijectors module, part 2
         include("vector/product.jl")
     end
 

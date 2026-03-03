@@ -32,6 +32,7 @@ jobs:
         group:
           - 'Classic'
           - 'Vector'
+          - 'VectorProduct'
 
     steps:
       - uses: actions/checkout@v6
