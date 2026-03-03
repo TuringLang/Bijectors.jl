@@ -64,7 +64,7 @@ function (t::ProductVecTransform{<:Elementwise{F,Dims{M}},Nothing,Dims{N}})(
         vec(trf.(x))
     else
         dims = ntuple(i -> i + N, Val(M))
-        vec(stack(map(trf, eachslice(x; dims=dims))))
+        vec(stack(trf, eachslice(x; dims=dims)))
     end
 end
 
@@ -98,7 +98,7 @@ function with_logabsdet_jacobian(
     else
         dims = ntuple(i -> i + N, Val(M))
         lj = WithLogabsdetjac(trf, _fzero(T))
-        y = vec(stack(map(lj, eachslice(x; dims=dims))))
+        y = vec(stack(lj, eachslice(x; dims=dims)))
         y, lj.logjac
     end
 end
@@ -114,7 +114,7 @@ function (t::ProductVecInvTransform{<:Elementwise{F,Dims{M}},Nothing,Dims{N}})(
         # dim 1 is the input for the inverse transform
         reshaped_y = reshape(y, :, t.transforms.size...)
         dims = ntuple(i -> i + 1, Val(M))
-        stack(map(t.transforms.value, eachslice(reshaped_y; dims=dims)))
+        stack(t.transforms.value, eachslice(reshaped_y; dims=dims))
     end
 end
 
@@ -136,7 +136,7 @@ function with_logabsdet_jacobian(
         reshaped_y = reshape(y, :, t.transforms.size...)
         dims = ntuple(i -> i + 1, Val(M))
         lj = WithLogabsdetjac(trf, _fzero(T))
-        x = stack(map(lj, eachslice(reshaped_y; dims=dims)))
+        x = stack(lj, eachslice(reshaped_y; dims=dims))
         x, lj.logjac
     end
 end
