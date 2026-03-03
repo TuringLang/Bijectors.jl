@@ -6,7 +6,7 @@
 # from 731 ns to 59 ns, and to_linked_vec(d)(x) from 278 ns to 75 ns.
 
 """
-    Elementwise{T,M}
+    Elementwise{T,S}
 
 Similar in principle to a `FillArrays.Fill`: this represents an array of size `size` where
 all entries are `value`. However, this does not subtype AbstractArray.
@@ -19,14 +19,16 @@ struct Elementwise{T,S}
     value::T
     size::S
 
-    Elementwise(value::T, size::Dims{N}) where {T,N} = new{T,Dims{N}}(value, size)
+    function Elementwise(value::T, size::S) where {N,T,S<:NTuple{N,Int}}
+        return new{T,S}(value, size)
+    end
 
     # Unwrap scalar-to-scalar bijectors
-    function Elementwise(value::VectWrap{T}, size::Dims{N}) where {T,N}
-        return new{T,Dims{N}}(value.bijector, size)
+    function Elementwise(value::VectWrap{T}, size::S) where {N,T,S<:NTuple{N,Int}}
+        return new{T,S}(value.bijector, size)
     end
-    function Elementwise(value::OnlyWrap{T}, size::Dims{N}) where {T,N}
-        return new{T,Dims{N}}(value.bijector, size)
+    function Elementwise(value::OnlyWrap{T}, size::S) where {N,T,S<:NTuple{N,Int}}
+        return new{T,S}(value.bijector, size)
     end
 end
 Base.:(==)(a::Elementwise, b::Elementwise) = (a.value == b.value) & (a.size == b.size)
