@@ -15,18 +15,18 @@ This is used to represent the vector bijector for homogeneous product distributi
 the same transform is applied to each component. By using a `Elementwise`, we can compute
 the transform once and reuse it, rather than computing it separately for each component.
 """
-struct Elementwise{T,N}
+struct Elementwise{T,S}
     value::T
-    size::N
+    size::S
 
-    Elementwise(value::T, size::NTuple{N,Int}) where {T,N} = new{T,N}(value, size)
+    Elementwise(value::T, size::Dims{N}) where {T,N} = new{T,Dims{N}}(value, size)
 
     # Unwrap scalar-to-scalar bijectors
-    function Elementwise(value::VectWrap{T}, size::NTuple{N,Int}) where {T,N}
-        return new{T,N}(value.bijector, size)
+    function Elementwise(value::VectWrap{T}, size::Dims{N}) where {T,N}
+        return new{T,Dims{N}}(value.bijector, size)
     end
-    function Elementwise(value::OnlyWrap{T}, size::NTuple{N,Int}) where {T,N}
-        return new{T,N}(value.bijector, size)
+    function Elementwise(value::OnlyWrap{T}, size::Dims{N}) where {T,N}
+        return new{T,Dims{N}}(value.bijector, size)
     end
 end
 Base.:(==)(a::Elementwise, b::Elementwise) = (a.value == b.value) & (a.size == b.size)
