@@ -70,13 +70,13 @@ VectorBijectors.from_linked_vec(d::POSITIVE_UNIVARIATES) = OnlyWrap(Exp(minimum(
 VectorBijectors.to_linked_vec(d::POSITIVE_UNIVARIATES) = VectWrap(Log(minimum(d), 1))
 
 function VectorBijectors.from_linked_vec(
-    d::D.LocationScale{<:Any,<:Any,<:POSITIVE_UNIVARIATES}
+    d::D.AffineDistribution{<:Any,<:Any,<:POSITIVE_UNIVARIATES}
 )
     s = sign(D.scale(d))
     return OnlyWrap(Exp(s > 0 ? minimum(d) : maximum(d), s))
 end
 function VectorBijectors.to_linked_vec(
-    d::D.LocationScale{<:Any,<:Any,<:POSITIVE_UNIVARIATES}
+    d::D.AffineDistribution{<:Any,<:Any,<:POSITIVE_UNIVARIATES}
 )
     s = sign(D.scale(d))
     return VectWrap(Log(s > 0 ? minimum(d) : maximum(d), s))
