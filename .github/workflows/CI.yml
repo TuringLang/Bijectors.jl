@@ -30,8 +30,9 @@ jobs:
           - version: 'min'
             os: 'ubuntu-latest'
         group:
-          - 'Interface'
-          - 'AD'
+          - 'Classic'
+          - 'Vector'
+          - 'VectorProduct'
 
     steps:
       - uses: actions/checkout@v6
