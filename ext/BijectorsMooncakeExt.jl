@@ -58,4 +58,33 @@ function Mooncake.rrule!!(
     return Mooncake.zero_fcodual(out), find_alpha_pb
 end
 
+# Precompile the Mooncake reverse-mode AD pipeline for common Bijectors operations
+# so that time-to-first-gradient is reduced for users. Based on the pattern from
+# https://github.com/chalk-lab/Mooncake.jl/blob/main/src/precompile.jl
+using PrecompileTools: @setup_workload, @compile_workload
+
+#! format: off
+@setup_workload begin
+    using Bijectors:
+        Bijectors, bijector, transformed, logabsdetjac, with_logabsdet_jacobian
+    using Bijectors.Distributions: LogNormal, logpdf
+
+    @compile_workload begin
+        d = LogNormal()
+        b = bijector(d)
+        td = transformed(d)
+
+        # Reverse-mode: differentiate logpdf of a transformed distribution
+        _precompile_f(x) = logpdf(td, x)
+        rule = Mooncake.build_rrule(_precompile_f, 0.5)
+        Mooncake.value_and_gradient!!(rule, _precompile_f, 0.5)
+
+        # Reverse-mode: differentiate with_logabsdet_jacobian
+        _precompile_g(x) = first(with_logabsdet_jacobian(b, x))
+        rule2 = Mooncake.build_rrule(_precompile_g, 1.0)
+        Mooncake.value_and_gradient!!(rule2, _precompile_g, 1.0)
+    end
+end
+#! format: on
+
 end

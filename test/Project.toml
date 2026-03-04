@@ -2,7 +2,6 @@
 AbstractMCMC = "80f14c24-f653-4e6a-9b94-39d6b0f70001"
 AbstractPPL = "7a57a42e-76ec-4ea3-a279-07e840d6d9cf"
 AdvancedHMC = "0bf59076-c3b1-5ca4-86bd-e02cd72cde3d"
-Bijectors = "76274a88-744f-5084-9051-94815aaf08c4"
 ChainRules = "082447d4-558c-5d27-93f4-14fc19e9eca2"
 ChainRulesTestUtils = "cdddcdb0-9152-4a09-a978-84456f9df70a"
 ChangesOfVariables = "9e997f8a-9a97-42d5-a9f1-ce6bfc15e2c0"
