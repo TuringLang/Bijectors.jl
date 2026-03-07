@@ -92,3 +92,15 @@ linked_vec_length(d::D.JointOrderStatistics) = vec_length(d)
 # TODO: Technically, the first element can be @opticof(_[1]) so this is not technically
 # correct.
 linked_optic_vec(d::D.JointOrderStatistics) = fill(nothing, vec_length(d))
+
+# We need to retain some definitions for Bijector.ordered, because that's not actually the
+# same as JointOrderStatistics (e.g. you can have Bijector.ordered(MvNormal([a, b], I))
+# which is not expressible as a JointOrderStatistics distribution).
+to_vec(::B.OrderedDistribution) = TypedIdentity()
+from_vec(::B.OrderedDistribution) = TypedIdentity()
+to_linked_vec(d::B.OrderedDistribution) = d.transform
+from_linked_vec(d::B.OrderedDistribution) = inverse(d.transform)
+optic_vec(d::B.OrderedDistribution) = optic_vec(d.dist)
+linked_optic_vec(d::B.OrderedDistribution) = fill(nothing, linked_vec_length(d))
+vec_length(d::B.OrderedDistribution) = vec_length(d.dist)
+linked_vec_length(d::B.OrderedDistribution) = linked_vec_length(d.dist)
