@@ -15,69 +15,95 @@ A bijector mapping unordered vectors in ℝᵈ to ordered vectors in ℝᵈ.
 - [Stan's documentation](https://mc-stan.org/docs/2_27/reference-manual/ordered-vector.html)
   - Note that this transformation and its inverse are the _opposite_ of in this reference.
 """
-struct OrderedBijector <: Bijector end
+struct OrderedBijector <: Bijector
+    order::Tuple{Vararg{Int}}
+end
 
-with_logabsdet_jacobian(b::OrderedBijector, x) = transform(b, x), logabsdetjac(b, x)
+OrderedBijector(order::AbstractVector{Int64}) = OrderedBijector(Tuple(order))
 
-transform(b::OrderedBijector, y::AbstractVecOrMat) = _transform_ordered(y)
+with_logabsdet_jacobian(b::OrderedBijector, y) = transform(b, y), logabsdetjac(b, y)
 
-function _transform_ordered(y::AbstractVector)
+transform(b::OrderedBijector, y::AbstractVecOrMat) = _transform_ordered(y, b.order)
+
+function _transform_ordered(y::AbstractVector, order::NTuple{N, Int64}) where N
+
     x = similar(y)
     @assert !isempty(y)
 
-    @inbounds x[1] = y[1]
-    @inbounds for i in 2:length(x)
-        x[i] = x[i - 1] + exp(y[i])
+    x .= y
+    @inbounds x[order[1]] = y[order[1]]
+    @inbounds for i in 2:N
+        x[order[i]] = x[order[i - 1]] + exp(y[order[i]])
     end
 
     return x
 end
 
-function _transform_ordered(y::AbstractMatrix)
+function _transform_ordered(y::AbstractMatrix, order::NTuple{N, Int64}) where N
     x = similar(y)
     @assert !isempty(y)
 
-    @inbounds for j in 1:size(x, 2), i in 1:size(x, 1)
+    x .= y
+
+    @inbounds for j in 1:size(x, 2), i in 1:N
         if i == 1
-            x[i, j] = y[i, j]
+            x[order[i], j] = y[order[i], j]
         else
-            x[i, j] = x[i - 1, j] + exp(y[i, j])
+            x[order[i], j] = x[order[i - 1], j] + exp(y[order[i], j])
         end
     end
 
     return x
 end
 
-transform(ib::Inverse{OrderedBijector}, x::AbstractVecOrMat) = _transform_inverse_ordered(x)
-function _transform_inverse_ordered(x::AbstractVector)
+transform(ib::Inverse{OrderedBijector}, x::AbstractVecOrMat) = _transform_inverse_ordered(x, ib.orig.order)
+function _transform_inverse_ordered(x::AbstractVector, order::NTuple{N, Int64}) where N
     y = similar(x)
     @assert !isempty(y)
+    y .= x
 
-    @inbounds y[1] = x[1]
-    @inbounds for i in 2:length(y)
-        y[i] = log(x[i] - x[i - 1])
+    @inbounds y[order[1]] = x[order[1]]
+    @inbounds for i in 2:N
+        @inbounds y[order[i]] = log(x[order[i]] - x[order[i - 1]])
     end
 
     return y
 end
 
-function _transform_inverse_ordered(x::AbstractMatrix)
+function _transform_inverse_ordered(x::AbstractMatrix, order::NTuple{N, Int64}) where N
     y = similar(x)
     @assert !isempty(y)
+    y .= x
 
-    @inbounds for j in 1:size(y, 2), i in 1:size(y, 1)
+    @inbounds for j in 1:size(y, 2), i in 1:N
         if i == 1
-            y[i, j] = x[i, j]
+            @inbounds y[order[i], j] = x[order[i], j]
         else
-            y[i, j] = log(x[i, j] - x[i - 1, j])
+            @inbounds y[order[i], j] = log(x[order[i], j] - x[order[i - 1], j])
         end
     end
 
     return y
 end
 
-logabsdetjac(b::OrderedBijector, x::AbstractVector) = sum(@view(x[2:end]))
-logabsdetjac(b::OrderedBijector, x::AbstractMatrix) = vec(sum(@view(x[2:end, :]); dims=1))
+function logabsdetjac(b::OrderedBijector, y::AbstractVector)
+    @assert length(y) >= length(b.order)
+    s = zero(eltype(y))
+    @inbounds for i in 2:length(b.order)
+        s += y[b.order[i]]
+    end
+    return s
+end
+
+function logabsdetjac(b::OrderedBijector, y::AbstractMatrix)
+    @assert size(y, 1) >= length(b.order)
+    s = zeros(eltype(y), size(y, 2))
+    @inbounds for j in 1:size(y, 2), i in 2:length(b.order)
+        s[j] += y[b.order[i], j]
+    end
+    return s
+end
+
 
 # Need a custom distribution type to handle this properly.
 """
@@ -88,12 +114,14 @@ Wraps a distribution to restrict its support to the subspace of ordered vectors.
 # Fields
 $(TYPEDFIELDS)
 """
-struct OrderedDistribution{D<:ContinuousMultivariateDistribution,B} <:
+struct OrderedDistribution{D<:ContinuousMultivariateDistribution, B} <:
        ContinuousMultivariateDistribution
     "distribution transformed to have ordered support"
     dist::D
     "transformation from constrained space to ordered unconstrained space"
     transform::B
+
+    order::Tuple{Vararg{Int}} 
 end
 
 """
@@ -127,23 +155,34 @@ A common case is where the distribution being ordered is a joint distribution of
 distributions. In this case the normalization factor works out to be the constant `n!`, and `ordered` can
 again be used without problems even if the parameters of the univariate distribution are sampled.
 """
-function ordered(d::ContinuousMultivariateDistribution)
+function ordered(d::ContinuousMultivariateDistribution; order=:ascending)
     # We're good if the map from unconstrained (in which we apply the ordered bijector)
     # to constrained is monotonically increasing, i.e. order-preserving. In that case,
     # we can form the ordered transformation as `binv ∘ OrderedBijector() ∘ b`.
     # Similarly, if we're working with monotonically decreasing maps, we can do the same
     # but with the addition of a sign flip before and after the ordered bijector.
+    
+    if order === :ascending
+        order = ntuple(identity, length(d))
+    elseif order === :descending
+        order = reverse(ntuple(identity, length(d)))
+    elseif eltype(order) === Int64 && length(order) >= 2 && issubset(order, 1:length(d)) && allunique(order)
+        order = Tuple(order)
+    else
+        throw(ArgumentError("order should be a subset of 1:$(length(d)) of size at least 2 with no duplicate"))
+    end
+    
     b = bijector(d)
     binv = inverse(b)
     ordered_b = if is_monotonically_decreasing(binv)
-        SignFlip() ∘ inverse(OrderedBijector()) ∘ SignFlip() ∘ b
+        SignFlip() ∘ inverse(OrderedBijector(order)) ∘ SignFlip() ∘ b
     elseif is_monotonically_increasing(binv)
-        inverse(OrderedBijector()) ∘ b
+        inverse(OrderedBijector(order)) ∘ b
     else
         throw(ArgumentError("ordered transform is currently not supported for $d."))
     end
 
-    return OrderedDistribution(d, ordered_b)
+    return OrderedDistribution(d, ordered_b, order)
 end
 
 bijector(d::OrderedDistribution) = d.transform
@@ -152,7 +191,7 @@ Base.eltype(::Type{<:OrderedDistribution{D}}) where {D} = eltype(D)
 Base.eltype(d::OrderedDistribution) = eltype(d.dist)
 function Distributions._logpdf(d::OrderedDistribution, x::AbstractVector{<:Real})
     lp = Distributions.logpdf(d.dist, x)
-    issorted(x) && return lp
+    _is_ordered(x, d.order) && return lp
     return oftype(lp, -Inf)
 end
 Base.length(d::OrderedDistribution) = length(d.dist)
@@ -163,6 +202,14 @@ function Distributions._rand!(
     # Rejection sampling.
     while true
         Distributions.rand!(rng, d.dist, x)
-        issorted(x) && return x
+        _is_ordered(x, d.order) && return x
     end
+    return x
+end
+
+function _is_ordered(x::AbstractVector, order::NTuple{N, Int64}) where N
+    @inbounds for i in 2:N
+        x[order[i-1]] ≤ x[order[i]] || return false
+    end
+    true
 end
