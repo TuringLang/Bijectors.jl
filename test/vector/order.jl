@@ -4,6 +4,7 @@ using Distributions
 using LinearAlgebra
 using Test
 using Bijectors.VectorBijectors
+using Bijectors: ordered
 import DifferentiationInterface as DI
 using Enzyme: Enzyme
 using ForwardDiff: ForwardDiff
@@ -57,6 +58,11 @@ joint_test_adtypes = [
             )
         end
     end
+
+    # Bijectors.ordered
+    VectorBijectors.test_all(
+        ordered(MvNormal([0.0, 1.0, 2.0], I)); expected_zero_allocs=(from_vec, to_vec)
+    )
 end
 
 end # module VBOrderTests

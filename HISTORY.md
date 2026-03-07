@@ -1,3 +1,7 @@
+# 0.15.18
+
+Implemented vector bijectors for `Bijectors.OrderedDistribution`.
+
 # 0.15.17
 
 Adds a new module, `Bijectors.VectorBijectors`.
