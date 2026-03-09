@@ -22,7 +22,7 @@ function ChainRulesCore.rrule(::typeof(combine), m::PartitionMask, x_1, x_2, x_3
 end
 
 # `OrderedBijector`
-function ChainRulesCore.rrule(::typeof(_transform_ordered), y::AbstractVector)
+function ChainRulesCore.rrule(::typeof(_transform_ordered), y::AbstractVector, ::Type{Ascending})
     # ensures that we remain in the primal's subspace
     project_y = ChainRulesCore.ProjectTo(y)
 
@@ -43,13 +43,66 @@ function ChainRulesCore.rrule(::typeof(_transform_ordered), y::AbstractVector)
             Δ_new[i] = s * exp(y[i])
         end
 
-        return ChainRulesCore.NoTangent(), project_y(Δ_new)
+        return ChainRulesCore.NoTangent(), project_y(Δ_new), ChainRulesCore.NoTangent()
     end
 
-    return _transform_ordered(y), _transform_ordered_adjoint
+    return _transform_ordered(y, Ascending), _transform_ordered_adjoint
 end
 
-function ChainRulesCore.rrule(::typeof(_transform_ordered), y::AbstractMatrix)
+function ChainRulesCore.rrule(::typeof(_transform_ordered), y::AbstractMatrix, ::Type{Ascending})
+    # ensures that we remain in the primal's subspace
+    project_y = ChainRulesCore.ProjectTo(y)
+
+    function _transform_ordered_adjoint(ΔΩ)
+        Δ_new = similar(y)
+        Δ = ChainRulesCore.unthunk(ΔΩ)
+        @assert size(Δ) == size(Δ_new)
+        n = size(Δ, 1)
+
+        s = vec(sum(Δ; dims=1))
+        Δ_new[1, :] .= s
+        @inbounds for i in 2:n
+            # Equivalent to
+            #
+            #    Δ_new[i] = sum(Δ[i:end]) * yexp[i - 1]
+            #
+            s .-= Δ[i - 1, :]
+            Δ_new[i, :] .= s .* exp.(y[i, :])
+        end
+
+        return ChainRulesCore.NoTangent(), project_y(Δ_new), ChainRulesCore.NoTangent()
+    end
+
+    return _transform_ordered(y, Ascending), _transform_ordered_adjoint
+end
+
+function ChainRulesCore.rrule(::typeof(_transform_ordered), y::AbstractVector, ::Type{Descending})
+    # ensures that we remain in the primal's subspace
+    project_y = ChainRulesCore.ProjectTo(y)
+
+    function _transform_ordered_adjoint(ΔΩ)
+        Δ_new = similar(y)
+        Δ = ChainRulesCore.unthunk(ΔΩ)
+        n = length(Δ)
+        @assert n == length(Δ_new)
+
+        # s = zero(eltype(Δ))
+        s = Δ[1]
+        @inbounds for i in 1:(n - 1)
+            # s += Δ[i]
+            Δ_new[i] = s * exp(y[i])
+            s += Δ[i + 1]
+        end
+        # Δ_new[n] = s + Δ[n]
+        Δ_new[n] = s
+
+        return ChainRulesCore.NoTangent(), project_y(Δ_new), ChainRulesCore.NoTangent()
+    end
+
+    return _transform_ordered(y, Descending), _transform_ordered_adjoint
+end
+
+function ChainRulesCore.rrule(::typeof(_transform_ordered), y::AbstractMatrix, ::Type{Descending})
     # ensures that we remain in the primal's subspace
     project_y = ChainRulesCore.ProjectTo(y)
 
@@ -59,24 +112,83 @@ function ChainRulesCore.rrule(::typeof(_transform_ordered), y::AbstractMatrix)
         n = size(Δ, 1)
         @assert size(Δ) == size(Δ_new)
 
-        s = vec(sum(Δ; dims=1))
-        Δ_new[1, :] .= s
-        @inbounds for i in 2:n
-            # Equivalent to
-            #
-            #    Δ_new[i] = sum(Δ[i:end]) * yexp[i - 1]
-            #
-            s -= Δ[i - 1, :]
-            Δ_new[i, :] = s .* exp.(y[i, :])
+        # s = zeros(eltype(Δ, size(Δ, 2)))
+        s = Δ[1, :]
+        @inbounds for i in 1:(n - 1)
+            # s .+= Δ[i, :]
+            Δ_new[i, :] .= s .* exp.(y[i, :])
+            s .+= Δ[i + 1, :]
         end
+        # Δ_new[n, :] = s .+ Δ[n, :]
+        Δ_new[n, :] .= s
 
-        return ChainRulesCore.NoTangent(), project_y(Δ_new)
+        return ChainRulesCore.NoTangent(), project_y(Δ_new), ChainRulesCore.NoTangent()
     end
 
-    return _transform_ordered(y), _transform_ordered_adjoint
+    return _transform_ordered(y, Descending), _transform_ordered_adjoint
 end
 
-function ChainRulesCore.rrule(::typeof(_transform_inverse_ordered), x::AbstractVector)
+function ChainRulesCore.rrule(::typeof(_transform_ordered), y::AbstractVector, ::Type{FixedOrder{o}}) where {o}
+    # ensures that we remain in the primal's subspace
+    project_y = ChainRulesCore.ProjectTo(y)
+
+    function _transform_ordered_adjoint(ΔΩ)
+        Δ_new = similar(y)
+        Δ = ChainRulesCore.unthunk(ΔΩ)
+        @assert length(Δ) == length(Δ_new)
+        m = length(o)
+        # Identity
+        Δ_new .= Δ
+
+        # Overwrite rows part of
+        s = sum(Δ[collect(o)])
+        Δ_new[o[1]] = s
+        @inbounds for i in 2:m
+            s -= Δ[o[i - 1]]
+            Δ_new[o[i]] = s * exp(y[o[i]])
+        end
+
+        return ChainRulesCore.NoTangent(), project_y(Δ_new), ChainRulesCore.NoTangent()
+    end
+
+    return _transform_ordered(y, FixedOrder{o}), _transform_ordered_adjoint
+end
+
+function ChainRulesCore.rrule(::typeof(_transform_ordered), y::AbstractMatrix, ::Type{FixedOrder{o}}) where {o}
+    # ensures that we remain in the primal's subspace
+    project_y = ChainRulesCore.ProjectTo(y)
+
+    function _transform_ordered_adjoint(ΔΩ)
+        Δ_new = similar(y)
+        Δ = ChainRulesCore.unthunk(ΔΩ)
+        @assert size(Δ) == size(Δ_new)
+        
+        Δ_new .= Δ
+        
+        m = length(o)
+        
+        # s = vec(sum(Δ[collect(o), :]; dims=1))
+        # Δ_new[o[1], :] .= s        
+        # @inbounds for i in 2:m
+        #     s .-= Δ[o[i - 1], :]
+        #     Δ_new[o[i], :] .= s .* exp.(y[o[i], :])
+        # end
+
+        s = Δ[o[m], :]
+        @inbounds for i in m:-1:2
+            Δ_new[o[i], :] .= s .* exp.(y[o[i], :])
+            s .+= Δ[o[i - 1], :]
+        end
+        Δ_new[o[1], :] .= s
+
+        return ChainRulesCore.NoTangent(), project_y(Δ_new), ChainRulesCore.NoTangent()
+    end
+
+    return _transform_ordered(y, FixedOrder{o}), _transform_ordered_adjoint
+end
+
+
+function ChainRulesCore.rrule(::typeof(_transform_inverse_ordered), x::AbstractVector, ::Type{Ascending})
     # ensures that we remain in the primal's subspace
     project_x = ChainRulesCore.ProjectTo(x)
 
@@ -100,7 +212,7 @@ function ChainRulesCore.rrule(::typeof(_transform_inverse_ordered), x::AbstractV
         end
         @inbounds Δ_new[n] = Δ[n] / r[n]
 
-        return ChainRulesCore.NoTangent(), project_x(Δ_new)
+        return ChainRulesCore.NoTangent(), project_x(Δ_new), ChainRulesCore.NoTangent()
     end
 
     y = similar(x)
@@ -112,7 +224,7 @@ function ChainRulesCore.rrule(::typeof(_transform_inverse_ordered), x::AbstractV
     return y, _transform_inverse_ordered_adjoint
 end
 
-function ChainRulesCore.rrule(::typeof(_transform_inverse_ordered), x::AbstractMatrix)
+function ChainRulesCore.rrule(::typeof(_transform_inverse_ordered), x::AbstractMatrix, ::Type{Ascending})
     # ensures that we remain in the primal's subspace
     project_x = ChainRulesCore.ProjectTo(x)
 
@@ -139,7 +251,7 @@ function ChainRulesCore.rrule(::typeof(_transform_inverse_ordered), x::AbstractM
             Δ_new[n, j] = Δ[n, j] / r[n, j]
         end
 
-        return ChainRulesCore.NoTangent(), project_x(Δ_new)
+        return ChainRulesCore.NoTangent(), project_x(Δ_new), ChainRulesCore.NoTangent()
     end
 
     # Compute primal here so we can make use of the already
@@ -151,6 +263,172 @@ function ChainRulesCore.rrule(::typeof(_transform_inverse_ordered), x::AbstractM
         else
             y[i, j] = log(r[i, j])
         end
+    end
+
+    return y, _transform_inverse_ordered_adjoint
+end
+
+function ChainRulesCore.rrule(::typeof(_transform_inverse_ordered), x::AbstractVector, ::Type{Descending})
+    # ensures that we remain in the primal's subspace
+    project_x = ChainRulesCore.ProjectTo(x)
+
+    r = similar(x)
+    n = length(r)
+    @inbounds for i in 1:n
+        if i == n
+            r[i] = 1
+        else
+            r[i] = x[i] - x[i + 1]
+        end
+    end
+
+    function _transform_inverse_ordered_adjoint(ΔΩ)
+        Δ_new = similar(x)
+        Δ = ChainRulesCore.unthunk(ΔΩ)
+        @assert length(Δ_new) == length(Δ)
+
+        n = length(Δ_new)
+        Δ_new[1] = Δ[1] / r[1]
+        @inbounds for j in 2:n
+            Δ_new[j] = (Δ[j] / r[j]) - (Δ[j-1] / r[j-1])
+        end
+
+        return ChainRulesCore.NoTangent(), project_x(Δ_new), ChainRulesCore.NoTangent()
+    end
+
+    y = similar(x)
+    n = length(x)
+    @inbounds for i in 1:(n - 1)
+        y[i] = log(r[i])
+    end
+    @inbounds y[n] = x[n]
+
+    return y, _transform_inverse_ordered_adjoint
+end
+
+function ChainRulesCore.rrule(::typeof(_transform_inverse_ordered), x::AbstractMatrix, ::Type{Descending})
+    # ensures that we remain in the primal's subspace
+    project_x = ChainRulesCore.ProjectTo(x)
+
+    r = similar(x)
+    n = size(x, 1)
+    @inbounds for j in 1:size(x, 2), i in 1:n
+        if i == n
+            r[i, j] = 1
+        else
+            r[i, j] = x[i, j] - x[i + 1, j]
+        end
+    end
+
+    function _transform_inverse_ordered_adjoint(ΔΩ)
+        Δ_new = similar(x)
+        Δ = ChainRulesCore.unthunk(ΔΩ)
+        n = size(Δ, 1)
+        @assert size(Δ) == size(Δ_new)
+
+        @inbounds for j in 1:size(Δ_new, 2)
+            Δ_new[1, j] = Δ[1, j] / r[1, j]
+        end
+
+        @inbounds for j in 1:size(Δ_new, 2), i in 2:n
+            Δ_new[i, j] = (Δ[i, j] / r[i, j]) - (Δ[i - 1, j] / r[i - 1, j])
+        end
+
+        return ChainRulesCore.NoTangent(), project_x(Δ_new), ChainRulesCore.NoTangent()
+    end
+
+    # Compute primal here so we can make use of the already
+    # computed `r`.
+    y = similar(x)
+    n = size(x, 1)
+    @inbounds for j in 1:size(x, 2), i in 1:n
+        if i == n
+            y[i, j] = x[i, j]
+        else
+            y[i, j] = log(r[i, j])
+        end
+    end
+
+    return y, _transform_inverse_ordered_adjoint
+end
+
+function ChainRulesCore.rrule(::typeof(_transform_inverse_ordered), x::AbstractVector, ::Type{FixedOrder{o}}) where {o}
+    # ensures that we remain in the primal's subspace
+    project_x = ChainRulesCore.ProjectTo(x)
+
+    m = length(o)
+    r = zeros(eltype(x), m)
+    @inbounds for i in 1:m
+        if i == 1
+            r[i] = 1
+        else
+            r[i] = x[o[i]] - x[o[i - 1]]
+        end
+    end
+
+    function _transform_inverse_ordered_adjoint(ΔΩ)
+        Δ_new = similar(x)
+        Δ = ChainRulesCore.unthunk(ΔΩ)
+
+        @assert length(Δ_new) == length(Δ)
+        
+        Δ_new .= Δ
+        
+        @inbounds for j in 1:(m - 1)
+            Δ_new[o[j]] = (Δ[o[j]] / r[j]) - (Δ[o[j + 1]] / r[j + 1])
+        end
+        Δ_new[o[m]] = Δ[o[m]] / r[m]
+
+        return ChainRulesCore.NoTangent(), project_x(Δ_new), ChainRulesCore.NoTangent()
+    end
+
+    y = copy(x)
+    @inbounds for i in 2:m
+        y[o[i]] = log(r[i])
+    end
+
+    return y, _transform_inverse_ordered_adjoint
+end
+
+function ChainRulesCore.rrule(::typeof(_transform_inverse_ordered), x::AbstractMatrix, ::Type{FixedOrder{o}}) where {o}
+    # ensures that we remain in the primal's subspace
+    project_x = ChainRulesCore.ProjectTo(x)
+
+    m = length(o)
+    
+    r = zeros(eltype(x), m, size(x, 2))
+
+    @inbounds for j in 1:size(x, 2), i in 1:m
+        if i == 1
+            r[i, j] = 1
+        else
+            r[i, j] = x[o[i], j] - x[o[i - 1], j]
+        end
+    end
+
+    function _transform_inverse_ordered_adjoint(ΔΩ)
+        Δ_new = similar(x)
+        Δ = ChainRulesCore.unthunk(ΔΩ)
+        @assert size(Δ) == size(Δ_new)
+
+        Δ_new .= Δ
+
+        @inbounds for j in 1:size(Δ_new, 2), i in 1:(m - 1)
+            Δ_new[o[i], j] = (Δ[o[i], j] / r[i, j]) - (Δ[o[i + 1], j] / r[i + 1, j])
+        end
+
+        @inbounds for j in 1:size(Δ_new, 2)
+            Δ_new[o[m], j] = Δ[o[m], j] / r[m, j]
+        end
+
+        return ChainRulesCore.NoTangent(), project_x(Δ_new), ChainRulesCore.NoTangent()
+    end
+
+    # Compute primal here so we can make use of the already
+    # computed `r`.
+    y = copy(x)
+    @inbounds for j in 1:size(x, 2), i in 2:m
+        y[o[i], j] = log(r[i, j])
     end
 
     return y, _transform_inverse_ordered_adjoint
