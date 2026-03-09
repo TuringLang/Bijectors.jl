@@ -9,7 +9,13 @@ is_monotonically_decreasing(::SignFlip) = true
 abstract type AbstractOrdering end
 struct Ascending <: AbstractOrdering end
 struct Descending <: AbstractOrdering end
-struct FixedOrder{ordertuple} <: AbstractOrdering end
+struct FixedOrder{ordertuple} <: AbstractOrdering
+    function FixedOrder{ordertuple}() where {ordertuple}
+        @assert (ordertuple isa Tuple{Int, Int, Vararg{Int}}) && allunique(ordertuple) && all(ordertuple .> 0)
+        new{ordertuple}()
+    end
+    FixedOrder(ordertuple::Tuple{Int, Int, Vararg{Int}}) = FixedOrder{ordertuple}()
+end
 
 """
     OrderedBijector()
