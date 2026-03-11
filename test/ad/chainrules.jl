@@ -43,11 +43,24 @@ end
     )
 
     # ordered bijector
-    b = Bijectors.OrderedBijector()
-    test_rrule(Bijectors._transform_ordered, randn(5))
-    test_rrule(Bijectors._transform_ordered, randn(5, 2))
-    test_rrule(Bijectors._transform_inverse_ordered, b(rand(5)))
-    test_rrule(Bijectors._transform_inverse_ordered, b(rand(5, 2)))
+    ba = Bijectors.OrderedBijector(Ascending())
+    test_rrule(Bijectors._transform_ordered, randn(5), Ascending ⊢ ChainRulesTestUtils.NoTangent())
+    test_rrule(Bijectors._transform_ordered, randn(5, 2), Ascending ⊢ ChainRulesTestUtils.NoTangent())
+    test_rrule(Bijectors._transform_inverse_ordered, ba(rand(5)), Ascending ⊢ ChainRulesTestUtils.NoTangent())
+    test_rrule(Bijectors._transform_inverse_ordered, ba(rand(5, 2)), Ascending ⊢ ChainRulesTestUtils.NoTangent())
+
+    bd = Bijectors.OrderedBijector(Descending())
+    test_rrule(Bijectors._transform_ordered, randn(5), Descending ⊢ ChainRulesTestUtils.NoTangent())
+    test_rrule(Bijectors._transform_ordered, randn(5, 2), Descending ⊢ ChainRulesTestUtils.NoTangent())
+    test_rrule(Bijectors._transform_inverse_ordered, bd(rand(5)), Descending ⊢ ChainRulesTestUtils.NoTangent())
+    test_rrule(Bijectors._transform_inverse_ordered, bd(rand(5, 2)), Descending ⊢ ChainRulesTestUtils.NoTangent())
+
+    OT = FixedOrder{(3, 4, 1)}
+    bf = Bijectors.OrderedBijector(OT())
+    test_rrule(Bijectors._transform_ordered, randn(5), OT ⊢ ChainRulesTestUtils.NoTangent())
+    test_rrule(Bijectors._transform_ordered, randn(5, 2), OT ⊢ ChainRulesTestUtils.NoTangent())
+    test_rrule(Bijectors._transform_inverse_ordered, bf(rand(5)), OT ⊢ ChainRulesTestUtils.NoTangent())
+    test_rrule(Bijectors._transform_inverse_ordered, bf(rand(5, 2)), OT ⊢ ChainRulesTestUtils.NoTangent())
 
     # LKJ and LKJCholesky bijector
     # Run multiple tests because we're working with `undef` entries, and so we
