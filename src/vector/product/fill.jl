@@ -67,6 +67,14 @@ function (t::ProductVecTransform{<:Elementwise{F,Dims{M}},Nothing,Dims{N}})(
         vec(stack(trf, eachslice(x; dims=dims)))
     end
 end
+function (::ProductVecTransform{<:Elementwise{TypedIdentity},Nothing,Dims{0}})(
+    x::AbstractArray
+)
+    # If the wrapped transform is TypedIdentity, then the entire vectorisation transform
+    # amounts to just `vec`. This special case is hit for things like
+    # product_distribution(fill(Cauchy(), m1, m2, ...)).
+    return vec(x)
+end
 
 # Tiny struct that allows us to use map(eachslices) directly instead of a manual loop inside
 # with_logabsdet_jacobian.
@@ -102,6 +110,14 @@ function with_logabsdet_jacobian(
         y, lj.logjac
     end
 end
+function with_logabsdet_jacobian(
+    ::ProductVecTransform{<:Elementwise{TypedIdentity},Nothing,Dims{0}}, x::AbstractArray{T}
+) where {T}
+    # If the wrapped transform is TypedIdentity, then the entire vectorisation transform
+    # amounts to just `vec`. This special case is hit for things like
+    # product_distribution(fill(Cauchy(), m1, m2, ...)).
+    return vec(x), _fzero(T)
+end
 
 function (t::ProductVecInvTransform{<:Elementwise{F,Dims{M}},Nothing,Dims{N}})(
     y::AbstractVector{T}
@@ -116,6 +132,11 @@ function (t::ProductVecInvTransform{<:Elementwise{F,Dims{M}},Nothing,Dims{N}})(
         dims = ntuple(i -> i + 1, Val(M))
         stack(t.transforms.value, eachslice(reshaped_y; dims=dims))
     end
+end
+function (t::ProductVecInvTransform{<:Elementwise{TypedIdentity},Nothing,Dims{0}})(
+    y::AbstractVector
+)
+    return reshape(y, t.transforms.size)
 end
 
 function with_logabsdet_jacobian(
@@ -139,4 +160,10 @@ function with_logabsdet_jacobian(
         x = stack(lj, eachslice(reshaped_y; dims=dims))
         x, lj.logjac
     end
+end
+function with_logabsdet_jacobian(
+    t::ProductVecInvTransform{<:Elementwise{TypedIdentity},Nothing,Dims{0}},
+    y::AbstractVector{T},
+) where {T}
+    return reshape(y, t.transforms.size), _fzero(T)
 end
