@@ -5,6 +5,8 @@
 # For example when N = 10, the optimised path here brings from_linked_vec(d)(y) down 
 # from 731 ns to 59 ns, and to_linked_vec(d)(x) from 278 ns to 75 ns.
 
+using FillArrays: FillArrays
+
 """
     Elementwise{T,S}
 
@@ -40,6 +42,11 @@ _map_inverse(t::Elementwise) = Elementwise(inverse(t.value), t.size)
 
 # Trait: returns true when the vector bijector for a distribution type is determined
 # solely by the type (not runtime parameter values).
+_has_constant_vec_bijector(::Type{TFill}) where {TFill<:FillArrays.Fill} = true
+function _has_constant_vec_bijector(::Type{<:AbstractArray{T}}) where {T}
+    return _has_constant_vec_bijector(T)
+end
+_has_constant_vec_bijector(t::Type{<:Tuple}) = _has_constant_vec_bijector(eltype(t))
 _has_constant_vec_bijector(::Type) = false
 _has_constant_vec_bijector(::Type{<:IDENTITY_UNIVARIATES}) = true
 _has_constant_vec_bijector(::Type{<:POSITIVE_UNIVARIATES}) = true
