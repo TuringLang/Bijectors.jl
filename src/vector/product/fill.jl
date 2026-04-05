@@ -77,8 +77,9 @@ end
 function (::ProductVecTransform{<:Elementwise{TypedIdentity},Nothing,Dims{0}})(
     x::AbstractArray
 )
-    # If the wrapped transform is TypedIdentity, then the entire vectorisation transform
-    # amounts to just `vec`. This special case is hit for things like
+    # If the wrapped transform is TypedIdentity, and the distribution is univariate (i.e.,
+    # the 'base size' is `()::Dims{0}`), then the entire vectorisation transform amounts to
+    # just `vec`. This special case is hit for things like
     # product_distribution(fill(Cauchy(), m1, m2, ...)).
     return vec(x)
 end
@@ -120,9 +121,6 @@ end
 function with_logabsdet_jacobian(
     ::ProductVecTransform{<:Elementwise{TypedIdentity},Nothing,Dims{0}}, x::AbstractArray{T}
 ) where {T}
-    # If the wrapped transform is TypedIdentity, then the entire vectorisation transform
-    # amounts to just `vec`. This special case is hit for things like
-    # product_distribution(fill(Cauchy(), m1, m2, ...)).
     return vec(x), _fzero(T)
 end
 
