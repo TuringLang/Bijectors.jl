@@ -1,3 +1,7 @@
+# 0.15.20
+
+Export `Bijectors.VectorBijectors.has_constant_vec_bijector` to allow downstream packages to overload it.
+
 # 0.15.19
 
 Optimise performance of vector bijectors for products of univariate distributions.

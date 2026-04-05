@@ -16,6 +16,8 @@ export vec_length
 export linked_vec_length
 export optic_vec
 export linked_optic_vec
+# utils
+export has_constant_vec_bijector
 # re-exports
 export with_logabsdet_jacobian
 export inverse
