@@ -40,28 +40,61 @@ end
 
 _map_inverse(t::Elementwise) = Elementwise(inverse(t.value), t.size)
 
-# Trait: returns true when the vector bijector for a distribution type is determined
-# solely by the type (not runtime parameter values).
-_has_constant_vec_bijector(::Type{TFill}) where {TFill<:FillArrays.Fill} = true
-function _has_constant_vec_bijector(::Type{<:AbstractArray{T}}) where {T}
-    return _has_constant_vec_bijector(T)
+"""
+    Bijectors.VectorBijectors.has_constant_vec_bijector(::Type{T}) where {T}
+
+Return `true` if the vector bijector for each element of a collection of distributions is
+determined solely by the type of the distribution, and not by any runtime parameter
+values.
+
+This is slightly confusing, so is best explained by example. Consider
+
+```julia
+d = product_distribution(array_of_dists)
+```
+
+If it can be inferred from `typeof(array_of_dists)` that each distribution inside
+`array_of_dists` has the same vector bijector, then
+`has_constant_vec_bijector(typeof(array_of_dists))` should return `true`.
+
+For example, if `array_of_dists` is a `FillArrays.Fill` of some distribution type, then we
+know that each distribution inside is the same, and so they all have the same vector
+bijector. Thus, we have that
+
+```julia
+has_constant_vec_bijector(::Type{<:FillArrays.Fill}) == true
+```
+
+For generic `AbstractArray`s or `Tuple`s, this will dispatch on the element type of the
+array. That means that if a `dist::D` (where `D<:Distribution`) has a constant vector
+bijector, we can simply mark `has_constant_vec_bijector(::Type{D}) == true`.
+
+For example, `Beta` has a constant vector bijector, because its support is always between 0
+and 1, regardless of its parameters.
+
+On the other hand, `Uniform` does not have a constant vector bijector, because its support
+depends on its parameters.
+"""
+has_constant_vec_bijector(::Type{TFill}) where {TFill<:FillArrays.Fill} = true
+function has_constant_vec_bijector(::Type{<:AbstractArray{T}}) where {T}
+    return has_constant_vec_bijector(T)
 end
-_has_constant_vec_bijector(t::Type{<:Tuple}) = _has_constant_vec_bijector(eltype(t))
-_has_constant_vec_bijector(::Type) = false
-_has_constant_vec_bijector(::Type{<:IDENTITY_UNIVARIATES}) = true
-_has_constant_vec_bijector(::Type{<:POSITIVE_UNIVARIATES}) = true
+has_constant_vec_bijector(t::Type{<:Tuple}) = has_constant_vec_bijector(eltype(t))
+has_constant_vec_bijector(::Type) = false
+has_constant_vec_bijector(::Type{<:IDENTITY_UNIVARIATES}) = true
+has_constant_vec_bijector(::Type{<:POSITIVE_UNIVARIATES}) = true
 # between 0 and 1
-function _has_constant_vec_bijector(
+function has_constant_vec_bijector(
     ::Type{<:Union{D.Beta,D.KSOneSided,D.NoncentralBeta,D.LogitNormal}}
 )
     return true
 end
-_has_constant_vec_bijector(::Type{<:D.DiscreteUnivariateDistribution}) = true
+has_constant_vec_bijector(::Type{<:D.DiscreteUnivariateDistribution}) = true
 # Multivariates
-_has_constant_vec_bijector(::Type{<:D.AbstractMvNormal}) = true
-_has_constant_vec_bijector(::Type{<:D.AbstractMvLogNormal}) = true
-_has_constant_vec_bijector(::Type{<:SIMPLEX_MULTIVARIATES}) = true
-_has_constant_vec_bijector(::Type{<:D.DiscreteMultivariateDistribution}) = true
+has_constant_vec_bijector(::Type{<:D.AbstractMvNormal}) = true
+has_constant_vec_bijector(::Type{<:D.AbstractMvLogNormal}) = true
+has_constant_vec_bijector(::Type{<:SIMPLEX_MULTIVARIATES}) = true
+has_constant_vec_bijector(::Type{<:D.DiscreteMultivariateDistribution}) = true
 
 function (t::ProductVecTransform{<:Elementwise{F,Dims{M}},Nothing,Dims{N}})(
     x::AbstractArray{T}
