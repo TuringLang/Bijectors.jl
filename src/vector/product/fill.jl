@@ -5,6 +5,8 @@
 # For example when N = 10, the optimised path here brings from_linked_vec(d)(y) down 
 # from 731 ns to 59 ns, and to_linked_vec(d)(x) from 278 ns to 75 ns.
 
+using FillArrays: FillArrays
+
 """
     Elementwise{T,S}
 
@@ -40,6 +42,11 @@ _map_inverse(t::Elementwise) = Elementwise(inverse(t.value), t.size)
 
 # Trait: returns true when the vector bijector for a distribution type is determined
 # solely by the type (not runtime parameter values).
+_has_constant_vec_bijector(::Type{TFill}) where {TFill<:FillArrays.Fill} = true
+function _has_constant_vec_bijector(::Type{<:AbstractArray{T}}) where {T}
+    return _has_constant_vec_bijector(T)
+end
+_has_constant_vec_bijector(t::Type{<:Tuple}) = _has_constant_vec_bijector(eltype(t))
 _has_constant_vec_bijector(::Type) = false
 _has_constant_vec_bijector(::Type{<:IDENTITY_UNIVARIATES}) = true
 _has_constant_vec_bijector(::Type{<:POSITIVE_UNIVARIATES}) = true
@@ -66,6 +73,15 @@ function (t::ProductVecTransform{<:Elementwise{F,Dims{M}},Nothing,Dims{N}})(
         dims = ntuple(i -> i + N, Val(M))
         vec(stack(trf, eachslice(x; dims=dims)))
     end
+end
+function (::ProductVecTransform{<:Elementwise{TypedIdentity},Nothing,Dims{0}})(
+    x::AbstractArray
+)
+    # If the wrapped transform is TypedIdentity, and the distribution is univariate (i.e.,
+    # the 'base size' is `()::Dims{0}`), then the entire vectorisation transform amounts to
+    # just `vec`. This special case is hit for things like
+    # product_distribution(fill(Cauchy(), m1, m2, ...)).
+    return vec(x)
 end
 
 # Tiny struct that allows us to use map(eachslices) directly instead of a manual loop inside
@@ -102,6 +118,11 @@ function with_logabsdet_jacobian(
         y, lj.logjac
     end
 end
+function with_logabsdet_jacobian(
+    ::ProductVecTransform{<:Elementwise{TypedIdentity},Nothing,Dims{0}}, x::AbstractArray{T}
+) where {T}
+    return vec(x), _fzero(T)
+end
 
 function (t::ProductVecInvTransform{<:Elementwise{F,Dims{M}},Nothing,Dims{N}})(
     y::AbstractVector{T}
@@ -116,6 +137,11 @@ function (t::ProductVecInvTransform{<:Elementwise{F,Dims{M}},Nothing,Dims{N}})(
         dims = ntuple(i -> i + 1, Val(M))
         stack(t.transforms.value, eachslice(reshaped_y; dims=dims))
     end
+end
+function (t::ProductVecInvTransform{<:Elementwise{TypedIdentity},Nothing,Dims{0}})(
+    y::AbstractVector
+)
+    return reshape(y, t.transforms.size)
 end
 
 function with_logabsdet_jacobian(
@@ -139,4 +165,10 @@ function with_logabsdet_jacobian(
         x = stack(lj, eachslice(reshaped_y; dims=dims))
         x, lj.logjac
     end
+end
+function with_logabsdet_jacobian(
+    t::ProductVecInvTransform{<:Elementwise{TypedIdentity},Nothing,Dims{0}},
+    y::AbstractVector{T},
+) where {T}
+    return reshape(y, t.transforms.size), _fzero(T)
 end

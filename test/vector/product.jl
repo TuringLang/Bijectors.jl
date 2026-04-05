@@ -2,6 +2,7 @@ module VBProductTests
 
 using Distributions
 using LinearAlgebra
+using FillArrays: Fill
 using Test
 using Bijectors.VectorBijectors
 import DifferentiationInterface as DI
@@ -49,9 +50,12 @@ products = [
     product_distribution(fill(Normal(), 2)), # This is actually an MvNormal in disguise
     product_distribution(fill(Beta(2, 2), 2)),
     product_distribution([Uniform(0, 1), Uniform(1, 2), Uniform(2, 3)]),
+    product_distribution(Fill(Uniform(1, 2), 2)),
     # >1D arrays, or vectors of >1D distributions (Distributions.ProductDistribution)
     product_distribution(fill(Normal(), 2, 2)),
+    product_distribution(Fill(Uniform(1, 2), 2, 2)),
     product_distribution(fill(m2, 2, 2)),
+    product_distribution(Fill(m2, 2, 2)),
     product_distribution(fill(d2, 2, 2)),
     # NamedTuples
     product_distribution((a=Normal(), b=Beta(2, 2))),

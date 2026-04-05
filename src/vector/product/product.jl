@@ -381,7 +381,7 @@ _sz(t::AbstractArray) = size(t)
 function _make_transform(
     dists::Union{Tuple,AbstractArray}, indiv_transform_fn, length_fn, struct_type
 )
-    return if _has_constant_vec_bijector(eltype(dists))
+    return if _has_constant_vec_bijector(typeof(dists))
         # Performance optimisation when all distributions have the same bijector type. (Note
         # that, for univariate distributions, the constructor of Elementwise will unwrap the
         # OnlyWrap or VectWrap wrappers that wrap the internal scalar-to-scalar bijector.)

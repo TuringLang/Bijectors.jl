@@ -1,3 +1,7 @@
+# 0.15.19
+
+Optimise performance of vector bijectors for products of univariate distributions.
+
 # 0.15.18
 
 Implemented vector bijectors for `Bijectors.OrderedDistribution`.
