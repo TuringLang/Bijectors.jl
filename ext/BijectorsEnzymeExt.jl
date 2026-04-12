@@ -22,10 +22,12 @@ function _enzyme_annotate_f(f, ::AutoEnzyme{M,A}) where {M,A}
     end
 end
 
-# For explicit reverse mode, use ReverseWithPrimal so value and gradient are computed
-# in a single autodiff call rather than evaluating f a second time.
+# For reverse mode (explicit or auto/nothing), use ReverseWithPrimal so value and
+# gradient are computed in a single autodiff call rather than evaluating f twice.
 function _value_and_gradient(
-    f, backend::AutoEnzyme{<:EnzymeCore.ReverseMode}, x::AbstractVector
+    f,
+    backend::Union{AutoEnzyme{Nothing},AutoEnzyme{<:EnzymeCore.ReverseMode}},
+    x::AbstractVector,
 )
     annotated_f = _enzyme_annotate_f(f, backend)
     dx = zero(x)
@@ -38,8 +40,8 @@ function _value_and_gradient(
     return val, dx
 end
 
-# For forward mode (or auto), the gradient already requires O(n) JVPs; one extra
-# f(x) evaluation is negligible.
+# For forward mode the gradient already requires O(n) JVPs; one extra f(x) evaluation
+# is negligible.
 function _value_and_gradient(f, backend::AutoEnzyme, x::AbstractVector)
     mode = _enzyme_mode(backend)
     annotated_f = _enzyme_annotate_f(f, backend)
