@@ -68,28 +68,10 @@ end
 
 ## Forward-mode implementations (column-by-column JVPs)
 
-function _value_and_gradient(
-    f, backend::AutoMooncakeForward, x::AbstractVector{T}
-) where {T}
-    val = f(x)
-    n = length(x)
-    cache = prepare_derivative_cache(f, x; config=_mooncake_config(backend))
-    df = _mooncake_zero_tangent_or_primal(f, backend)
-    if n == 0
-        return val, Vector{eltype(x)}(undef, 0)
-    end
-    dx = zeros(T, n)
-    dx[1] = one(T)
-    _, first_jvp = value_and_derivative!!(cache, (f, df), (x, dx))
-    grad = Vector{typeof(first_jvp)}(undef, n)
-    grad[1] = first_jvp
-    for j in 2:n
-        fill!(dx, zero(T))
-        dx[j] = one(T)
-        _, jvp = value_and_derivative!!(cache, (f, df), (x, dx))
-        grad[j] = jvp
-    end
-    return val, grad
+function _value_and_gradient(f, backend::AutoMooncakeForward, x::AbstractVector)
+    cache = prepare_gradient_cache(f, x; config=_mooncake_config(backend))
+    val, (_, x_grad) = value_and_gradient!!(cache, f, x)
+    return val, x_grad
 end
 
 function _value_and_jacobian(
