@@ -1,11 +1,10 @@
 module BijectorsMooncakeExt
 
+using Mooncake: Mooncake
 using Mooncake:
     @is_primitive,
     MinimalCtx,
-    Mooncake,
     CoDual,
-    primal,
     tangent_type,
     @from_chainrules,
     prepare_pullback_cache,
@@ -144,7 +143,9 @@ function Mooncake.rrule!!(
         msg = "Integer argument has tangent type $(tangent_type(I)), should be NoTangent."
         throw(ArgumentError(msg))
     end
-    out, pb = ChainRulesCore.rrule(find_alpha, primal(x), primal(y), primal(z))
+    out, pb = ChainRulesCore.rrule(
+        find_alpha, Mooncake.primal(x), Mooncake.primal(y), Mooncake.primal(z)
+    )
     function find_alpha_pb(dout::P)
         _, dx, dy, _ = pb(dout)
         return Mooncake.NoRData(), P(dx), P(dy), Mooncake.NoRData()

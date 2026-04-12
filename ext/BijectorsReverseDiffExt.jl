@@ -50,14 +50,12 @@ function _value_and_jacobian(f, ::AutoReverseDiff{true}, x::AbstractVector)
 end
 
 using Bijectors:
-    ChainRulesCore,
     Elementwise,
     SimplexBijector,
     maphcat,
     simplex_link_jacobian,
     simplex_invlink_jacobian,
-    simplex_logabsdetjac_gradient,
-    Inverse
+    simplex_logabsdetjac_gradient
 import Bijectors:
     Bijectors,
     _eps,
@@ -66,8 +64,6 @@ import Bijectors:
     _simplex_bijector,
     _simplex_inv_bijector,
     replace_diag,
-    jacobian,
-    _inv_link_chol_lkj,
     _link_chol_lkj,
     _transform_ordered,
     _transform_inverse_ordered,

@@ -7,6 +7,9 @@ using ForwardDiff: ForwardDiff
 function _value_and_gradient(
     f, backend::AutoForwardDiff{chunksize,T}, x::AbstractVector
 ) where {chunksize,T}
+    if isempty(x)
+        return f(x), similar(x, 0)
+    end
     result = ForwardDiff.DiffResults.GradientResult(x)
     chunk = isnothing(chunksize) ? ForwardDiff.Chunk(x) : ForwardDiff.Chunk{chunksize}()
     tag = T === Nothing ? ForwardDiff.Tag(f, eltype(x)) : backend.tag
@@ -22,6 +25,9 @@ function _value_and_jacobian(
     f, backend::AutoForwardDiff{chunksize,T}, x::AbstractVector
 ) where {chunksize,T}
     y = f(x)
+    if isempty(x)
+        return y, Matrix{eltype(y)}(undef, length(y), 0)
+    end
     result = ForwardDiff.DiffResults.JacobianResult(y, x)
     chunk = isnothing(chunksize) ? ForwardDiff.Chunk(x) : ForwardDiff.Chunk{chunksize}()
     tag = T === Nothing ? ForwardDiff.Tag(f, eltype(x)) : backend.tag
