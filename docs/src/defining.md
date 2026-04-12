@@ -8,14 +8,14 @@ In general, there are two pieces of information needed to define a bijector:
 
  2. The log-absolute determinant of the Jacobian of that transformation.
     For a transformation $b: \mathbb{R}^d \to \mathbb{R}^d$, the Jacobian at point $x \in \mathbb{R}^d$ is defined as:
-    
+
     $$J_{b}(x) = \begin{bmatrix}
     \partial y_1/\partial x_1 & \partial y_1/\partial x_2 & \cdots & \partial y_1/\partial x_d \\
     \partial y_2/\partial x_1 & \partial y_2/\partial x_2 & \cdots & \partial y_2/\partial x_d \\
     \vdots & \vdots & \ddots & \vdots \\
     \partial y_d/\partial x_1 & \partial y_d/\partial x_2 & \cdots & \partial y_d/\partial x_d
     \end{bmatrix}$$
-    
+
     where $y = b(x)$.
 
 ## The transform itself
@@ -27,7 +27,7 @@ Bijectors.with_logabsdet_jacobian
 ```
 
 !!! note
-    
+
     `with_logabsdet_jacobian` is re-exported from ChangesOfVariables.jl, so if you want to avoid importing Bijectors.jl, you can implement `ChangesOfVariables.with_logabsdet_jacobian` instead.
 
 If you define `with_logabsdet_jacobian(b, x)`, then you will automatically get default implementations of both `transform(b, x)` and `logabsdetjac(b, x)`, which respectively return the first and second value of that tuple.
@@ -60,7 +60,7 @@ Bijectors.inverse
 ```
 
 !!! note
-    
+
     `inverse` is re-exported from InverseFunctions.jl, so the same note as for `with_logabsdet_jacobian` applies.
 
 If `b` is a bijector, then `inverse(b)` should return the inverse bijector $b^{-1}$.

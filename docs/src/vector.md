@@ -7,8 +7,9 @@ It assumes that there are three forms of samples from a distribution `d` that we
  1. **The original form**, which is what `rand(d)` returns.
 
  2. **A vectorised form**, which is a vector that contains a flattened version of the original form.
+
  3. **A linked vectorised form**, which is a vector in which:
-    
+
       + each element is independent; and
       + each element is unconstrained (can take any value in ℝ).
 
