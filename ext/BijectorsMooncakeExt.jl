@@ -30,8 +30,9 @@ function _value_and_jacobian(f, ::AutoMooncake, x::AbstractVector{T}) where {T}
     n_out, n_in = length(y), length(x)
     J = Matrix{T}(undef, n_out, n_in)
     cache = prepare_pullback_cache(f, x)
+    dy = zeros(eltype(y), n_out)
     for i in 1:n_out
-        dy = zeros(eltype(y), n_out)
+        fill!(dy, zero(eltype(y)))
         dy[i] = one(eltype(y))
         _, (_, row) = value_and_pullback!!(cache, dy, f, x)
         J[i, :] .= row
@@ -47,8 +48,9 @@ function _value_and_gradient(f, ::AutoMooncakeForward, x::AbstractVector{T}) whe
     grad = Vector{T}(undef, n)
     cache = prepare_derivative_cache(f, x)
     df = zero_tangent(f)
+    dx = zeros(T, n)
     for j in 1:n
-        dx = zeros(T, n)
+        fill!(dx, zero(T))
         dx[j] = one(T)
         _, jvp = value_and_derivative!!(cache, (f, df), (x, dx))
         grad[j] = jvp
@@ -62,8 +64,9 @@ function _value_and_jacobian(f, ::AutoMooncakeForward, x::AbstractVector{T}) whe
     J = Matrix{T}(undef, n_out, n_in)
     cache = prepare_derivative_cache(f, x)
     df = zero_tangent(f)
+    dx = zeros(T, n_in)
     for j in 1:n_in
-        dx = zeros(T, n_in)
+        fill!(dx, zero(T))
         dx[j] = one(T)
         _, jvp = value_and_derivative!!(cache, (f, df), (x, dx))
         J[:, j] .= jvp

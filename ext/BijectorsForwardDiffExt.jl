@@ -5,13 +5,16 @@ import ADTypes: AutoForwardDiff
 using ForwardDiff: ForwardDiff
 
 function _value_and_gradient(f, ::AutoForwardDiff, x::AbstractVector)
-    grad = ForwardDiff.gradient(f, x)
-    return f(x), grad
+    result = ForwardDiff.DiffResults.GradientResult(x)
+    ForwardDiff.gradient!(result, f, x)
+    return ForwardDiff.DiffResults.value(result), ForwardDiff.DiffResults.gradient(result)
 end
 
 function _value_and_jacobian(f, ::AutoForwardDiff, x::AbstractVector)
-    jac = ForwardDiff.jacobian(f, x)
-    return f(x), jac
+    y = f(x)
+    result = ForwardDiff.DiffResults.JacobianResult(y, x)
+    ForwardDiff.jacobian!(result, f, x)
+    return ForwardDiff.DiffResults.value(result), ForwardDiff.DiffResults.jacobian(result)
 end
 
 Bijectors._eps(::Type{<:ForwardDiff.Dual{<:Any,Real}}) = Bijectors._eps(Real)

@@ -14,30 +14,33 @@ import Bijectors: _value_and_gradient, _value_and_jacobian
 import ADTypes: AutoReverseDiff
 
 function _value_and_gradient(f, ::AutoReverseDiff{false}, x::AbstractVector)
-    grad = ReverseDiff.gradient(f, x)
-    return f(x), grad
+    result = ReverseDiff.DiffResults.GradientResult(x)
+    ReverseDiff.gradient!(result, f, x)
+    return ReverseDiff.DiffResults.value(result), ReverseDiff.DiffResults.gradient(result)
 end
 
 function _value_and_jacobian(f, ::AutoReverseDiff{false}, x::AbstractVector)
-    jac = ReverseDiff.jacobian(f, x)
-    return f(x), jac
+    y = f(x)
+    result = ReverseDiff.DiffResults.JacobianResult(y, x)
+    ReverseDiff.jacobian!(result, f, x)
+    return ReverseDiff.DiffResults.value(result), ReverseDiff.DiffResults.jacobian(result)
 end
 
 function _value_and_gradient(f, ::AutoReverseDiff{true}, x::AbstractVector)
     tape = ReverseDiff.GradientTape(f, x)
     compiled = ReverseDiff.compile(tape)
-    result = similar(x)
+    result = ReverseDiff.DiffResults.GradientResult(x)
     ReverseDiff.gradient!(result, compiled, x)
-    return f(x), result
+    return ReverseDiff.DiffResults.value(result), ReverseDiff.DiffResults.gradient(result)
 end
 
 function _value_and_jacobian(f, ::AutoReverseDiff{true}, x::AbstractVector)
     tape = ReverseDiff.JacobianTape(f, x)
     compiled = ReverseDiff.compile(tape)
     y = f(x)
-    result = zeros(eltype(x), length(y), length(x))
+    result = ReverseDiff.DiffResults.JacobianResult(y, x)
     ReverseDiff.jacobian!(result, compiled, x)
-    return y, result
+    return ReverseDiff.DiffResults.value(result), ReverseDiff.DiffResults.jacobian(result)
 end
 
 using Bijectors:
