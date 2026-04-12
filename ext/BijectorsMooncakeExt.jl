@@ -1,8 +1,75 @@
 module BijectorsMooncakeExt
 
 using Mooncake:
-    @is_primitive, MinimalCtx, Mooncake, CoDual, primal, tangent_type, @from_chainrules
+    @is_primitive,
+    MinimalCtx,
+    Mooncake,
+    CoDual,
+    primal,
+    tangent_type,
+    @from_chainrules,
+    prepare_pullback_cache,
+    prepare_derivative_cache,
+    value_and_pullback!!,
+    value_and_derivative!!,
+    zero_tangent
 using Bijectors: find_alpha, ChainRulesCore
+import Bijectors: _value_and_gradient, _value_and_jacobian
+import ADTypes: AutoMooncake, AutoMooncakeForward
+
+## Reverse-mode implementations
+
+function _value_and_gradient(f, ::AutoMooncake, x::AbstractVector{T}) where {T}
+    cache = prepare_pullback_cache(f, x)
+    val, (_, x_grad) = value_and_pullback!!(cache, one(T), f, x)
+    return val, x_grad
+end
+
+function _value_and_jacobian(f, ::AutoMooncake, x::AbstractVector{T}) where {T}
+    y = f(x)
+    n_out, n_in = length(y), length(x)
+    J = Matrix{T}(undef, n_out, n_in)
+    cache = prepare_pullback_cache(f, x)
+    for i in 1:n_out
+        dy = zeros(eltype(y), n_out)
+        dy[i] = one(eltype(y))
+        _, (_, row) = value_and_pullback!!(cache, dy, f, x)
+        J[i, :] .= row
+    end
+    return y, J
+end
+
+## Forward-mode implementations (column-by-column JVPs)
+
+function _value_and_gradient(f, ::AutoMooncakeForward, x::AbstractVector{T}) where {T}
+    val = f(x)
+    n = length(x)
+    grad = Vector{T}(undef, n)
+    cache = prepare_derivative_cache(f, x)
+    df = zero_tangent(f)
+    for j in 1:n
+        dx = zeros(T, n)
+        dx[j] = one(T)
+        _, jvp = value_and_derivative!!(cache, (f, df), (x, dx))
+        grad[j] = jvp
+    end
+    return val, grad
+end
+
+function _value_and_jacobian(f, ::AutoMooncakeForward, x::AbstractVector{T}) where {T}
+    y = f(x)
+    n_out, n_in = length(y), length(x)
+    J = Matrix{T}(undef, n_out, n_in)
+    cache = prepare_derivative_cache(f, x)
+    df = zero_tangent(f)
+    for j in 1:n_in
+        dx = zeros(T, n_in)
+        dx[j] = one(T)
+        _, jvp = value_and_derivative!!(cache, (f, df), (x, dx))
+        J[:, j] .= jvp
+    end
+    return y, J
+end
 
 @from_chainrules(MinimalCtx, Tuple{typeof(find_alpha),Float16,Float16,Float16})
 @from_chainrules(MinimalCtx, Tuple{typeof(find_alpha),Float32,Float32,Float32})

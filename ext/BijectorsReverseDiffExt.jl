@@ -10,6 +10,36 @@ using ReverseDiff:
     TrackedMatrix,
     @grad_from_chainrules
 
+import Bijectors: _value_and_gradient, _value_and_jacobian
+import ADTypes: AutoReverseDiff
+
+function _value_and_gradient(f, ::AutoReverseDiff{false}, x::AbstractVector)
+    grad = ReverseDiff.gradient(f, x)
+    return f(x), grad
+end
+
+function _value_and_jacobian(f, ::AutoReverseDiff{false}, x::AbstractVector)
+    jac = ReverseDiff.jacobian(f, x)
+    return f(x), jac
+end
+
+function _value_and_gradient(f, ::AutoReverseDiff{true}, x::AbstractVector)
+    tape = ReverseDiff.GradientTape(f, x)
+    compiled = ReverseDiff.compile(tape)
+    result = similar(x)
+    ReverseDiff.gradient!(result, compiled, x)
+    return f(x), result
+end
+
+function _value_and_jacobian(f, ::AutoReverseDiff{true}, x::AbstractVector)
+    tape = ReverseDiff.JacobianTape(f, x)
+    compiled = ReverseDiff.compile(tape)
+    y = f(x)
+    result = zeros(eltype(x), length(y), length(x))
+    ReverseDiff.jacobian!(result, compiled, x)
+    return y, result
+end
+
 using Bijectors:
     ChainRulesCore,
     Elementwise,

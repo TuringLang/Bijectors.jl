@@ -1,7 +1,18 @@
 module BijectorsForwardDiffExt
 
-using Bijectors: Bijectors, find_alpha
+import Bijectors: Bijectors, find_alpha, _value_and_gradient, _value_and_jacobian
+import ADTypes: AutoForwardDiff
 using ForwardDiff: ForwardDiff
+
+function _value_and_gradient(f, ::AutoForwardDiff, x::AbstractVector)
+    grad = ForwardDiff.gradient(f, x)
+    return f(x), grad
+end
+
+function _value_and_jacobian(f, ::AutoForwardDiff, x::AbstractVector)
+    jac = ForwardDiff.jacobian(f, x)
+    return f(x), jac
+end
 
 Bijectors._eps(::Type{<:ForwardDiff.Dual{<:Any,Real}}) = Bijectors._eps(Real)
 Bijectors._eps(::Type{<:ForwardDiff.Dual{<:Any,<:Integer}}) = Bijectors._eps(Real)
