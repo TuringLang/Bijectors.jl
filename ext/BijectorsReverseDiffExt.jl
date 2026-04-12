@@ -14,6 +14,9 @@ import Bijectors: _value_and_gradient, _value_and_jacobian
 import ADTypes: AutoReverseDiff
 
 function _value_and_gradient(f, ::AutoReverseDiff{false}, x::AbstractVector)
+    if isempty(x)
+        return f(x), similar(x, 0)
+    end
     result = ReverseDiff.DiffResults.GradientResult(x)
     ReverseDiff.gradient!(result, f, x)
     return ReverseDiff.DiffResults.value(result), ReverseDiff.DiffResults.gradient(result)
@@ -27,6 +30,9 @@ function _value_and_jacobian(f, ::AutoReverseDiff{false}, x::AbstractVector)
 end
 
 function _value_and_gradient(f, ::AutoReverseDiff{true}, x::AbstractVector)
+    if isempty(x)
+        return f(x), similar(x, 0)
+    end
     tape = ReverseDiff.GradientTape(f, x)
     compiled = ReverseDiff.compile(tape)
     result = ReverseDiff.DiffResults.GradientResult(x)

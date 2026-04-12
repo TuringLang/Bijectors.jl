@@ -9,31 +9,57 @@ using Mooncake:
     tangent_type,
     @from_chainrules,
     prepare_pullback_cache,
+    prepare_gradient_cache,
     prepare_derivative_cache,
     value_and_pullback!!,
+    value_and_gradient!!,
     value_and_derivative!!,
-    zero_tangent
+    zero_tangent,
+    Config,
+    _copy_output,
+    tangent_to_primal!!
 using Bijectors: find_alpha, ChainRulesCore
 import Bijectors: _value_and_gradient, _value_and_jacobian
 import ADTypes: AutoMooncake, AutoMooncakeForward
 
+_mooncake_config(::Union{AutoMooncake{Nothing},AutoMooncakeForward{Nothing}}) = Config()
+_mooncake_config(backend::Union{AutoMooncake,AutoMooncakeForward}) = backend.config
+
+function _mooncake_zero_tangent_or_primal(
+    x, backend::Union{AutoMooncake,AutoMooncakeForward}
+)
+    if _mooncake_config(backend).friendly_tangents
+        return tangent_to_primal!!(_copy_output(x), zero_tangent(x))
+    else
+        return zero_tangent(x)
+    end
+end
+
 ## Reverse-mode implementations
 
-function _value_and_gradient(f, ::AutoMooncake, x::AbstractVector{T}) where {T}
-    cache = prepare_pullback_cache(f, x)
-    val, (_, x_grad) = value_and_pullback!!(cache, one(T), f, x)
+function _value_and_gradient(f, backend::AutoMooncake, x::AbstractVector)
+    cache = prepare_gradient_cache(f, x; config=_mooncake_config(backend))
+    val, (_, x_grad) = value_and_gradient!!(cache, f, x)
     return val, x_grad
 end
 
-function _value_and_jacobian(f, ::AutoMooncake, x::AbstractVector{T}) where {T}
-    y = f(x)
-    n_out, n_in = length(y), length(x)
-    J = Matrix{T}(undef, n_out, n_in)
-    cache = prepare_pullback_cache(f, x)
-    dy = zeros(eltype(y), n_out)
-    for i in 1:n_out
-        fill!(dy, zero(eltype(y)))
-        dy[i] = one(eltype(y))
+function _value_and_jacobian(f, backend::AutoMooncake, x::AbstractVector)
+    cache = prepare_pullback_cache(f, x; config=_mooncake_config(backend))
+    n_out, n_in = length(cache.y_cache), length(x)
+    dy = zeros(eltype(cache.y_cache), n_out)
+    if n_out > 0
+        dy[1] = one(eltype(cache.y_cache))
+    end
+    val, (_, first_row) = value_and_pullback!!(cache, dy, f, x)
+    if n_out == 0
+        return _copy_output(val), Matrix{eltype(x)}(undef, 0, n_in)
+    end
+    y = _copy_output(val)
+    J = Matrix{eltype(first_row)}(undef, n_out, n_in)
+    J[1, :] .= first_row
+    for i in 2:n_out
+        fill!(dy, zero(eltype(cache.y_cache)))
+        dy[i] = one(eltype(cache.y_cache))
         _, (_, row) = value_and_pullback!!(cache, dy, f, x)
         J[i, :] .= row
     end
@@ -42,14 +68,22 @@ end
 
 ## Forward-mode implementations (column-by-column JVPs)
 
-function _value_and_gradient(f, ::AutoMooncakeForward, x::AbstractVector{T}) where {T}
+function _value_and_gradient(
+    f, backend::AutoMooncakeForward, x::AbstractVector{T}
+) where {T}
     val = f(x)
     n = length(x)
-    grad = Vector{T}(undef, n)
-    cache = prepare_derivative_cache(f, x)
-    df = zero_tangent(f)
+    cache = prepare_derivative_cache(f, x; config=_mooncake_config(backend))
+    df = _mooncake_zero_tangent_or_primal(f, backend)
+    if n == 0
+        return val, Vector{eltype(x)}(undef, 0)
+    end
     dx = zeros(T, n)
-    for j in 1:n
+    dx[1] = one(T)
+    _, first_jvp = value_and_derivative!!(cache, (f, df), (x, dx))
+    grad = Vector{typeof(first_jvp)}(undef, n)
+    grad[1] = first_jvp
+    for j in 2:n
         fill!(dx, zero(T))
         dx[j] = one(T)
         _, jvp = value_and_derivative!!(cache, (f, df), (x, dx))
@@ -58,14 +92,22 @@ function _value_and_gradient(f, ::AutoMooncakeForward, x::AbstractVector{T}) whe
     return val, grad
 end
 
-function _value_and_jacobian(f, ::AutoMooncakeForward, x::AbstractVector{T}) where {T}
+function _value_and_jacobian(
+    f, backend::AutoMooncakeForward, x::AbstractVector{T}
+) where {T}
     y = f(x)
     n_out, n_in = length(y), length(x)
-    J = Matrix{T}(undef, n_out, n_in)
-    cache = prepare_derivative_cache(f, x)
-    df = zero_tangent(f)
+    cache = prepare_derivative_cache(f, x; config=_mooncake_config(backend))
+    df = _mooncake_zero_tangent_or_primal(f, backend)
+    if n_in == 0
+        return y, Matrix{eltype(y)}(undef, n_out, 0)
+    end
     dx = zeros(T, n_in)
-    for j in 1:n_in
+    dx[1] = one(T)
+    _, first_jvp = value_and_derivative!!(cache, (f, df), (x, dx))
+    J = Matrix{eltype(first_jvp)}(undef, n_out, n_in)
+    J[:, 1] .= first_jvp
+    for j in 2:n_in
         fill!(dx, zero(T))
         dx[j] = one(T)
         _, jvp = value_and_derivative!!(cache, (f, df), (x, dx))
