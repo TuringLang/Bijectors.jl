@@ -4,7 +4,7 @@ using Distributions
 using LinearAlgebra
 using Test
 using PDMats
-import DifferentiationInterface as DI
+using ADTypes: AutoMooncake, AutoMooncakeForward
 using Bijectors.VectorBijectors
 using Enzyme: Enzyme
 using ForwardDiff: ForwardDiff
@@ -19,7 +19,7 @@ M = [1 2 3; 4 5 6]
 # TODO(penelopeysm): ReverseDiff gives wrong results when differentiating
 # through VecCorrBijector. Correctness tests are disabled for now.
 # https://github.com/TuringLang/Bijectors.jl/issues/434
-lkj_test_adtypes = [DI.AutoMooncake(), DI.AutoMooncakeForward()]
+lkj_test_adtypes = [AutoMooncake(), AutoMooncakeForward()]
 
 # Don't check that from_linked_vec(d)(randn(...)) is in support for LKJ,
 # The reason is because the inverse bijector for LKJ causes the diagonal

@@ -3,8 +3,8 @@ module VBReshapedTests
 using Distributions
 using LinearAlgebra
 using Test
+using ADTypes: AutoEnzyme, AutoMooncake, AutoMooncakeForward, AutoReverseDiff
 using Bijectors.VectorBijectors
-import DifferentiationInterface as DI
 using Enzyme: Enzyme
 using ForwardDiff: ForwardDiff
 using ReverseDiff: ReverseDiff
@@ -30,11 +30,11 @@ reshaped = [
 
 # Fails on 1.10: https://github.com/EnzymeAD/Enzyme.jl/issues/2987
 adtypes_no_enz_rvs = [
-    DI.AutoReverseDiff(),
-    DI.AutoReverseDiff(; compile=true),
-    DI.AutoMooncake(),
-    DI.AutoMooncakeForward(),
-    DI.AutoEnzyme(; mode=Enzyme.Forward, function_annotation=Enzyme.Const),
+    AutoReverseDiff(),
+    AutoReverseDiff(; compile=true),
+    AutoMooncake(),
+    AutoMooncakeForward(),
+    AutoEnzyme(; mode=Enzyme.Forward, function_annotation=Enzyme.Const),
 ]
 reshaped_no_enzyme = [reshape(Beta(2, 2), (1, 1, 1, 1, 1))]
 
