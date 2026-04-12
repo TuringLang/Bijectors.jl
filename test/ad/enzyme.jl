@@ -32,7 +32,8 @@ using Test
         @testset "forward" begin
             # No batches
             @testset for RT in (Const, Duplicated, DuplicatedNoNeed),
-                Tx in (Const, Duplicated), Ty in (Const, Duplicated),
+                Tx in (Const, Duplicated),
+                Ty in (Const, Duplicated),
                 Tz in (Const, Duplicated)
 
                 test_forward(Bijectors.find_alpha, RT, (x, Tx), (y, Ty), (z, Tz))
@@ -40,7 +41,8 @@ using Test
 
             # Batches
             @testset for RT in (Const, BatchDuplicated, BatchDuplicatedNoNeed),
-                Tx in (Const, BatchDuplicated), Ty in (Const, BatchDuplicated),
+                Tx in (Const, BatchDuplicated),
+                Ty in (Const, BatchDuplicated),
                 Tz in (Const, BatchDuplicated)
 
                 test_forward(Bijectors.find_alpha, RT, (x, Tx), (y, Ty), (z, Tz))
@@ -49,7 +51,8 @@ using Test
         @testset "reverse" begin
             # No batches
             @testset for RT in (Const, Active),
-                Tx in (Const, Active), Ty in (Const, Active),
+                Tx in (Const, Active),
+                Ty in (Const, Active),
                 Tz in (Const, Active)
 
                 test_reverse(Bijectors.find_alpha, RT, (x, Tx), (y, Ty), (z, Tz))

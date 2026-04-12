@@ -94,7 +94,7 @@ inverse(b)(y) == x
 ```
 
 !!! note
-
+    
     Bijectors re-exports both `with_logabsdet_jacobian` as well as `inverse`, so you don't need to import them separately if Bijectors is already a dependency.
     Conversely, if you don't want to depend on Bijectors.jl directly, you can just import these functions from their respective packages.
 
@@ -121,7 +121,7 @@ end
 ```
 
 !!! warning
-
+    
     This will return `[Inf, Inf]` if `x[3] == 1` (the 'north pole' of the sphere), which may potentially make downstream computations fail. One potential way around this is to add `eps(T)` to the denominator to avoid it ever being zero: you will sometimes see this trick used in Bijectors.jl. However, be aware that the reverse transform has to also be modified accordingly so that the two transforms remain inverses of each other!
 
 When it comes to computing the Jacobian, we find ourselves in a spot of bother.
@@ -171,7 +171,7 @@ $$J = \begin{bmatrix}
 \end{bmatrix}.$$
 
 !!! note
-
+    
     When you see $x_3$ here, don't think 'the variable $x_3$': it's just shorthand for $\pm \sqrt{1 - x_1^2 - x_2^2}$. (And recall that these formulae hold for both choices of sign.)
 
 Its determinant very nicely simplifies to
