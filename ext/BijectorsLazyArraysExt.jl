@@ -1,15 +1,15 @@
 module BijectorsLazyArraysExt
 
 import Bijectors: maporbroadcast
-using LazyArrays: LazyArrays
+using LazyArrays: BroadcastArray
 
-function maporbroadcast(f, x1::LazyArrays.BroadcastArray, x...)
+function maporbroadcast(f, x1::BroadcastArray, x...)
     return copy(f.(x1, x...))
 end
-function maporbroadcast(f, x1, x2::LazyArrays.BroadcastArray, x...)
+function maporbroadcast(f, x1, x2::BroadcastArray, x...)
     return copy(f.(x1, x2, x...))
 end
-function maporbroadcast(f, x1, x2, x3::LazyArrays.BroadcastArray, x...)
+function maporbroadcast(f, x1, x2, x3::BroadcastArray, x...)
     return copy(f.(x1, x2, x3, x...))
 end
 
