@@ -68,7 +68,7 @@ function _value_and_jacobian(
 )
     value = f(x)
     if isempty(x) || isempty(value)
-        return value, Matrix{eltype(value)}(undef, length(value), 0)
+        return value, Matrix{eltype(value)}(undef, length(value), length(x))
     end
     annotated_f = _annotate_function(f, backend, backend.mode)
     jacobian = only(Enzyme.jacobian(backend.mode, annotated_f, x))
