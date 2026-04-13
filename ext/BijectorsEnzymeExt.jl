@@ -67,7 +67,7 @@ function _value_and_jacobian(
     f, backend::AutoEnzyme{<:EnzymeCore.ReverseMode}, x::AbstractVector
 )
     value = f(x)
-    if isempty(x)
+    if isempty(x) || isempty(value)
         return value, Matrix{eltype(value)}(undef, length(value), 0)
     end
     annotated_f = _annotate_function(f, backend, backend.mode)
