@@ -4,10 +4,10 @@ version = "0.15.20"
 
 [deps]
 AbstractPPL = "7a57a42e-76ec-4ea3-a279-07e840d6d9cf"
+ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
 ArgCheck = "dce04be8-c92d-5529-be00-80e4d2c0e197"
 ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
 ChangesOfVariables = "9e997f8a-9a97-42d5-a9f1-ce6bfc15e2c0"
-DifferentiationInterface = "a0c0ee7d-e4b9-4e03-894e-1c5f64a51d63"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 DocStringExtensions = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
 EnzymeCore = "f151be2c-9106-41f4-ab19-57ee4f262869"
@@ -41,13 +41,16 @@ BijectorsMooncakeExt = "Mooncake"
 BijectorsReverseDiffChainRulesExt = ["ChainRules", "ReverseDiff"]
 BijectorsReverseDiffExt = "ReverseDiff"
 
+[sources]
+AbstractPPL = {url = "https://github.com/TuringLang/AbstractPPL.jl", rev = "evaluator-interface"}
+
 [compat]
 AbstractPPL = "0.14"
+ADTypes = "1"
 ArgCheck = "1, 2"
 ChainRules = "1"
 ChainRulesCore = "0.10.11, 1"
 ChangesOfVariables = "0.1"
-DifferentiationInterface = "0.7.14"
 Distributions = "0.25.33"
 DistributionsAD = "0.6"
 DocStringExtensions = "0.9"
