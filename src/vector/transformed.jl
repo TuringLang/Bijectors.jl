@@ -1,3 +1,6 @@
+# Note that to_vec, from_vec, vec_length, and optic_vec are inherited from the generic
+# UnivariateDistribution, MultivariateDistribution, and MatrixDistribution methods so
+# we don't need to define them here.
 for T in (B.UnivariateTransformed, B.MultivariateTransformed, B.MatrixTransformed)
     @eval begin
         to_linked_vec(td::$T) = to_linked_vec(td.dist) ∘ inverse(td.transform)
