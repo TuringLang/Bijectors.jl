@@ -26,7 +26,7 @@ jobs:
         with:
           version: "1.11"
 
-      - uses: julia-actions/cache@v2
+      - uses: julia-actions/cache@v3
 
       - name: Run Enzyme tests
         working-directory: test/integration/enzyme
