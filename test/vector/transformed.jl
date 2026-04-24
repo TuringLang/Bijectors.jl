@@ -20,6 +20,8 @@ transformed_dists = [
     transformed(MvNormal(zeros(3), I), Bijectors.Scale(2.0)),
     transformed(Dirichlet([1.0, 2.0, 3.0])),
     transformed(MvLogNormal(zeros(2), I), elementwise(log)),
+    # Matrix
+    transformed(MatrixNormal(zeros(2, 3), I(2), I(3)), elementwise(exp)),
 ]
 
 @testset "TransformedDistributions" begin
