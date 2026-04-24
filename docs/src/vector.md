@@ -70,3 +70,11 @@ Bijectors.VectorBijectors.linked_vec_length
 Bijectors.VectorBijectors.optic_vec
 Bijectors.VectorBijectors.linked_optic_vec
 ```
+
+## Additional utilities
+
+The VectorBijectors module also contains some functions that can be extended to provide better performance for distributions defined outside of Bijectors.jl / Distributions.jl.
+
+```@docs
+Bijectors.VectorBijectors.has_constant_vec_bijector
+```
