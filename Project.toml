@@ -1,6 +1,6 @@
 name = "Bijectors"
 uuid = "76274a88-744f-5084-9051-94815aaf08c4"
-version = "0.15.20"
+version = "0.15.21"
 
 [deps]
 AbstractPPL = "7a57a42e-76ec-4ea3-a279-07e840d6d9cf"
