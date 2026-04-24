@@ -1,3 +1,7 @@
+# 0.15.22
+
+Implement vector bijectors for `Bijectors.TransformedDistribution`.
+
 # 0.15.21
 
 Add compatibility with Roots.jl v3.

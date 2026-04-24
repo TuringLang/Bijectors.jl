@@ -46,6 +46,8 @@ include("cholesky/cholesky.jl")
 include("product/product.jl")
 include("product/fill.jl")
 
+include("transformed.jl")
+
 # Put last to avoid cluttering namespace
 include("test_utils.jl")
 
