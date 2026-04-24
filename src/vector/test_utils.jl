@@ -1,7 +1,7 @@
 using Test
 using LinearAlgebra: logabsdet, Cholesky, UpperTriangular, LowerTriangular
 using ADTypes
-import AbstractPPL
+using AbstractPPL: AbstractPPL
 import EnzymeCore as EC
 
 # Would like to use FiniteDifferences, but very easy to run into issues with
@@ -14,6 +14,10 @@ const default_adtypes = [
     AutoEnzyme(; mode=EC.Forward, function_annotation=EC.Const),
     AutoEnzyme(; mode=EC.Reverse, function_annotation=EC.Const),
 ]
+
+_to_ad_input(x::AbstractVector{<:AbstractFloat}) = x
+_to_ad_input(x::AbstractVector{<:Real}) = float.(x)
+_to_ad_input(x) = x
 
 _get_value_support(::D.Distribution{<:Any,VS}) where {VS<:D.ValueSupport} = VS
 
@@ -419,9 +423,11 @@ function test_optics(d::D.Distribution)
         #  corresponding to `lo[i]`. This is a bit finicky to do because `x` might not be a
         #  vector(!) so we need to flatten everything first, using `to_vec`.
         x = rand(d)
-        xvec = to_vec(d)(x)
+        xvec = _to_ad_input(to_vec(d)(x))
         yvec = to_linked_vec(d)(x)
-        prepared = AbstractPPL.prepare(ref_adtype, to_linked_vec(d) ∘ from_vec(d), xvec; mode=:jacobian)
+        prepared = AbstractPPL.prepare(
+            ref_adtype, to_linked_vec(d) ∘ from_vec(d), xvec; mode=:jacobian
+        )
         _, J = AbstractPPL.value_and_jacobian(prepared, xvec)
         o = optic_vec(d)
         lo = linked_optic_vec(d)
@@ -558,13 +564,13 @@ function test_logjac(d::D.Distribution, atol, rtol)
 
             @testset let x = x, d = d
                 # Forward
-                xvec = to_vec(d)(x)
+                xvec = _to_ad_input(to_vec(d)(x))
                 ffwd = to_linked_vec(d) ∘ from_vec(d)
                 y, vbt_logjac = with_logabsdet_jacobian(ffwd, xvec)
                 @test _isapprox_safe(y, ffwd(xvec); atol=atol, rtol=rtol)
                 # For the AD calculation we need to use to/from_vec_for_logjac_test instead,
                 # to make sure that the Jacobian is square.
-                ad_xvec = to_vec_for_logjac_test(d)(x)
+                ad_xvec = _to_ad_input(to_vec_for_logjac_test(d)(x))
                 ad_ffwd = to_linked_vec(d) ∘ from_vec_for_logjac_test(d)
                 prepared = AbstractPPL.prepare(ref_adtype, ad_ffwd, ad_xvec; mode=:jacobian)
                 _, ad_jac = AbstractPPL.value_and_jacobian(prepared, ad_xvec)
@@ -574,7 +580,7 @@ function test_logjac(d::D.Distribution, atol, rtol)
 
             @testset let x = x, d = d
                 # Reverse
-                yvec = to_linked_vec(d)(x)
+                yvec = _to_ad_input(to_linked_vec(d)(x))
                 vbt_frvs = to_vec(d) ∘ from_linked_vec(d)
                 x, vbt_logjac = with_logabsdet_jacobian(vbt_frvs, yvec)
                 @test _isapprox_safe(x, vbt_frvs(yvec); atol=atol, rtol=rtol)
@@ -615,7 +621,7 @@ function test_ad(d::D.Distribution, adtypes::Vector{<:ADTypes.AbstractADType}, a
 
     @testset "AD forward: $(_name(d))" begin
         x = _rand_safe_ad(d)
-        xvec = to_vec(d)(x)
+        xvec = _to_ad_input(to_vec(d)(x))
         ffwd = to_linked_vec(d) ∘ from_vec(d)
         ref_prepared_jac = AbstractPPL.prepare(ref_adtype, ffwd, xvec; mode=:jacobian)
         _, ref_jac = AbstractPPL.value_and_jacobian(ref_prepared_jac, xvec)
@@ -640,7 +646,7 @@ function test_ad(d::D.Distribution, adtypes::Vector{<:ADTypes.AbstractADType}, a
 
     @testset "AD reverse: $(_name(d))" begin
         x = _rand_safe_ad(d)
-        yvec = to_linked_vec(d)(x)
+        yvec = _to_ad_input(to_linked_vec(d)(x))
         frvs = to_vec(d) ∘ from_linked_vec(d)
         ref_prepared_jac = AbstractPPL.prepare(ref_adtype, frvs, yvec; mode=:jacobian)
         _, ref_jac = AbstractPPL.value_and_jacobian(ref_prepared_jac, yvec)

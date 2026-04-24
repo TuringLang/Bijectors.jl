@@ -36,10 +36,7 @@ const GROUP = get(ENV, "GROUP", "All")
 # Enzyme doesn't work on 1.12 yet
 const TEST_ENZYME = VERSION < v"1.12.0"
 
-TEST_ADTYPES = [
-    ("ForwardDiff", AutoForwardDiff()),
-    ("Mooncake", AutoMooncake()),
-]
+TEST_ADTYPES = [("ForwardDiff", AutoForwardDiff()), ("Mooncake", AutoMooncake())]
 if TEST_ENZYME
     Pkg.add("Enzyme")
     Pkg.add("EnzymeTestUtils")
