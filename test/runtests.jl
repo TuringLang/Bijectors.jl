@@ -107,6 +107,7 @@ include("bijectors/utils.jl")
         include("vector/reshaped.jl")
         include("vector/cholesky.jl")
         include("vector/order.jl")
+        include("vector/transformed.jl")
     end
 
     if GROUP == "All" || GROUP == "VectorProduct"
