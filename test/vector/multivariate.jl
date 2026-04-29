@@ -15,6 +15,8 @@ multivariates = [
     # identity transforms (continuous multivariate)
     MvNormal([0.0, 0.0], I),
     MvNormalCanon([1.0, 2.0, 3.0], [4.0 -2.0 -1.0; -2.0 5.0 -1.0; -1.0 -1.0 6.0]),
+    MvTDist(5.0, zeros(2), Matrix(1.0I, 2, 2)),
+    MvTDist(1.0, [1.0, -1.0, 0.5], [2.0 0.5 0.0; 0.5 3.0 0.5; 0.0 0.5 1.5]),
     # broadcast exp/log
     MvLogNormal([0.0, 0.0], I),
     # simplex distribution

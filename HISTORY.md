@@ -1,3 +1,7 @@
+# 0.15.23
+
+Implement vector bijectors for `Distributions.MvTDist`.
+
 # 0.15.22
 
 Implement vector bijectors for `Bijectors.TransformedDistribution`.
