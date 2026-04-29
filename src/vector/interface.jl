@@ -92,13 +92,19 @@ Returns a function that can be used to convert an unconstrained vector back to a
 ## Examples
 
 ```jldoctest
-julia> using Bijectors.VectorBijectors: from_linked_vec; using Distributions
+julia> using Bijectors.VectorBijectors: from_linked_vec; using Distributions, Bijectors
 
 julia> d = Beta(2, 2); from_linked_vec(d)([1.0])
 0.7310585786300049
 
+julia> f = from_linked_vec(d); Bijectors.with_logabsdet_jacobian(f, [1.0])
+(0.7310585786300049, -1.6265233750364456)
+
 julia> d = product_distribution((a = Normal(), b = Beta(2, 2))); from_linked_vec(d)([0.2, 1.0])
 (a = 0.2, b = 0.7310585786300049)
+
+julia> f = from_linked_vec(d); Bijectors.with_logabsdet_jacobian(f, [0.2, 1.0])
+((a = 0.2, b = 0.7310585786300049), -1.6265233750364456)
 ```
 """
 function from_linked_vec end
@@ -113,16 +119,22 @@ Returns a function that can be used to convert a sample from `d` to an unconstra
 ## Examples
 
 ```jldoctest
-julia> using Bijectors.VectorBijectors: to_linked_vec; using Distributions
+julia> using Bijectors.VectorBijectors: to_linked_vec; using Distributions, Bijectors
 
 julia> d = Beta(2, 2); to_linked_vec(d)(0.5)
 1-element Vector{Float64}:
  0.0
 
+julia> f = to_linked_vec(d); Bijectors.with_logabsdet_jacobian(f, 0.5)
+([0.0], 1.3862943611198906)
+
 julia> d = product_distribution((a = Normal(), b = Beta(2, 2))); to_linked_vec(d)((a = 0.2, b = 0.5))
 2-element Vector{Float64}:
  0.2
  0.0
+
+julia> f = to_linked_vec(d); Bijectors.with_logabsdet_jacobian(f, (a = 0.2, b = 0.5))
+([0.2, 0.0], 1.3862943611198906)
 ```
 """
 function to_linked_vec end
