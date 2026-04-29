@@ -14,7 +14,7 @@ julia> using Bijectors.VectorBijectors: from_vec; using Distributions
 julia> d = Beta(2, 2); from_vec(d)([0.5])
 0.5
 
-ulia> d = product_distribution((a = Normal(), b = Beta(2, 2))); from_vec(d)([0.2, 0.5])
+julia> d = product_distribution((a = Normal(), b = Beta(2, 2))); from_vec(d)([0.2, 0.5])
 (a = 0.2, b = 0.5)
 ```
 """
