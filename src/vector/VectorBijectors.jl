@@ -18,6 +18,8 @@ export optic_vec
 export linked_optic_vec
 # utils
 export has_constant_vec_bijector
+export scalar_to_scalar_bijector
+export TypedIdentity, Log, Untruncate
 # re-exports
 export with_logabsdet_jacobian
 export inverse
