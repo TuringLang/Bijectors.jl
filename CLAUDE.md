@@ -17,7 +17,7 @@ The code in `src/` outside of `src/vector/` is largely legacy. It still works an
 
 Run tests with `julia --project -e 'using Pkg; Pkg.test()'`.
 
-Use `Bijectors.VectorBijectors.test_all(d)` to test a new distribution's VectorBijectors implementation. It checks roundtrips, type stability, vector lengths, optics, allocations, log-Jacobian correctness (against ForwardDiff), and AD compatibility across backends.
+`Bijectors.VectorBijectors.test_all(d)` is the single source of truth for whether a VectorBijectors implementation is correct. If it passes, the implementation is almost certainly fine. It checks roundtrips, type stability, vector lengths, optics, allocations, log-Jacobian correctness (against ForwardDiff), and AD compatibility across backends.
 
 AD backends tested: ForwardDiff (reference), ReverseDiff, Mooncake, Enzyme. It is acceptable to skip a backend for genuine upstream bugs (especially ReverseDiff), but prefer `@test_broken` over silently omitting tests.
 
