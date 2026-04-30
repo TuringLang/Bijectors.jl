@@ -1,3 +1,7 @@
+# 0.15.24
+
+Export a few more functions from `Bijectors.VectorBijectors`, namely `scalar_to_scalar_bijector`, `TypedIdentity`, `Log`, and `Untruncate`.
+
 # 0.15.23
 
 Implement vector bijectors for `Distributions.MvTDist`.

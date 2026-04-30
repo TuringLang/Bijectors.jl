@@ -26,6 +26,9 @@ inverse(e::Exp) = Log(e.bound, e.sign)
 Callable struct, defined such that `(l::Log)(x) = log(l.sign * (x - l.bound))`. The sign is
 determined by the `sign` field.
 
+This is the appropriate scalar-to-scalar bijector for univariate distributions which have a
+support of `[l.bound, ∞)` (if `l.sign == 1`), or `(-∞, l.bound]` (if `l.sign == -1`).
+
 !!! warning
     This does not check whether the input is the domain of the transformation.
 """
