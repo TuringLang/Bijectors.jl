@@ -6,6 +6,17 @@ output_size(::SignFlip, dim) = dim
 is_monotonically_increasing(::SignFlip) = false
 is_monotonically_decreasing(::SignFlip) = true
 
+abstract type AbstractOrdering end
+struct Ascending <: AbstractOrdering end
+struct Descending <: AbstractOrdering end
+struct FixedOrder{ordertuple} <: AbstractOrdering
+    function FixedOrder{ordertuple}() where {ordertuple}
+        @assert (ordertuple isa Tuple{Int, Int, Vararg{Int}}) && allunique(ordertuple) && all(ordertuple .> 0)
+        new{ordertuple}()
+    end
+    FixedOrder(ordertuple::Tuple{Int, Int, Vararg{Int}}) = FixedOrder{ordertuple}()
+end
+
 """
     OrderedBijector()
 
@@ -15,13 +26,22 @@ A bijector mapping unordered vectors in ℝᵈ to ordered vectors in ℝᵈ.
 - [Stan's documentation](https://mc-stan.org/docs/2_27/reference-manual/ordered-vector.html)
   - Note that this transformation and its inverse are the _opposite_ of in this reference.
 """
-struct OrderedBijector <: Bijector end
+struct OrderedBijector{OT<:AbstractOrdering} <: Bijector
+    OrderedBijector() = new{Ascending}()
+    OrderedBijector(::OT) where {OT <: AbstractOrdering}= new{OT}()
+    OrderedBijector{OT}() where {OT <: AbstractOrdering} = new{OT}()
+    OrderedBijector(ordertuple::Tuple{Int, Int, Vararg{Int}}) = OrderedBijector{FixedOrder{ordertuple}}()
+    function OrderedBijector{FixedOrder{ordertuple}}() where {ordertuple}
+        @assert (ordertuple isa Tuple{Int, Int, Vararg{Int}}) && all(ordertuple .> 0) && allunique(ordertuple)
+        new{FixedOrder{ordertuple}}()
+    end
+end
 
-with_logabsdet_jacobian(b::OrderedBijector, x) = transform(b, x), logabsdetjac(b, x)
+with_logabsdet_jacobian(b::OrderedBijector, y) = transform(b, y), logabsdetjac(b, y)
 
-transform(b::OrderedBijector, y::AbstractVecOrMat) = _transform_ordered(y)
+transform(b::OrderedBijector{OT}, y::AbstractVecOrMat) where {OT<:AbstractOrdering} = _transform_ordered(y, OT)
 
-function _transform_ordered(y::AbstractVector)
+function _transform_ordered(y::AbstractVector, ::Type{Ascending})
     x = similar(y)
     @assert !isempty(y)
 
@@ -33,7 +53,7 @@ function _transform_ordered(y::AbstractVector)
     return x
 end
 
-function _transform_ordered(y::AbstractMatrix)
+function _transform_ordered(y::AbstractMatrix, ::Type{Ascending})
     x = similar(y)
     @assert !isempty(y)
 
@@ -48,20 +68,79 @@ function _transform_ordered(y::AbstractMatrix)
     return x
 end
 
-transform(ib::Inverse{OrderedBijector}, x::AbstractVecOrMat) = _transform_inverse_ordered(x)
-function _transform_inverse_ordered(x::AbstractVector)
+function _transform_ordered(y::AbstractVector, ::Type{Descending})
+    x = similar(y)
+    @assert !isempty(y)
+
+    N = length(x)
+    @inbounds x[N] = y[N]
+    @inbounds for i in N-1:-1:1
+        x[i] = x[i + 1] + exp(y[i])
+    end
+
+    return x
+end
+
+function _transform_ordered(y::AbstractMatrix, ::Type{Descending})
+    x = similar(y)
+    @assert !isempty(y)
+
+    N = size(x, 1)
+    @inbounds for j in 1:size(x, 2), i in N:-1:1
+        if i == N
+            x[i, j] = y[i, j]
+        else
+            x[i, j] = x[i + 1, j] + exp(y[i, j])
+        end
+    end
+
+    return x
+end
+
+
+function _transform_ordered(y::AbstractVector, ::Type{FixedOrder{o}}) where {o}
+
+    x = copy(y)
+    @assert !isempty(y)
+
+    @inbounds x[o[1]] = y[o[1]]
+    @inbounds for i in 2:length(o)
+        x[o[i]] = x[o[i - 1]] + exp(y[o[i]])
+    end
+
+    return x
+end
+
+function _transform_ordered(y::AbstractMatrix, ::Type{FixedOrder{o}}) where {o}
+    x = copy(y)
+    @assert !isempty(y)
+
+    @inbounds for j in 1:size(x, 2), i in 1:length(o)
+        if i == 1
+            x[o[i], j] = y[o[i], j]
+        else
+            x[o[i], j] = x[o[i - 1], j] + exp(y[o[i], j])
+        end
+    end
+
+    return x
+end
+
+transform(ib::Inverse{OrderedBijector{OT}}, x::AbstractVecOrMat) where {OT <: AbstractOrdering} = _transform_inverse_ordered(x, OT)
+
+function _transform_inverse_ordered(x::AbstractVector, ::Type{Ascending})
     y = similar(x)
     @assert !isempty(y)
 
     @inbounds y[1] = x[1]
-    @inbounds for i in 2:length(y)
-        y[i] = log(x[i] - x[i - 1])
+    @inbounds for i in 2:length(x)
+        @inbounds y[i] = log(x[i] - x[i - 1])
     end
 
     return y
 end
 
-function _transform_inverse_ordered(x::AbstractMatrix)
+function _transform_inverse_ordered(x::AbstractMatrix, ::Type{Ascending})
     y = similar(x)
     @assert !isempty(y)
 
@@ -76,8 +155,69 @@ function _transform_inverse_ordered(x::AbstractMatrix)
     return y
 end
 
-logabsdetjac(b::OrderedBijector, x::AbstractVector) = sum(@view(x[2:end]))
-logabsdetjac(b::OrderedBijector, x::AbstractMatrix) = vec(sum(@view(x[2:end, :]); dims=1))
+function _transform_inverse_ordered(x::AbstractVector, ::Type{Descending})
+    y = similar(x)
+    @assert !isempty(y)
+
+    n = length(x)
+    @inbounds y[n] = x[n]
+    @inbounds for i in (n - 1):-1:1
+        @inbounds y[i] = log(x[i] - x[i + 1])
+    end
+
+    return y
+end
+
+function _transform_inverse_ordered(x::AbstractMatrix, ::Type{Descending})
+    y = similar(x)
+    @assert !isempty(y)
+    n = size(y, 1)
+    @inbounds for j in 1:size(y, 2), i in n:-1:1
+        if i == n
+            y[i, j] = x[i, j]
+        else
+            y[i, j] = log(x[i, j] - x[i + 1, j])
+        end
+    end
+
+    return y
+end
+
+function _transform_inverse_ordered(x::AbstractVector, ::Type{FixedOrder{o}}) where {o}
+    y = copy(x)
+    @assert !isempty(y)
+
+    @inbounds y[o[1]] = x[o[1]]
+    @inbounds for i in 2:length(o)
+        @inbounds y[o[i]] = log(x[o[i]] - x[o[i - 1]])
+    end
+
+    return y
+end
+
+function _transform_inverse_ordered(x::AbstractMatrix, ::Type{FixedOrder{o}}) where {o}
+    y = copy(x)
+    @assert !isempty(y)
+
+    @inbounds for j in 1:size(y, 2), i in 1:length(o)
+        if i == 1
+            y[o[i], j] = x[o[i], j]
+        else
+            y[o[i], j] = log(x[o[i], j] - x[o[i - 1], j])
+        end
+    end
+
+    return y
+end
+
+logabsdetjac(::OrderedBijector{Ascending}, x::AbstractVector) = sum(@view(x[2:end]))
+logabsdetjac(::OrderedBijector{Ascending}, x::AbstractMatrix) = vec(sum(@view(x[2:end, :]); dims=1))
+
+logabsdetjac(::OrderedBijector{Descending}, x::AbstractVector) = sum(@view(x[1:end-1]))
+logabsdetjac(::OrderedBijector{Descending}, x::AbstractMatrix) = vec(sum(@view(x[1:end-1, :]); dims=1))
+
+logabsdetjac(::OrderedBijector{FixedOrder{o}}, x::AbstractVector) where {o} = sum(@view(x[collect(o)[2:end]]))
+logabsdetjac(::OrderedBijector{FixedOrder{o}}, x::AbstractMatrix) where {o} = vec(sum(@view(x[collect(o)[2:end], :]); dims=1))
 
 # Need a custom distribution type to handle this properly.
 """
@@ -88,12 +228,24 @@ Wraps a distribution to restrict its support to the subspace of ordered vectors.
 # Fields
 $(TYPEDFIELDS)
 """
-struct OrderedDistribution{D<:ContinuousMultivariateDistribution,B} <:
+struct OrderedDistribution{D<:ContinuousMultivariateDistribution, B, OT<:AbstractOrdering} <:
        ContinuousMultivariateDistribution
     "distribution transformed to have ordered support"
     dist::D
     "transformation from constrained space to ordered unconstrained space"
     transform::B
+
+    OrderedDistribution(d::D, b::B, ::OT=Ascending()) where {D, B, OT <: AbstractOrdering} = new{D, B, OT}(d, b)
+    OrderedDistribution{D, B}(d::D, b::B, ::OT=Ascending()) where {D, B, OT <: AbstractOrdering} = new{D, B, OT}(d, b)
+    OrderedDistribution(d::D, b::B, ordertuple::Tuple{Int, Int, Vararg{Int}}) where {D, B} = OrderedDistribution(d, b, FixedOrder{ordertuple})
+    function OrderedDistribution(d::D, b::B, ::FixedOrder{ordertuple}) where {D, B, ordertuple}
+        if !((ordertuple isa Tuple{Int, Int, Vararg{Int}})
+             && issubset(ordertuple, 1:length(d))
+             && allunique(ordertuple))
+        throw(ArgumentError("ordertuple must be a subset of 1:$(length(d)) of length at least 2 with no duplicates."))
+        end
+        new{D, B, FixedOrder{ordertuple}}(d, b)
+    end
 end
 
 """
@@ -127,7 +279,10 @@ A common case is where the distribution being ordered is a joint distribution of
 distributions. In this case the normalization factor works out to be the constant `n!`, and `ordered` can
 again be used without problems even if the parameters of the univariate distribution are sampled.
 """
-function ordered(d::ContinuousMultivariateDistribution)
+
+ordered(d::ContinuousMultivariateDistribution, ordertuple::Tuple{Int, Int, Vararg{Int}}) = ordered(d, FixedOrder{ordertuple}())
+
+function ordered(d::ContinuousMultivariateDistribution, order::OT=Ascending()) where {OT <: AbstractOrdering}
     # We're good if the map from unconstrained (in which we apply the ordered bijector)
     # to constrained is monotonically increasing, i.e. order-preserving. In that case,
     # we can form the ordered transformation as `binv ∘ OrderedBijector() ∘ b`.
@@ -136,33 +291,47 @@ function ordered(d::ContinuousMultivariateDistribution)
     b = bijector(d)
     binv = inverse(b)
     ordered_b = if is_monotonically_decreasing(binv)
-        SignFlip() ∘ inverse(OrderedBijector()) ∘ SignFlip() ∘ b
+        SignFlip() ∘ inverse(OrderedBijector{OT}()) ∘ SignFlip() ∘ b
     elseif is_monotonically_increasing(binv)
-        inverse(OrderedBijector()) ∘ b
+        inverse(OrderedBijector{OT}()) ∘ b
     else
         throw(ArgumentError("ordered transform is currently not supported for $d."))
     end
 
-    return OrderedDistribution(d, ordered_b)
+    return OrderedDistribution(d, ordered_b, order)
 end
 
 bijector(d::OrderedDistribution) = d.transform
 
 Base.eltype(::Type{<:OrderedDistribution{D}}) where {D} = eltype(D)
 Base.eltype(d::OrderedDistribution) = eltype(d.dist)
-function Distributions._logpdf(d::OrderedDistribution, x::AbstractVector{<:Real})
+function Distributions._logpdf(d::OrderedDistribution{D, B, OT}, x::AbstractVector{<:Real}) where {D, B, OT}
     lp = Distributions.logpdf(d.dist, x)
-    issorted(x) && return lp
-    return oftype(lp, -Inf)
+    return if _is_ordered(x, OT)
+        lp
+    else
+        oftype(lp, -Inf)
+    end
 end
 Base.length(d::OrderedDistribution) = length(d.dist)
 
 function Distributions._rand!(
-    rng::AbstractRNG, d::OrderedDistribution, x::AbstractVector{<:Real}
-)
+    rng::AbstractRNG, d::OrderedDistribution{D, B, OT}, x::AbstractVector{<:Real}
+) where {D, B, OT}
     # Rejection sampling.
     while true
         Distributions.rand!(rng, d.dist, x)
-        issorted(x) && return x
+        _is_ordered(x, OT) && return x
     end
+    return x
+end
+
+_is_ordered(x::AbstractVector, ::Type{Ascending}) = issorted(x)
+_is_ordered(x::AbstractVector, ::Type{Descending}) = issorted(x, rev=true)
+
+function _is_ordered(x::AbstractVector, ::Type{FixedOrder{o}}) where {o}
+    @inbounds for i in 2:length(o)
+        x[o[i-1]] ≤ x[o[i]] || return false
+    end
+    true
 end
