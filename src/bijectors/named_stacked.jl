@@ -87,8 +87,8 @@ end
                 end
             ),
         )
-        push!(exprs, :(transforms = merge(transforms, ($n=trf,))))
-        push!(exprs, :(ranges = merge(ranges, ($n=output_range,))))
+        push!(exprs, :(transforms = merge(transforms, (($n)=trf,))))
+        push!(exprs, :(ranges = merge(ranges, (($n)=output_range,))))
     end
     push!(exprs, :(return NamedStacked{names}(transforms, ranges)))
     return Expr(:block, exprs...)
@@ -153,14 +153,15 @@ end
         if i == 1
             push!(
                 exprs,
-                :(output = ($n=inverse(nsi.orig.transforms.$n)(y[nsi.orig.ranges.$n]),)),
+                :(output = (($n)=inverse(nsi.orig.transforms.$n)(y[nsi.orig.ranges.$n]),)),
             )
         else
             push!(
                 exprs,
                 :(
                     output = merge(
-                        output, ($n=inverse(nsi.orig.transforms.$n)(y[nsi.orig.ranges.$n]),)
+                        output,
+                        (($n)=inverse(nsi.orig.transforms.$n)(y[nsi.orig.ranges.$n]),),
                     )
                 ),
             )
@@ -182,7 +183,7 @@ end
                     first_out, first_logjac = with_logabsdet_jacobian(
                         inverse(nsi.orig.transforms.$n), y[nsi.orig.ranges.$n]
                     )
-                    output = ($n=first_out,)
+                    output = (($n)=first_out,)
                     logjac = first_logjac
                 end,
             )
@@ -193,7 +194,7 @@ end
                     next_out, next_logjac = with_logabsdet_jacobian(
                         inverse(nsi.orig.transforms.$n), y[nsi.orig.ranges.$n]
                     )
-                    output = merge(output, ($n=next_out,))
+                    output = merge(output, (($n)=next_out,))
                     logjac += next_logjac
                 end,
             )

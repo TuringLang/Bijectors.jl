@@ -1,7 +1,6 @@
 [deps]
 Bijectors = "76274a88-744f-5084-9051-94815aaf08c4"
 ChangesOfVariables = "9e997f8a-9a97-42d5-a9f1-ce6bfc15e2c0"
-DifferentiationInterface = "a0c0ee7d-e4b9-4e03-894e-1c5f64a51d63"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 FiniteDifferences = "26cc04aa-876d-5657-8c51-4c34ba976000"

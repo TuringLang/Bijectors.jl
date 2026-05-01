@@ -1,19 +1,25 @@
 using Test
 using LinearAlgebra: logabsdet, Cholesky, UpperTriangular, LowerTriangular
-import DifferentiationInterface as DI
+import ADTypes:
+    AutoForwardDiff,
+    AutoReverseDiff,
+    AutoMooncake,
+    AutoMooncakeForward,
+    AutoEnzyme,
+    AbstractADType
 import EnzymeCore as EC
 
 # Would like to use FiniteDifferences, but very easy to run into issues with
 # https://juliadiff.org/FiniteDifferences.jl/latest/#Dealing-with-Singularities
-const ref_adtype = DI.AutoForwardDiff()
+const ref_adtype = AutoForwardDiff()
 
-const default_adtypes = [
-    DI.AutoReverseDiff(),
-    DI.AutoReverseDiff(; compile=true),
-    DI.AutoMooncake(),
-    DI.AutoMooncakeForward(),
-    DI.AutoEnzyme(; mode=EC.Forward, function_annotation=EC.Const),
-    DI.AutoEnzyme(; mode=EC.Reverse, function_annotation=EC.Const),
+const default_adtypes = AbstractADType[
+    AutoReverseDiff(),
+    AutoReverseDiff(; compile=true),
+    AutoMooncake(; config=nothing),
+    AutoMooncakeForward(; config=nothing),
+    AutoEnzyme(; mode=EC.Forward, function_annotation=EC.Const),
+    AutoEnzyme(; mode=EC.Reverse, function_annotation=EC.Const),
 ]
 
 _get_value_support(::D.Distribution{<:Any,VS}) where {VS<:D.ValueSupport} = VS
@@ -422,7 +428,7 @@ function test_optics(d::D.Distribution)
         x = rand(d)
         xvec = to_vec(d)(x)
         yvec = to_linked_vec(d)(x)
-        J = DI.jacobian(to_linked_vec(d) ∘ from_vec(d), ref_adtype, xvec)
+        _, J = B._value_and_jacobian(to_linked_vec(d) ∘ from_vec(d), ref_adtype, xvec)
         o = optic_vec(d)
         lo = linked_optic_vec(d)
         for i in 1:length(yvec)
@@ -566,7 +572,9 @@ function test_logjac(d::D.Distribution, atol, rtol)
                 # to make sure that the Jacobian is square.
                 ad_xvec = to_vec_for_logjac_test(d)(x)
                 ad_ffwd = to_linked_vec(d) ∘ from_vec_for_logjac_test(d)
-                ad_logjac = first(logabsdet(DI.jacobian(ad_ffwd, ref_adtype, ad_xvec)))
+                ad_logjac = first(
+                    logabsdet(last(B._value_and_jacobian(ad_ffwd, ref_adtype, ad_xvec)))
+                )
                 @test vbt_logjac ≈ ad_logjac atol = atol rtol = rtol
             end
 
@@ -579,7 +587,9 @@ function test_logjac(d::D.Distribution, atol, rtol)
                 # For the AD calculation we need to use to/from_vec_for_logjac_test instead,
                 # to make sure that the Jacobian is square.
                 ad_frvs = to_vec_for_logjac_test(d) ∘ from_linked_vec(d)
-                ad_logjac = first(logabsdet(DI.jacobian(ad_frvs, ref_adtype, yvec)))
+                ad_logjac = first(
+                    logabsdet(last(B._value_and_jacobian(ad_frvs, ref_adtype, yvec)))
+                )
                 @test vbt_logjac ≈ ad_logjac atol = atol rtol = rtol
             end
         end
@@ -590,7 +600,7 @@ end
 Test that various AD backends can differentiate the conversions to and from vector and
 linked vector forms for the given distribution `d`.
 """
-function test_ad(d::D.Distribution, adtypes::Vector{<:DI.AbstractADType}, atol, rtol)
+function test_ad(d::D.Distribution, adtypes::Vector{<:AbstractADType}, atol, rtol)
     # If `d` is a discrete distribution, Mooncake refuses to differentiate through the
     # transforms (which are just identity transforms). Likewise, Enzyme will throw an
     # error saying that the output is Const but was not marked as such.
@@ -600,9 +610,9 @@ function test_ad(d::D.Distribution, adtypes::Vector{<:DI.AbstractADType}, atol, 
     adtypes = if d isa D.Distribution{<:Any,D.Discrete}
         filter(adtypes) do adtype
             !(
-                adtype isa DI.AutoMooncake ||
-                adtype isa DI.AutoMooncakeForward ||
-                adtype isa DI.AutoEnzyme
+                adtype isa AutoMooncake ||
+                adtype isa AutoMooncakeForward ||
+                adtype isa AutoEnzyme
             )
         end
     else
@@ -613,18 +623,18 @@ function test_ad(d::D.Distribution, adtypes::Vector{<:DI.AbstractADType}, atol, 
         x = _rand_safe_ad(d)
         xvec = to_vec(d)(x)
         ffwd = to_linked_vec(d) ∘ from_vec(d)
-        ref_jac = DI.jacobian(ffwd, ref_adtype, xvec)
+        _, ref_jac = B._value_and_jacobian(ffwd, ref_adtype, xvec)
 
         ladj(xvec) = last(with_logabsdet_jacobian(ffwd, xvec))
-        ref_grad_ladj = DI.gradient(ladj, ref_adtype, xvec)
+        _, ref_grad_ladj = B._value_and_gradient(ladj, ref_adtype, xvec)
 
         for adtype in adtypes
             @testset let x = x, adtype = adtype, d = d
-                ad_jac = DI.jacobian(ffwd, adtype, xvec)
+                _, ad_jac = B._value_and_jacobian(ffwd, adtype, xvec)
                 @test ref_jac ≈ ad_jac atol = atol rtol = rtol
             end
             @testset let x = x, adtype = adtype, d = d
-                ad_grad_ladj = DI.gradient(ladj, adtype, xvec)
+                _, ad_grad_ladj = B._value_and_gradient(ladj, adtype, xvec)
                 @test ref_grad_ladj ≈ ad_grad_ladj atol = atol rtol = rtol
             end
         end
@@ -634,19 +644,19 @@ function test_ad(d::D.Distribution, adtypes::Vector{<:DI.AbstractADType}, atol, 
         x = _rand_safe_ad(d)
         yvec = to_linked_vec(d)(x)
         frvs = to_vec(d) ∘ from_linked_vec(d)
-        ref_jac = DI.jacobian(frvs, ref_adtype, yvec)
+        _, ref_jac = B._value_and_jacobian(frvs, ref_adtype, yvec)
 
         ladj(yvec) = last(with_logabsdet_jacobian(frvs, yvec))
-        ref_grad_ladj = DI.gradient(ladj, ref_adtype, yvec)
+        _, ref_grad_ladj = B._value_and_gradient(ladj, ref_adtype, yvec)
 
         for adtype in adtypes
             @testset let x = x, adtype = adtype, d = d
-                ad_jac = DI.jacobian(frvs, adtype, yvec)
+                _, ad_jac = B._value_and_jacobian(frvs, adtype, yvec)
                 @test ref_jac ≈ ad_jac atol = atol rtol = rtol
             end
 
             @testset let x = x, adtype = adtype, d = d
-                ad_grad_ladj = DI.gradient(ladj, adtype, yvec)
+                _, ad_grad_ladj = B._value_and_gradient(ladj, adtype, yvec)
                 @test ref_grad_ladj ≈ ad_grad_ladj atol = atol rtol = rtol
             end
         end

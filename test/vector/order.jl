@@ -3,9 +3,9 @@ module VBOrderTests
 using Distributions
 using LinearAlgebra
 using Test
+using ADTypes: AutoEnzyme, AutoMooncake, AutoMooncakeForward
 using Bijectors.VectorBijectors
 using Bijectors: ordered
-import DifferentiationInterface as DI
 using Enzyme: Enzyme
 using ForwardDiff: ForwardDiff
 using ReverseDiff: ReverseDiff
@@ -24,10 +24,10 @@ base_dists = [
 # because of the heavy setindex! usage.
 # https://github.com/JuliaDiff/ReverseDiff.jl/issues/43 We just avoid testing it for now.
 joint_test_adtypes = [
-    DI.AutoMooncake(),
-    DI.AutoMooncakeForward(),
-    DI.AutoEnzyme(; mode=Enzyme.Forward),
-    DI.AutoEnzyme(; mode=Enzyme.Reverse),
+    AutoMooncake(),
+    AutoMooncakeForward(),
+    AutoEnzyme(; mode=Enzyme.Forward),
+    AutoEnzyme(; mode=Enzyme.Reverse),
 ]
 
 @testset "Order statistics" begin

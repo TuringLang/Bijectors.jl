@@ -39,7 +39,7 @@ has_square_jacobian(b, x) = Bijectors.output_size(b, x) == size(x)
             y,
             logjac,
             changes_of_variables_test=has_square_jacobian(b, xs[1]),
-            test_not_identity=!isidentity,
+            test_not_identity=(!isidentity),
         )
     end
 
@@ -63,7 +63,7 @@ has_square_jacobian(b, x) = Bijectors.output_size(b, x) == size(x)
             y,
             logjac,
             changes_of_variables_test=has_square_jacobian(b, xs[1]),
-            test_not_identity=!isidentity,
+            test_not_identity=(!isidentity),
         )
     end
 end
