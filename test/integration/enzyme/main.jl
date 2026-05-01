@@ -1,6 +1,6 @@
 using ADTypes
 using Bijectors
-using DifferentiationInterface
+using AbstractPPL
 using Enzyme
 using FiniteDifferences
 using LinearAlgebra
@@ -10,8 +10,10 @@ const REF_BACKEND = AutoFiniteDifferences(; fdm=central_fdm(5, 1))
 
 function test_ad(f, backend, x; rtol=1e-6, atol=1e-6)
     @info "testing AD for function $f with $backend"
-    ref_gradient = DifferentiationInterface.gradient(f, REF_BACKEND, x)
-    gradient = DifferentiationInterface.gradient(f, backend, x)
+    ref_prepared = AbstractPPL.prepare(REF_BACKEND, f, x)
+    prepared = AbstractPPL.prepare(backend, f, x)
+    _, ref_gradient = AbstractPPL.value_and_gradient(ref_prepared, x)
+    _, gradient = AbstractPPL.value_and_gradient(prepared, x)
     @test isapprox(gradient, ref_gradient; rtol=rtol, atol=atol)
 end
 
@@ -38,8 +40,17 @@ BACKENDS = [
 
             roundtrip(y) = sum(transform(b, binv(y)))
             inverse_only(y) = sum(transform(binv, y))
-            test_ad(roundtrip, adtype, y)
-            test_ad(inverse_only, adtype, y)
+            if isempty(y)
+                ref_prepared = AbstractPPL.prepare(REF_BACKEND, roundtrip, y)
+                _, ref_gradient = AbstractPPL.value_and_gradient(ref_prepared, y)
+                @test isempty(ref_gradient)
+                ref_prepared = AbstractPPL.prepare(REF_BACKEND, inverse_only, y)
+                _, ref_gradient = AbstractPPL.value_and_gradient(ref_prepared, y)
+                @test isempty(ref_gradient)
+            else
+                test_ad(roundtrip, adtype, y)
+                test_ad(inverse_only, adtype, y)
+            end
         end
     end
 

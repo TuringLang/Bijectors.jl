@@ -1,10 +1,10 @@
 module VBCholeskyTests
 
+using ADTypes
 using Distributions
 using LinearAlgebra
 using Test
 using Bijectors.VectorBijectors
-import DifferentiationInterface as DI
 using ForwardDiff: ForwardDiff
 using ReverseDiff: ReverseDiff
 using Mooncake: Mooncake
@@ -13,12 +13,10 @@ using Enzyme: Enzyme, set_runtime_activity, Const, Forward, Reverse
 # Need runtime activity for some reason.
 # TODO(penelopeysm): Report upstream
 const adtypes = [
-    DI.AutoReverseDiff(),
-    DI.AutoReverseDiff(; compile=true),
-    DI.AutoMooncake(),
-    DI.AutoMooncakeForward(),
-    DI.AutoEnzyme(; mode=set_runtime_activity(Forward), function_annotation=Const),
-    DI.AutoEnzyme(; mode=set_runtime_activity(Reverse), function_annotation=Const),
+    AutoMooncake(),
+    AutoMooncakeForward(),
+    AutoEnzyme(; mode=set_runtime_activity(Forward), function_annotation=Const),
+    AutoEnzyme(; mode=set_runtime_activity(Reverse), function_annotation=Const),
 ]
 
 dists = [

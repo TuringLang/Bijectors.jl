@@ -1,14 +1,15 @@
 [deps]
 ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
+AbstractPPL = "7a57a42e-76ec-4ea3-a279-07e840d6d9cf"
 Bijectors = "76274a88-744f-5084-9051-94815aaf08c4"
-DifferentiationInterface = "a0c0ee7d-e4b9-4e03-894e-1c5f64a51d63"
 Enzyme = "7da242da-08ed-463a-9acd-ee780be4f1d9"
 FiniteDifferences = "26cc04aa-876d-5657-8c51-4c34ba976000"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
+[sources]
+AbstractPPL = {rev = "evaluator-interface", url = "https://github.com/TuringLang/AbstractPPL.jl"}
+Bijectors = {path = "../../.."}
+
 [compat]
 Enzyme = "0.13.111"
-
-[sources]
-Bijectors = {path = "../../../"}
