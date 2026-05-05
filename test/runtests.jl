@@ -4,6 +4,7 @@ using Bijectors
 using ChainRulesTestUtils
 using Combinatorics
 using AbstractPPL
+using DifferentiationInterface: DifferentiationInterface
 using DistributionsAD
 using Documenter: Documenter
 using FiniteDifferences
@@ -59,8 +60,8 @@ function test_ad(f, backend, x; rtol=1e-6, atol=1e-6)
     @info "testing AD for function $f with $backend"
     ref_prepared = AbstractPPL.prepare(REF_BACKEND, f, x)
     prepared = AbstractPPL.prepare(backend, f, x)
-    _, ref_gradient = AbstractPPL.value_and_gradient(ref_prepared, x)
-    _, gradient = AbstractPPL.value_and_gradient(prepared, x)
+    _, ref_gradient = AbstractPPL.value_and_gradient!!(ref_prepared, x)
+    _, gradient = AbstractPPL.value_and_gradient!!(prepared, x)
     @test isapprox(gradient, ref_gradient; rtol=rtol, atol=atol)
 end
 

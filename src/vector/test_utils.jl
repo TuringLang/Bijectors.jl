@@ -425,10 +425,8 @@ function test_optics(d::D.Distribution)
         x = rand(d)
         xvec = _to_ad_input(to_vec(d)(x))
         yvec = to_linked_vec(d)(x)
-        prepared = AbstractPPL.prepare(
-            ref_adtype, to_linked_vec(d) ∘ from_vec(d), xvec; mode=:jacobian
-        )
-        _, J = AbstractPPL.value_and_jacobian(prepared, xvec)
+        prepared = AbstractPPL.prepare(ref_adtype, to_linked_vec(d) ∘ from_vec(d), xvec)
+        _, J = AbstractPPL.value_and_jacobian!!(prepared, xvec)
         o = optic_vec(d)
         lo = linked_optic_vec(d)
         for i in 1:length(yvec)
@@ -572,8 +570,8 @@ function test_logjac(d::D.Distribution, atol, rtol)
                 # to make sure that the Jacobian is square.
                 ad_xvec = _to_ad_input(to_vec_for_logjac_test(d)(x))
                 ad_ffwd = to_linked_vec(d) ∘ from_vec_for_logjac_test(d)
-                prepared = AbstractPPL.prepare(ref_adtype, ad_ffwd, ad_xvec; mode=:jacobian)
-                _, ad_jac = AbstractPPL.value_and_jacobian(prepared, ad_xvec)
+                prepared = AbstractPPL.prepare(ref_adtype, ad_ffwd, ad_xvec)
+                _, ad_jac = AbstractPPL.value_and_jacobian!!(prepared, ad_xvec)
                 ad_logjac = first(logabsdet(ad_jac))
                 @test vbt_logjac ≈ ad_logjac atol = atol rtol = rtol
             end
@@ -587,8 +585,8 @@ function test_logjac(d::D.Distribution, atol, rtol)
                 # For the AD calculation we need to use to/from_vec_for_logjac_test instead,
                 # to make sure that the Jacobian is square.
                 ad_frvs = to_vec_for_logjac_test(d) ∘ from_linked_vec(d)
-                prepared = AbstractPPL.prepare(ref_adtype, ad_frvs, yvec; mode=:jacobian)
-                _, ad_jac = AbstractPPL.value_and_jacobian(prepared, yvec)
+                prepared = AbstractPPL.prepare(ref_adtype, ad_frvs, yvec)
+                _, ad_jac = AbstractPPL.value_and_jacobian!!(prepared, yvec)
                 ad_logjac = first(logabsdet(ad_jac))
                 @test vbt_logjac ≈ ad_logjac atol = atol rtol = rtol
             end
@@ -623,22 +621,22 @@ function test_ad(d::D.Distribution, adtypes::Vector{<:ADTypes.AbstractADType}, a
         x = _rand_safe_ad(d)
         xvec = _to_ad_input(to_vec(d)(x))
         ffwd = to_linked_vec(d) ∘ from_vec(d)
-        ref_prepared_jac = AbstractPPL.prepare(ref_adtype, ffwd, xvec; mode=:jacobian)
-        _, ref_jac = AbstractPPL.value_and_jacobian(ref_prepared_jac, xvec)
+        ref_prepared_jac = AbstractPPL.prepare(ref_adtype, ffwd, xvec)
+        _, ref_jac = AbstractPPL.value_and_jacobian!!(ref_prepared_jac, xvec)
 
         ladj(xvec) = last(with_logabsdet_jacobian(ffwd, xvec))
         ref_prepared_grad = AbstractPPL.prepare(ref_adtype, ladj, xvec)
-        _, ref_grad_ladj = AbstractPPL.value_and_gradient(ref_prepared_grad, xvec)
+        _, ref_grad_ladj = AbstractPPL.value_and_gradient!!(ref_prepared_grad, xvec)
 
         for adtype in adtypes
             @testset let x = x, adtype = adtype, d = d
-                prepared = AbstractPPL.prepare(adtype, ffwd, xvec; mode=:jacobian)
-                _, ad_jac = AbstractPPL.value_and_jacobian(prepared, xvec)
+                prepared = AbstractPPL.prepare(adtype, ffwd, xvec)
+                _, ad_jac = AbstractPPL.value_and_jacobian!!(prepared, xvec)
                 @test ref_jac ≈ ad_jac atol = atol rtol = rtol
             end
             @testset let x = x, adtype = adtype, d = d
                 prepared = AbstractPPL.prepare(adtype, ladj, xvec)
-                _, ad_grad_ladj = AbstractPPL.value_and_gradient(prepared, xvec)
+                _, ad_grad_ladj = AbstractPPL.value_and_gradient!!(prepared, xvec)
                 @test ref_grad_ladj ≈ ad_grad_ladj atol = atol rtol = rtol
             end
         end
@@ -648,23 +646,23 @@ function test_ad(d::D.Distribution, adtypes::Vector{<:ADTypes.AbstractADType}, a
         x = _rand_safe_ad(d)
         yvec = _to_ad_input(to_linked_vec(d)(x))
         frvs = to_vec(d) ∘ from_linked_vec(d)
-        ref_prepared_jac = AbstractPPL.prepare(ref_adtype, frvs, yvec; mode=:jacobian)
-        _, ref_jac = AbstractPPL.value_and_jacobian(ref_prepared_jac, yvec)
+        ref_prepared_jac = AbstractPPL.prepare(ref_adtype, frvs, yvec)
+        _, ref_jac = AbstractPPL.value_and_jacobian!!(ref_prepared_jac, yvec)
 
         ladj(yvec) = last(with_logabsdet_jacobian(frvs, yvec))
         ref_prepared_grad = AbstractPPL.prepare(ref_adtype, ladj, yvec)
-        _, ref_grad_ladj = AbstractPPL.value_and_gradient(ref_prepared_grad, yvec)
+        _, ref_grad_ladj = AbstractPPL.value_and_gradient!!(ref_prepared_grad, yvec)
 
         for adtype in adtypes
             @testset let x = x, adtype = adtype, d = d
-                prepared = AbstractPPL.prepare(adtype, frvs, yvec; mode=:jacobian)
-                _, ad_jac = AbstractPPL.value_and_jacobian(prepared, yvec)
+                prepared = AbstractPPL.prepare(adtype, frvs, yvec)
+                _, ad_jac = AbstractPPL.value_and_jacobian!!(prepared, yvec)
                 @test ref_jac ≈ ad_jac atol = atol rtol = rtol
             end
 
             @testset let x = x, adtype = adtype, d = d
                 prepared = AbstractPPL.prepare(adtype, ladj, yvec)
-                _, ad_grad_ladj = AbstractPPL.value_and_gradient(prepared, yvec)
+                _, ad_grad_ladj = AbstractPPL.value_and_gradient!!(prepared, yvec)
                 @test ref_grad_ladj ≈ ad_grad_ladj atol = atol rtol = rtol
             end
         end
