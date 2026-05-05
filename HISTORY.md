@@ -1,3 +1,19 @@
+# 0.15.24
+
+Export a few more functions from `Bijectors.VectorBijectors`, namely `scalar_to_scalar_bijector`, `TypedIdentity`, `Log`, and `Untruncate`.
+
+# 0.15.23
+
+Implement vector bijectors for `Distributions.MvTDist`.
+
+# 0.15.22
+
+Implement vector bijectors for `Bijectors.TransformedDistribution`.
+
+# 0.15.21
+
+Add compatibility with Roots.jl v3.
+
 # 0.15.20
 
 Export `Bijectors.VectorBijectors.has_constant_vec_bijector` to allow downstream packages to overload it.

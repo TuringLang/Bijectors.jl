@@ -1,4 +1,4 @@
-# Defining a bijector: examples
+# [Defining a bijector: examples](@id bijectors-defining-examples)
 
 Here we provide two different worked examples of defining a custom bijector.
 

@@ -58,22 +58,33 @@ If it can be inferred from `typeof(array_of_dists)` that each distribution insid
 `has_constant_vec_bijector(typeof(array_of_dists))` should return `true`.
 
 For example, if `array_of_dists` is a `FillArrays.Fill` of some distribution type, then we
-know that each distribution inside is the same, and so they all have the same vector
-bijector. Thus, we have that
+know that each distribution inside is necessarily the same, and so they all have the same
+vector bijector. Thus, we have that
 
 ```julia
 has_constant_vec_bijector(::Type{<:FillArrays.Fill}) == true
 ```
 
-For generic `AbstractArray`s or `Tuple`s, this will dispatch on the element type of the
-array. That means that if a `dist::D` (where `D<:Distribution`) has a constant vector
-bijector, we can simply mark `has_constant_vec_bijector(::Type{D}) == true`.
+For generic `AbstractArray`s or `Tuple`s, this function will recursively call itself on the
+element type of the array. That means that if a `dist::D` (where `D<:Distribution`) has a
+constant vector bijector, we can simply mark `has_constant_vec_bijector(::Type{D}) == true`,
+and that will automatically propagate to arrays of that distribution type.
 
 For example, `Beta` has a constant vector bijector, because its support is always between 0
-and 1, regardless of its parameters.
+and 1, regardless of its parameters, and thus we can wite
+
+```julia
+has_constant_vec_bijector(::Type{<:Distributions.Beta}) == true
+```
 
 On the other hand, `Uniform` does not have a constant vector bijector, because its support
-depends on its parameters.
+depends on its parameters. So, it would be inappropriate (and can lead to wrong results) if
+we were to write `has_constant_vec_bijector(::Type{<:Distributions.Uniform}) == true`.
+
+!!! warning
+    This function must depend only on the **type** of the array of distributions or the
+distribution, and not the actual **value**. This is necessary in order to guarantee type
+stability.
 """
 has_constant_vec_bijector(::Type{TFill}) where {TFill<:FillArrays.Fill} = true
 function has_constant_vec_bijector(::Type{<:AbstractArray{T}}) where {T}
@@ -92,6 +103,7 @@ end
 has_constant_vec_bijector(::Type{<:D.DiscreteUnivariateDistribution}) = true
 # Multivariates
 has_constant_vec_bijector(::Type{<:D.AbstractMvNormal}) = true
+has_constant_vec_bijector(::Type{<:D.AbstractMvTDist}) = true
 has_constant_vec_bijector(::Type{<:D.AbstractMvLogNormal}) = true
 has_constant_vec_bijector(::Type{<:SIMPLEX_MULTIVARIATES}) = true
 has_constant_vec_bijector(::Type{<:D.DiscreteMultivariateDistribution}) = true

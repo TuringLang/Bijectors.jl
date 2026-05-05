@@ -2,6 +2,12 @@
 
 This package implements functionality for transforming random variables to Euclidean space (and back).
 
+!!! note "VectorBijectors"
+    
+    Note that Turing.jl and DynamicPPL.jl do not use the old interface with e.g. `Bijectors.bijector`: they instead use the interface in the `Bijectors.VectorBijectors` module. Please see [the documentation](@ref vector) for more information.
+
+## Example
+
 For example, consider a random variable $X \sim \mathrm{Beta}(2, 2)$, which has support on $(0, 1)$:
 
 ```@example main

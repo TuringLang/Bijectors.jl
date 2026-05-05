@@ -33,9 +33,27 @@ inverse(w::VectWrap) = OnlyWrap(inverse(w.bijector))
 VectorBijectors.from_vec(::D.UnivariateDistribution) = OnlyWrap(TypedIdentity())
 VectorBijectors.to_vec(::D.UnivariateDistribution) = VectWrap(TypedIdentity())
 
-# For the linked transformations, we start by defining the scalar to scalar bijector that
-# maps from the support of the distribution to the real line, and then wrap it in `OnlyWrap`
-# and `VectWrap` to get the vector to scalar and scalar to vector bijectors, respectively.
+"""
+    Bijectors.VectorBijectors.scalar_to_scalar_bijector(d::D.UnivariateDistribution)
+
+The VectorBijectors interface is intended to map samples to vectors. However, for univariate
+distributions, the 'vectorisation' part of this is trivial (we only need to convert a scalar
+to a vector of length one, and vice versa). Therefore, this function is provided to allow
+users to specify the 'interesting' part of the transformation, which is the function that
+maps values to unconstrained space.
+
+Overloading this function for a univariate distribution is sufficient to implement the
+entire VectorBijectors interface for that distribution.
+
+There are three scalar-to-scalar bijectors that are exported, which should be enough for any
+univariate distribution:
+
+- [`Bijectors.VectorBijectors.TypedIdentity`](@ref)
+- [`Bijectors.VectorBijectors.Log`](@ref)
+- [`Bijectors.VectorBijectors.Untruncate`](@ref)
+
+If you need a different scalar-to-scalar bijector, please open an issue.
+"""
 function scalar_to_scalar_bijector end
 function VectorBijectors.from_linked_vec(d::D.UnivariateDistribution)
     return OnlyWrap(inverse(scalar_to_scalar_bijector(d)))

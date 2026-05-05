@@ -59,6 +59,9 @@ inverse(t::Truncate) = Untruncate(t.lower, t.upper)
 Callable struct, defined such that `(::Untruncate(a, b))(x)` maps a scalar `x` from `(a, b)`
 to `(-Inf, Inf)`.
 
+This is the appropriate scalar-to-scalar bijector for distributions which have support over
+`(a, b)`.
+
 !!! warning
     This does not check whether the input is a scalar in `(a, b)`.
 """
