@@ -45,7 +45,7 @@ BijectorsReverseDiffExt = "ReverseDiff"
 AbstractPPL = {url = "https://github.com/TuringLang/AbstractPPL.jl", rev = "evaluator-interface"}
 
 [compat]
-AbstractPPL = "0.14"
+AbstractPPL = "0.15"
 ADTypes = "1"
 ArgCheck = "1, 2"
 ChainRules = "1"
