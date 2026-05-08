@@ -207,12 +207,10 @@ function full_transform(x12)
     return StereographicProj()(x123)
 end
 
-import DifferentiationInterface as DI
 using FiniteDifferences, LinearAlgebra
 x = [0.3, 0.4, sgn * sqrt(1 - 0.3^2 - 0.4^2)]
 
-adtype = DI.AutoFiniteDifferences(; fdm=central_fdm(5, 1))
-jac = DI.jacobian(full_transform, adtype, x[1:2])
+jac = only(FiniteDifferences.jacobian(central_fdm(5, 1), full_transform, x[1:2]))
 logjac = logabsdet(jac)[1]
 ```
 

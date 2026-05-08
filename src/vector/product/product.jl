@@ -303,7 +303,7 @@ end
             expr.args,
             :((xr, lj) = with_logabsdet_jacobian(t.transforms.$nm, view(y, t.ranges.$nm))),
         )
-        push!(expr.args, :(x = (x..., $nm=xr)))
+        push!(expr.args, :(x = (x..., ($nm)=xr)))
         push!(expr.args, :(logjac += lj))
     end
     push!(expr.args, :(return x, logjac))
@@ -332,7 +332,7 @@ end
     push!(exprs, :(offset = 1))
     for nm in names
         push!(exprs, :(this_length = length_fn(dists.$nm)))
-        push!(exprs, :(ranges = (ranges..., $nm=offset:(offset + this_length - 1))))
+        push!(exprs, :(ranges = (ranges..., ($nm)=offset:(offset + this_length - 1))))
         push!(exprs, :(offset += this_length))
     end
     push!(exprs, :(return struct_type(trfms, ranges, size(dists[1]))))

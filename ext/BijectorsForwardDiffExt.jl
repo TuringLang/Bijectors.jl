@@ -1,7 +1,43 @@
 module BijectorsForwardDiffExt
 
-using Bijectors: Bijectors, find_alpha
+import Bijectors: Bijectors, find_alpha, _value_and_gradient, _value_and_jacobian
+import ADTypes: AutoForwardDiff
 using ForwardDiff: ForwardDiff
+
+function _value_and_gradient(
+    f, backend::AutoForwardDiff{chunksize,T}, x::AbstractVector
+) where {chunksize,T}
+    if isempty(x)
+        return f(x), similar(x, 0)
+    end
+    result = ForwardDiff.DiffResults.GradientResult(x)
+    chunk = isnothing(chunksize) ? ForwardDiff.Chunk(x) : ForwardDiff.Chunk{chunksize}()
+    tag = T === Nothing ? ForwardDiff.Tag(f, eltype(x)) : backend.tag
+    config = ForwardDiff.GradientConfig(nothing, x, chunk, tag)
+    if T === Nothing
+        ForwardDiff.checktag(config, f, x)
+    end
+    ForwardDiff.gradient!(result, f, x, config, Val(false))
+    return ForwardDiff.DiffResults.value(result), ForwardDiff.DiffResults.gradient(result)
+end
+
+function _value_and_jacobian(
+    f, backend::AutoForwardDiff{chunksize,T}, x::AbstractVector
+) where {chunksize,T}
+    y = f(x)
+    if isempty(x)
+        return y, Matrix{eltype(y)}(undef, length(y), 0)
+    end
+    result = ForwardDiff.DiffResults.JacobianResult(y, x)
+    chunk = isnothing(chunksize) ? ForwardDiff.Chunk(x) : ForwardDiff.Chunk{chunksize}()
+    tag = T === Nothing ? ForwardDiff.Tag(f, eltype(x)) : backend.tag
+    config = ForwardDiff.JacobianConfig(nothing, x, chunk, tag)
+    if T === Nothing
+        ForwardDiff.checktag(config, f, x)
+    end
+    ForwardDiff.jacobian!(result, f, x, config, Val(false))
+    return ForwardDiff.DiffResults.value(result), ForwardDiff.DiffResults.jacobian(result)
+end
 
 Bijectors._eps(::Type{<:ForwardDiff.Dual{<:Any,Real}}) = Bijectors._eps(Real)
 Bijectors._eps(::Type{<:ForwardDiff.Dual{<:Any,<:Integer}}) = Bijectors._eps(Real)

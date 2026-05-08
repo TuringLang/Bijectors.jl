@@ -10,15 +10,52 @@ using ReverseDiff:
     TrackedMatrix,
     @grad_from_chainrules
 
+import Bijectors: _value_and_gradient, _value_and_jacobian
+import ADTypes: AutoReverseDiff
+
+function _value_and_gradient(f, ::AutoReverseDiff{false}, x::AbstractVector)
+    if isempty(x)
+        return f(x), similar(x, 0)
+    end
+    result = ReverseDiff.DiffResults.GradientResult(x)
+    ReverseDiff.gradient!(result, f, x)
+    return ReverseDiff.DiffResults.value(result), ReverseDiff.DiffResults.gradient(result)
+end
+
+function _value_and_jacobian(f, ::AutoReverseDiff{false}, x::AbstractVector)
+    y = f(x)
+    result = ReverseDiff.DiffResults.JacobianResult(y, x)
+    ReverseDiff.jacobian!(result, f, x)
+    return ReverseDiff.DiffResults.value(result), ReverseDiff.DiffResults.jacobian(result)
+end
+
+function _value_and_gradient(f, ::AutoReverseDiff{true}, x::AbstractVector)
+    if isempty(x)
+        return f(x), similar(x, 0)
+    end
+    tape = ReverseDiff.GradientTape(f, x)
+    compiled = ReverseDiff.compile(tape)
+    result = ReverseDiff.DiffResults.GradientResult(x)
+    ReverseDiff.gradient!(result, compiled, x)
+    return ReverseDiff.DiffResults.value(result), ReverseDiff.DiffResults.gradient(result)
+end
+
+function _value_and_jacobian(f, ::AutoReverseDiff{true}, x::AbstractVector)
+    tape = ReverseDiff.JacobianTape(f, x)
+    compiled = ReverseDiff.compile(tape)
+    y = f(x)
+    result = ReverseDiff.DiffResults.JacobianResult(y, x)
+    ReverseDiff.jacobian!(result, compiled, x)
+    return ReverseDiff.DiffResults.value(result), ReverseDiff.DiffResults.jacobian(result)
+end
+
 using Bijectors:
-    ChainRulesCore,
     Elementwise,
     SimplexBijector,
     maphcat,
     simplex_link_jacobian,
     simplex_invlink_jacobian,
-    simplex_logabsdetjac_gradient,
-    Inverse
+    simplex_logabsdetjac_gradient
 import Bijectors:
     Bijectors,
     _eps,
@@ -27,8 +64,6 @@ import Bijectors:
     _simplex_bijector,
     _simplex_inv_bijector,
     replace_diag,
-    jacobian,
-    _inv_link_chol_lkj,
     _link_chol_lkj,
     _transform_ordered,
     _transform_inverse_ordered,
