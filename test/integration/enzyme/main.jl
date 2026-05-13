@@ -6,6 +6,7 @@ using Enzyme: Enzyme, set_runtime_activity, Forward, Reverse, Const
 using EnzymeTestUtils: test_forward, test_reverse
 using FillArrays: Fill
 using FiniteDifferences
+using ForwardDiff: ForwardDiff
 using LinearAlgebra
 using PDMats
 using Test

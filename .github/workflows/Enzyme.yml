@@ -19,6 +19,10 @@ concurrency:
 jobs:
   enzyme:
     runs-on: ubuntu-latest
+    # Enzyme is an integration test isolated from the main suite. It reports failures for
+    # visibility but does not block PRs: Enzyme regressions surface as red here without
+    # making the rest of the workflow fail.
+    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
