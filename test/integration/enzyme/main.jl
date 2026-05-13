@@ -174,12 +174,18 @@ end
     for c in generate_testcases(Val(:nested_product_namedtuple))
         run_vector_case(c, runtime_const_backends)
     end
-    # The last two `:type_unstable_products` cases — `product_distribution(p1t, p1t, p1t)`
-    # and `product_distribution(p1a, p1a, p1a)` — were the `enzyme_failures` on `main`:
-    # Enzyme cannot differentiate through these triple-nested tuple-of-products. Skip them
-    # so the integration job doesn't flap on known failures.
-    type_unstable_cases = generate_testcases(Val(:type_unstable_products))
-    for c in type_unstable_cases[1:(end - 2)]
+    # Skip the `enzyme_failures` from `main`: Enzyme cannot differentiate through
+    # triple-nested tuple-of-products (e.g. `product_distribution(p1t, p1t, p1t)`).
+    # Identify them structurally — `ProductDistribution` whose `.dists` is a `Tuple` of
+    # `Product` / `ProductDistribution` components.
+    function _enzyme_failing_product(d)
+        d isa Distributions.ProductDistribution || return false
+        d.dists isa Tuple || return false
+        return first(d.dists) isa
+               Union{Distributions.Product,Distributions.ProductDistribution}
+    end
+    for c in generate_testcases(Val(:type_unstable_products))
+        _enzyme_failing_product(c.dist) && continue
         run_vector_case(c, runtime_const_backends)
     end
 end
