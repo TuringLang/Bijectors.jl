@@ -11,19 +11,17 @@ using LinearAlgebra
 using PDMats
 using Test
 
-const SHARED = joinpath(@__DIR__, "..", "..", "shared")
-include(joinpath(SHARED, "ad_test_utils.jl"))
-include(joinpath(SHARED, "ad_bijector_tests.jl"))
-include(joinpath(SHARED, "vector_distributions.jl"))
+include(joinpath(@__DIR__, "..", "..", "testresources.jl"))
 
 # Enzyme adtype configurations. Each list matches a flavour previously used in a different
 # place on `main` so the moved tests run against the exact same backend they did before:
-# - `bijector_backends`: original test/integration/enzyme/main.jl
-# - `runtime_const_backends`: test/runtests.jl::TEST_ADTYPES (test/ad/{corr,stacked}.jl)
-#   and test/vector/{cholesky,product}.jl
-# - `default_backends`: src/vector/test_utils.jl::default_adtypes (test/vector/
-#   {univariate,multivariate,matrix,transformed,reshaped}.jl)
-# - `joint_order_backends`: test/vector/order.jl::joint_test_adtypes
+#   bijector_backends      → original test/integration/enzyme/main.jl
+#   runtime_const_backends → test/runtests.jl::TEST_ADTYPES (used by ad/{corr,stacked}.jl)
+#                            and test/vector/{cholesky,product}.jl
+#   default_backends       → src/vector/test_utils.jl::default_adtypes (used by
+#                            test/vector/{univariate,multivariate,matrix,transformed,
+#                            reshaped}.jl)
+#   joint_order_backends   → test/vector/order.jl::joint_test_adtypes
 const bijector_backends = [
     ("EnzymeForward", AutoEnzyme(; mode=Forward)),
     ("EnzymeReverse", AutoEnzyme(; mode=Reverse)),
@@ -102,31 +100,81 @@ end
 # `main`; VecCholeskyBijector and StackedBijector ran via TEST_ADTYPES on `main`, which
 # used set_runtime_activity + Const.
 @testset "$backend" for (backend, adtype) in bijector_backends
-    @testset "VecCorrBijector" test_veccorrbijector_ad(adtype)
-    @testset "PlanarLayer" test_planarlayer_ad(adtype)
-    @testset "PDVecBijector" test_pdvecbijector_ad(adtype)
+    @testset "VecCorrBijector" for c in generate_testcases(Val(:veccorrbijector))
+        run_ad_case(c, adtype)
+    end
+    @testset "PlanarLayer" for c in generate_testcases(Val(:planarlayer))
+        run_ad_case(c, adtype)
+    end
+    @testset "PDVecBijector" for c in generate_testcases(Val(:pdvecbijector))
+        run_ad_case(c, adtype)
+    end
 end
 
 @testset "VecCholeskyBijector: $adtype" for adtype in runtime_const_backends
-    test_veccholeskybijector_ad(adtype)
+    for c in generate_testcases(Val(:veccholeskybijector))
+        run_ad_case(c, adtype)
+    end
 end
 
 @testset "StackedBijector: $adtype" for adtype in runtime_const_backends
-    test_stackedbijector_ad(adtype)
+    for c in generate_testcases(Val(:stackedbijector))
+        run_ad_case(c, adtype)
+    end
 end
 
-# Distribution-level test_all coverage moved from test/vector/*.jl. The adtype list passed
-# to each wrapper matches what `main` used for that file's Enzyme entries.
-@testset "Univariates" test_univariates_with(default_backends)
-@testset "Multivariates" test_multivariates_with(default_backends)
-# LKJ ran with Mooncake only on `main`, so it has no Enzyme coverage to move.
-@testset "Matrix distributions" test_matrix_dists_with(default_backends; lkj_adtypes=[])
-@testset "Cholesky" test_cholesky_with(runtime_const_backends)
-@testset "Order statistics" test_order_with(
-    default_backends; joint_adtypes=joint_order_backends
-)
-@testset "Reshaped distributions" test_reshaped_with(
-    default_backends; beta_reshape_adtypes_pre_111=reshaped_beta_pre_111_backends
-)
-@testset "TransformedDistributions" test_transformed_with(default_backends)
-@testset "Product distributions" test_products_with(runtime_const_backends)
+# Distribution-level `test_all` coverage moved from test/vector/*.jl.
+@testset "Univariates" for c in generate_testcases(Val(:univariates))
+    run_vector_case(c, default_backends)
+end
+
+@testset "Multivariates" for c in generate_testcases(Val(:multivariates))
+    run_vector_case(c, default_backends)
+end
+
+# LKJ matrix dists ran with Mooncake only on `main`, so they have no Enzyme coverage.
+@testset "Matrix distributions" for c in generate_testcases(Val(:matrix_dists))
+    run_vector_case(c, default_backends)
+end
+
+@testset "Cholesky" for c in generate_testcases(Val(:cholesky_dists))
+    run_vector_case(c, runtime_const_backends)
+end
+
+@testset "Order statistics" begin
+    for c in generate_testcases(Val(:order_orderstatistic))
+        run_vector_case(c, default_backends)
+    end
+    for c in generate_testcases(Val(:order_joint))
+        run_vector_case(c, joint_order_backends)
+    end
+    for c in generate_testcases(Val(:order_ordered))
+        run_vector_case(c, default_backends)
+    end
+end
+
+@testset "Reshaped distributions" begin
+    for c in generate_testcases(Val(:reshaped_dists))
+        run_vector_case(c, default_backends)
+    end
+    beta_backends = VERSION >= v"1.11-" ? default_backends : reshaped_beta_pre_111_backends
+    for c in generate_testcases(Val(:reshaped_beta_special))
+        run_vector_case(c, beta_backends)
+    end
+end
+
+@testset "TransformedDistributions" for c in generate_testcases(Val(:transformed_dists))
+    run_vector_case(c, default_backends)
+end
+
+@testset "Product distributions" begin
+    for c in generate_testcases(Val(:products))
+        run_vector_case(c, runtime_const_backends)
+    end
+    for c in generate_testcases(Val(:nested_product_namedtuple))
+        run_vector_case(c, runtime_const_backends)
+    end
+    for c in generate_testcases(Val(:type_unstable_products))
+        run_vector_case(c, runtime_const_backends)
+    end
+end

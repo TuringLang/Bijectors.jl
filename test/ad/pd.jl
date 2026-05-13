@@ -1,3 +1,5 @@
 @testset "PDVecBijector: $backend_name" for (backend_name, adtype) in TEST_ADTYPES
-    test_pdvecbijector_ad(adtype)
+    for c in generate_testcases(Val(:pdvecbijector))
+        run_ad_case(c, adtype)
+    end
 end

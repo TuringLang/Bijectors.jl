@@ -1,23 +1,15 @@
-module VBReshapedTests
-
-import DifferentiationInterface as DI
-using ForwardDiff: ForwardDiff
-using Mooncake: Mooncake
-using ReverseDiff: ReverseDiff
-using Test
-
-include(joinpath(@__DIR__, "..", "shared", "vector_distributions.jl"))
-
-# Enzyme is tested separately in test/integration/enzyme.
-const adtypes = [
-    DI.AutoReverseDiff(),
-    DI.AutoReverseDiff(; compile=true),
-    DI.AutoMooncake(),
-    DI.AutoMooncakeForward(),
-]
-
 @testset "Reshaped distributions" begin
-    test_reshaped_with(adtypes)
+    # Enzyme is tested separately in test/integration/enzyme.
+    adtypes = [
+        AutoReverseDiff(),
+        AutoReverseDiff(; compile=true),
+        AutoMooncake(),
+        AutoMooncakeForward(),
+    ]
+    for c in generate_testcases(Val(:reshaped_dists))
+        run_vector_case(c, adtypes)
+    end
+    for c in generate_testcases(Val(:reshaped_beta_special))
+        run_vector_case(c, adtypes)
+    end
 end
-
-end # module VBReshapedTests

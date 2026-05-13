@@ -40,9 +40,7 @@ const TEST_ADTYPES = [
     ("Mooncake", AutoMooncake()),
 ]
 
-include("shared/ad_test_utils.jl")
-include("shared/ad_bijector_tests.jl")
-include("shared/vector_distributions.jl")
+include("testresources.jl")
 
 # Always include this since it can be useful for other tests.
 include("bijectors/utils.jl")
