@@ -38,7 +38,7 @@ _case_name(d) = string(VectorBijectors._name(d))
 
 # Baseline adtype list shared by every main-suite caller. Backends with separate
 # integration suites (currently: Enzyme, in test/integration/enzyme) are not in this list.
-const BASE_ADTYPES = [
+const adtypes = [
     AutoReverseDiff(),
     AutoReverseDiff(; compile=true),
     AutoMooncake(),

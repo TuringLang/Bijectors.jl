@@ -1,6 +1,6 @@
 @testset "Order statistics" begin
     for c in generate_testcases(Val(:order_orderstatistic))
-        run_vector_case(c, BASE_ADTYPES)
+        run_vector_case(c, adtypes)
     end
     # ReverseDiff can't differentiate JointOrderStatistics because of the heavy setindex!
     # usage. https://github.com/JuliaDiff/ReverseDiff.jl/issues/43
@@ -9,6 +9,6 @@
         run_vector_case(c, joint_adtypes)
     end
     for c in generate_testcases(Val(:order_ordered))
-        run_vector_case(c, BASE_ADTYPES)
+        run_vector_case(c, adtypes)
     end
 end
