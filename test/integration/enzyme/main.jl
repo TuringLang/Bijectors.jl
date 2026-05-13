@@ -13,25 +13,11 @@ using Test
 
 include(joinpath(@__DIR__, "..", "..", "test_resources.jl"))
 
-# Enzyme adtype flavours. The flags differ across tests because closure shapes and
-# Enzyme's activity inference do not permit a single configuration:
-#
-# * `function_annotation=Const` — the closure itself captures a bijector that is
-#   constant for AD purposes (we differentiate `f(x)` w.r.t. `x` only). Without it,
-#   Enzyme tries to thread tangents through the captured fields and either errors or
-#   returns wrong gradients.
-# * `set_runtime_activity(mode)` — replaces Enzyme's compile-time activity inference
-#   with a runtime check. Slower but works for transform paths where the compile-time
-#   pass can't prove activity (branchy or polymorphic dispatch).
-#
-# bijector_backends      — no flags. Used for VecCorrBijector / PlanarLayer / PDVecBijector;
-#                          their transforms are simple enough for Enzyme's defaults.
-# runtime_const_backends — both flags. Used for VecCholeskyBijector, Stacked, LKJCholesky,
-#                          and product distributions.
-# default_backends       — Const only. Used for distribution-level closures inside
-#                          `VectorBijectors.test_all` (univariates, multivariates, matrix,
-#                          transformed, reshaped, OrderStatistic, ordered).
-# joint_order_backends   — no flags. JointOrderStatistics works with Enzyme's defaults.
+# Enzyme adtype flavours. `set_runtime_activity` is the load-bearing flag — empirically
+# required for VecCholesky / Stacked / LKJCholesky / products, where Enzyme's compile-time
+# activity inference fails. `function_annotation=Const` is set explicitly to pin DI's
+# default. Some tag groups don't need either flag; flavours are kept separate to match the
+# minimal configuration each test was originally validated against.
 const bijector_backends = [
     ("EnzymeForward", AutoEnzyme(; mode=Forward)),
     ("EnzymeReverse", AutoEnzyme(; mode=Reverse)),
