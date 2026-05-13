@@ -6,16 +6,9 @@
 # list(s) and runs the same cases, so every test body lives in one place and gets exercised
 # against every AD backend that opts in.
 #
-# Tags fall into two groups:
-#
-#   `ADTestCase` (bijector-specific function/argument pairs, run via `test_ad`):
-#     :veccorrbijector, :veccholeskybijector, :planarlayer, :pdvecbijector, :stackedbijector
-#
-#   `VectorTestCase` (distributions exercised via `VectorBijectors.test_all`):
-#     :univariates, :multivariates, :matrix_dists, :lkj_matrix_dists, :cholesky_dists,
-#     :reshaped_dists, :reshaped_beta_special, :transformed_dists, :order_orderstatistic,
-#     :order_joint, :order_ordered, :products, :nested_product_namedtuple,
-#     :type_unstable_products
+# `ADTestCase` cases run via `run_ad_case` (using `test_ad` for the gradient comparison).
+# `VectorTestCase` cases run via `run_vector_case` (using `VectorBijectors.test_all`).
+# The full set of tags is the method table of `generate_testcases` — see uses below.
 
 using Bijectors
 using Bijectors: ordered
@@ -28,7 +21,15 @@ using FillArrays: Fill
 using FiniteDifferences: central_fdm
 using LinearAlgebra
 using PDMats
+using StableRNGs: StableRNG
 using Test
+
+# Seed used to construct randomised AD test inputs. Stable across CI runs so that a
+# backend failure can be reproduced with the same `c.arg` and so all backends see
+# identical inputs.
+const TESTCASE_SEED = 23
+
+_testcase_rng() = StableRNG(TESTCASE_SEED)
 
 # Compact, readable name for a distribution. `Bijectors.VectorBijectors._name` already
 # handles wrappers (Truncated, Censored, ReshapedDistribution, OrderStatistic, etc.); fall
@@ -62,10 +63,13 @@ struct VectorTestCase{D<:Distributions.Distribution}
     name::String
     dist::D
     test_kwargs::NamedTuple
+    broken::Bool
 end
 
-function VectorTestCase(name::String, dist::Distributions.Distribution; kwargs...)
-    return VectorTestCase(name, dist, NamedTuple(kwargs))
+function VectorTestCase(
+    name::String, dist::Distributions.Distribution; broken::Bool=false, kwargs...
+)
+    return VectorTestCase(name, dist, NamedTuple(kwargs), broken)
 end
 function VectorTestCase(dist::Distributions.Distribution; kwargs...)
     return VectorTestCase(_case_name(dist), dist; kwargs...)
@@ -89,7 +93,16 @@ end
 function run_ad_case(c::ADTestCase, adtype; rtol=1e-6, atol=1e-6)
     @testset "$(c.name)" begin
         if c.broken
-            @test_broken false
+            # Evaluate the comparison anyway under @test_broken: if `gradient` throws or
+            # returns the wrong result the test stays broken; if the upstream bug is fixed
+            # the case flips to "unexpectedly passing" and the maintainer gets a nudge.
+            @info "testing (broken) AD for function $(c.func) with $adtype"
+            @test_broken isapprox(
+                gradient(c.func, adtype, c.arg),
+                gradient(c.func, REF_BACKEND, c.arg);
+                rtol=rtol,
+                atol=atol,
+            )
         else
             test_ad(c.func, adtype, c.arg; rtol=rtol, atol=atol)
         end
@@ -97,18 +110,28 @@ function run_ad_case(c::ADTestCase, adtype; rtol=1e-6, atol=1e-6)
 end
 
 function run_vector_case(c::VectorTestCase, adtypes)
+    if c.broken
+        # `VectorBijectors.test_all` runs many internal `@test`s and doesn't return a
+        # single pass/fail, so we mark broken cases with a bare `@test_broken false`
+        # rather than running test_all and trying to capture every internal result.
+        @testset "$(c.name)" begin
+            @test_broken false
+        end
+        return nothing
+    end
     return VectorBijectors.test_all(c.dist; adtypes=adtypes, c.test_kwargs...)
 end
 
 # ===== Bijector-specific AD test cases =====
 
 function generate_testcases(::Val{:veccorrbijector})
+    rng = _testcase_rng()
     cases = ADTestCase[]
     for d in (1, 2, 4)
         dist = LKJ(d, 2.0)
         b = bijector(dist)
         binv = inverse(b)
-        x = rand(dist)
+        x = rand(rng, dist)
         y = b(x)
         roundtrip = let b = b, binv = binv
             y_ -> sum(transform(b, binv(y_)))
@@ -123,12 +146,13 @@ function generate_testcases(::Val{:veccorrbijector})
 end
 
 function generate_testcases(::Val{:veccholeskybijector})
+    rng = _testcase_rng()
     cases = ADTestCase[]
     for d in (1, 2, 4), uplo in ('U', 'L')
         dist = LKJCholesky(d, 2.0, uplo)
         b = bijector(dist)
         binv = inverse(b)
-        x = rand(dist)
+        x = rand(rng, dist)
         y = b(x)
         cholesky_to_triangular =
             uplo == 'U' ? Bijectors.cholesky_upper : Bijectors.cholesky_lower
@@ -152,6 +176,7 @@ function generate_testcases(::Val{:veccholeskybijector})
 end
 
 function generate_testcases(::Val{:planarlayer})
+    rng = _testcase_rng()
     # logpdf of a flow with a planar layer and two-dimensional inputs
     f = function (θ)
         layer = PlanarLayer(θ[1:2], θ[3:4], θ[5:5])
@@ -179,19 +204,20 @@ function generate_testcases(::Val{:planarlayer})
         return sum(logpdf(flow.dist, x) - logabsdetjac(flow.transform, x))
     end
     return [
-        ADTestCase("PlanarLayer logpdf vector input", f, randn(7)),
-        ADTestCase("PlanarLayer logpdf matrix input", g, randn(11)),
-        ADTestCase("PlanarLayer inverse logpdf vector input", finv, randn(7)),
-        ADTestCase("PlanarLayer inverse logpdf matrix input", ginv, randn(11)),
+        ADTestCase("PlanarLayer logpdf vector input", f, randn(rng, 7)),
+        ADTestCase("PlanarLayer logpdf matrix input", g, randn(rng, 11)),
+        ADTestCase("PlanarLayer inverse logpdf vector input", finv, randn(rng, 7)),
+        ADTestCase("PlanarLayer inverse logpdf matrix input", ginv, randn(rng, 11)),
     ]
 end
 
 function generate_testcases(::Val{:pdvecbijector})
+    rng = _testcase_rng()
     _topd(x) = x * x' + I
     d = 4
     b = Bijectors.PDVecBijector()
     binv = inverse(b)
-    z = randn(d, d)
+    z = randn(rng, d, d)
     x = _topd(z)
     y = b(x)
     forward_only = let b = b, _topd = _topd, d = d
@@ -215,12 +241,13 @@ function generate_testcases(::Val{:pdvecbijector})
 end
 
 function generate_testcases(::Val{:stackedbijector})
+    rng = _testcase_rng()
     dist1 = Dirichlet(4, 1.0)
     b1 = bijector(dist1)
     dist2 = LogNormal(0.0, 1.0)
     b2 = bijector(dist2)
-    x1 = rand(dist1)
-    x2 = rand(dist2)
+    x1 = rand(rng, dist1)
+    x2 = rand(rng, dist2)
     y1 = b1(x1)
     y2 = b2(x2)
 

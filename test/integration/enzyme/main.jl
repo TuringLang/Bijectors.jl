@@ -11,7 +11,7 @@ using LinearAlgebra
 using PDMats
 using Test
 
-include(joinpath(@__DIR__, "..", "..", "testresources.jl"))
+include(joinpath(@__DIR__, "..", "..", "test_resources.jl"))
 
 # Enzyme adtype configurations. Each list matches a flavour previously used in a different
 # place on `main` so the moved tests run against the exact same backend they did before:
