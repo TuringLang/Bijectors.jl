@@ -54,7 +54,9 @@ struct ADTestCase
     broken::Bool
 end
 
-ADTestCase(name::String, func, arg; broken::Bool=false) = ADTestCase(name, func, arg, broken)
+function ADTestCase(name::String, func, arg; broken::Bool=false)
+    ADTestCase(name, func, arg, broken)
+end
 
 struct VectorTestCase{D<:Distributions.Distribution}
     name::String
@@ -65,8 +67,9 @@ end
 function VectorTestCase(name::String, dist::Distributions.Distribution; kwargs...)
     return VectorTestCase(name, dist, NamedTuple(kwargs))
 end
-VectorTestCase(dist::Distributions.Distribution; kwargs...) =
+function VectorTestCase(dist::Distributions.Distribution; kwargs...)
     VectorTestCase(_case_name(dist), dist; kwargs...)
+end
 
 # `generate_testcases(Val{:tag})` returns the list of cases for that tag. The method table
 # is populated below per tag.
@@ -137,9 +140,12 @@ function generate_testcases(::Val{:veccholeskybijector})
         inverse_only = let binv = binv, f = cholesky_to_triangular
             y_ -> sum(f(transform(binv, y_)))
         end
-        push!(cases, ADTestCase("VecCholeskyBijector d=$d uplo=$uplo roundtrip", roundtrip, y))
         push!(
-            cases, ADTestCase("VecCholeskyBijector d=$d uplo=$uplo inverse", inverse_only, y)
+            cases, ADTestCase("VecCholeskyBijector d=$d uplo=$uplo roundtrip", roundtrip, y)
+        )
+        push!(
+            cases,
+            ADTestCase("VecCholeskyBijector d=$d uplo=$uplo inverse", inverse_only, y),
         )
     end
     return cases
@@ -364,9 +370,7 @@ const heterogeneous_mixtures = [
 function generate_testcases(::Val{:univariates})
     cases = VectorTestCase[]
     for d in univariates
-        push!(
-            cases, VectorTestCase(d; expected_zero_allocs=(from_vec, from_linked_vec))
-        )
+        push!(cases, VectorTestCase(d; expected_zero_allocs=(from_vec, from_linked_vec)))
     end
     expected_alloc_for_hm = @static if VERSION >= v"1.12-"
         (from_vec, from_linked_vec)
@@ -374,9 +378,7 @@ function generate_testcases(::Val{:univariates})
         ()
     end
     for d in heterogeneous_mixtures
-        push!(
-            cases, VectorTestCase(d; expected_zero_allocs=expected_alloc_for_hm)
-        )
+        push!(cases, VectorTestCase(d; expected_zero_allocs=expected_alloc_for_hm))
     end
     return cases
 end
@@ -402,9 +404,7 @@ function generate_testcases(::Val{:multivariates})
         else
             (to_vec, from_vec, to_linked_vec, from_linked_vec)
         end
-        push!(
-            cases, VectorTestCase(d; expected_zero_allocs=expected_zero_allocs)
-        )
+        push!(cases, VectorTestCase(d; expected_zero_allocs=expected_zero_allocs))
     end
     return cases
 end
@@ -481,10 +481,7 @@ const reshaped_default_dists = [
 ]
 
 function generate_testcases(::Val{:reshaped_dists})
-    return [
-        VectorTestCase(d; expected_zero_allocs=()) for
-        d in reshaped_default_dists
-    ]
+    return [VectorTestCase(d; expected_zero_allocs=()) for d in reshaped_default_dists]
 end
 
 # `reshape(Beta(2, 2), (1, 1, 1, 1, 1))` hit
@@ -510,9 +507,7 @@ const transformed_dists = [
 ]
 
 function generate_testcases(::Val{:transformed_dists})
-    return [
-        VectorTestCase(d; test_in_support=false) for d in transformed_dists
-    ]
+    return [VectorTestCase(d; test_in_support=false) for d in transformed_dists]
 end
 
 # --- order statistics ---
@@ -629,7 +624,7 @@ const products = [
 # On Julia 1.10 (and only 1.10), `@inferred to_vec(d)` fails for this case even though
 # `@code_warntype to_vec(d)` is type stable. Almost certainly a Julia bug.
 const nested_product_namedtuple = [
-    product_distribution((a=Normal(), b=product_distribution((c=Normal(), d=Beta(2, 2))))),
+    product_distribution((a=Normal(), b=product_distribution((c=Normal(), d=Beta(2, 2)))))
 ]
 
 # Heterogeneous arrays make bijector construction type unstable. The triple-nested tuple
@@ -650,19 +645,14 @@ end
 function generate_testcases(::Val{:nested_product_namedtuple})
     return [
         VectorTestCase(
-            d;
-            expected_zero_allocs=(),
-            test_construction_type_stable=(VERSION >= v"1.11-"),
+            d; expected_zero_allocs=(), test_construction_type_stable=(VERSION >= v"1.11-")
         ) for d in nested_product_namedtuple
     ]
 end
 
 function generate_testcases(::Val{:type_unstable_products})
     return [
-        VectorTestCase(
-            d;
-            expected_zero_allocs=(),
-            test_construction_type_stable=false,
-        ) for d in type_unstable_products
+        VectorTestCase(d; expected_zero_allocs=(), test_construction_type_stable=false) for
+        d in type_unstable_products
     ]
 end
