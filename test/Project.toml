@@ -38,7 +38,7 @@ AbstractPPL = {url = "https://github.com/TuringLang/AbstractPPL.jl", rev = "eval
 [compat]
 ADTypes = "1"
 AbstractMCMC = "5"
-AbstractPPL = "0.14"
+AbstractPPL = "0.15"
 AdvancedHMC = "0.6, 0.7, 0.8"
 Bijectors = "0.15"
 ChainRules = "1"
