@@ -1,10 +1,4 @@
 @testset "PlanarLayer: $backend_name" for (backend_name, adtype) in TEST_ADTYPES
-    # Enzyme is tested separately as these tests are flaky
-    # TODO(penelopeysm): Fix upstream and re-enable.
-    if adtype isa AutoEnzyme
-        continue
-    end
-
     # logpdf of a flow with a planar layer and two-dimensional inputs
     function f(θ)
         layer = PlanarLayer(θ[1:2], θ[3:4], θ[5:5])

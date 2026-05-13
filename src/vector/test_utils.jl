@@ -1,19 +1,17 @@
 using Test
 using LinearAlgebra: logabsdet, Cholesky, UpperTriangular, LowerTriangular
 import DifferentiationInterface as DI
-import EnzymeCore as EC
 
 # Would like to use FiniteDifferences, but very easy to run into issues with
 # https://juliadiff.org/FiniteDifferences.jl/latest/#Dealing-with-Singularities
 const ref_adtype = DI.AutoForwardDiff()
 
+# Enzyme is tested separately in test/integration/enzyme.
 const default_adtypes = [
     DI.AutoReverseDiff(),
     DI.AutoReverseDiff(; compile=true),
     DI.AutoMooncake(),
     DI.AutoMooncakeForward(),
-    DI.AutoEnzyme(; mode=EC.Forward, function_annotation=EC.Const),
-    DI.AutoEnzyme(; mode=EC.Reverse, function_annotation=EC.Const),
 ]
 
 _get_value_support(::D.Distribution{<:Any,VS}) where {VS<:D.ValueSupport} = VS

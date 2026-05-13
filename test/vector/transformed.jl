@@ -5,7 +5,6 @@ using Distributions
 using LinearAlgebra
 using Test
 using Bijectors.VectorBijectors
-using Enzyme: Enzyme
 using ForwardDiff: ForwardDiff
 using ReverseDiff: ReverseDiff
 using Mooncake: Mooncake

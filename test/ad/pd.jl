@@ -1,12 +1,6 @@
 _topd(x) = x * x' + I
 
 @testset "PDVecBijector: $backend_name" for (backend_name, adtype) in TEST_ADTYPES
-    # Enzyme is tested separately as these tests are flaky
-    # TODO(penelopeysm): Fix upstream and re-enable.
-    if adtype isa AutoEnzyme
-        continue
-    end
-
     d = 4
     b = Bijectors.PDVecBijector()
     binv = inverse(b)

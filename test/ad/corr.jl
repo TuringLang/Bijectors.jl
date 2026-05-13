@@ -1,10 +1,4 @@
 @testset "VecCorrBijector: $backend_name" for (backend_name, adtype) in TEST_ADTYPES
-    # Enzyme is tested separately as these tests are flaky
-    # TODO(penelopeysm): Fix upstream and re-enable.
-    if adtype isa AutoEnzyme
-        continue
-    end
-
     @testset "d = $d" for d in (1, 2, 4)
         dist = LKJ(d, 2.0)
         b = bijector(dist)

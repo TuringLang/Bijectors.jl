@@ -6,7 +6,6 @@ using Test
 using Bijectors.VectorBijectors
 using Bijectors: ordered
 import DifferentiationInterface as DI
-using Enzyme: Enzyme
 using ForwardDiff: ForwardDiff
 using ReverseDiff: ReverseDiff
 using Mooncake: Mooncake
@@ -23,12 +22,8 @@ base_dists = [
 # TODO(penelopeysm): ReverseDiff can't differentiate through JointOrderStatistics transform
 # because of the heavy setindex! usage.
 # https://github.com/JuliaDiff/ReverseDiff.jl/issues/43 We just avoid testing it for now.
-joint_test_adtypes = [
-    DI.AutoMooncake(),
-    DI.AutoMooncakeForward(),
-    DI.AutoEnzyme(; mode=Enzyme.Forward),
-    DI.AutoEnzyme(; mode=Enzyme.Reverse),
-]
+# Enzyme is tested separately in test/integration/enzyme.
+joint_test_adtypes = [DI.AutoMooncake(), DI.AutoMooncakeForward()]
 
 @testset "Order statistics" begin
     for d in base_dists

@@ -5,7 +5,6 @@ using LinearAlgebra
 using Test
 using Bijectors.VectorBijectors
 import DifferentiationInterface as DI
-using Enzyme: Enzyme
 using ForwardDiff: ForwardDiff
 using ReverseDiff: ReverseDiff
 using Mooncake: Mooncake
@@ -26,29 +25,12 @@ reshaped = [
     reshape(MatrixNormal(2, 5), 5, 2),
     reshape(Wishart(7, Matrix{Float64}(I, 4, 4)), 16),
     reshape(Wishart(7, Matrix{Float64}(I, 4, 4)), 1, 1, 4, 1, 4),
+    reshape(Beta(2, 2), (1, 1, 1, 1, 1)),
 ]
-
-# Fails on 1.10: https://github.com/EnzymeAD/Enzyme.jl/issues/2987
-adtypes_no_enz_rvs = [
-    DI.AutoReverseDiff(),
-    DI.AutoReverseDiff(; compile=true),
-    DI.AutoMooncake(),
-    DI.AutoMooncakeForward(),
-    DI.AutoEnzyme(; mode=Enzyme.Forward, function_annotation=Enzyme.Const),
-]
-reshaped_no_enzyme = [reshape(Beta(2, 2), (1, 1, 1, 1, 1))]
 
 @testset "Reshaped distributions" begin
     for d in reshaped
         VectorBijectors.test_all(d; expected_zero_allocs=())
-    end
-
-    for d in reshaped_no_enzyme
-        @static if VERSION >= v"1.11-"
-            VectorBijectors.test_all(d; expected_zero_allocs=())
-        else
-            VectorBijectors.test_all(d; adtypes=adtypes_no_enz_rvs, expected_zero_allocs=())
-        end
     end
 end
 

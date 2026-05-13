@@ -11,7 +11,6 @@ using Functors
 using LogExpFunctions
 using Mooncake
 using ReverseDiff
-using Pkg
 
 using Random, LinearAlgebra, Test
 
@@ -32,31 +31,14 @@ using InverseFunctions: InverseFunctions
 using LazyArrays: LazyArrays
 
 const GROUP = get(ENV, "GROUP", "All")
-# Enzyme doesn't work on 1.12 yet
-const TEST_ENZYME = VERSION < v"1.12.0"
 
-TEST_ADTYPES = [
+# Enzyme is tested separately in test/integration/enzyme.
+const TEST_ADTYPES = [
     ("ForwardDiff", AutoForwardDiff()),
     ("ReverseDiff", AutoReverseDiff(; compile=false)),
     ("ReverseDiffCompiled", AutoReverseDiff(; compile=true)),
     ("Mooncake", AutoMooncake()),
 ]
-if TEST_ENZYME
-    Pkg.add("Enzyme")
-    Pkg.add("EnzymeTestUtils")
-    using Enzyme: Enzyme, set_runtime_activity, Forward, Reverse, Const
-    TEST_ADTYPES = [
-        TEST_ADTYPES...,
-        (
-            "EnzymeForward",
-            AutoEnzyme(; mode=set_runtime_activity(Forward), function_annotation=Const),
-        ),
-        (
-            "EnzymeReverse",
-            AutoEnzyme(; mode=set_runtime_activity(Reverse), function_annotation=Const),
-        ),
-    ]
-end
 const REF_BACKEND = AutoFiniteDifferences(; fdm=central_fdm(5, 1))
 
 function test_ad(f, backend, x; rtol=1e-6, atol=1e-6)
@@ -90,9 +72,6 @@ include("bijectors/utils.jl")
         # These tests specifically check the implementation of AD backend rules.
         include("ad/chainrules.jl")
         include("ad/mooncake.jl")
-        if TEST_ENZYME
-            include("ad/enzyme.jl")
-        end
 
         # These tests check that AD can differentiate through Bijectors # functionality without explicit rules.
         include("ad/flows.jl")

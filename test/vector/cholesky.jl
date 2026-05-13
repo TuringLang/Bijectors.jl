@@ -8,17 +8,13 @@ import DifferentiationInterface as DI
 using ForwardDiff: ForwardDiff
 using ReverseDiff: ReverseDiff
 using Mooncake: Mooncake
-using Enzyme: Enzyme, set_runtime_activity, Const, Forward, Reverse
 
-# Need runtime activity for some reason.
-# TODO(penelopeysm): Report upstream
+# Enzyme is tested separately in test/integration/enzyme.
 const adtypes = [
     DI.AutoReverseDiff(),
     DI.AutoReverseDiff(; compile=true),
     DI.AutoMooncake(),
     DI.AutoMooncakeForward(),
-    DI.AutoEnzyme(; mode=set_runtime_activity(Forward), function_annotation=Const),
-    DI.AutoEnzyme(; mode=set_runtime_activity(Reverse), function_annotation=Const),
 ]
 
 dists = [
