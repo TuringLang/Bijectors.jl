@@ -36,9 +36,9 @@ using Test
 # the 1000-character `string(d)` form for nested products.
 _case_name(d) = string(VectorBijectors._name(d))
 
-# Adtypes used by every main-suite caller. Enzyme is tested separately in
-# test/integration/enzyme.
-const NONENZYME_ADTYPES = [
+# Baseline adtype list shared by every main-suite caller. Backends with separate
+# integration suites (currently: Enzyme, in test/integration/enzyme) are not in this list.
+const BASE_ADTYPES = [
     AutoReverseDiff(),
     AutoReverseDiff(; compile=true),
     AutoMooncake(),

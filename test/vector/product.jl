@@ -1,11 +1,11 @@
 @testset "Product distributions" begin
     for c in generate_testcases(Val(:products))
-        run_vector_case(c, NONENZYME_ADTYPES)
+        run_vector_case(c, BASE_ADTYPES)
     end
     for c in generate_testcases(Val(:nested_product_namedtuple))
-        run_vector_case(c, NONENZYME_ADTYPES)
+        run_vector_case(c, BASE_ADTYPES)
     end
     for c in generate_testcases(Val(:type_unstable_products))
-        run_vector_case(c, NONENZYME_ADTYPES)
+        run_vector_case(c, BASE_ADTYPES)
     end
 end
