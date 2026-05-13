@@ -1,31 +1,44 @@
 using ADTypes
 using Bijectors
 using DifferentiationInterface
+using Distributions
 using Enzyme: Enzyme, set_runtime_activity, Forward, Reverse, Const
 using EnzymeTestUtils: test_forward, test_reverse
+using FillArrays: Fill
 using FiniteDifferences
+using ForwardDiff: ForwardDiff
 using LinearAlgebra
+using PDMats
 using Test
 
-const REF_BACKEND = AutoFiniteDifferences(; fdm=central_fdm(5, 1))
+const SHARED = joinpath(@__DIR__, "..", "..", "shared")
+include(joinpath(SHARED, "ad_test_utils.jl"))
+include(joinpath(SHARED, "ad_bijector_tests.jl"))
+include(joinpath(SHARED, "vector_distributions.jl"))
 
-function test_ad(f, backend, x; rtol=1e-6, atol=1e-6)
-    @info "testing AD for function $f with $backend"
-    ref_gradient = DifferentiationInterface.gradient(f, REF_BACKEND, x)
-    gradient = DifferentiationInterface.gradient(f, backend, x)
-    @test isapprox(gradient, ref_gradient; rtol=rtol, atol=atol)
-end
-
-const BACKENDS = [
-    (
-        "EnzymeForward",
-        AutoEnzyme(; mode=set_runtime_activity(Forward), function_annotation=Const),
-    ),
-    (
-        "EnzymeReverse",
-        AutoEnzyme(; mode=set_runtime_activity(Reverse), function_annotation=Const),
-    ),
+# Enzyme adtype configurations. Each list matches a flavour previously used in a different
+# place on `main` so the moved tests run against the exact same backend they did before:
+# - `bijector_backends`: original test/integration/enzyme/main.jl
+# - `runtime_const_backends`: test/runtests.jl::TEST_ADTYPES (test/ad/{corr,stacked}.jl)
+#   and test/vector/{cholesky,product}.jl
+# - `default_backends`: src/vector/test_utils.jl::default_adtypes (test/vector/
+#   {univariate,multivariate,matrix,transformed,reshaped}.jl)
+# - `joint_order_backends`: test/vector/order.jl::joint_test_adtypes
+const bijector_backends = [
+    ("EnzymeForward", AutoEnzyme(; mode=Forward)),
+    ("EnzymeReverse", AutoEnzyme(; mode=Reverse)),
 ]
+const runtime_const_backends = [
+    AutoEnzyme(; mode=set_runtime_activity(Forward), function_annotation=Const),
+    AutoEnzyme(; mode=set_runtime_activity(Reverse), function_annotation=Const),
+]
+const default_backends = [
+    AutoEnzyme(; mode=Forward, function_annotation=Const),
+    AutoEnzyme(; mode=Reverse, function_annotation=Const),
+]
+const joint_order_backends = [AutoEnzyme(; mode=Forward), AutoEnzyme(; mode=Reverse)]
+const reshaped_beta_pre_111_backends =
+    [AutoEnzyme(; mode=Forward, function_annotation=Const)]
 
 # This entire test suite is broken on 1.11.
 #
@@ -51,7 +64,6 @@ const BACKENDS = [
         z = randn()
 
         @testset "forward" begin
-            # No batches
             @testset for RT in (Const, Enzyme.Duplicated, Enzyme.DuplicatedNoNeed),
                 Tx in (Const, Enzyme.Duplicated),
                 Ty in (Const, Enzyme.Duplicated),
@@ -60,7 +72,6 @@ const BACKENDS = [
                 test_forward(Bijectors.find_alpha, RT, (x, Tx), (y, Ty), (z, Tz))
             end
 
-            # Batches
             @testset for RT in
                           (Const, Enzyme.BatchDuplicated, Enzyme.BatchDuplicatedNoNeed),
                 Tx in (Const, Enzyme.BatchDuplicated),
@@ -71,7 +82,6 @@ const BACKENDS = [
             end
         end
         @testset "reverse" begin
-            # No batches
             @testset for RT in (Const, Enzyme.Active),
                 Tx in (Const, Enzyme.Active),
                 Ty in (Const, Enzyme.Active),
@@ -80,119 +90,43 @@ const BACKENDS = [
                 test_reverse(Bijectors.find_alpha, RT, (x, Tx), (y, Ty), (z, Tz))
             end
 
-            # TODO: Test batch mode
-            # This is a bit problematic since Enzyme does not support all combinations of
-            # activities currently
+            # TODO: Test batch mode. Enzyme does not support all combinations of activities
+            # currently:
             # https://github.com/TuringLang/Bijectors.jl/pull/350#issuecomment-2480468728
         end
     end
 end
 
-@testset "$backend" for (backend, adtype) in BACKENDS
-    @info "Testing with backend: $backend"
-
-    @testset "VecCorrBijector" begin
-        @info " - Testing VecCorrBijector"
-
-        @testset "d = $d" for d in (1, 2, 4)
-            @info "   - Dimension: $d"
-
-            dist = LKJ(d, 2.0)
-            b = bijector(dist)
-            binv = inverse(b)
-
-            x = rand(dist)
-            y = b(x)
-
-            roundtrip(y) = sum(transform(b, binv(y)))
-            inverse_only(y) = sum(transform(binv, y))
-            test_ad(roundtrip, adtype, y)
-            test_ad(inverse_only, adtype, y)
-        end
-    end
-
-    @testset "VecCholeskyBijector" begin
-        @info " - Testing VecCholeskyBijector"
-
-        @testset "d = $d, uplo = $uplo" for d in (1, 2, 4), uplo in ('U', 'L')
-            @info "   - Dimension: $d, uplo: $uplo"
-
-            dist = LKJCholesky(d, 2.0, uplo)
-            b = bijector(dist)
-            binv = inverse(b)
-
-            x = rand(dist)
-            y = b(x)
-            cholesky_to_triangular =
-                uplo == 'U' ? Bijectors.cholesky_upper : Bijectors.cholesky_lower
-
-            roundtrip(y) = sum(transform(b, binv(y)))
-            test_ad(roundtrip, adtype, y)
-
-            # we need to tack on `cholesky_upper`/`cholesky_lower`, because directly calling
-            # `sum` on a LinearAlgebra.Cholesky doesn't give a scalar
-            inverse_only(y) = sum(cholesky_to_triangular(transform(binv, y)))
-            test_ad(inverse_only, adtype, y)
-        end
-    end
-
-    @testset "PlanarLayer" begin
-        @info " - Testing PlanarLayer"
-        # logpdf of a flow with a planar layer and two-dimensional inputs
-        function f(θ)
-            layer = PlanarLayer(θ[1:2], θ[3:4], θ[5:5])
-            flow = transformed(MvNormal(zeros(2), I), layer)
-            x = θ[6:7]
-            return logpdf(flow.dist, x) - logabsdetjac(flow.transform, x)
-        end
-        test_ad(f, adtype, randn(7))
-
-        function g(θ)
-            layer = PlanarLayer(θ[1:2], θ[3:4], θ[5:5])
-            flow = transformed(MvNormal(zeros(2), I), layer)
-            x = reshape(θ[6:end], 2, :)
-            return sum(logpdf(flow.dist, x) - logabsdetjac(flow.transform, x))
-        end
-        test_ad(g, adtype, randn(11))
-
-        # logpdf of a flow with the inverse of a planar layer and two-dimensional inputs
-        function finv(θ)
-            layer = PlanarLayer(θ[1:2], θ[3:4], θ[5:5])
-            flow = transformed(MvNormal(zeros(2), I), inverse(layer))
-            x = θ[6:7]
-            return logpdf(flow.dist, x) - logabsdetjac(flow.transform, x)
-        end
-        test_ad(finv, adtype, randn(7))
-
-        function ginv(θ)
-            layer = PlanarLayer(θ[1:2], θ[3:4], θ[5:5])
-            flow = transformed(MvNormal(zeros(2), I), inverse(layer))
-            x = reshape(θ[6:end], 2, :)
-            return sum(logpdf(flow.dist, x) - logabsdetjac(flow.transform, x))
-        end
-        test_ad(ginv, adtype, randn(11))
-    end
-
-    @testset "PDVecBijector" begin
-        @info " - Testing PDVecBijector"
-        _topd(x) = x * x' + I
-
-        d = 4
-        b = Bijectors.PDVecBijector()
-        binv = inverse(b)
-
-        z = randn(d, d)
-        x = _topd(z)
-        y = b(x)
-
-        forward_only(x) = sum(transform(b, _topd(reshape(x, d, d))))
-        inverse_only(y) = sum(transform(binv, y))
-        inverse_chol_lower(y) = sum(Bijectors.cholesky_lower(transform(binv, y)))
-        inverse_chol_upper(y) = sum(Bijectors.cholesky_upper(transform(binv, y)))
-
-        test_ad(forward_only, adtype, vec(z))
-        test_ad(inverse_only, adtype, y)
-        test_ad(inverse_chol_lower, adtype, y)
-        test_ad(inverse_chol_upper, adtype, y)
-    end
+# Bijector-level AD tests. The bare `AutoEnzyme(; mode=Forward)` / `mode=Reverse` form for
+# VecCorrBijector/PlanarLayer/PDVecBijector matches the original integration test on
+# `main`; VecCholeskyBijector and StackedBijector ran via TEST_ADTYPES on `main`, which
+# used set_runtime_activity + Const.
+@testset "$backend" for (backend, adtype) in bijector_backends
+    @testset "VecCorrBijector" test_veccorrbijector_ad(adtype)
+    @testset "PlanarLayer" test_planarlayer_ad(adtype)
+    @testset "PDVecBijector" test_pdvecbijector_ad(adtype)
 end
+
+@testset "VecCholeskyBijector: $adtype" for adtype in runtime_const_backends
+    test_veccholeskybijector_ad(adtype)
+end
+
+@testset "StackedBijector: $adtype" for adtype in runtime_const_backends
+    test_stackedbijector_ad(adtype)
+end
+
+# Distribution-level test_all coverage moved from test/vector/*.jl. The adtype list passed
+# to each wrapper matches what `main` used for that file's Enzyme entries.
+@testset "Univariates" test_univariates_with(default_backends)
+@testset "Multivariates" test_multivariates_with(default_backends)
+# LKJ ran with Mooncake only on `main`, so it has no Enzyme coverage to move.
+@testset "Matrix distributions" test_matrix_dists_with(default_backends; lkj_adtypes=[])
+@testset "Cholesky" test_cholesky_with(runtime_const_backends)
+@testset "Order statistics" test_order_with(
+    default_backends; joint_adtypes=joint_order_backends
+)
+@testset "Reshaped distributions" test_reshaped_with(
+    default_backends; beta_reshape_adtypes_pre_111=reshaped_beta_pre_111_backends
+)
+@testset "TransformedDistributions" test_transformed_with(default_backends)
+@testset "Product distributions" test_products_with(runtime_const_backends)
