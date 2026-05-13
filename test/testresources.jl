@@ -19,7 +19,8 @@
 
 using Bijectors
 using Bijectors: ordered
-using Bijectors.VectorBijectors
+import Bijectors.VectorBijectors
+using Bijectors.VectorBijectors: from_linked_vec, from_vec, to_linked_vec, to_vec
 using DifferentiationInterface
 using Distributions
 using FillArrays: Fill
@@ -619,8 +620,8 @@ const nested_product_namedtuple = [
 ]
 
 # Heterogeneous arrays make bijector construction type unstable. The triple-nested tuple
-# products (last two) originally lived here as "enzyme_failures" — Enzyme couldn't
-# differentiate through them on `main`.
+# products (last two) were the `enzyme_failures` on `main` — Enzyme can't differentiate
+# through them; callers that test Enzyme should filter them out.
 const type_unstable_products = [
     product_distribution([Normal(), Beta(2, 2), Exponential()]),
     product_distribution([Normal() Beta(2, 2); Exponential() Uniform(-1, 1)]),
