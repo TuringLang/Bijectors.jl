@@ -70,7 +70,8 @@ end
 
         @testset "forward" begin
             @testset for RT in (Const, Enzyme.Duplicated, Enzyme.DuplicatedNoNeed),
-                Tx in (Const, Enzyme.Duplicated), Ty in (Const, Enzyme.Duplicated),
+                Tx in (Const, Enzyme.Duplicated),
+                Ty in (Const, Enzyme.Duplicated),
                 Tz in (Const, Enzyme.Duplicated)
 
                 test_forward(Bijectors.find_alpha, RT, (x, Tx), (y, Ty), (z, Tz))
@@ -87,7 +88,8 @@ end
         end
         @testset "reverse" begin
             @testset for RT in (Const, Enzyme.Active),
-                Tx in (Const, Enzyme.Active), Ty in (Const, Enzyme.Active),
+                Tx in (Const, Enzyme.Active),
+                Ty in (Const, Enzyme.Active),
                 Tz in (Const, Enzyme.Active)
 
                 test_reverse(Bijectors.find_alpha, RT, (x, Tx), (y, Ty), (z, Tz))

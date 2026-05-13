@@ -55,7 +55,7 @@ struct ADTestCase
 end
 
 function ADTestCase(name::String, func, arg; broken::Bool=false)
-    ADTestCase(name, func, arg, broken)
+    return ADTestCase(name, func, arg, broken)
 end
 
 struct VectorTestCase{D<:Distributions.Distribution}
@@ -68,7 +68,7 @@ function VectorTestCase(name::String, dist::Distributions.Distribution; kwargs..
     return VectorTestCase(name, dist, NamedTuple(kwargs))
 end
 function VectorTestCase(dist::Distributions.Distribution; kwargs...)
-    VectorTestCase(_case_name(dist), dist; kwargs...)
+    return VectorTestCase(_case_name(dist), dist; kwargs...)
 end
 
 # `generate_testcases(Val{:tag})` returns the list of cases for that tag. The method table
