@@ -22,12 +22,28 @@ using Bijectors: ordered
 import Bijectors.VectorBijectors
 using Bijectors.VectorBijectors: from_linked_vec, from_vec, to_linked_vec, to_vec
 using DifferentiationInterface
+using DifferentiationInterface: gradient
 using Distributions
 using FillArrays: Fill
 using FiniteDifferences: central_fdm
 using LinearAlgebra
 using PDMats
 using Test
+
+# Compact, readable name for a distribution. `Bijectors.VectorBijectors._name` already
+# handles wrappers (Truncated, Censored, ReshapedDistribution, OrderStatistic, etc.); fall
+# back to a stripped `nameof` for everything else so `VectorTestCase.name` doesn't carry
+# the 1000-character `string(d)` form for nested products.
+_case_name(d) = string(VectorBijectors._name(d))
+
+# Adtypes used by every main-suite caller. Enzyme is tested separately in
+# test/integration/enzyme.
+const NONENZYME_ADTYPES = [
+    AutoReverseDiff(),
+    AutoReverseDiff(; compile=true),
+    AutoMooncake(),
+    AutoMooncakeForward(),
+]
 
 # ===== Test case types =====
 
@@ -49,6 +65,8 @@ end
 function VectorTestCase(name::String, dist::Distributions.Distribution; kwargs...)
     return VectorTestCase(name, dist, NamedTuple(kwargs))
 end
+VectorTestCase(dist::Distributions.Distribution; kwargs...) =
+    VectorTestCase(_case_name(dist), dist; kwargs...)
 
 # `generate_testcases(Val{:tag})` returns the list of cases for that tag. The method table
 # is populated below per tag.
@@ -60,9 +78,9 @@ const REF_BACKEND = AutoFiniteDifferences(; fdm=central_fdm(5, 1))
 
 function test_ad(f, backend, x; rtol=1e-6, atol=1e-6)
     @info "testing AD for function $f with $backend"
-    ref_gradient = DifferentiationInterface.gradient(f, REF_BACKEND, x)
-    gradient = DifferentiationInterface.gradient(f, backend, x)
-    @test isapprox(gradient, ref_gradient; rtol=rtol, atol=atol)
+    ref_gradient = gradient(f, REF_BACKEND, x)
+    ad_gradient = gradient(f, backend, x)
+    @test isapprox(ad_gradient, ref_gradient; rtol=rtol, atol=atol)
 end
 
 function run_ad_case(c::ADTestCase, adtype; rtol=1e-6, atol=1e-6)
@@ -347,10 +365,7 @@ function generate_testcases(::Val{:univariates})
     cases = VectorTestCase[]
     for d in univariates
         push!(
-            cases,
-            VectorTestCase(
-                string(d), d; expected_zero_allocs=(from_vec, from_linked_vec)
-            ),
+            cases, VectorTestCase(d; expected_zero_allocs=(from_vec, from_linked_vec))
         )
     end
     expected_alloc_for_hm = @static if VERSION >= v"1.12-"
@@ -360,7 +375,7 @@ function generate_testcases(::Val{:univariates})
     end
     for d in heterogeneous_mixtures
         push!(
-            cases, VectorTestCase(string(d), d; expected_zero_allocs=expected_alloc_for_hm)
+            cases, VectorTestCase(d; expected_zero_allocs=expected_alloc_for_hm)
         )
     end
     return cases
@@ -388,7 +403,7 @@ function generate_testcases(::Val{:multivariates})
             (to_vec, from_vec, to_linked_vec, from_linked_vec)
         end
         push!(
-            cases, VectorTestCase(string(d), d; expected_zero_allocs=expected_zero_allocs)
+            cases, VectorTestCase(d; expected_zero_allocs=expected_zero_allocs)
         )
     end
     return cases
@@ -414,7 +429,7 @@ const matrix_dists = [
 const lkj_matrix_dists = [LKJ(3, 1.0), LKJ(7, 1.0)]
 
 function generate_testcases(::Val{:matrix_dists})
-    return [VectorTestCase(string(d), d; expected_zero_allocs=()) for d in matrix_dists]
+    return [VectorTestCase(d; expected_zero_allocs=()) for d in matrix_dists]
 end
 
 # LKJ runs with a smaller backend list because ReverseDiff gives wrong results when
@@ -425,7 +440,7 @@ end
 # (https://github.com/TuringLang/Bijectors.jl/issues/435).
 function generate_testcases(::Val{:lkj_matrix_dists})
     return [
-        VectorTestCase(string(d), d; expected_zero_allocs=(), test_in_support=false) for
+        VectorTestCase(d; expected_zero_allocs=(), test_in_support=false) for
         d in lkj_matrix_dists
     ]
 end
@@ -442,7 +457,7 @@ const cholesky_dists = [
 ]
 
 function generate_testcases(::Val{:cholesky_dists})
-    return [VectorTestCase(string(d), d; expected_zero_allocs=()) for d in cholesky_dists]
+    return [VectorTestCase(d; expected_zero_allocs=()) for d in cholesky_dists]
 end
 
 # --- reshaped ---
@@ -467,7 +482,7 @@ const reshaped_default_dists = [
 
 function generate_testcases(::Val{:reshaped_dists})
     return [
-        VectorTestCase(string(d), d; expected_zero_allocs=()) for
+        VectorTestCase(d; expected_zero_allocs=()) for
         d in reshaped_default_dists
     ]
 end
@@ -478,9 +493,7 @@ end
 const reshaped_beta_dist = reshape(Beta(2, 2), (1, 1, 1, 1, 1))
 
 function generate_testcases(::Val{:reshaped_beta_special})
-    return [
-        VectorTestCase(string(reshaped_beta_dist), reshaped_beta_dist; expected_zero_allocs=())
-    ]
+    return [VectorTestCase(reshaped_beta_dist; expected_zero_allocs=())]
 end
 
 # --- transformed ---
@@ -498,7 +511,7 @@ const transformed_dists = [
 
 function generate_testcases(::Val{:transformed_dists})
     return [
-        VectorTestCase(string(d), d; test_in_support=false) for d in transformed_dists
+        VectorTestCase(d; test_in_support=false) for d in transformed_dists
     ]
 end
 
@@ -520,7 +533,7 @@ function generate_testcases(::Val{:order_orderstatistic})
         push!(
             cases,
             VectorTestCase(
-                "OrderStatistic($d, 10, 1)",
+                "OrderStatistic($(_case_name(d)), 10, 1)",
                 OrderStatistic(d, 10, 1);
                 expected_zero_allocs=unvec_only,
             ),
@@ -528,7 +541,7 @@ function generate_testcases(::Val{:order_orderstatistic})
         push!(
             cases,
             VectorTestCase(
-                "OrderStatistic($d, 10, 10)",
+                "OrderStatistic($(_case_name(d)), 10, 10)",
                 OrderStatistic(d, 10, 10);
                 expected_zero_allocs=unvec_only,
             ),
@@ -548,7 +561,7 @@ function generate_testcases(::Val{:order_joint})
         push!(
             cases,
             VectorTestCase(
-                "JointOrderStatistics($d, 4)",
+                "JointOrderStatistics($(_case_name(d)), 4)",
                 JointOrderStatistics(d, 4);
                 expected_zero_allocs=unlinked_only,
                 roundtrip_atol=1e-1,
@@ -557,7 +570,7 @@ function generate_testcases(::Val{:order_joint})
         push!(
             cases,
             VectorTestCase(
-                "JointOrderStatistics($d, 10, 2:5)",
+                "JointOrderStatistics($(_case_name(d)), 10, 2:5)",
                 JointOrderStatistics(d, 10, 2:5);
                 expected_zero_allocs=unlinked_only,
                 roundtrip_atol=1e-1,
@@ -631,13 +644,12 @@ const type_unstable_products = [
 ]
 
 function generate_testcases(::Val{:products})
-    return [VectorTestCase(string(d), d; expected_zero_allocs=()) for d in products]
+    return [VectorTestCase(d; expected_zero_allocs=()) for d in products]
 end
 
 function generate_testcases(::Val{:nested_product_namedtuple})
     return [
         VectorTestCase(
-            string(d),
             d;
             expected_zero_allocs=(),
             test_construction_type_stable=(VERSION >= v"1.11-"),
@@ -648,7 +660,6 @@ end
 function generate_testcases(::Val{:type_unstable_products})
     return [
         VectorTestCase(
-            string(d),
             d;
             expected_zero_allocs=(),
             test_construction_type_stable=false,

@@ -1,18 +1,11 @@
 @testset "Product distributions" begin
-    # Enzyme is tested separately in test/integration/enzyme.
-    adtypes = [
-        AutoReverseDiff(),
-        AutoReverseDiff(; compile=true),
-        AutoMooncake(),
-        AutoMooncakeForward(),
-    ]
     for c in generate_testcases(Val(:products))
-        run_vector_case(c, adtypes)
+        run_vector_case(c, NONENZYME_ADTYPES)
     end
     for c in generate_testcases(Val(:nested_product_namedtuple))
-        run_vector_case(c, adtypes)
+        run_vector_case(c, NONENZYME_ADTYPES)
     end
     for c in generate_testcases(Val(:type_unstable_products))
-        run_vector_case(c, adtypes)
+        run_vector_case(c, NONENZYME_ADTYPES)
     end
 end

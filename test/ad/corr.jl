@@ -1,11 +1,15 @@
-@testset "VecCorrBijector: $backend_name" for (backend_name, adtype) in TEST_ADTYPES
-    for c in generate_testcases(Val(:veccorrbijector))
-        run_ad_case(c, adtype)
+let cases = generate_testcases(Val(:veccorrbijector))
+    @testset "VecCorrBijector: $name" for (name, adtype) in TEST_ADTYPES
+        for c in cases
+            run_ad_case(c, adtype)
+        end
     end
 end
 
-@testset "VecCholeskyBijector: $backend_name" for (backend_name, adtype) in TEST_ADTYPES
-    for c in generate_testcases(Val(:veccholeskybijector))
-        run_ad_case(c, adtype)
+let cases = generate_testcases(Val(:veccholeskybijector))
+    @testset "VecCholeskyBijector: $name" for (name, adtype) in TEST_ADTYPES
+        for c in cases
+            run_ad_case(c, adtype)
+        end
     end
 end

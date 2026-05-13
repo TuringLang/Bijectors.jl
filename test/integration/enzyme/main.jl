@@ -6,7 +6,6 @@ using Enzyme: Enzyme, set_runtime_activity, Forward, Reverse, Const
 using EnzymeTestUtils: test_forward, test_reverse
 using FillArrays: Fill
 using FiniteDifferences
-using ForwardDiff: ForwardDiff
 using LinearAlgebra
 using PDMats
 using Test
@@ -35,8 +34,16 @@ const default_backends = [
     AutoEnzyme(; mode=Reverse, function_annotation=Const),
 ]
 const joint_order_backends = [AutoEnzyme(; mode=Forward), AutoEnzyme(; mode=Reverse)]
-const reshaped_beta_pre_111_backends =
-    [AutoEnzyme(; mode=Forward, function_annotation=Const)]
+
+# `enzyme_failures` from `main`: Enzyme cannot differentiate through triple-nested
+# tuple-of-products (e.g. `product_distribution(p1t, p1t, p1t)`). Identify them
+# structurally — `ProductDistribution` whose `.dists` is a `Tuple` of `Product` /
+# `ProductDistribution` components.
+function _enzyme_failing_product(d)
+    d isa Distributions.ProductDistribution || return false
+    d.dists isa Tuple || return false
+    return first(d.dists) isa Union{Distributions.Product,Distributions.ProductDistribution}
+end
 
 # This entire test suite is broken on 1.11.
 #
@@ -99,27 +106,36 @@ end
 # VecCorrBijector/PlanarLayer/PDVecBijector matches the original integration test on
 # `main`; VecCholeskyBijector and StackedBijector ran via TEST_ADTYPES on `main`, which
 # used set_runtime_activity + Const.
-@testset "$backend" for (backend, adtype) in bijector_backends
-    @testset "VecCorrBijector" for c in generate_testcases(Val(:veccorrbijector))
-        run_ad_case(c, adtype)
-    end
-    @testset "PlanarLayer" for c in generate_testcases(Val(:planarlayer))
-        run_ad_case(c, adtype)
-    end
-    @testset "PDVecBijector" for c in generate_testcases(Val(:pdvecbijector))
-        run_ad_case(c, adtype)
+let
+    corr_cases = generate_testcases(Val(:veccorrbijector))
+    planar_cases = generate_testcases(Val(:planarlayer))
+    pd_cases = generate_testcases(Val(:pdvecbijector))
+    @testset "$backend" for (backend, adtype) in bijector_backends
+        @testset "VecCorrBijector" for c in corr_cases
+            run_ad_case(c, adtype)
+        end
+        @testset "PlanarLayer" for c in planar_cases
+            run_ad_case(c, adtype)
+        end
+        @testset "PDVecBijector" for c in pd_cases
+            run_ad_case(c, adtype)
+        end
     end
 end
 
-@testset "VecCholeskyBijector: $adtype" for adtype in runtime_const_backends
-    for c in generate_testcases(Val(:veccholeskybijector))
-        run_ad_case(c, adtype)
+let cases = generate_testcases(Val(:veccholeskybijector))
+    @testset "VecCholeskyBijector: $adtype" for adtype in runtime_const_backends
+        for c in cases
+            run_ad_case(c, adtype)
+        end
     end
 end
 
-@testset "StackedBijector: $adtype" for adtype in runtime_const_backends
-    for c in generate_testcases(Val(:stackedbijector))
-        run_ad_case(c, adtype)
+let cases = generate_testcases(Val(:stackedbijector))
+    @testset "StackedBijector: $adtype" for adtype in runtime_const_backends
+        for c in cases
+            run_ad_case(c, adtype)
+        end
     end
 end
 
@@ -157,7 +173,10 @@ end
     for c in generate_testcases(Val(:reshaped_dists))
         run_vector_case(c, default_backends)
     end
-    beta_backends = VERSION >= v"1.11-" ? default_backends : reshaped_beta_pre_111_backends
+    # reshape(Beta(2, 2), (1, 1, 1, 1, 1)) hit
+    # https://github.com/EnzymeAD/Enzyme.jl/issues/2987 on Julia 1.10 — Enzyme Reverse
+    # fails there, so on 1.10 we run only the Forward backend.
+    beta_backends = VERSION >= v"1.11-" ? default_backends : default_backends[1:1]
     for c in generate_testcases(Val(:reshaped_beta_special))
         run_vector_case(c, beta_backends)
     end
@@ -173,16 +192,6 @@ end
     end
     for c in generate_testcases(Val(:nested_product_namedtuple))
         run_vector_case(c, runtime_const_backends)
-    end
-    # Skip the `enzyme_failures` from `main`: Enzyme cannot differentiate through
-    # triple-nested tuple-of-products (e.g. `product_distribution(p1t, p1t, p1t)`).
-    # Identify them structurally — `ProductDistribution` whose `.dists` is a `Tuple` of
-    # `Product` / `ProductDistribution` components.
-    function _enzyme_failing_product(d)
-        d isa Distributions.ProductDistribution || return false
-        d.dists isa Tuple || return false
-        return first(d.dists) isa
-               Union{Distributions.Product,Distributions.ProductDistribution}
     end
     for c in generate_testcases(Val(:type_unstable_products))
         _enzyme_failing_product(c.dist) && continue
