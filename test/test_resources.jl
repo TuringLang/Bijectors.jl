@@ -15,7 +15,6 @@ using Bijectors: ordered
 import Bijectors.VectorBijectors
 using Bijectors.VectorBijectors: from_linked_vec, from_vec, to_linked_vec, to_vec
 using DifferentiationInterface
-using DifferentiationInterface: gradient
 using Distributions
 using FillArrays: Fill
 using FiniteDifferences: central_fdm
@@ -555,7 +554,7 @@ function generate_testcases(::Val{:order_orderstatistic})
         push!(
             cases,
             VectorTestCase(
-                "OrderStatistic($(_case_name(d)), 10, 1)",
+                "order statistic $(_case_name(d)) i=1 of n=10",
                 OrderStatistic(d, 10, 1);
                 expected_zero_allocs=unvec_only,
             ),
@@ -563,7 +562,7 @@ function generate_testcases(::Val{:order_orderstatistic})
         push!(
             cases,
             VectorTestCase(
-                "OrderStatistic($(_case_name(d)), 10, 10)",
+                "order statistic $(_case_name(d)) i=10 of n=10",
                 OrderStatistic(d, 10, 10);
                 expected_zero_allocs=unvec_only,
             ),
@@ -583,7 +582,7 @@ function generate_testcases(::Val{:order_joint})
         push!(
             cases,
             VectorTestCase(
-                "JointOrderStatistics($(_case_name(d)), 4)",
+                "joint order statistic $(_case_name(d)) n=4 (all ranks)",
                 JointOrderStatistics(d, 4);
                 expected_zero_allocs=unlinked_only,
                 roundtrip_atol=1e-1,
@@ -592,7 +591,7 @@ function generate_testcases(::Val{:order_joint})
         push!(
             cases,
             VectorTestCase(
-                "JointOrderStatistics($(_case_name(d)), 10, 2:5)",
+                "joint order statistic $(_case_name(d)) n=10 ranks=2:5",
                 JointOrderStatistics(d, 10, 2:5);
                 expected_zero_allocs=unlinked_only,
                 roundtrip_atol=1e-1,
@@ -604,7 +603,7 @@ end
 
 function generate_testcases(::Val{:order_ordered})
     d = ordered(MvNormal([0.0, 1.0, 2.0], I))
-    return [VectorTestCase("ordered(MvNormal)", d; expected_zero_allocs=(from_vec, to_vec))]
+    return [VectorTestCase("ordered MvNormal", d; expected_zero_allocs=(from_vec, to_vec))]
 end
 
 # --- product distributions ---

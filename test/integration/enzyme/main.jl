@@ -141,21 +141,29 @@ let cases = generate_testcases(Val(:stackedbijector))
 end
 
 # Distribution-level `test_all` coverage moved from test/vector/*.jl.
-@testset "Univariates" for c in generate_testcases(Val(:univariates))
-    run_vector_case(c, default_backends)
+@testset "Univariates" begin
+    for c in generate_testcases(Val(:univariates))
+        run_vector_case(c, default_backends)
+    end
 end
 
-@testset "Multivariates" for c in generate_testcases(Val(:multivariates))
-    run_vector_case(c, default_backends)
+@testset "Multivariates" begin
+    for c in generate_testcases(Val(:multivariates))
+        run_vector_case(c, default_backends)
+    end
 end
 
 # LKJ matrix dists ran with Mooncake only on `main`, so they have no Enzyme coverage.
-@testset "Matrix distributions" for c in generate_testcases(Val(:matrix_dists))
-    run_vector_case(c, default_backends)
+@testset "Matrix distributions" begin
+    for c in generate_testcases(Val(:matrix_dists))
+        run_vector_case(c, default_backends)
+    end
 end
 
-@testset "Cholesky" for c in generate_testcases(Val(:cholesky_dists))
-    run_vector_case(c, runtime_const_backends)
+@testset "Cholesky" begin
+    for c in generate_testcases(Val(:cholesky_dists))
+        run_vector_case(c, runtime_const_backends)
+    end
 end
 
 @testset "Order statistics" begin
@@ -183,8 +191,10 @@ end
     end
 end
 
-@testset "TransformedDistributions" for c in generate_testcases(Val(:transformed_dists))
-    run_vector_case(c, default_backends)
+@testset "TransformedDistributions" begin
+    for c in generate_testcases(Val(:transformed_dists))
+        run_vector_case(c, default_backends)
+    end
 end
 
 @testset "Product distributions" begin
@@ -195,7 +205,12 @@ end
         run_vector_case(c, runtime_const_backends)
     end
     for c in generate_testcases(Val(:type_unstable_products))
-        _enzyme_failing_product(c.dist) && continue
+        # Mark known Enzyme failures broken so they appear as broken in the test report
+        # rather than being silently skipped. (VectorTestCase's broken flag is a marker;
+        # run_vector_case does not invoke test_all in that branch.)
+        if _enzyme_failing_product(c.dist)
+            c = VectorTestCase(c.name, c.dist, c.test_kwargs, true)
+        end
         run_vector_case(c, runtime_const_backends)
     end
 end
