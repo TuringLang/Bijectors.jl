@@ -20,5 +20,10 @@ makedocs(;
         "vector.md",
     ],
     checkdocs=:exports,
-    doctest=false,
+    doctest=true,
+    doctestfilters=[
+        # Ignore the source of a warning in the doctest output, since this is dependent
+        # on host. This is a line that starts with "└ @ " and ends with the line number.
+        r"└ @ .+:[0-9]+",
+    ],
 )

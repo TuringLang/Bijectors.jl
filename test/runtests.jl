@@ -3,7 +3,6 @@ using Bijectors
 using ChainRulesTestUtils
 using Combinatorics
 using DifferentiationInterface
-using Documenter: Documenter
 using FiniteDifferences
 using ForwardDiff
 using Functors
@@ -93,17 +92,4 @@ include("bijectors/utils.jl")
         end
     end
 
-    if GROUP == "All" || GROUP == "Doctests"
-        @testset "doctests" begin
-            Documenter.DocMeta.setdocmeta!(
-                Bijectors, :DocTestSetup, :(using Bijectors); recursive=true
-            )
-            doctestfilters = [
-                # Ignore the source of a warning in the doctest output, since this is dependent
-                # on host. This is a line that starts with "└ @ " and ends with the line number.
-                r"└ @ .+:[0-9]+",
-            ]
-            Documenter.doctest(Bijectors; manual=false, doctestfilters=doctestfilters)
-        end
-    end
 end
