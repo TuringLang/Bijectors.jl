@@ -2,7 +2,6 @@ using Test
 using Random
 using LinearAlgebra
 using ForwardDiff
-using ReverseDiff
 using DistributionsAD
 
 using Bijectors

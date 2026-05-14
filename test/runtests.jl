@@ -9,8 +9,6 @@ using FiniteDifferences
 using ForwardDiff
 using Functors
 using LogExpFunctions
-using Mooncake
-using ReverseDiff
 
 using Random, LinearAlgebra, Test
 
@@ -32,13 +30,7 @@ using LazyArrays: LazyArrays
 
 const GROUP = get(ENV, "GROUP", "All")
 
-# Enzyme is tested separately in test/integration/enzyme.
-const TEST_ADTYPES = [
-    ("ForwardDiff", AutoForwardDiff()),
-    ("ReverseDiff", AutoReverseDiff(; compile=false)),
-    ("ReverseDiffCompiled", AutoReverseDiff(; compile=true)),
-    ("Mooncake", AutoMooncake()),
-]
+# AD backends are tested separately in test/integration/{enzyme,mooncake,reversediff}.
 
 include("test_resources.jl")
 
@@ -59,36 +51,14 @@ include("bijectors/utils.jl")
         include("bijectors/pd.jl")
         include("bijectors/reshape.jl")
         include("bijectors/corr.jl")
+        include("bijectors/chainrules.jl")
         include("bijectors/product_bijector.jl")
         include("bijectors/named_stacked.jl")
         include("distributionsad.jl")
-
-        # These tests specifically check the implementation of AD backend rules.
-        include("ad/chainrules.jl")
-        include("ad/mooncake.jl")
-
-        # These tests check that AD can differentiate through Bijectors # functionality without explicit rules.
-        include("ad/flows.jl")
-        include("ad/pd.jl")
-        include("ad/corr.jl")
-        include("ad/stacked.jl")
     end
 
-    if GROUP == "All" || GROUP == "Vector"
-        # VectorBijectors module.
-        include("vector/univariate.jl")
-        include("vector/multivariate.jl")
-        include("vector/matrix.jl")
-        include("vector/reshaped.jl")
-        include("vector/cholesky.jl")
-        include("vector/order.jl")
-        include("vector/transformed.jl")
-    end
-
-    if GROUP == "All" || GROUP == "VectorProduct"
-        # VectorBijectors module, part 2
-        include("vector/product.jl")
-    end
+    # Vector test_all coverage lives inside `vector_bijectors.jl`, which is included
+    # transitively via `test_resources.jl` and runs its `@testset` if `GROUP` is set.
 
     if GROUP == "All" || GROUP == "Doctests"
         @testset "doctests" begin
