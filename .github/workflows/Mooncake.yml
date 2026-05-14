@@ -37,6 +37,9 @@ jobs:
 
       - name: Run Mooncake tests
         working-directory: test/integration_tests/mooncake
+        # `Pkg.develop` makes Julia 1.10 use the working tree's Bijectors. The
+        # `[sources]` section in `Project.toml` only takes effect on Julia 1.11+,
+        # so on 1.10 the registry version would be resolved instead.
         run: |
-          julia --project=. --color=yes -e 'using Pkg; Pkg.instantiate()'
+          julia --project=. --color=yes -e 'using Pkg; Pkg.develop(PackageSpec(path="../../..")); Pkg.instantiate()'
           julia --project=. --color=yes main.jl
