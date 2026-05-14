@@ -25,7 +25,7 @@ jobs:
             os: 'macos-latest'
           - version: '1'
             os: 'windows-latest'
-          - version: '1.11'
+          - version: '1'
             os: 'ubuntu-latest'
           - version: 'min'
             os: 'ubuntu-latest'
