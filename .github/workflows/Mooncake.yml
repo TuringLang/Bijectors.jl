@@ -35,7 +35,7 @@ jobs:
       - uses: julia-actions/cache@v3
 
       - name: Run Mooncake tests
-        working-directory: test/integration/mooncake
+        working-directory: test/integration_tests/mooncake
         run: |
           julia --project=. --color=yes -e 'using Pkg; Pkg.instantiate()'
           julia --project=. --color=yes main.jl

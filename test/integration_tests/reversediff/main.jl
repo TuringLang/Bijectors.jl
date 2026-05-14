@@ -1,5 +1,6 @@
 using ADTypes
 using Bijectors
+using ChainRules: ChainRules
 using DifferentiationInterface
 using Distributions
 using FillArrays: Fill

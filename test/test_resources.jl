@@ -1,5 +1,5 @@
 # Shared test resources used by `test/vector_bijectors.jl` (main suite) and the AD
-# integration tests (`test/integration/{enzyme,mooncake,reversediff}/main.jl`).
+# integration tests (`test/integration_tests/{enzyme,mooncake,reversediff}/main.jl`).
 #
 # Each test case carries a `tag::Symbol` identifying its source generator. Aggregate
 # entry points return flat lists:
@@ -338,7 +338,7 @@ end
 # ===== AD-dependent vector test helpers =====
 #
 # These pull in DifferentiationInterface and so cannot live in `src/vector/test_utils.jl`.
-# Each AD integration test (test/integration/<backend>/main.jl) calls `run_vector_case`
+# Each AD integration test (test/integration_tests/<backend>/main.jl) calls `run_vector_case`
 # with a non-empty `adtypes` list to exercise them.
 
 const _REF_AD = DI.AutoForwardDiff()

@@ -35,7 +35,7 @@ jobs:
       - uses: julia-actions/cache@v3
 
       - name: Run ReverseDiff tests
-        working-directory: test/integration/reversediff
+        working-directory: test/integration_tests/reversediff
         run: |
           julia --project=. --color=yes -e 'using Pkg; Pkg.instantiate()'
           julia --project=. --color=yes main.jl
