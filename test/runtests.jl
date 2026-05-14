@@ -57,8 +57,9 @@ include("bijectors/utils.jl")
         include("distributionsad.jl")
     end
 
-    # Vector test_all coverage lives inside `vector_bijectors.jl`, which is included
-    # transitively via `test_resources.jl` and runs its `@testset` if `GROUP` is set.
+    if GROUP == "All" || GROUP == "Vector" || GROUP == "VectorProduct"
+        include("vector/main.jl")
+    end
 
     if GROUP == "All" || GROUP == "Doctests"
         @testset "doctests" begin
