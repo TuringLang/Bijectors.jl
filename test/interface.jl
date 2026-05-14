@@ -145,7 +145,7 @@ end
             @test logpdf(td, y) ≈ logpdf_with_trans(dist, x, true)
 
             # verify against AD
-            # similar to what we do in test/transform.jl for Dirichlet
+            # similar to what we do in test/legacy_interface.jl for Dirichlet
             if dist isa Dirichlet
                 b = Bijectors.SimplexBijector()
                 x = rand(dist)

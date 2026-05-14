@@ -35,7 +35,7 @@
         TruncatedBijector(1.0, 3.0),
         TruncatedBijector(0.0, 2.0),
     ]
-    for i in 1:length(bs), j in 1:length(bs)
+    for i in eachindex(bs), j in eachindex(bs)
         if i == j
             @test bs[i] == deepcopy(bs[j])
             @test inverse(bs[i]) == inverse(deepcopy(bs[j]))

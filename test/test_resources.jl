@@ -1,5 +1,6 @@
-# Shared test resources used by `test/vector_bijectors.jl` (main suite) and the AD
-# integration tests (`test/integration_tests/{enzyme,mooncake,reversediff}/main.jl`).
+# Shared test resources used by `test/runtests.jl` (main suite, including the inline
+# vector-loop) and the AD integration tests
+# (`test/integration_tests/{enzyme,mooncake,reversediff}/main.jl`).
 #
 # Each test case carries a `tag::Symbol` identifying its source generator. Aggregate
 # entry points return flat lists:

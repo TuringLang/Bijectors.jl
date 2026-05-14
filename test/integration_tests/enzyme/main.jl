@@ -31,7 +31,8 @@ function _enzyme_failing_product(d)
     return first(d.dists) isa Union{Distributions.Product,Distributions.ProductDistribution}
 end
 
-function is_broken(c::VectorTestCase)
+function is_broken(c::Union{VectorTestCase,ADTestCase})
+    c isa ADTestCase && return false
     # `reshape(Beta(2,2), (1,1,1,1,1))` hits https://github.com/EnzymeAD/Enzyme.jl/issues/2987
     # on Julia 1.10 (Reverse mode); mark the whole case broken on 1.10 rather than splitting
     # the adtype list per case.
@@ -40,7 +41,6 @@ function is_broken(c::VectorTestCase)
     c.tag === :type_unstable_products && _enzyme_failing_product(c.dist) && return true
     return false
 end
-is_broken(::ADTestCase) = false
 
 # This entire test suite is broken on 1.11.
 #
