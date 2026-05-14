@@ -30,7 +30,11 @@ using LazyArrays: LazyArrays
 
 const GROUP = get(ENV, "GROUP", "All")
 
-# AD backends are tested separately in test/integration/{enzyme,mooncake,reversediff}.
+# ReverseDiff, Mooncake, and Enzyme run as separate integration suites under
+# test/integration/. ForwardDiff is a hard test dep (it's the reference for both the
+# ADTestCase and vector test_all_ad loops), so we keep its bijector-level AD coverage as
+# an inline @testset in the Classic group below — `gradient(f, AutoForwardDiff(), x)` is
+# checked against `AutoFiniteDifferences()` for every case in `generate_ad_testcases()`.
 
 include("test_resources.jl")
 
@@ -55,6 +59,12 @@ include("bijectors/utils.jl")
         include("bijectors/product_bijector.jl")
         include("bijectors/named_stacked.jl")
         include("distributionsad.jl")
+
+        @testset "ForwardDiff bijector AD" begin
+            for c in generate_ad_testcases()
+                run_ad_case(c, AutoForwardDiff())
+            end
+        end
     end
 
     if GROUP == "All" || GROUP == "Vector" || GROUP == "VectorProduct"
