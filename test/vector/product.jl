@@ -44,8 +44,7 @@ const nested_product_namedtuple = [
 ]
 
 # Heterogeneous arrays make bijector construction type unstable. The triple-nested tuple
-# products (last two) were the `enzyme_failures` on `main` — Enzyme can't differentiate
-# through them; callers that test Enzyme should filter them out.
+# products (last two) hit Enzyme activity-inference limits; the Enzyme suite filters them.
 const type_unstable_products = [
     product_distribution([Normal(), Beta(2, 2), Exponential()]),
     product_distribution([Normal() Beta(2, 2); Exponential() Uniform(-1, 1)]),

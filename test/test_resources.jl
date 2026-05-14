@@ -319,7 +319,7 @@ generate_vector_testcases() = reduce(vcat, generate_testcases(Val(t)) for t in _
 
 # ===== VectorTestCase runner =====
 
-function run_vector_case(c::VectorTestCase; broken::Bool=false)
+function run_vector_case(c::VectorTestCase, adtypes=nothing; broken::Bool=false)
     if broken
         # `VectorBijectors.test_all` runs many internal `@test`s and doesn't return a
         # single pass/fail, so we mark broken cases with a bare `@test_broken false`
@@ -329,26 +329,13 @@ function run_vector_case(c::VectorTestCase; broken::Bool=false)
         end
         return nothing
     end
-    VectorBijectors.test_all(c.dist; c.test_kwargs...)
-    return nothing
-end
-
-function run_vector_case(c::VectorTestCase, adtypes; broken::Bool=false)
-    if broken
-        @testset "$(c.name)" begin
-            @test_broken false
-        end
-        return nothing
+    if adtypes === nothing
+        VectorBijectors.test_all(c.dist; c.test_kwargs...)
+    else
+        VectorBijectors.test_all(c.dist; c.test_kwargs..., adtypes)
     end
-    VectorBijectors.test_all(c.dist; c.test_kwargs..., adtypes)
     return nothing
 end
-
-# NOTE: AD-dependent vector test helpers (linked_optic, linked_logjac, AD correctness,
-# `_rand_safe_ad`, `to_vec_for_logjac_test`/`from_vec_for_logjac_test`) live in
-# `src/vector/test_utils.jl` and run from inside `VectorBijectors.test_all`. They were
-# extracted here briefly when DifferentiationInterface was kept out of Bijectors's deps;
-# since DI is a hard dep again, they are part of the package proper.
 
 # ===== Per-category vector generators =====
 

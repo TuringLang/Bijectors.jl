@@ -20,9 +20,8 @@ function _gen_testcases(::Val{:reshaped_dists})
     return [VectorTestCase(d; expected_zero_allocs=()) for d in reshaped_default_dists]
 end
 
-# `reshape(Beta(2, 2), (1, 1, 1, 1, 1))` hit
-# https://github.com/EnzymeAD/Enzyme.jl/issues/2987 on Julia 1.10 — Enzyme Reverse fails
-# there, so callers may need a smaller adtype list for this one case.
+# Isolated under its own tag because Enzyme Reverse fails on Julia 1.10
+# (https://github.com/EnzymeAD/Enzyme.jl/issues/2987).
 const reshaped_beta_dist = reshape(Beta(2, 2), (1, 1, 1, 1, 1))
 
 function _gen_testcases(::Val{:reshaped_beta_special})

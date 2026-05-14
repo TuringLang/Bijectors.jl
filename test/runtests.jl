@@ -28,12 +28,7 @@ using LazyArrays: LazyArrays
 
 const GROUP = get(ENV, "GROUP", "All")
 
-# ReverseDiff, Mooncake, and Enzyme run as separate integration suites under
-# test/integration_tests/. ForwardDiff is a hard test dep (it's the reference for both the
-# ADTestCase loop and the AD checks inside `VectorBijectors.test_all`), so we keep its
-# bijector-level AD coverage as an inline @testset in the Classic group below —
-# `gradient(f, AutoForwardDiff(), x)` is checked against `AutoFiniteDifferences()` for
-# every case in `generate_ad_testcases()`.
+# Non-ForwardDiff backends run under `test/integration_tests/`.
 
 include("test_resources.jl")
 
