@@ -6,6 +6,11 @@ on:
       - main
   pull_request:
 
+# needed to allow julia-actions/cache to delete old caches that it has created
+permissions:
+  actions: write
+  contents: read
+
 concurrency:
   # Skip intermediate builds: always.
   # Cancel intermediate builds: only if it is a pull request build.
@@ -26,8 +31,6 @@ jobs:
             os: 'macos-latest'
           - version: '1'
             os: 'windows-latest'
-          - version: '1'
-            os: 'ubuntu-latest'
           - version: 'min'
             os: 'ubuntu-latest'
         group:
