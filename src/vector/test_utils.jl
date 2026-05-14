@@ -1,5 +1,26 @@
-using LinearAlgebra: Cholesky
+using LinearAlgebra: Cholesky, LowerTriangular, UpperTriangular, logabsdet
 using Test
+
+import DifferentiationInterface as DI
+
+# Reference AD backend for the analytical-vs-AD log-Jacobian and AD-correctness checks in
+# `test_all`. ForwardDiff is the baked-in reference; other backends (ReverseDiff, Mooncake,
+# Enzyme) are exercised by the per-backend integration suites under
+# `test/integration_tests/`.
+const ref_adtype = DI.AutoForwardDiff()
+
+# AD will give nonsense results at the limits of censored distributions (since the gradient
+# is not well-defined), so we avoid generating samples that are exactly at the limits.
+_rand_safe_ad(d::D.Distribution) = rand(d)
+function _rand_safe_ad(d::D.Censored)
+    a, b = d.lower, d.upper
+    while true
+        x = rand(d)
+        if x != a && x != b
+            return x
+        end
+    end
+end
 
 _get_value_support(::D.Distribution{<:Any,VS}) where {VS<:D.ValueSupport} = VS
 
@@ -40,6 +61,9 @@ end
 function test_all(
     d::D.Distribution;
     expected_zero_allocs=(),
+    adtypes=[ref_adtype],
+    ad_atol=1e-10,
+    ad_rtol=sqrt(eps()),
     roundtrip_atol=1e-10,
     roundtrip_rtol=sqrt(eps()),
     test_in_support=(_get_value_support(d) <: D.Continuous),
@@ -52,8 +76,11 @@ function test_all(
         test_type_stability(d, test_construction_type_stable)
         test_vec_lengths(d)
         test_optics(d)
+        test_linked_optic(d)
         test_allocations(d, expected_zero_allocs)
         test_logjac(d)
+        test_linked_logjac(d, ad_atol, ad_rtol)
+        test_ad(d, adtypes, ad_atol, ad_rtol)
     end
 end
 
@@ -198,10 +225,7 @@ end
 
 """
 Test that the optics produced by `optic_vec` for the given distribution `d` line up with the
-values produced by `to_vec`.
-
-The companion check for `linked_optic_vec` requires an AD backend to compute the link
-Jacobian and lives in `test/test_resources.jl` (called by the AD integration suites).
+values produced by `to_vec`. The companion check for `linked_optic_vec` is `test_linked_optic`.
 """
 function test_optics(d::D.Distribution)
     @testset "optic_vec: $(_name(d))" begin
@@ -287,11 +311,9 @@ function test_allocations(d::D.Distribution, expected_zero_allocs=())
 end
 
 """
-Test that the vectorisation conversions produce zero log-Jacobian (they are reshapes).
-
-The companion check that the analytical *linked* log-Jacobian matches an AD-derived one
-requires an AD backend and lives in `test/test_resources.jl` (called by the AD integration
-suites).
+Test that the vectorisation conversions produce zero log-Jacobian (they are reshapes). The
+companion check that the analytical *linked* log-Jacobian matches an AD-derived one is
+`test_linked_logjac`.
 """
 function test_logjac(d::D.Distribution)
     # Vectorisation logjacs should be zero because they are just reshapes.
@@ -306,6 +328,298 @@ function test_logjac(d::D.Distribution)
                 x_recon, logjac = with_logabsdet_jacobian(frvs, y)
                 @test _isapprox_safe(x_recon, frvs(y))
                 @test iszero(logjac)
+            end
+        end
+    end
+end
+
+# When testing logjac for distributions where `vec_length(d) != linked_vec_length(d)`, if
+# we naively try to compute the logjacobian of the transformation from vector to linked
+# vector form (or vice versa), it will error because the dimensions don't match (i.e., the
+# Jacobian is not square). See
+# https://turinglang.org/Bijectors.jl/stable/defining_examples/#Stereographic-projection
+# for an example of how to work around this issue.
+# Here we define a function which converts a sample from `d` to a vector of length
+# `linked_vec_length(d)` but does NOT perform linking. This allows us to compute the
+# Jacobian from `to_vec_for_logjac_test(d)(x)` to `to_linked_vec(d)(x)`, which will be
+# square. The fallback definition is just to_vec(d), but we can overload this for specific
+# distributions.
+to_vec_for_logjac_test(d::D.Distribution) = to_vec(d)
+from_vec_for_logjac_test(d::D.Distribution) = from_vec(d)
+to_vec_for_logjac_test(::Union{D.Dirichlet,D.MvLogitNormal}) = x -> x[1:(end - 1)]
+from_vec_for_logjac_test(::Union{D.Dirichlet,D.MvLogitNormal}) = y -> vcat(y, 1 - sum(y))
+function to_vec_for_logjac_test(
+    d::Union{<:D.ProductDistribution,<:D.ProductNamedTupleDistribution}
+)
+    return _make_transform(d.dists, to_vec_for_logjac_test, linked_vec_length, ProductVecTransform)
+end
+function from_vec_for_logjac_test(
+    d::Union{<:D.ProductDistribution,<:D.ProductNamedTupleDistribution}
+)
+    return _make_transform(
+        d.dists, from_vec_for_logjac_test, linked_vec_length, ProductVecInvTransform
+    )
+end
+function to_vec_for_logjac_test(
+    ::D.ReshapedDistribution{<:Any,<:D.ValueSupport,<:Union{D.Dirichlet,D.MvLogitNormal}}
+)
+    return x -> vec(x)[1:(end - 1)]
+end
+function from_vec_for_logjac_test(
+    d::D.ReshapedDistribution{<:Any,<:D.ValueSupport,<:Union{D.Dirichlet,D.MvLogitNormal}}
+)
+    return y -> reshape(vcat(y, 1 - sum(y)), size(d))
+end
+struct CholeskyToVecForLogjac
+    n::Int
+    uplo::Char
+end
+function (c::CholeskyToVecForLogjac)(x::Cholesky{T}) where {T<:Number}
+    indices = _get_cartesian_indices(c.n, c.uplo)
+    vec_len = div(c.n * (c.n - 1), 2)
+    xvec = Vector{T}(undef, vec_len)
+    idx = 1
+    for (i, j) in indices
+        if i != j
+            xvec[idx] = x.UL[i, j]
+            idx += 1
+        end
+    end
+    return xvec
+end
+to_vec_for_logjac_test(d::D.LKJCholesky) = CholeskyToVecForLogjac(first(size(d)), d.uplo)
+struct CholeskyFromVecForLogjac
+    n::Int
+    uplo::Char
+end
+function (c::CholeskyFromVecForLogjac)(xvec::AbstractVector{T}) where {T<:Number}
+    indices = _get_cartesian_indices(c.n, c.uplo)
+    x = if c.uplo == 'U'
+        Cholesky(UpperTriangular(zeros(T, c.n, c.n)))
+    else
+        Cholesky(LowerTriangular(zeros(T, c.n, c.n)))
+    end
+    idx = 1
+    for (i, j) in indices
+        if i != j
+            x.UL[i, j] = xvec[idx]
+            idx += 1
+        end
+    end
+    for i in 1:(c.n)
+        sum_sq = if c.uplo == 'U'
+            sum(abs2, x.UL[:, i])
+        else
+            sum(abs2, x.UL[i, :])
+        end
+        x.UL[i, i] = sqrt(one(T) - sum_sq)
+    end
+    return x
+end
+function from_vec_for_logjac_test(d::D.LKJCholesky)
+    return CholeskyFromVecForLogjac(first(size(d)), d.uplo)
+end
+
+function to_vec_for_logjac_test(d::D.ReshapedDistribution)
+    return rx -> begin
+        x = _reshape_or_only(rx, size(d.dist))
+        return to_vec_for_logjac_test(d.dist)(x)
+    end
+end
+function from_vec_for_logjac_test(d::D.ReshapedDistribution)
+    return yvec -> begin
+        x = from_vec_for_logjac_test(d.dist)(yvec)
+        return _reshape_or_only(x, size(d))
+    end
+end
+
+# Positive (semi)definite matrix distributions are symmetric, so vectorise the
+# lower-triangular part.
+function to_vec_for_logjac_test(d::Union{D.Wishart,D.InverseWishart})
+    n = first(size(d))
+    return x -> begin
+        vec_len = div(n * (n + 1), 2)
+        xvec = zeros(eltype(x), vec_len)
+        idx = 1
+        for i in 1:n, j in 1:i
+            xvec[idx] = x[i, j]
+            idx += 1
+        end
+        return xvec
+    end
+end
+function from_vec_for_logjac_test(d::Union{D.Wishart,D.InverseWishart})
+    n = first(size(d))
+    return xvec -> begin
+        x = zeros(eltype(xvec), n, n)
+        idx = 1
+        for i in 1:n, j in 1:i
+            x[i, j] = xvec[idx]
+            x[j, i] = xvec[idx]
+            idx += 1
+        end
+        return x
+    end
+end
+
+# Correlation matrices: symmetric with all-ones diagonal.
+function to_vec_for_logjac_test(d::D.LKJ)
+    n = first(size(d))
+    return x -> begin
+        vec_len = div(n * (n - 1), 2)
+        xvec = zeros(eltype(x), vec_len)
+        idx = 1
+        for i in 1:n, j in 1:(i - 1)
+            xvec[idx] = x[i, j]
+            idx += 1
+        end
+        return xvec
+    end
+end
+function from_vec_for_logjac_test(d::D.LKJ)
+    n = first(size(d))
+    return xvec -> begin
+        x = ones(eltype(xvec), n, n)
+        idx = 1
+        for i in 1:n, j in 1:(i - 1)
+            x[i, j] = xvec[idx]
+            x[j, i] = xvec[idx]
+            idx += 1
+        end
+        return x
+    end
+end
+
+"""
+Test that the optics produced by `linked_optic_vec` line up with the Jacobian structure
+of the link transform.
+"""
+function test_linked_optic(d::D.Distribution)
+    @testset "linked_optic_vec: $(_name(d))" begin
+        x = rand(d)
+        xvec = to_vec(d)(x)
+        yvec = to_linked_vec(d)(x)
+        J = DI.jacobian(to_linked_vec(d) ∘ from_vec(d), ref_adtype, xvec)
+        o = optic_vec(d)
+        lo = linked_optic_vec(d)
+        for i in 1:length(yvec)
+            linked_optic = lo[i]
+            if linked_optic !== nothing
+                nonzero_index = findfirst(j -> o[j] == linked_optic, 1:length(xvec))
+                if nonzero_index === nothing
+                    error("linked_optic_vec produced an optic not found in optic_vec")
+                end
+                for j in 1:length(xvec)
+                    if j != nonzero_index
+                        @test iszero(J[i, j])
+                    end
+                end
+            end
+        end
+    end
+end
+
+"""
+Test that the analytical linked log-Jacobians match AD-derived log-Jacobians for `d`.
+"""
+function test_linked_logjac(d::D.Distribution, atol, rtol)
+    @testset "logjac (linked): $(_name(d))" begin
+        for _ in 1:100
+            x = _rand_safe_ad(d)
+
+            @testset let x = x, d = d
+                # Sanity: to_vec_for_logjac_test and from_vec_for_logjac_test are inverses.
+                @test _isapprox_safe(
+                    x,
+                    from_vec_for_logjac_test(d)(to_vec_for_logjac_test(d)(x));
+                    atol=atol,
+                    rtol=rtol,
+                )
+            end
+
+            @testset let x = x, d = d
+                # Forward
+                xvec = to_vec(d)(x)
+                ffwd = to_linked_vec(d) ∘ from_vec(d)
+                y, vbt_logjac = with_logabsdet_jacobian(ffwd, xvec)
+                @test _isapprox_safe(y, ffwd(xvec); atol=atol, rtol=rtol)
+                ad_xvec = to_vec_for_logjac_test(d)(x)
+                ad_ffwd = to_linked_vec(d) ∘ from_vec_for_logjac_test(d)
+                ad_logjac = first(logabsdet(DI.jacobian(ad_ffwd, ref_adtype, ad_xvec)))
+                @test vbt_logjac ≈ ad_logjac atol = atol rtol = rtol
+            end
+
+            @testset let x = x, d = d
+                # Reverse
+                yvec = to_linked_vec(d)(x)
+                vbt_frvs = to_vec(d) ∘ from_linked_vec(d)
+                x, vbt_logjac = with_logabsdet_jacobian(vbt_frvs, yvec)
+                @test _isapprox_safe(x, vbt_frvs(yvec); atol=atol, rtol=rtol)
+                ad_frvs = to_vec_for_logjac_test(d) ∘ from_linked_vec(d)
+                ad_logjac = first(logabsdet(DI.jacobian(ad_frvs, ref_adtype, yvec)))
+                @test vbt_logjac ≈ ad_logjac atol = atol rtol = rtol
+            end
+        end
+    end
+end
+
+"""
+Test that each AD backend in `adtypes` produces the same Jacobian / log-abs-det Jacobian
+gradient as the ForwardDiff reference for the link and inverse-link transforms of `d`.
+"""
+function test_ad(d::D.Distribution, adtypes, atol, rtol)
+    # Mooncake refuses to differentiate identity transforms over discrete distributions,
+    # and Enzyme errors with a Const annotation mismatch — filter both out for discrete d.
+    adtypes = if d isa D.Distribution{<:Any,D.Discrete}
+        filter(adtypes) do adtype
+            !(
+                adtype isa DI.AutoMooncake ||
+                adtype isa DI.AutoMooncakeForward ||
+                adtype isa DI.AutoEnzyme
+            )
+        end
+    else
+        adtypes
+    end
+
+    @testset "AD forward: $(_name(d))" begin
+        x = _rand_safe_ad(d)
+        xvec = to_vec(d)(x)
+        ffwd = to_linked_vec(d) ∘ from_vec(d)
+        ref_jac = DI.jacobian(ffwd, ref_adtype, xvec)
+
+        ladj(xvec) = last(with_logabsdet_jacobian(ffwd, xvec))
+        ref_grad_ladj = DI.gradient(ladj, ref_adtype, xvec)
+
+        for adtype in adtypes
+            @testset let x = x, adtype = adtype, d = d
+                ad_jac = DI.jacobian(ffwd, adtype, xvec)
+                @test ref_jac ≈ ad_jac atol = atol rtol = rtol
+            end
+            @testset let x = x, adtype = adtype, d = d
+                ad_grad_ladj = DI.gradient(ladj, adtype, xvec)
+                @test ref_grad_ladj ≈ ad_grad_ladj atol = atol rtol = rtol
+            end
+        end
+    end
+
+    @testset "AD reverse: $(_name(d))" begin
+        x = _rand_safe_ad(d)
+        yvec = to_linked_vec(d)(x)
+        frvs = to_vec(d) ∘ from_linked_vec(d)
+        ref_jac = DI.jacobian(frvs, ref_adtype, yvec)
+
+        ladj(yvec) = last(with_logabsdet_jacobian(frvs, yvec))
+        ref_grad_ladj = DI.gradient(ladj, ref_adtype, yvec)
+
+        for adtype in adtypes
+            @testset let x = x, adtype = adtype, d = d
+                ad_jac = DI.jacobian(frvs, adtype, yvec)
+                @test ref_jac ≈ ad_jac atol = atol rtol = rtol
+            end
+            @testset let x = x, adtype = adtype, d = d
+                ad_grad_ladj = DI.gradient(ladj, adtype, yvec)
+                @test ref_grad_ladj ≈ ad_grad_ladj atol = atol rtol = rtol
             end
         end
     end
