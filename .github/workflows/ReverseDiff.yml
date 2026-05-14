@@ -1,4 +1,4 @@
-name: ReverseDiff AD tests
+name: ReverseDiff
 
 on:
   push:
@@ -17,7 +17,8 @@ concurrency:
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 
 jobs:
-  reversediff:
+  test:
+    name: Julia ${{ matrix.version }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

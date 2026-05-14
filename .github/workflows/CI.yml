@@ -14,6 +14,7 @@ concurrency:
 
 jobs:
   test:
+    name: ${{ matrix.group }} / Julia ${{ matrix.runner.version }} / ${{ matrix.runner.os }}
     runs-on: ${{ matrix.runner.os }}
     strategy:
       fail-fast: false

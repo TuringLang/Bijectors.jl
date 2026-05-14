@@ -1,4 +1,4 @@
-name: Enzyme AD tests
+name: Enzyme
 
 on:
   push:
@@ -17,7 +17,8 @@ concurrency:
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 
 jobs:
-  enzyme:
+  test:
+    name: Julia ${{ matrix.version }}
     runs-on: ubuntu-latest
     # Enzyme is an integration test isolated from the main suite. It reports failures for
     # visibility but does not block PRs: Enzyme regressions surface as red here without
