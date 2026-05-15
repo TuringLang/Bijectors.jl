@@ -319,20 +319,15 @@ generate_vector_testcases() = reduce(vcat, generate_testcases(Val(t)) for t in _
 
 # ===== VectorTestCase runner =====
 
-function run_vector_case(c::VectorTestCase, adtypes=nothing; broken::Bool=false)
-    if broken
-        # `VectorBijectors.test_all` runs many internal `@test`s and doesn't return a
-        # single pass/fail, so we mark broken cases with a bare `@test_broken false`
-        # rather than running test_all and trying to capture every internal result.
-        @testset "$(c.name)" begin
-            @test_broken false
-        end
-        return nothing
-    end
+function run_vector_case(
+    c::VectorTestCase, adtypes=nothing; broken::Bool=false, skip::Bool=false
+)
     if adtypes === nothing
-        VectorBijectors.test_all(c.dist; c.test_kwargs...)
+        VectorBijectors.test_all(c.dist; c.test_kwargs..., broken=broken, skip=skip)
     else
-        VectorBijectors.test_all(c.dist; c.test_kwargs..., adtypes)
+        VectorBijectors.test_all(
+            c.dist; c.test_kwargs..., adtypes, broken=broken, skip=skip
+        )
     end
     return nothing
 end

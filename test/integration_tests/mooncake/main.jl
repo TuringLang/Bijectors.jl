@@ -15,8 +15,6 @@ include(joinpath(@__DIR__, "..", "..", "test_resources.jl"))
 
 const adtypes = [AutoMooncake(), AutoMooncakeForward()]
 
-is_broken(c::Union{VectorTestCase,ADTestCase}) = false
-
 # ===== Mooncake rule for `find_alpha` =====
 
 @testset "Mooncake $mode: find_alpha" for mode in (Mooncake.ReverseMode,)
@@ -44,12 +42,12 @@ end
 
 @testset "Mooncake bijector AD" begin
     for c in generate_ad_testcases(), adtype in adtypes
-        run_ad_case(c, adtype; broken=is_broken(c))
+        run_ad_case(c, adtype)
     end
 end
 
 @testset "Mooncake vector test_all" begin
     for c in generate_vector_testcases()
-        run_vector_case(c, adtypes; broken=is_broken(c))
+        run_vector_case(c, adtypes)
     end
 end

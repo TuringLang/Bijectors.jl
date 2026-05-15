@@ -31,13 +31,11 @@ function _enzyme_failing_product(d)
     return first(d.dists) isa Union{Distributions.Product,Distributions.ProductDistribution}
 end
 
-function is_broken(c::Union{VectorTestCase,ADTestCase})
-    c isa ADTestCase && return false
-    # `reshape(Beta(2,2), (1,1,1,1,1))` hits https://github.com/EnzymeAD/Enzyme.jl/issues/2987
-    # on Julia 1.10 (Reverse mode); mark the whole case broken on 1.10 rather than splitting
-    # the adtype list per case.
+# `:reshaped_beta_special` hits https://github.com/EnzymeAD/Enzyme.jl/issues/2987 on
+# Julia 1.10 Reverse mode only; the triple-nested products in `:type_unstable_products`
+# (last two entries) defeat Enzyme's activity inference.
+function vector_is_broken(c::VectorTestCase)
     c.tag === :reshaped_beta_special && VERSION < v"1.11-" && return true
-    # Triple-nested products: Enzyme bails on the activity inference.
     c.tag === :type_unstable_products && _enzyme_failing_product(c.dist) && return true
     return false
 end
@@ -101,12 +99,12 @@ end
 
 @testset "Enzyme bijector AD" begin
     for c in generate_ad_testcases(), adtype in adtypes
-        run_ad_case(c, adtype; broken=is_broken(c))
+        run_ad_case(c, adtype)
     end
 end
 
 @testset "Enzyme vector test_all" begin
     for c in generate_vector_testcases()
-        run_vector_case(c, adtypes; broken=is_broken(c))
+        run_vector_case(c, adtypes; broken=vector_is_broken(c))
     end
 end
