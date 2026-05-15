@@ -20,7 +20,9 @@ const adtypes = [AutoReverseDiff(), AutoReverseDiff(; compile=true)]
 # (setindex!).
 const _BROKEN_VECTOR_TAGS = (:lkj_matrix_dists, :order_joint)
 
-vector_is_broken(c::VectorTestCase) = c.tag in _BROKEN_VECTOR_TAGS
+function vector_broken_adtypes(c::VectorTestCase)
+    return c.tag in _BROKEN_VECTOR_TAGS ? adtypes : DI.AbstractADType[]
+end
 
 @testset "ReverseDiff bijector AD" begin
     for c in generate_ad_testcases(), adtype in adtypes
@@ -30,6 +32,6 @@ end
 
 @testset "ReverseDiff vector test_all" begin
     for c in generate_vector_testcases()
-        run_vector_case(c, adtypes; broken=vector_is_broken(c))
+        run_vector_case(c, adtypes; broken_adtypes=vector_broken_adtypes(c))
     end
 end

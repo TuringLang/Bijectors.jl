@@ -18,10 +18,13 @@ include(joinpath(@__DIR__, "..", "..", "test_resources.jl"))
 # everywhere — we lose the assertion "this case happens to work without runtime_activity"
 # in exchange for a single adtype list across all cases. `function_annotation=Const` pins
 # DI's default to match what these tests were originally validated against.
-const adtypes = [
-    AutoEnzyme(; mode=set_runtime_activity(Forward), function_annotation=Const),
-    AutoEnzyme(; mode=set_runtime_activity(Reverse), function_annotation=Const),
-]
+const ENZYME_FORWARD = AutoEnzyme(;
+    mode=set_runtime_activity(Forward), function_annotation=Const
+)
+const ENZYME_REVERSE = AutoEnzyme(;
+    mode=set_runtime_activity(Reverse), function_annotation=Const
+)
+const adtypes = [ENZYME_FORWARD, ENZYME_REVERSE]
 
 # Enzyme cannot differentiate through triple-nested tuple-of-products (e.g.
 # `product_distribution(p1t, p1t, p1t)`); identify them structurally.
@@ -31,13 +34,14 @@ function _enzyme_failing_product(d)
     return first(d.dists) isa Union{Distributions.Product,Distributions.ProductDistribution}
 end
 
-# `:reshaped_beta_special` hits https://github.com/EnzymeAD/Enzyme.jl/issues/2987 on
-# Julia 1.10 Reverse mode only; the triple-nested products in `:type_unstable_products`
-# (last two entries) defeat Enzyme's activity inference.
-function vector_is_broken(c::VectorTestCase)
-    c.tag === :reshaped_beta_special && VERSION < v"1.11-" && return true
-    c.tag === :type_unstable_products && _enzyme_failing_product(c.dist) && return true
-    return false
+# Return the subset of `adtypes` that is known-broken for this case. Only Reverse mode
+# hits https://github.com/EnzymeAD/Enzyme.jl/issues/2987 on `:reshaped_beta_special` on
+# Julia 1.10 — Forward mode passes. Triple-nested products in `:type_unstable_products`
+# defeat activity inference for both modes.
+function vector_broken_adtypes(c::VectorTestCase)
+    c.tag === :reshaped_beta_special && VERSION < v"1.11-" && return [ENZYME_REVERSE]
+    c.tag === :type_unstable_products && _enzyme_failing_product(c.dist) && return adtypes
+    return DI.AbstractADType[]
 end
 
 # This entire test suite is broken on 1.11.
@@ -105,6 +109,6 @@ end
 
 @testset "Enzyme vector test_all" begin
     for c in generate_vector_testcases()
-        run_vector_case(c, adtypes; broken=vector_is_broken(c))
+        run_vector_case(c, adtypes; broken_adtypes=vector_broken_adtypes(c))
     end
 end

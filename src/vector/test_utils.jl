@@ -228,13 +228,13 @@ function test_all(
     d::D.Distribution;
     expected_zero_allocs=(),
     adtypes=default_adtypes,
+    broken_adtypes=DI.AbstractADType[],
     ad_atol=1e-10,
     ad_rtol=sqrt(eps()),
     roundtrip_atol=1e-10,
     roundtrip_rtol=sqrt(eps()),
     test_in_support=(_get_value_support(d) <: D.Continuous),
     test_construction_type_stable=true,
-    broken::Bool=false,
     skip::Bool=false,
 )
     @info "Testing $(_name(d))"
@@ -246,12 +246,13 @@ function test_all(
         test_optics(d)
         test_allocations(d, expected_zero_allocs)
         test_logjac(d, ad_atol, ad_rtol)
-        if skip
-            # nothing
-        elseif broken
-            _test_ad_broken(d, adtypes, ad_atol, ad_rtol)
-        else
-            test_ad(d, adtypes, ad_atol, ad_rtol)
+        if !skip
+            # Any adtype in `broken_adtypes` is wrapped via `_test_ad_broken`; the rest
+            # of `adtypes` run normally under `test_ad`.
+            normal = filter(a -> !(a in broken_adtypes), adtypes)
+            isempty(normal) || test_ad(d, normal, ad_atol, ad_rtol)
+            isempty(broken_adtypes) ||
+                _test_ad_broken(d, collect(broken_adtypes), ad_atol, ad_rtol)
         end
     end
 end

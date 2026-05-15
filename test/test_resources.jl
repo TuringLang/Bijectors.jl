@@ -320,13 +320,15 @@ generate_vector_testcases() = reduce(vcat, generate_testcases(Val(t)) for t in _
 # ===== VectorTestCase runner =====
 
 function run_vector_case(
-    c::VectorTestCase, adtypes=nothing; broken::Bool=false, skip::Bool=false
+    c::VectorTestCase, adtypes=nothing; broken_adtypes=DI.AbstractADType[], skip::Bool=false
 )
     if adtypes === nothing
-        VectorBijectors.test_all(c.dist; c.test_kwargs..., broken=broken, skip=skip)
+        VectorBijectors.test_all(
+            c.dist; c.test_kwargs..., broken_adtypes=broken_adtypes, skip=skip
+        )
     else
         VectorBijectors.test_all(
-            c.dist; c.test_kwargs..., adtypes, broken=broken, skip=skip
+            c.dist; c.test_kwargs..., adtypes, broken_adtypes=broken_adtypes, skip=skip
         )
     end
     return nothing
