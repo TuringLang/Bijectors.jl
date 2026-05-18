@@ -1,5 +1,6 @@
 [deps]
 ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
+AbstractPPL = "7a57a42e-76ec-4ea3-a279-07e840d6d9cf"
 Bijectors = "76274a88-744f-5084-9051-94815aaf08c4"
 DifferentiationInterface = "a0c0ee7d-e4b9-4e03-894e-1c5f64a51d63"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
@@ -14,7 +15,10 @@ StableRNGs = "860ef19b-820b-49d6-a774-d7a799459cd3"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [sources]
+AbstractPPL = {rev = "evaluator-interface", url = "https://github.com/TuringLang/AbstractPPL.jl"}
 Bijectors = {path = "../../.."}
 
 [compat]
+AbstractPPL = "0.15"
+DifferentiationInterface = "0.6, 0.7"
 Enzyme = "0.13.111"

@@ -1,6 +1,7 @@
 using ADTypes
+using AbstractPPL: AbstractPPL
 using Bijectors
-using DifferentiationInterface
+using DifferentiationInterface: DifferentiationInterface
 using Distributions
 using Enzyme: Enzyme, set_runtime_activity, Forward, Reverse, Const
 using EnzymeTestUtils: test_forward, test_reverse
@@ -41,7 +42,7 @@ end
 function vector_broken_adtypes(c::VectorTestCase)
     c.tag === :reshaped_beta_special && VERSION < v"1.11-" && return [ENZYME_REVERSE]
     c.tag === :type_unstable_products && _enzyme_failing_product(c.dist) && return adtypes
-    return DI.AbstractADType[]
+    return ADTypes.AbstractADType[]
 end
 
 # This entire test suite is broken on 1.11.

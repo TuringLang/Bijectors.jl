@@ -1,7 +1,8 @@
 using ADTypes
+using AbstractPPL: AbstractPPL
 using Bijectors
 using ChainRules: ChainRules
-using DifferentiationInterface
+using DifferentiationInterface: DifferentiationInterface
 using Distributions
 using FillArrays: Fill
 using FiniteDifferences
@@ -21,7 +22,7 @@ const adtypes = [AutoReverseDiff(), AutoReverseDiff(; compile=true)]
 const _BROKEN_VECTOR_TAGS = (:lkj_matrix_dists, :order_joint)
 
 function vector_broken_adtypes(c::VectorTestCase)
-    return c.tag in _BROKEN_VECTOR_TAGS ? adtypes : DI.AbstractADType[]
+    return c.tag in _BROKEN_VECTOR_TAGS ? adtypes : ADTypes.AbstractADType[]
 end
 
 @testset "ReverseDiff bijector AD" begin

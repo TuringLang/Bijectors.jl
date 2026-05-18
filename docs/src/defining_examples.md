@@ -199,6 +199,8 @@ If we try to calculate a Jacobian for `StereographicProj()`, we will just get a 
 So, we need to take an extra step to map from the independent coordinates of $x$ (i.e., $x_1$ and $x_2$) to the full 3D coordinates, and _then_ to the plane:
 
 ```@example stereographic
+using ForwardDiff, LinearAlgebra
+
 sgn = 1
 
 function full_transform(x12)
@@ -207,12 +209,8 @@ function full_transform(x12)
     return StereographicProj()(x123)
 end
 
-import DifferentiationInterface as DI
-using FiniteDifferences, LinearAlgebra
 x = [0.3, 0.4, sgn * sqrt(1 - 0.3^2 - 0.4^2)]
-
-adtype = DI.AutoFiniteDifferences(; fdm=central_fdm(5, 1))
-jac = DI.jacobian(full_transform, adtype, x[1:2])
+jac = ForwardDiff.jacobian(full_transform, x[1:2])
 logjac = logabsdet(jac)[1]
 ```
 

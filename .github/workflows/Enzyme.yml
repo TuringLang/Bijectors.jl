@@ -28,7 +28,9 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          - "min"
+          # `min` (Julia 1.10) drops out until AbstractPPL 0.15 is released — this branch
+          # pins AbstractPPL via `[sources]`, which Pkg only honours on Julia 1.11+.
+          # - "min"
           - "1"
     steps:
       - uses: actions/checkout@v6

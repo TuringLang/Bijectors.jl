@@ -23,8 +23,9 @@ using Bijectors: ordered
 import Bijectors.VectorBijectors
 using Bijectors.VectorBijectors:
     from_linked_vec, from_vec, linked_vec_length, to_linked_vec, to_vec
-using DifferentiationInterface
-import DifferentiationInterface as DI
+using ADTypes
+using AbstractPPL: AbstractPPL
+using DifferentiationInterface: DifferentiationInterface
 using Distributions
 const _D = Distributions
 using FillArrays: Fill
@@ -83,8 +84,12 @@ const REF_BACKEND = AutoFiniteDifferences(; fdm=central_fdm(5, 1))
 
 function test_ad(f, backend, x; rtol=1e-6, atol=1e-6)
     @info "testing AD for function $f with $backend"
-    ref_gradient = gradient(f, REF_BACKEND, x)
-    ad_gradient = gradient(f, backend, x)
+    ref_gradient = last(
+        AbstractPPL.value_and_gradient!!(AbstractPPL.prepare(REF_BACKEND, f, x), x)
+    )
+    ad_gradient = last(
+        AbstractPPL.value_and_gradient!!(AbstractPPL.prepare(backend, f, x), x)
+    )
     @test isapprox(ad_gradient, ref_gradient; rtol=rtol, atol=atol)
 end
 
@@ -96,8 +101,16 @@ function run_ad_case(c::ADTestCase, adtype; broken::Bool=false, rtol=1e-6, atol=
             # the case flips to "unexpectedly passing" and the maintainer gets a nudge.
             @info "testing (broken) AD for function $(c.func) with $adtype"
             @test_broken isapprox(
-                gradient(c.func, adtype, c.arg),
-                gradient(c.func, REF_BACKEND, c.arg);
+                last(
+                    AbstractPPL.value_and_gradient!!(
+                        AbstractPPL.prepare(adtype, c.func, c.arg), c.arg
+                    ),
+                ),
+                last(
+                    AbstractPPL.value_and_gradient!!(
+                        AbstractPPL.prepare(REF_BACKEND, c.func, c.arg), c.arg
+                    ),
+                );
                 rtol=rtol,
                 atol=atol,
             )
@@ -320,7 +333,10 @@ generate_vector_testcases() = reduce(vcat, generate_testcases(Val(t)) for t in _
 # ===== VectorTestCase runner =====
 
 function run_vector_case(
-    c::VectorTestCase, adtypes=nothing; broken_adtypes=DI.AbstractADType[], skip::Bool=false
+    c::VectorTestCase,
+    adtypes=nothing;
+    broken_adtypes=ADTypes.AbstractADType[],
+    skip::Bool=false,
 )
     if adtypes === nothing
         VectorBijectors.test_all(

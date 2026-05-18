@@ -2,7 +2,9 @@ using Bijectors
 
 using ChainRulesTestUtils
 using Combinatorics
-using DifferentiationInterface
+using ADTypes
+using AbstractPPL: AbstractPPL
+using DifferentiationInterface: DifferentiationInterface
 using FiniteDifferences
 using ForwardDiff
 using Functors

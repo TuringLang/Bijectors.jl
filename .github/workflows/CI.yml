@@ -31,8 +31,10 @@ jobs:
             os: 'macos-latest'
           - version: '1'
             os: 'windows-latest'
-          - version: 'min'
-            os: 'ubuntu-latest'
+          # `min` (Julia 1.10) drops out until AbstractPPL 0.15 is released — this branch
+          # pins AbstractPPL via `[sources]`, which Pkg only honours on Julia 1.11+.
+          # - version: 'min'
+          #   os: 'ubuntu-latest'
         group:
           - 'Classic'
           - 'Vector'
