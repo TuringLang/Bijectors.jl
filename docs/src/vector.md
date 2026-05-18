@@ -117,6 +117,7 @@ For more information about generally testing bijectors (and in particular how to
 
 One of the most tricky parts of testing Bijectors is ensuring that the transforms are compatible with automatic differentiation.
 This is important for DynamicPPL: we need to be able to compute the gradient of the log-density with respect to (possibly transformed) parameters, which may include the log-abs-det-Jacobian of the transformation.
-The default AD backends tested are ForwardDiff, ReverseDiff, Mooncake, and Enzyme.
+`test_all` accepts an `adtypes` keyword argument and defaults to `[AutoForwardDiff()]`, so the main test suite exercises ForwardDiff as the reference backend.
+ReverseDiff, Mooncake, and Enzyme are covered by standalone integration suites under `test/integration_tests/<backend>/`, each of which passes its own `adtypes` list through to `test_all`.
 It is acceptable to skip tests for a particular backend if there are genuine upstream bugs, especially with ReverseDiff, which is not actively maintained.
-However where possible it is best to ensure that all backends are supported, and to use `@test_broken` to mark any known issues with specific backends.
+Where possible it is best to ensure that all backends are supported, and to use `@test_broken` to mark any known issues with specific backends.

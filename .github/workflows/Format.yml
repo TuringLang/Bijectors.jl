@@ -15,7 +15,8 @@ concurrency:
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 
 jobs:
-  format:
+  check:
+    name: runic
     runs-on: ubuntu-latest
 
     steps:

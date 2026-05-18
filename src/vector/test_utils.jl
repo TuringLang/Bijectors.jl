@@ -2,28 +2,16 @@ using Test
 using LinearAlgebra: logabsdet, Cholesky, UpperTriangular, LowerTriangular
 using ADTypes
 using AbstractPPL: AbstractPPL
-import EnzymeCore as EC
 
 # Would like to use FiniteDifferences, but very easy to run into issues with
 # https://juliadiff.org/FiniteDifferences.jl/latest/#Dealing-with-Singularities
 const ref_adtype = AutoForwardDiff()
 
-const default_adtypes = [
-    AutoMooncake(),
-    AutoMooncakeForward(),
-    AutoEnzyme(; mode=EC.Forward, function_annotation=EC.Const),
-    AutoEnzyme(; mode=EC.Reverse, function_annotation=EC.Const),
-]
-
-_to_ad_input(x::AbstractVector{<:AbstractFloat}) = x
-_to_ad_input(x::AbstractVector{<:Real}) = float.(x)
-
-function _ad_jacobian(adtype, f, x)
-    return last(AbstractPPL.value_and_jacobian!!(AbstractPPL.prepare(adtype, f, x), x))
-end
-function _ad_gradient(adtype, f, x)
-    return last(AbstractPPL.value_and_gradient!!(AbstractPPL.prepare(adtype, f, x), x))
-end
+# `ref_adtype` (ForwardDiff) is already used as the ground truth in `test_optics`,
+# `test_logjac`, and as the `ref_jac` baseline inside `test_ad`; including it here would
+# just make `test_ad` compare FD against FD. Backends to compare against the reference
+# are passed by each integration suite under `test/integration_tests/`.
+const default_adtypes = ADTypes.AbstractADType[]
 
 _get_value_support(::D.Distribution{<:Any,VS}) where {VS<:D.ValueSupport} = VS
 
@@ -243,12 +231,14 @@ function test_all(
     d::D.Distribution;
     expected_zero_allocs=(),
     adtypes=default_adtypes,
+    broken_adtypes=ADTypes.AbstractADType[],
     ad_atol=1e-10,
     ad_rtol=sqrt(eps()),
     roundtrip_atol=1e-10,
     roundtrip_rtol=sqrt(eps()),
     test_in_support=(_get_value_support(d) <: D.Continuous),
     test_construction_type_stable=true,
+    skip::Bool=false,
 )
     @info "Testing $(_name(d))"
     @testset "$(_name(d))" begin
@@ -259,7 +249,14 @@ function test_all(
         test_optics(d)
         test_allocations(d, expected_zero_allocs)
         test_logjac(d, ad_atol, ad_rtol)
-        test_ad(d, adtypes, ad_atol, ad_rtol)
+        if !skip
+            # Any adtype in `broken_adtypes` is wrapped via `_test_ad_broken`; the rest
+            # of `adtypes` run normally under `test_ad`.
+            normal = filter(a -> !(a in broken_adtypes), adtypes)
+            isempty(normal) || test_ad(d, normal, ad_atol, ad_rtol)
+            isempty(broken_adtypes) ||
+                _test_ad_broken(d, collect(broken_adtypes), ad_atol, ad_rtol)
+        end
     end
 end
 
@@ -348,14 +345,11 @@ function test_roundtrip_inverse(d::D.Distribution, test_in_support, atol, rtol)
                 end
 
                 ynew = ffwd(x)
-                if d isa D.JointOrderStatistics && (
-                    any(isnan, x) ||
-                    !all(isfinite, x) ||
-                    any(isnan, ynew) ||
-                    !all(isfinite, ynew)
-                )
-                    @warn "NaNs or Inf produced in roundtrip test for $(_name(d)), skipping isapprox test"
-                else
+                # JointOrderStatistics: extreme random `y` pushes `x` to the support
+                # boundary, where the y → x → ynew roundtrip loses precision (or produces
+                # NaN/Inf). Structural correctness is covered by `test_roundtrip`. See
+                # https://github.com/TuringLang/Bijectors.jl/issues/441.
+                if !(d isa D.JointOrderStatistics)
                     @test _isapprox_safe(y, ynew; atol=atol, rtol=rtol)
                 end
             end
@@ -418,6 +412,10 @@ function test_optics(d::D.Distribution)
         end
     end
 
+    # Discrete: link transform is identity, so the AD Jacobian sparsity test below is
+    # trivial — skip it.
+    d isa D.Distribution{<:Any,D.Discrete} && return nothing
+
     @testset "linked_optic_vec: $(_name(d))" begin
         # This is a lot harder to test. What we need to prove is that
         #       x = rand(d)
@@ -429,9 +427,12 @@ function test_optics(d::D.Distribution)
         #  corresponding to `lo[i]`. This is a bit finicky to do because `x` might not be a
         #  vector(!) so we need to flatten everything first, using `to_vec`.
         x = rand(d)
-        xvec = _to_ad_input(to_vec(d)(x))
+        xvec = to_vec(d)(x)
         yvec = to_linked_vec(d)(x)
-        J = _ad_jacobian(ref_adtype, to_linked_vec(d) ∘ from_vec(d), xvec)
+        f = to_linked_vec(d) ∘ from_vec(d)
+        J = last(
+            AbstractPPL.value_and_jacobian!!(AbstractPPL.prepare(ref_adtype, f, xvec), xvec)
+        )
         o = optic_vec(d)
         lo = linked_optic_vec(d)
         for i in 1:length(yvec)
@@ -546,6 +547,10 @@ function test_logjac(d::D.Distribution, atol, rtol)
         end
     end
 
+    # Discrete: link transform is identity, so the linked logjac is trivially zero on
+    # both sides of the comparison — skip the AD-based check.
+    d isa D.Distribution{<:Any,D.Discrete} && return nothing
+
     # Link logjacs will not be zero, so we need to check against a chosen backend. Because
     # Jacobians need to map from vector to vector, here we test the transformation of the
     # vectorised form to the linked vectorised form via the original sample.
@@ -567,28 +572,44 @@ function test_logjac(d::D.Distribution, atol, rtol)
 
             @testset let x = x, d = d
                 # Forward
-                xvec = _to_ad_input(to_vec(d)(x))
+                xvec = to_vec(d)(x)
                 ffwd = to_linked_vec(d) ∘ from_vec(d)
                 y, vbt_logjac = with_logabsdet_jacobian(ffwd, xvec)
                 @test _isapprox_safe(y, ffwd(xvec); atol=atol, rtol=rtol)
                 # For the AD calculation we need to use to/from_vec_for_logjac_test instead,
                 # to make sure that the Jacobian is square.
-                ad_xvec = _to_ad_input(to_vec_for_logjac_test(d)(x))
+                ad_xvec = to_vec_for_logjac_test(d)(x)
                 ad_ffwd = to_linked_vec(d) ∘ from_vec_for_logjac_test(d)
-                ad_logjac = first(logabsdet(_ad_jacobian(ref_adtype, ad_ffwd, ad_xvec)))
+                ad_logjac = first(
+                    logabsdet(
+                        last(
+                            AbstractPPL.value_and_jacobian!!(
+                                AbstractPPL.prepare(ref_adtype, ad_ffwd, ad_xvec), ad_xvec
+                            ),
+                        ),
+                    ),
+                )
                 @test vbt_logjac ≈ ad_logjac atol = atol rtol = rtol
             end
 
             @testset let x = x, d = d
                 # Reverse
-                yvec = _to_ad_input(to_linked_vec(d)(x))
+                yvec = to_linked_vec(d)(x)
                 vbt_frvs = to_vec(d) ∘ from_linked_vec(d)
                 x, vbt_logjac = with_logabsdet_jacobian(vbt_frvs, yvec)
                 @test _isapprox_safe(x, vbt_frvs(yvec); atol=atol, rtol=rtol)
                 # For the AD calculation we need to use to/from_vec_for_logjac_test instead,
                 # to make sure that the Jacobian is square.
                 ad_frvs = to_vec_for_logjac_test(d) ∘ from_linked_vec(d)
-                ad_logjac = first(logabsdet(_ad_jacobian(ref_adtype, ad_frvs, yvec)))
+                ad_logjac = first(
+                    logabsdet(
+                        last(
+                            AbstractPPL.value_and_jacobian!!(
+                                AbstractPPL.prepare(ref_adtype, ad_frvs, yvec), yvec
+                            ),
+                        ),
+                    ),
+                )
                 @test vbt_logjac ≈ ad_logjac atol = atol rtol = rtol
             end
         end
@@ -600,61 +621,163 @@ Test that various AD backends can differentiate the conversions to and from vect
 linked vector forms for the given distribution `d`.
 """
 function test_ad(d::D.Distribution, adtypes::Vector{<:ADTypes.AbstractADType}, atol, rtol)
-    # If `d` is a discrete distribution, Mooncake refuses to differentiate through the
-    # transforms (which are just identity transforms). Likewise, Enzyme will throw an
-    # error saying that the output is Const but was not marked as such.
-    #
-    # Arguably, the other AD backends probably should also refuse to differentiate it, but
-    # they do actually return the right 'gradients' so we can test them.
-    adtypes = if d isa D.Distribution{<:Any,D.Discrete}
-        filter(adtypes) do adtype
-            !(
-                adtype isa AutoMooncake ||
-                adtype isa AutoMooncakeForward ||
-                adtype isa AutoEnzyme
-            )
-        end
-    else
-        adtypes
-    end
+    # Discrete-distribution link transforms are identities; nothing AD-meaningful to check.
+    d isa D.Distribution{<:Any,D.Discrete} && return nothing
 
     @testset "AD forward: $(_name(d))" begin
         x = _rand_safe_ad(d)
-        xvec = _to_ad_input(to_vec(d)(x))
+        xvec = to_vec(d)(x)
         ffwd = to_linked_vec(d) ∘ from_vec(d)
-        ref_jac = _ad_jacobian(ref_adtype, ffwd, xvec)
+        ref_jac = last(
+            AbstractPPL.value_and_jacobian!!(
+                AbstractPPL.prepare(ref_adtype, ffwd, xvec), xvec
+            ),
+        )
 
         ladj(xvec) = last(with_logabsdet_jacobian(ffwd, xvec))
-        ref_grad_ladj = _ad_gradient(ref_adtype, ladj, xvec)
+        ref_grad_ladj = last(
+            AbstractPPL.value_and_gradient!!(
+                AbstractPPL.prepare(ref_adtype, ladj, xvec), xvec
+            ),
+        )
 
         for adtype in adtypes
             @testset let x = x, adtype = adtype, d = d
-                @test ref_jac ≈ _ad_jacobian(adtype, ffwd, xvec) atol = atol rtol = rtol
+                ad_jac = last(
+                    AbstractPPL.value_and_jacobian!!(
+                        AbstractPPL.prepare(adtype, ffwd, xvec), xvec
+                    ),
+                )
+                @test ref_jac ≈ ad_jac atol = atol rtol = rtol
             end
             @testset let x = x, adtype = adtype, d = d
-                @test ref_grad_ladj ≈ _ad_gradient(adtype, ladj, xvec) atol = atol rtol =
-                    rtol
+                ad_grad_ladj = last(
+                    AbstractPPL.value_and_gradient!!(
+                        AbstractPPL.prepare(adtype, ladj, xvec), xvec
+                    ),
+                )
+                @test ref_grad_ladj ≈ ad_grad_ladj atol = atol rtol = rtol
             end
         end
     end
 
     @testset "AD reverse: $(_name(d))" begin
         x = _rand_safe_ad(d)
-        yvec = _to_ad_input(to_linked_vec(d)(x))
+        yvec = to_linked_vec(d)(x)
         frvs = to_vec(d) ∘ from_linked_vec(d)
-        ref_jac = _ad_jacobian(ref_adtype, frvs, yvec)
+        ref_jac = last(
+            AbstractPPL.value_and_jacobian!!(
+                AbstractPPL.prepare(ref_adtype, frvs, yvec), yvec
+            ),
+        )
 
         ladj(yvec) = last(with_logabsdet_jacobian(frvs, yvec))
-        ref_grad_ladj = _ad_gradient(ref_adtype, ladj, yvec)
+        ref_grad_ladj = last(
+            AbstractPPL.value_and_gradient!!(
+                AbstractPPL.prepare(ref_adtype, ladj, yvec), yvec
+            ),
+        )
 
         for adtype in adtypes
             @testset let x = x, adtype = adtype, d = d
-                @test ref_jac ≈ _ad_jacobian(adtype, frvs, yvec) atol = atol rtol = rtol
+                ad_jac = last(
+                    AbstractPPL.value_and_jacobian!!(
+                        AbstractPPL.prepare(adtype, frvs, yvec), yvec
+                    ),
+                )
+                @test ref_jac ≈ ad_jac atol = atol rtol = rtol
             end
 
             @testset let x = x, adtype = adtype, d = d
-                @test ref_grad_ladj ≈ _ad_gradient(adtype, ladj, yvec) atol = atol rtol =
-                    rtol
+                ad_grad_ladj = last(
+                    AbstractPPL.value_and_gradient!!(
+                        AbstractPPL.prepare(adtype, ladj, yvec), yvec
+                    ),
+                )
+                @test ref_grad_ladj ≈ ad_grad_ladj atol = atol rtol = rtol
+            end
+        end
+    end
+end
+
+# Broken-mode counterpart to `test_ad`: collapses the four per-adtype AD comparisons into
+# one `@test_broken` per adtype so a partially-broken backend stays cleanly broken.
+function _test_ad_broken(
+    d::D.Distribution, adtypes::Vector{<:ADTypes.AbstractADType}, atol, rtol
+)
+    d isa D.Distribution{<:Any,D.Discrete} && return nothing
+    @testset "AD (broken): $(_name(d))" begin
+        x = _rand_safe_ad(d)
+        xvec = to_vec(d)(x)
+        yvec = to_linked_vec(d)(x)
+        ffwd = to_linked_vec(d) ∘ from_vec(d)
+        frvs = to_vec(d) ∘ from_linked_vec(d)
+        ladj_fwd(xv) = last(with_logabsdet_jacobian(ffwd, xv))
+        ladj_rev(yv) = last(with_logabsdet_jacobian(frvs, yv))
+        ref_jac_fwd = last(
+            AbstractPPL.value_and_jacobian!!(
+                AbstractPPL.prepare(ref_adtype, ffwd, xvec), xvec
+            ),
+        )
+        ref_grad_ladj_fwd = last(
+            AbstractPPL.value_and_gradient!!(
+                AbstractPPL.prepare(ref_adtype, ladj_fwd, xvec), xvec
+            ),
+        )
+        ref_jac_rev = last(
+            AbstractPPL.value_and_jacobian!!(
+                AbstractPPL.prepare(ref_adtype, frvs, yvec), yvec
+            ),
+        )
+        ref_grad_ladj_rev = last(
+            AbstractPPL.value_and_gradient!!(
+                AbstractPPL.prepare(ref_adtype, ladj_rev, yvec), yvec
+            ),
+        )
+        for adtype in adtypes
+            @testset let x = x, adtype = adtype, d = d
+                @test_broken (
+                    isapprox(
+                        last(
+                            AbstractPPL.value_and_jacobian!!(
+                                AbstractPPL.prepare(adtype, ffwd, xvec), xvec
+                            ),
+                        ),
+                        ref_jac_fwd;
+                        atol=atol,
+                        rtol=rtol,
+                    ) &&
+                    isapprox(
+                        last(
+                            AbstractPPL.value_and_gradient!!(
+                                AbstractPPL.prepare(adtype, ladj_fwd, xvec), xvec
+                            ),
+                        ),
+                        ref_grad_ladj_fwd;
+                        atol=atol,
+                        rtol=rtol,
+                    ) &&
+                    isapprox(
+                        last(
+                            AbstractPPL.value_and_jacobian!!(
+                                AbstractPPL.prepare(adtype, frvs, yvec), yvec
+                            ),
+                        ),
+                        ref_jac_rev;
+                        atol=atol,
+                        rtol=rtol,
+                    ) &&
+                    isapprox(
+                        last(
+                            AbstractPPL.value_and_gradient!!(
+                                AbstractPPL.prepare(adtype, ladj_rev, yvec), yvec
+                            ),
+                        ),
+                        ref_grad_ladj_rev;
+                        atol=atol,
+                        rtol=rtol,
+                    )
+                )
             end
         end
     end

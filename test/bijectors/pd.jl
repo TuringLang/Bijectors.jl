@@ -1,4 +1,4 @@
-using Bijectors, DistributionsAD, LinearAlgebra, Test
+using Bijectors, LinearAlgebra, Test
 using Bijectors: PDBijector, PDVecBijector
 
 @testset "PDBijector" begin

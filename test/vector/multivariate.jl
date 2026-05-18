@@ -1,38 +1,23 @@
-module VBMultivariateTests
-
-using Distributions
-using LinearAlgebra
-using Test
-using Bijectors.VectorBijectors
-using Enzyme: Enzyme
-using ForwardDiff: ForwardDiff
-using ReverseDiff: ReverseDiff
-using Mooncake: Mooncake
-
-multivariates = [
-    # identity transforms (discrete multivariate)
+const multivariates = [
     Multinomial(10, [0.2, 0.5, 0.3]),
-    # identity transforms (continuous multivariate)
     MvNormal([0.0, 0.0], I),
     MvNormalCanon([1.0, 2.0, 3.0], [4.0 -2.0 -1.0; -2.0 5.0 -1.0; -1.0 -1.0 6.0]),
     MvTDist(5.0, zeros(2), Matrix(1.0I, 2, 2)),
     MvTDist(1.0, [1.0, -1.0, 0.5], [2.0 0.5 0.0; 0.5 3.0 0.5; 0.0 0.5 1.5]),
-    # broadcast exp/log
     MvLogNormal([0.0, 0.0], I),
-    # simplex distribution
     MvLogitNormal([1.0, 2.0], Diagonal([4.0, 5.0])),
     Dirichlet([2.0, 3.0, 5.0]),
 ]
 
-@testset "Multivariates" begin
+function _gen_testcases(::Val{:multivariates})
+    cases = VectorTestCase[]
     for d in multivariates
         expected_zero_allocs = if d isa Union{Dirichlet,MvLogitNormal,MvLogNormal}
             (to_vec, from_vec)
         else
             (to_vec, from_vec, to_linked_vec, from_linked_vec)
         end
-        VectorBijectors.test_all(d; expected_zero_allocs=expected_zero_allocs)
+        push!(cases, VectorTestCase(d; expected_zero_allocs=expected_zero_allocs))
     end
+    return cases
 end
-
-end # module VBMultivariateTests

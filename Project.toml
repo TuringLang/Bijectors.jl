@@ -27,14 +27,12 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [weakdeps]
 ChainRules = "082447d4-558c-5d27-93f4-14fc19e9eca2"
-DistributionsAD = "ced4e74d-a319-5a8a-b0ac-84af2272839c"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 LazyArrays = "5078a376-72f3-5289-bfd5-ec5146d43c02"
 Mooncake = "da2b9cff-9c12-43a0-ae48-6db2b0edb7d6"
 ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267"
 
 [extensions]
-BijectorsDistributionsADExt = "DistributionsAD"
 BijectorsForwardDiffExt = "ForwardDiff"
 BijectorsLazyArraysExt = "LazyArrays"
 BijectorsMooncakeExt = "Mooncake"
@@ -52,7 +50,6 @@ ChainRules = "1"
 ChainRulesCore = "0.10.11, 1"
 ChangesOfVariables = "0.1"
 Distributions = "0.25.33"
-DistributionsAD = "0.6"
 DocStringExtensions = "0.9"
 EnzymeCore = "0.8.15"
 FillArrays = "1"
@@ -72,7 +69,6 @@ Test = "1"
 julia = "1.10.8"
 
 [extras]
-DistributionsAD = "ced4e74d-a319-5a8a-b0ac-84af2272839c"
 EnzymeCore = "f151be2c-9106-41f4-ab19-57ee4f262869"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 LazyArrays = "5078a376-72f3-5289-bfd5-ec5146d43c02"
