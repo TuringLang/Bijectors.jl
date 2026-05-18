@@ -1,17 +1,5 @@
-module VBReshapedTests
-
-using Distributions
-using LinearAlgebra
-using Test
-using Bijectors.VectorBijectors
-import DifferentiationInterface as DI
-using Enzyme: Enzyme
-using ForwardDiff: ForwardDiff
-using ReverseDiff: ReverseDiff
-using Mooncake: Mooncake
-
-reshaped = [
-    # 0-dim array output: doesn't work because
+const reshaped_default_dists = [
+    # 0-dim array output is blocked by
     # https://github.com/JuliaStats/Distributions.jl/issues/2025
     # reshape(Normal(), ()),
     vec(Normal()),
@@ -28,28 +16,14 @@ reshaped = [
     reshape(Wishart(7, Matrix{Float64}(I, 4, 4)), 1, 1, 4, 1, 4),
 ]
 
-# Fails on 1.10: https://github.com/EnzymeAD/Enzyme.jl/issues/2987
-adtypes_no_enz_rvs = [
-    DI.AutoReverseDiff(),
-    DI.AutoReverseDiff(; compile=true),
-    DI.AutoMooncake(),
-    DI.AutoMooncakeForward(),
-    DI.AutoEnzyme(; mode=Enzyme.Forward, function_annotation=Enzyme.Const),
-]
-reshaped_no_enzyme = [reshape(Beta(2, 2), (1, 1, 1, 1, 1))]
-
-@testset "Reshaped distributions" begin
-    for d in reshaped
-        VectorBijectors.test_all(d; expected_zero_allocs=())
-    end
-
-    for d in reshaped_no_enzyme
-        @static if VERSION >= v"1.11-"
-            VectorBijectors.test_all(d; expected_zero_allocs=())
-        else
-            VectorBijectors.test_all(d; adtypes=adtypes_no_enz_rvs, expected_zero_allocs=())
-        end
-    end
+function _gen_testcases(::Val{:reshaped_dists})
+    return [VectorTestCase(d; expected_zero_allocs=()) for d in reshaped_default_dists]
 end
 
-end # module VBReshapedTests
+# Isolated under its own tag because Enzyme Reverse fails on Julia 1.10
+# (https://github.com/EnzymeAD/Enzyme.jl/issues/2987).
+const reshaped_beta_dist = reshape(Beta(2, 2), (1, 1, 1, 1, 1))
+
+function _gen_testcases(::Val{:reshaped_beta_special})
+    return [VectorTestCase(reshaped_beta_dist; expected_zero_allocs=())]
+end

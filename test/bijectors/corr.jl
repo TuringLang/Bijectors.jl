@@ -1,4 +1,4 @@
-using Bijectors, DistributionsAD, LinearAlgebra, Test
+using Bijectors, LinearAlgebra, Test
 using Bijectors: VecCorrBijector, VecCholeskyBijector, CorrBijector
 
 @testset "CorrBijector & VecCorrBijector" begin

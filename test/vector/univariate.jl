@@ -1,79 +1,61 @@
-module VBUnivariateTests
-
-using Distributions
-using Test
-using Bijectors.VectorBijectors
-using Enzyme: Enzyme
-using ForwardDiff: ForwardDiff
-using ReverseDiff: ReverseDiff
-using Mooncake: Mooncake
-
-univariates = [
-    # Continuous
-    Arcsine(0, 1), # trunc
-    Beta(2, 2), # trunc
-    BetaPrime(1, 2), # pos
+const univariates = [
+    Arcsine(0, 1),
+    Beta(2, 2),
+    BetaPrime(1, 2),
     Biweight(1, 2),
-    Cauchy(-2, 1), # iden
-    # sampling from Chernoff errors randomly:
-    # https://github.com/JuliaStats/Distributions.jl/issues/1999
-    # https://github.com/JuliaStats/Distributions.jl/pull/2000
-    # Chernoff(), # iden
-    Chi(1), # pos
-    Chisq(3), # pos
-    Cosine(0, 1), # trunc
+    Cauchy(-2, 1),
+    Chi(1),
+    Chisq(3),
+    Cosine(0, 1),
     Epanechnikov(0, 1),
-    Erlang(7, 0.5), # pos
-    Exponential(0.5), # pos
-    FDist(10, 1), # pos
-    Frechet(1, 1), # trunc
-    Gamma(7.5, 1), # pos
-    GeneralizedExtremeValue(0, 1, 1), # trunc
-    GeneralizedPareto(0, 1, 1), # trunc
-    Gumbel(0, 1), # iden
-    InverseGamma(3, 0.5), # pos
-    InverseGaussian(1, 1), # pos
-    JohnsonSU(0.0, 1.0, 0.0, 1.0), # iden
-    Kolmogorov(), # pos
-    # KSDist(5), # can't rand
-    # KSOneSided(5), # can't rand
-    Kumaraswamy(2, 5), # trunc
-    Laplace(0, 4), # iden
-    Levy(0, 1), # trunc
-    Lindley(1.5), # pos
-    Logistic(2, 1), # iden
-    LogitNormal(0, 1), # trunc
-    LogNormal(0, 1), # pos
-    LogUniform(1, 10), # trunc
-    NoncentralBeta(2, 3, 1), # trunc
-    NoncentralChisq(2, 3), # pos
-    NoncentralF(2, 3, 1), # pos
-    NoncentralT(2, 3), # iden
-    Normal(0, 1), # iden
-    NormalCanon(0, 1), # iden
-    NormalInverseGaussian(0, 0.5, 0.2, 0.1), # iden
-    Pareto(1, 1), # trunc
-    PGeneralizedGaussian(0.2), # iden
-    Rayleigh(0.5), # pos
-    Rician(0.5, 1), # pos
-    Semicircle(1), # trunc
-    SkewedExponentialPower(0, 1, 0.7, 0.7), # iden
-    SkewNormal(0, 1, -1), # iden
-    StudentizedRange(2, 2), # pos
-    SymTriangularDist(0, 1), # trunc
-    TDist(5), # iden
-    TriangularDist(0, 1.5, 0.5), # trunc
-    Triweight(1, 1), # trunc
-    Uniform(0, 1), # trunc
-    VonMises(0.5), # trunc
-    Weibull(0.5, 1), # pos
-    truncated(Normal(); lower=0.0), # trunc
-    truncated(Normal(); upper=0.0), # trunc
-    truncated(Normal(); lower=0.0, upper=1.0), # trunc
-    censored(Normal(); lower=0.0), # trunc
-    censored(Normal(); upper=0.0), # trunc
-    censored(Normal(); lower=0.0, upper=1.0), # trunc
-    # Discrete
+    Erlang(7, 0.5),
+    Exponential(0.5),
+    FDist(10, 1),
+    Frechet(1, 1),
+    Gamma(7.5, 1),
+    GeneralizedExtremeValue(0, 1, 1),
+    GeneralizedPareto(0, 1, 1),
+    Gumbel(0, 1),
+    InverseGamma(3, 0.5),
+    InverseGaussian(1, 1),
+    JohnsonSU(0.0, 1.0, 0.0, 1.0),
+    Kolmogorov(),
+    Kumaraswamy(2, 5),
+    Laplace(0, 4),
+    Levy(0, 1),
+    Lindley(1.5),
+    Logistic(2, 1),
+    LogitNormal(0, 1),
+    LogNormal(0, 1),
+    LogUniform(1, 10),
+    NoncentralBeta(2, 3, 1),
+    NoncentralChisq(2, 3),
+    NoncentralF(2, 3, 1),
+    NoncentralT(2, 3),
+    Normal(0, 1),
+    NormalCanon(0, 1),
+    NormalInverseGaussian(0, 0.5, 0.2, 0.1),
+    Pareto(1, 1),
+    PGeneralizedGaussian(0.2),
+    Rayleigh(0.5),
+    Rician(0.5, 1),
+    Semicircle(1),
+    SkewedExponentialPower(0, 1, 0.7, 0.7),
+    SkewNormal(0, 1, -1),
+    StudentizedRange(2, 2),
+    SymTriangularDist(0, 1),
+    TDist(5),
+    TriangularDist(0, 1.5, 0.5),
+    Triweight(1, 1),
+    Uniform(0, 1),
+    VonMises(0.5),
+    Weibull(0.5, 1),
+    truncated(Normal(); lower=0.0),
+    truncated(Normal(); upper=0.0),
+    truncated(Normal(); lower=0.0, upper=1.0),
+    censored(Normal(); lower=0.0),
+    censored(Normal(); upper=0.0),
+    censored(Normal(); lower=0.0, upper=1.0),
     Bernoulli(0.5),
     BernoulliLogit(0.0),
     BetaBinomial(5, 2, 2),
@@ -89,51 +71,44 @@ univariates = [
     PoissonBinomial([0.2, 0.5, 0.3]),
     Skellam(2.0, 3.0),
     Soliton(100, 60, 0.2),
-    # Univariate mixture models
     MixtureModel([Normal(-2.0, 1.2), Normal(0.0, 1.0), Normal(3.0, 2.5)], [0.2, 0.5, 0.3]),
     MixtureModel([Normal(0, 1)], [1.0]),
     MixtureModel([Beta(2, 2), Beta(5, 1)], [0.5, 0.5]),
-    # Shifted / scaled distributions
-    # Identity
     Logistic() + 2,
     Logistic() - 2,
     Logistic() * 3,
     Logistic() * -3,
-    # Positive
     Gamma(2, 3) + 2,
     Gamma(2, 3) - 2,
     Gamma(2, 3) * 3,
     Gamma(2, 3) * -3,
-    # Truncated
     Beta(2, 5) + 2,
     Beta(2, 5) - 2,
     Beta(2, 5) * 3,
     Beta(2, 5) * -3,
-    # Some extra tests just for good measure
     truncated(Beta(2, 5); lower=0.2, upper=0.8),
     truncated(Beta(2, 5) * -4; lower=-3.0, upper=-1.0),
 ]
 
-heterogeneous_mixtures = [
-    # Because of the abstract eltype, there's some loss of inference somewhere that causes
-    # allocations on < 1.12, so for these we skip the zero-allocation tests.
+# Abstract eltype causes a loss of inference that allocates on < 1.12; skip the
+# zero-allocation tests there.
+const heterogeneous_mixtures = [
     MixtureModel(Union{Normal,Exponential}[Normal(0, 1), Exponential(1)], [0.4, 0.6]),
     MixtureModel(Union{Gamma,Exponential}[Gamma(2, 1), Exponential(3)], [0.5, 0.5]),
 ]
 
-@testset "Univariates" begin
+function _gen_testcases(::Val{:univariates})
+    cases = VectorTestCase[]
     for d in univariates
-        VectorBijectors.test_all(d; expected_zero_allocs=(from_vec, from_linked_vec))
+        push!(cases, VectorTestCase(d; expected_zero_allocs=(from_vec, from_linked_vec)))
     end
-
+    expected_alloc_for_hm = @static if VERSION >= v"1.12-"
+        (from_vec, from_linked_vec)
+    else
+        ()
+    end
     for d in heterogeneous_mixtures
-        expected_zero_allocs = @static if VERSION >= v"1.12-"
-            (from_vec, from_linked_vec)
-        else
-            ()
-        end
-        VectorBijectors.test_all(d; expected_zero_allocs=expected_zero_allocs)
+        push!(cases, VectorTestCase(d; expected_zero_allocs=expected_alloc_for_hm))
     end
+    return cases
 end
-
-end # module VBUnivariateTests

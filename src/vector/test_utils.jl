@@ -1,20 +1,14 @@
 using Test
 using LinearAlgebra: logabsdet, Cholesky, UpperTriangular, LowerTriangular
 import DifferentiationInterface as DI
-import EnzymeCore as EC
 
 # Would like to use FiniteDifferences, but very easy to run into issues with
 # https://juliadiff.org/FiniteDifferences.jl/latest/#Dealing-with-Singularities
 const ref_adtype = DI.AutoForwardDiff()
 
-const default_adtypes = [
-    DI.AutoReverseDiff(),
-    DI.AutoReverseDiff(; compile=true),
-    DI.AutoMooncake(),
-    DI.AutoMooncakeForward(),
-    DI.AutoEnzyme(; mode=EC.Forward, function_annotation=EC.Const),
-    DI.AutoEnzyme(; mode=EC.Reverse, function_annotation=EC.Const),
-]
+# ForwardDiff is the baked-in reference; per-backend integration suites under
+# `test/integration_tests/` pass their own `adtypes` to `test_all`.
+const default_adtypes = [ref_adtype]
 
 _get_value_support(::D.Distribution{<:Any,VS}) where {VS<:D.ValueSupport} = VS
 
@@ -234,12 +228,14 @@ function test_all(
     d::D.Distribution;
     expected_zero_allocs=(),
     adtypes=default_adtypes,
+    broken_adtypes=DI.AbstractADType[],
     ad_atol=1e-10,
     ad_rtol=sqrt(eps()),
     roundtrip_atol=1e-10,
     roundtrip_rtol=sqrt(eps()),
     test_in_support=(_get_value_support(d) <: D.Continuous),
     test_construction_type_stable=true,
+    skip::Bool=false,
 )
     @info "Testing $(_name(d))"
     @testset "$(_name(d))" begin
@@ -250,7 +246,14 @@ function test_all(
         test_optics(d)
         test_allocations(d, expected_zero_allocs)
         test_logjac(d, ad_atol, ad_rtol)
-        test_ad(d, adtypes, ad_atol, ad_rtol)
+        if !skip
+            # Any adtype in `broken_adtypes` is wrapped via `_test_ad_broken`; the rest
+            # of `adtypes` run normally under `test_ad`.
+            normal = filter(a -> !(a in broken_adtypes), adtypes)
+            isempty(normal) || test_ad(d, normal, ad_atol, ad_rtol)
+            isempty(broken_adtypes) ||
+                _test_ad_broken(d, collect(broken_adtypes), ad_atol, ad_rtol)
+        end
     end
 end
 
@@ -339,14 +342,11 @@ function test_roundtrip_inverse(d::D.Distribution, test_in_support, atol, rtol)
                 end
 
                 ynew = ffwd(x)
-                if d isa D.JointOrderStatistics && (
-                    any(isnan, x) ||
-                    !all(isfinite, x) ||
-                    any(isnan, ynew) ||
-                    !all(isfinite, ynew)
-                )
-                    @warn "NaNs or Inf produced in roundtrip test for $(_name(d)), skipping isapprox test"
-                else
+                # JointOrderStatistics: extreme random `y` pushes `x` to the support
+                # boundary, where the y → x → ynew roundtrip loses precision (or produces
+                # NaN/Inf). Structural correctness is covered by `test_roundtrip`. See
+                # https://github.com/TuringLang/Bijectors.jl/issues/441.
+                if !(d isa D.JointOrderStatistics)
                     @test _isapprox_safe(y, ynew; atol=atol, rtol=rtol)
                 end
             end
@@ -591,23 +591,8 @@ Test that various AD backends can differentiate the conversions to and from vect
 linked vector forms for the given distribution `d`.
 """
 function test_ad(d::D.Distribution, adtypes::Vector{<:DI.AbstractADType}, atol, rtol)
-    # If `d` is a discrete distribution, Mooncake refuses to differentiate through the
-    # transforms (which are just identity transforms). Likewise, Enzyme will throw an
-    # error saying that the output is Const but was not marked as such.
-    #
-    # Arguably, the other AD backends probably should also refuse to differentiate it, but
-    # they do actually return the right 'gradients' so we can test them.
-    adtypes = if d isa D.Distribution{<:Any,D.Discrete}
-        filter(adtypes) do adtype
-            !(
-                adtype isa DI.AutoMooncake ||
-                adtype isa DI.AutoMooncakeForward ||
-                adtype isa DI.AutoEnzyme
-            )
-        end
-    else
-        adtypes
-    end
+    # Discrete-distribution link transforms are identities; nothing AD-meaningful to check.
+    d isa D.Distribution{<:Any,D.Discrete} && return nothing
 
     @testset "AD forward: $(_name(d))" begin
         x = _rand_safe_ad(d)
@@ -648,6 +633,51 @@ function test_ad(d::D.Distribution, adtypes::Vector{<:DI.AbstractADType}, atol, 
             @testset let x = x, adtype = adtype, d = d
                 ad_grad_ladj = DI.gradient(ladj, adtype, yvec)
                 @test ref_grad_ladj ≈ ad_grad_ladj atol = atol rtol = rtol
+            end
+        end
+    end
+end
+
+# Broken-mode counterpart to `test_ad`: collapses the four per-adtype AD comparisons into
+# one `@test_broken` per adtype so a partially-broken backend stays cleanly broken.
+function _test_ad_broken(
+    d::D.Distribution, adtypes::Vector{<:DI.AbstractADType}, atol, rtol
+)
+    d isa D.Distribution{<:Any,D.Discrete} && return nothing
+    @testset "AD (broken): $(_name(d))" begin
+        x = _rand_safe_ad(d)
+        xvec = to_vec(d)(x)
+        yvec = to_linked_vec(d)(x)
+        ffwd = to_linked_vec(d) ∘ from_vec(d)
+        frvs = to_vec(d) ∘ from_linked_vec(d)
+        ladj_fwd(xv) = last(with_logabsdet_jacobian(ffwd, xv))
+        ladj_rev(yv) = last(with_logabsdet_jacobian(frvs, yv))
+        ref_jac_fwd = DI.jacobian(ffwd, ref_adtype, xvec)
+        ref_grad_ladj_fwd = DI.gradient(ladj_fwd, ref_adtype, xvec)
+        ref_jac_rev = DI.jacobian(frvs, ref_adtype, yvec)
+        ref_grad_ladj_rev = DI.gradient(ladj_rev, ref_adtype, yvec)
+        for adtype in adtypes
+            @testset let x = x, adtype = adtype, d = d
+                @test_broken (
+                    isapprox(
+                        DI.jacobian(ffwd, adtype, xvec), ref_jac_fwd; atol=atol, rtol=rtol
+                    ) &&
+                    isapprox(
+                        DI.gradient(ladj_fwd, adtype, xvec),
+                        ref_grad_ladj_fwd;
+                        atol=atol,
+                        rtol=rtol,
+                    ) &&
+                    isapprox(
+                        DI.jacobian(frvs, adtype, yvec), ref_jac_rev; atol=atol, rtol=rtol
+                    ) &&
+                    isapprox(
+                        DI.gradient(ladj_rev, adtype, yvec),
+                        ref_grad_ladj_rev;
+                        atol=atol,
+                        rtol=rtol,
+                    )
+                )
             end
         end
     end
