@@ -64,8 +64,6 @@ function triu_mask(X::AbstractMatrix, k::Int)
     return triu!(fill!(parent(m), true), k)
 end
 
-ChainRulesCore.@non_differentiable triu_mask(X::AbstractMatrix, k::Int)
-
 _triu_to_vec(X::AbstractMatrix{<:Real}, k::Int) = X[triu_mask(X, k)]
 
 function update_triu_from_vec!(
@@ -93,20 +91,6 @@ function update_triu_from_vec(vals::AbstractVector{<:Real}, k::Int, dim::Int)
     # TODO: Do we need this?
     fill!(X, 0)
     return update_triu_from_vec!(vals, k, X)
-end
-
-function ChainRulesCore.rrule(
-    ::typeof(update_triu_from_vec), x::AbstractVector{<:Real}, k::Int, dim::Int
-)
-    function update_triu_from_vec_pullback(ΔX)
-        return (
-            ChainRulesCore.NoTangent(),
-            _triu_to_vec(ChainRulesCore.unthunk(ΔX), k),
-            ChainRulesCore.NoTangent(),
-            ChainRulesCore.NoTangent(),
-        )
-    end
-    return update_triu_from_vec(x, k, dim), update_triu_from_vec_pullback
 end
 
 #      n * (n - 1) / 2 = d
