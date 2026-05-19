@@ -235,11 +235,13 @@ if isdefined(Base.Experimental, :register_error_hint)
         Base.Experimental.register_error_hint(MethodError) do io, exc, argtypes, _kwargs
             exc.f === ReverseDiff.track || return nothing
             length(argtypes) == 2 || return nothing
-            f = argtypes[1].instance
-            f in _CHAINRULES_GATED || return nothing
+            T = argtypes[1]
+            # `.instance` is only defined for singleton types (e.g. `typeof(some_fn)`).
+            isdefined(T, :instance) || return nothing
+            T.instance in _CHAINRULES_GATED || return nothing
             return print(
                 io,
-                "\nDifferentiating `$(nameof(f))` with ReverseDiff requires ChainRules.jl. ",
+                "\nDifferentiating `$(nameof(T.instance))` with ReverseDiff requires ChainRules.jl. ",
                 "Run `using ChainRules` first.",
             )
         end
