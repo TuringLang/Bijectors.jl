@@ -17,27 +17,44 @@ const adtypes = [AutoMooncake(), AutoMooncakeForward()]
 
 # ===== Mooncake rule for `find_alpha` =====
 
-@testset "Mooncake $mode: find_alpha" for mode in (Mooncake.ReverseMode,)
+# Cover both `frule!!` and `rrule!!` paths registered in `BijectorsMooncakeExt`, across
+# every `Base.IEEEFloat` width for the homogeneous case and a couple of integer types for
+# the `Integer`-third-argument case.
+@testset "Mooncake $mode: find_alpha" for mode in
+                                          (Mooncake.ReverseMode, Mooncake.ForwardMode)
     rng = Xoshiro(123456)
-    x = randn()
-    y = expm1(randn())
-    z = randn()
-    Mooncake.TestUtils.test_rule(
-        rng, Bijectors.find_alpha, x, y, z; is_primitive=true, perf_flag=:none, mode=mode
-    )
-    Mooncake.TestUtils.test_rule(
-        rng, Bijectors.find_alpha, x, y, 3; is_primitive=true, perf_flag=:none, mode=mode
-    )
-    Mooncake.TestUtils.test_rule(
-        rng,
-        Bijectors.find_alpha,
-        x,
-        y,
-        UInt32(3);
-        is_primitive=true,
-        perf_flag=:none,
-        mode=mode,
-    )
+    # Skip `Float16`: the root-finder in `find_alpha` doesn't keep enough precision for
+    # Mooncake's default correctness tolerance.
+    @testset "$P×$P×$P" for P in (Float32, Float64)
+        x = P(randn(rng))
+        y = P(expm1(randn(rng)))
+        z = P(randn(rng))
+        Mooncake.TestUtils.test_rule(
+            rng,
+            Bijectors.find_alpha,
+            x,
+            y,
+            z;
+            is_primitive=true,
+            perf_flag=:none,
+            mode=mode,
+        )
+    end
+    @testset "Float64×Float64×$I" for I in (Int64, UInt32)
+        x = randn(rng)
+        y = expm1(randn(rng))
+        z = I(3)
+        Mooncake.TestUtils.test_rule(
+            rng,
+            Bijectors.find_alpha,
+            x,
+            y,
+            z;
+            is_primitive=true,
+            perf_flag=:none,
+            mode=mode,
+        )
+    end
 end
 
 @testset "Mooncake bijector AD" begin
