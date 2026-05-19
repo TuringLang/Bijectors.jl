@@ -15,7 +15,7 @@ The code in `src/` outside of `src/vector/` is largely legacy. It still works an
 
 ## Testing
 
-Run tests with `julia --project -e 'using Pkg; Pkg.test()'`.
+Run tests with `julia --project -e 'using Pkg; Pkg.test()'`. The Enzyme integration suite lives in `test/integration_tests/enzyme/` and runs separately (see `.github/workflows/Enzyme.yml`). Always refresh each environment (`Pkg.update()` / `up`) before tests or doc builds — a stale manifest can cause subtle resolution and loading issues.
 
 `Bijectors.VectorBijectors.test_all(d)` is the single source of truth for whether a VectorBijectors implementation is correct. If it passes, the implementation is almost certainly fine. It checks roundtrips, type stability, vector lengths, optics, allocations, log-Jacobian correctness (against ForwardDiff), and AD compatibility across backends.
 
