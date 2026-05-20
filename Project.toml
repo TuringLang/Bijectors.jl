@@ -40,7 +40,7 @@ BijectorsReverseDiffChainRulesExt = ["ChainRules", "ReverseDiff"]
 BijectorsReverseDiffExt = "ReverseDiff"
 
 [compat]
-AbstractPPL = "0.14"
+AbstractPPL = "0.14, 0.15"
 ArgCheck = "1, 2"
 ChainRules = "1"
 ChainRulesCore = "0.10.11, 1"
