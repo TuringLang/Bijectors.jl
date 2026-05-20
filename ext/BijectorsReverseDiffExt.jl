@@ -11,7 +11,6 @@ using ReverseDiff:
     @grad_from_chainrules
 
 using Bijectors:
-    ChainRulesCore,
     Elementwise,
     SimplexBijector,
     maphcat,
@@ -225,24 +224,26 @@ end
 cholesky_lower(X::TrackedMatrix) = track(cholesky_lower, X)
 cholesky_upper(X::TrackedMatrix) = track(cholesky_upper, X)
 
+# `cholesky_lower` and `cholesky_upper` route through ChainRules.jl rules for
+# `Hermitian` and `cholesky` (see `BijectorsReverseDiffChainRulesExt`). Without
+# ChainRules loaded that extension is dormant and the user hits a `MethodError` on
+# `ReverseDiff.track(cholesky_lower, ::TrackedMatrix)`. Point them at the fix.
+const _CHAINRULES_GATED = (cholesky_lower, cholesky_upper)
+
 if isdefined(Base.Experimental, :register_error_hint)
     function __init__()
-        Base.Experimental.register_error_hint(MethodError) do io, exc, argtypes, kwargs
-            if exc.f === ReverseDiff.track &&
-                length(argtypes) == 2 &&
-                (
-                    argtypes[1] === typeof(cholesky_lower) ||
-                    argtypes[1] === typeof(cholesky_upper)
-                )
-                print(io, "\nThe gradient function for ")
-                if argtypes[1] === typeof(cholesky_lower)
-                    print(io, "`cholesky_lower`")
-                else
-                    print(io, "`cholesky_upper`")
-                end
-                print(io, " requires ChainRules.jl. ")
-                print(io, "Please load ChainRules to use ReverseDiff with this bijector.")
-            end
+        Base.Experimental.register_error_hint(MethodError) do io, exc, argtypes, _kwargs
+            exc.f === ReverseDiff.track || return nothing
+            length(argtypes) == 2 || return nothing
+            T = argtypes[1]
+            # `.instance` is only defined for singleton types (e.g. `typeof(some_fn)`).
+            isdefined(T, :instance) || return nothing
+            T.instance in _CHAINRULES_GATED || return nothing
+            return print(
+                io,
+                "\nDifferentiating `$(nameof(T.instance))` with ReverseDiff requires ChainRules.jl. ",
+                "Run `using ChainRules` first.",
+            )
         end
     end
 end

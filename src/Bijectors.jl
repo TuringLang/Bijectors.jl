@@ -40,7 +40,6 @@ using InverseFunctions: InverseFunctions
 import ChangesOfVariables: ChangesOfVariables, with_logabsdet_jacobian
 import InverseFunctions: inverse
 
-using ChainRulesCore: ChainRulesCore
 using Functors: Functors
 using IrrationalConstants: IrrationalConstants
 using LogExpFunctions: LogExpFunctions
@@ -358,7 +357,6 @@ end
 
 include("utils.jl")
 include("interface.jl")
-include("chainrules.jl")
 include("vector/VectorBijectors.jl")
 
 # Broadcasting here breaks some AD backends for certain array types

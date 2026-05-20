@@ -1,4 +1,44 @@
-# differentation rule for the iterative algorithm in the inverse of `PlanarLayer`
+module BijectorsChainRulesCoreExt
+
+using ChainRulesCore: ChainRulesCore
+using Bijectors:
+    Bijectors,
+    PartitionMask,
+    combine,
+    partition,
+    find_alpha,
+    _transform_ordered,
+    _transform_inverse_ordered,
+    _link_chol_lkj_from_upper,
+    _link_chol_lkj_from_lower,
+    _inv_link_chol_lkj,
+    _inv_link_chol_lkj_rrule,
+    pd_from_upper,
+    triu_mask,
+    _triu_to_vec,
+    update_triu_from_vec,
+    _debug
+using LinearAlgebra: LinearAlgebra, UpperTriangular
+
+# `triu_mask` only reads its arguments' types/sizes — mark non-differentiable so AD
+# doesn't try to thread tangents through the Bool mask construction.
+ChainRulesCore.@non_differentiable triu_mask(X::AbstractMatrix, k::Int)
+
+function ChainRulesCore.rrule(
+    ::typeof(update_triu_from_vec), x::AbstractVector{<:Real}, k::Int, dim::Int
+)
+    function update_triu_from_vec_pullback(ΔX)
+        return (
+            ChainRulesCore.NoTangent(),
+            _triu_to_vec(ChainRulesCore.unthunk(ΔX), k),
+            ChainRulesCore.NoTangent(),
+            ChainRulesCore.NoTangent(),
+        )
+    end
+    return update_triu_from_vec(x, k, dim), update_triu_from_vec_pullback
+end
+
+# Differentation rule for the iterative algorithm in the inverse of `PlanarLayer`.
 ChainRulesCore.@scalar_rule(
     find_alpha(wt_y::Real, wt_u_hat::Real, b::Real),
     @setup(x = inv(1 + wt_u_hat * sech(Ω + b)^2),),
@@ -292,3 +332,5 @@ end
 
 # Fixes AD issues with `@debug`
 ChainRulesCore.@non_differentiable _debug(::Any)
+
+end # module BijectorsChainRulesCoreExt
