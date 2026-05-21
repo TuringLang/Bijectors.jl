@@ -105,6 +105,8 @@ Univariate distributions tend to fall into one of the following categories:
 Bijectors.VectorBijectors.TypedIdentity
 Bijectors.VectorBijectors.Log
 Bijectors.VectorBijectors.Untruncate
+Bijectors.VectorBijectors.CDF
+Bijectors.VectorBijectors.Quantile
 ```
 
 ## Testing

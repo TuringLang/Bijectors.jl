@@ -58,6 +58,7 @@ include("bijectors/utils.jl")
         include("bijectors/simplex.jl")
         include("bijectors/equality.jl")
         include("bijectors/scale.jl")
+        include("bijectors/cdf_quantile.jl")
     end
 
     if GROUP == "All" || GROUP == "Vector" || GROUP == "VectorProduct"
@@ -81,6 +82,9 @@ include("bijectors/utils.jl")
                     run_vector_case(c)
                 end
             end
+
+            # Scalar-to-scalar bijectors not exercised by the test_all sweep.
+            GROUP != "VectorProduct" && include("vector/cdf_quantile.jl")
         end
     end
 end

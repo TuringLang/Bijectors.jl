@@ -40,7 +40,7 @@ with_logabsdet_jacobian(b::CDFBijector, x) = transform(b, x), logabsdetjac(b, x)
 
 transform(b::CDFBijector, x) = Distributions.cdf.(b.dist, x)
 
-logabsdetjac(b::CDFBijector, x) = Distributions.logpdf.(b.dist, x)
+logabsdetjac(b::CDFBijector, x) = sum(Distributions.logpdf.(b.dist, x))
 
 """
     QuantileBijector(dist::Distributions.ContinuousUnivariateDistribution)
@@ -80,11 +80,17 @@ function Base.show(io::IO, b::QuantileBijector)
     return nothing
 end
 
-with_logabsdet_jacobian(b::QuantileBijector, x) = transform(b, x), logabsdetjac(b, x)
+function with_logabsdet_jacobian(b::QuantileBijector, x)
+    y = transform(b, x)
+    return y, -sum(Distributions.logpdf.(b.dist, y))
+end
 
 transform(b::QuantileBijector, x) = Distributions.quantile.(b.dist, x)
 
-logabsdetjac(b::QuantileBijector, x) = @. -Distributions.logpdf(b.dist, x)
+logabsdetjac(b::QuantileBijector, x) = last(with_logabsdet_jacobian(b, x))
 
 inverse(b::CDFBijector) = QuantileBijector(b.dist)
 inverse(b::QuantileBijector) = CDFBijector(b.dist)
+
+is_monotonically_increasing(::CDFBijector) = true
+is_monotonically_increasing(::QuantileBijector) = true
