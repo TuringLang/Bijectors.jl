@@ -1,7 +1,7 @@
 """
     Stacked(bs)
     Stacked(bs, ranges)
-    stack(bs::Bijector...)
+    Stacked(bs::Bijector...)
 
 A `Bijector` which stacks bijectors together which can then be applied to a vector
 where `bs[i]::Bijector` is applied to `x[ranges[i]]::UnitRange{Int}`.
@@ -15,9 +15,10 @@ where `bs[i]::Bijector` is applied to `x[ranges[i]]::UnitRange{Int}`.
 
 # Examples
 ```
+using Bijectors: Logit, Stacked
 b1 = Logit(0.0, 1.0)
 b2 = identity
-b = stack(b1, b2)
+b = Stacked(b1, b2)
 b([0.0, 1.0]) == [b1(0.0), 1.0]  # => true
 ```
 """
@@ -230,15 +231,12 @@ end
 end
 
 function _with_logabsdet_jacobian(sb::Stacked, x::AbstractVector)
-    N = length(sb.bs)
-    yinit, linit = with_logabsdet_jacobian(sb.bs[1], x[sb.ranges_in[1]])
-    logjac = sum(linit)
-    ys = mapreduce(vcat, sb.bs[2:end], sb.ranges_in[2:end]; init=yinit) do b, r
-        y, l = with_logabsdet_jacobian(b, x[r])
-        logjac += sum(l)
-        y
+    ys_and_logjacs = map(zip(sb.bs, sb.ranges_in)) do (b, r)
+        with_logabsdet_jacobian(b, x[r])
     end
-    return (ys, logjac)
+    y = reduce(vcat, map(first, ys_and_logjacs))
+    logjac = sum(map(last, ys_and_logjacs))
+    return (y, logjac)
 end
 
 function with_logabsdet_jacobian(sb::Stacked, x::AbstractVector)

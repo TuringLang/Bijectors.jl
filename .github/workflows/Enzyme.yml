@@ -1,0 +1,49 @@
+name: Enzyme
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+# needed to allow julia-actions/cache to delete old caches that it has created
+permissions:
+  actions: write
+  contents: read
+
+# Cancel existing tests on the same PR if a new commit is added to a pull request
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
+jobs:
+  test:
+    name: Julia ${{ matrix.version }}
+    runs-on: ubuntu-latest
+    # Enzyme is an integration test isolated from the main suite. It reports failures for
+    # visibility but does not block PRs: Enzyme regressions surface as red here without
+    # making the rest of the workflow fail.
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        version:
+          - "min"
+          - "1"
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: ${{ matrix.version }}
+
+      - uses: julia-actions/cache@v3
+
+      - name: Run Enzyme tests
+        working-directory: test/integration_tests/enzyme
+        # `Pkg.develop` makes Julia 1.10 use the working tree's Bijectors. The
+        # `[sources]` section in `Project.toml` only takes effect on Julia 1.11+,
+        # so on 1.10 the registry version would be resolved instead.
+        run: |
+          julia --project=. --color=yes -e 'using Pkg; Pkg.develop(PackageSpec(path="../../..")); Pkg.instantiate()'
+          julia --project=. --color=yes main.jl

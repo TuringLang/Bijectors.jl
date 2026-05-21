@@ -40,21 +40,22 @@ using InverseFunctions: InverseFunctions
 import ChangesOfVariables: ChangesOfVariables, with_logabsdet_jacobian
 import InverseFunctions: inverse
 
-using ChainRulesCore: ChainRulesCore
 using Functors: Functors
 using IrrationalConstants: IrrationalConstants
 using LogExpFunctions: LogExpFunctions
 using Roots: Roots
-using Compat: Compat
+using DocStringExtensions: TYPEDFIELDS
 
 export TransformDistribution,
     PositiveDistribution,
     UnitDistribution,
     SimplexDistribution,
     PDMatDistribution,
+    # basic interface
     link,
     invlink,
     logpdf_with_trans,
+    isinvertible,
     isclosedform,
     transform,
     transform!,
@@ -64,22 +65,25 @@ export TransformDistribution,
     logabsdetjac,
     logabsdetjac!,
     logabsdetjacinv,
-    Bijector,
-    Inverse,
-    Stacked,
     bijector,
     transformed,
+    # types and specific bijectors
+    Bijector,
     UnivariateTransformed,
     MultivariateTransformed,
+    Inverse,
+    # specific bijectors
+    Stacked,
     PlanarLayer,
     RadialLayer,
     Coupling,
     InvertibleBatchNorm,
-    elementwise
-
-if VERSION < v"1.1"
-    using Compat: eachcol
-end
+    # transform wrappers
+    elementwise,
+    columnwise,
+    # utilities
+    output_size,
+    ordered
 
 const DEBUG = Bool(parse(Int, get(ENV, "DEBUG_BIJECTORS", "0")))
 _debug(str) = @debug str
@@ -90,7 +94,6 @@ _eps(::Type{<:Integer}) = eps(Float64)
 
 function _clamp(x, a, b)
     T = promote_type(typeof(x), typeof(a), typeof(b))
-    ϵ = _eps(T)
     clamped_x = ifelse(x < a, convert(T, a), ifelse(x > b, convert(T, b), x))
     DEBUG && _debug("x = $x, bounds = $((a, b)), clamped_x = $clamped_x")
     return clamped_x
@@ -118,17 +121,74 @@ function eachcolmaphcat(f, x)
     return reduce(hcat, drop(out, 1); init=init)
 end
 function sumeachcol(f, x1, x2)
-    # Using a view below for x1 breaks Tracker
+    # Using a view below for x1 breaks some AD backends
     return sum(f(x1[:, i], x2[i]) for i in 1:size(x1, 2))
 end
 
 # Distributions
 
+"""
+    link(d::Distribution, x)
+
+Transforms the input `x` using the constrained-to-unconstrained bijector for
+distribution `d`.
+
+See also: [`invlink`](@ref).
+
+# Example
+
+```jldoctest
+julia> using Bijectors
+
+julia> d = LogNormal()   # support is (0, Inf)
+LogNormal{Float64}(μ=0.0, σ=1.0)
+
+julia> b = bijector(d)   # log function transforms to unconstrained space
+(::Base.Fix1{typeof(broadcast), typeof(log)}) (generic function with 2 methods)
+
+julia> b(1.0)
+0.0
+
+julia> link(LogNormal(), 1.0)
+0.0
+```
+"""
 link(d::Distribution, x) = bijector(d)(x)
+
+"""
+    invlink(d::Distribution, y)
+
+Performs the inverse transform on a value `y` that was transformed using the
+constrained-to-unconstrained bijector for distribution `d`.
+
+It should hold that `invlink(d, link(d, x)) = x`.
+
+See also: [`link`](@ref).
+
+# Example
+
+```jldoctest
+julia> using Bijectors
+
+julia> d = LogNormal()    # support is (0, Inf)
+LogNormal{Float64}(μ=0.0, σ=1.0)
+
+julia> link(LogNormal(), 1.0)   # uses a log transform
+0.0
+
+julia> invlink(LogNormal(), 0.0)
+1.0
+```
+"""
 invlink(d::Distribution, y) = inverse(bijector(d))(y)
 
 # To still allow `logpdf_with_trans` to work with "batches" in a similar way
 # as `logpdf` can.
+
+# Default catch-all so we can work with distributions by default and batch-support can be
+# added when needed.
+_logabsdetjac_dist(d::Distribution, x) = logabsdetjac(bijector(d), x)
+
 _logabsdetjac_dist(d::UnivariateDistribution, x::Real) = logabsdetjac(bijector(d), x)
 function _logabsdetjac_dist(d::UnivariateDistribution, x::AbstractArray)
     return logabsdetjac.((bijector(d),), x)
@@ -138,7 +198,7 @@ function _logabsdetjac_dist(d::MultivariateDistribution, x::AbstractVector)
     return logabsdetjac(bijector(d), x)
 end
 function _logabsdetjac_dist(d::MultivariateDistribution, x::AbstractMatrix)
-    return logabsdetjac.((bijector(d),), eachcol(x))
+    return map(Base.Fix1(logabsdetjac, bijector(d)), eachcol(x))
 end
 
 _logabsdetjac_dist(d::MatrixDistribution, x::AbstractMatrix) = logabsdetjac(bijector(d), x)
@@ -149,11 +209,48 @@ end
 _logabsdetjac_dist(d::LKJCholesky, x::Cholesky) = logabsdetjac(bijector(d), x)
 _logabsdetjac_dist(d::LKJCholesky, x::AbstractVector) = logabsdetjac.((bijector(d),), x)
 
+"""
+    logpdf_with_trans(d::Distribution, x, transform::Bool)
+
+If `transform` is `false`, `logpdf_with_trans` calculates the log probability
+density function (logpdf) of distribution `d` at `x`.
+
+If `transform` is `true`, `x` is transformed using the
+constrained-to-unconstrained bijector for distribution `d`, and then the logpdf
+of the resulting value is calculated with respect to the unconstrained
+(transformed) distribution. Equivalently, if `x` is distributed according to
+`d` and `y = link(d, x)` is distributed according to `td = transformed(d)`,
+then `logpdf_with_trans(d, x, true) = logpdf(td, y)`. This is accomplished
+by subtracting the log Jacobian of the transformation.
+
+# Example
+
+```jldoctest
+julia> using Bijectors
+
+julia> logpdf_with_trans(LogNormal(), ℯ, false)
+-2.4189385332046727
+
+julia> logpdf(LogNormal(), ℯ)  # Same as above
+-2.4189385332046727
+
+julia> logpdf_with_trans(LogNormal(), ℯ, true)
+-1.4189385332046727
+
+julia> # If x ~ LogNormal(), then log(x) ~ Normal()
+       logpdf(Normal(), 1.0)   
+-1.4189385332046727
+
+julia> # The difference between the two is due to the Jacobian
+       logabsdetjac(bijector(LogNormal()), ℯ)
+-1
+```
+"""
 function logpdf_with_trans(d::Distribution, x, transform::Bool)
     if ispd(d)
         return pd_logpdf_with_trans(d, x, transform)
     elseif isdirichlet(d)
-        l = logpdf(d, x .+ eps(eltype(x)))
+        l = logpdf(d, x .+ _eps(eltype(x)))
     else
         l = logpdf(d, x)
     end
@@ -260,38 +357,10 @@ end
 
 include("utils.jl")
 include("interface.jl")
-include("chainrules.jl")
+include("vector/VectorBijectors.jl")
 
-# Broadcasting here breaks Tracker for some reason
+# Broadcasting here breaks some AD backends for certain array types
 maporbroadcast(f, x::AbstractArray{<:Any,N}...) where {N} = map(f, x...)
 maporbroadcast(f, x::AbstractArray...) = f.(x...)
-
-# optional dependencies
-if !isdefined(Base, :get_extension)
-    using Requires
-end
-
-function __init__()
-    @static if !isdefined(Base, :get_extension)
-        @require LazyArrays = "5078a376-72f3-5289-bfd5-ec5146d43c02" include(
-            "../ext/BijectorsLazyArraysExt.jl"
-        )
-        @require ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210" include(
-            "../ext/BijectorsForwardDiffExt.jl"
-        )
-        @require Tracker = "9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c" include(
-            "../ext/BijectorsTrackerExt.jl"
-        )
-        @require Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f" include(
-            "../ext/BijectorsZygoteExt.jl"
-        )
-        @require ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267" include(
-            "../ext/BijectorsReverseDiffExt.jl"
-        )
-        @require DistributionsAD = "ced4e74d-a319-5a8a-b0ac-84af2272839c" include(
-            "../ext/BijectorsDistributionsADExt.jl"
-        )
-    end
-end
 
 end # module

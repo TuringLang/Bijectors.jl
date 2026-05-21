@@ -166,7 +166,7 @@ julia> coupling(cl) # get the `Bijector` map `θ -> b(⋅, θ)`
 Shift
 
 julia> couple(cl, x) # get the `Bijector` resulting from `x`
-Shift([2.0])
+Shift{Vector{Float64}}([2.0])
 
 julia> with_logabsdet_jacobian(cl, x)
 ([3.0, 2.0, 3.0], 0.0)

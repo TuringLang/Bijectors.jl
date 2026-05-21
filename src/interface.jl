@@ -12,19 +12,61 @@ Alias for `Base.Fix1(broadcast, f)`.
 In the case where `f::ComposedFunction`, the result is
 `Base.Fix1(broadcast, f.outer) ∘ Base.Fix1(broadcast, f.inner)` rather than
 `Base.Fix1(broadcast, f)`.
+
+# Examples
+
+```jldoctest; setup = :(using Bijectors)
+julia> x = [1.0, 2.0, 3.0];
+
+julia> f = elementwise(exp);
+
+julia> f(x)
+3-element Vector{Float64}:
+  2.718281828459045
+  7.38905609893065
+ 20.085536923187668
+
+julia> with_logabsdet_jacobian(f, x)
+([2.718281828459045, 7.38905609893065, 20.085536923187668], 6.0)
+```
 """
 elementwise(f) = Base.Fix1(broadcast, f)
+elementwise(::typeof(identity)) = identity
 # TODO: This is makes dispatching quite a bit easier, but uncertain if this is really
 # the way to go.
 function elementwise(f::ComposedFunction)
     return ComposedFunction(elementwise(f.outer), elementwise(f.inner))
 end
+
 const Columnwise{F} = Base.Fix1{typeof(eachcolmaphcat),F}
 """
+    columnwise(f)
 
 Alias for `Base.Fix1(eachcolmaphcat, f)`.
 
 Represents a function `f` which is applied to each column of an input.
+
+# Examples
+
+```jldoctest; setup = :(using Bijectors)
+julia> x = [4.0 5.0 6.0; 1.0 2.0 3.0];
+
+julia> my_reverse(v) = reverse(v);  # To avoid type piracy.
+
+julia> f = columnwise(my_reverse);
+
+julia> f(x)
+2×3 Matrix{Float64}:
+ 1.0  2.0  3.0
+ 4.0  5.0  6.0
+
+julia> # We can't use `with_logabsdet_jacobian` on `f` until we define it
+       # for `my_reverse`, since we need to sum over columns.
+       Bijectors.with_logabsdet_jacobian(::typeof(my_reverse), xs) = my_reverse(xs), 0.0;
+
+julia> with_logabsdet_jacobian(f, x)
+([1.0 2.0 3.0; 4.0 5.0 6.0], 0.0)
+```
 """
 columnwise(f) = Base.Fix1(eachcolmaphcat, f)
 inverse(f::Columnwise) = columnwise(inverse(f.x))
@@ -38,14 +80,27 @@ with_logabsdet_jacobian(f::Columnwise, x::AbstractMatrix) = (f(x), logabsdetjac(
 """
     output_size(f, sz)
 
-Returns the output size of `f` given the input size `sz`.
+Returns the size of `f(x)` when given an input `x` of size `sz`.
 """
 output_size(f, sz) = sz
+output_size(f::ComposedFunction, sz) = output_size(f.outer, output_size(f.inner, sz))
+"""
+    output_size(f, dist::Distribution)
+
+Returns the output size of `f` given an input drawn from the distribution `dist`.
+
+By default this just calls `output_size(f, size(dist))`, but this can be overloaded for
+specific distributions. This is useful when `Base.size(dist)` is not defined, e.g. for
+`ProductNamedTupleDistribution` and in particular is used by DynamicPPL when generating new
+random values for transformed distributions.
+"""
+output_size(f, dist::Distribution) = output_size(f, size(dist))
+output_size(f::ComposedFunction, dist::Distribution) = output_size(f, size(dist))
 
 """
     output_length(f, len::Int)
 
-Returns the output length of `f` given the input length `len`.
+Returns the length of `f(x)` given a vector input `x` of length `len`.
 """
 output_length(f, len::Int) = only(output_size(f, (len,)))
 
@@ -79,19 +134,31 @@ abstract type Transform end
 
 (t::Transform)(x) = transform(t, x)
 
+"""
+    with_logabsdet_jacobian(t::Transform, x)
+
+Semantically, this must return a tuple of `(y, logabsdetjac)`, where `y = transform(t, x)`
+and `logabsdetjac = logabsdetjac(t, x)`. However, you can implement this function to exploit
+shared computation between the two quantities.
+"""
+function with_logabsdet_jacobian end
+
 Broadcast.broadcastable(b::Transform) = Ref(b)
 
 """
     transform(b, x)
 
-Transform `x` using `b`, treating `x` as a single input.
+Transform `x` using `b`.
+
+If `with_logabsdet_jacobian` is already implemented for `b`, the default implementation of
+`transform` will call `first(with_logabsdet_jacobian(b, x))`.
 """
 transform(f::F, x) where {F<:Function} = f(x)
 function transform(t::Transform, x)
     res = with_logabsdet_jacobian(t, x)
     if res isa ChangesOfVariables.NoLogAbsDetJacobian
         error(
-            "`transform` not implemented for $(typeof(b)); implement `transform` and/or `with_logabsdet_jacobian`.",
+            "`transform` not implemented for $(typeof(t)); implement `transform` and/or `with_logabsdet_jacobian`.",
         )
     end
 
@@ -229,12 +296,76 @@ transform!(::typeof(identity), x, y) = copy!(y, x)
 logabsdetjac(::typeof(identity), x) = zero(eltype(x))
 logabsdetjac!(::typeof(identity), x, logjac) = logjac
 
+###################
+# Other utilities #
+###################
+"""
+    is_monotonically_increasing(f)
+
+Returns `true` if `f` is monotonically increasing.
+"""
+is_monotonically_increasing(f) = false
+is_monotonically_increasing(::typeof(identity)) = true
+is_monotonically_increasing(binv::Inverse) = is_monotonically_increasing(inverse(binv))
+is_monotonically_increasing(ef::Elementwise) = is_monotonically_increasing(ef.x)
+function is_monotonically_increasing(cf::ComposedFunction)
+    # Here we have a few different cases:
+    #
+    #     inner \ outer | inc | dec | other
+    #     --------------+-----+-----+------
+    #     inc           | inc | dec | NA   
+    #     dec           | dec | inc | NA   
+    #     other         | NA  | NA  | NA   
+    #     --------------+-----+-----+------
+    #
+    # where `inc` means monotonically increasing, `dec` means monotonically decreasing,
+    # and `NA` means not applicable, i.e. we should return `false`.
+    return if is_monotonically_increasing(cf.inner)
+        is_monotonically_increasing(cf.outer)
+    elseif is_monotonically_decreasing(cf.inner)
+        is_monotonically_decreasing(cf.outer)
+    else
+        false
+    end
+end
+
+"""
+    is_monotonically_decreasing(f)
+
+Returns `true` if `f` is monotonically decreasing.
+"""
+is_monotonically_decreasing(f) = false
+is_monotonically_decreasing(::typeof(identity)) = false
+is_monotonically_decreasing(binv::Inverse) = is_monotonically_decreasing(inverse(binv))
+is_monotonically_decreasing(ef::Elementwise) = is_monotonically_decreasing(ef.x)
+function is_monotonically_decreasing(cf::ComposedFunction)
+    # Here we have a few different cases:
+    #
+    #     inner \ outer | inc | dec | other
+    #     --------------+-----+-----+------
+    #     inc           | inc | dec | NA   
+    #     dec           | dec | inc | NA   
+    #     other         | NA  | NA  | NA   
+    #     --------------+-----+-----+------
+    #
+    # where `inc` means monotonically increasing, `dec` means monotonically decreasing,
+    # and `NA` means not applicable, i.e. we should return `false`.
+    return if is_monotonically_increasing(cf.inner)
+        is_monotonically_decreasing(cf.outer)
+    elseif is_monotonically_decreasing(cf.inner)
+        is_monotonically_increasing(cf.outer)
+    else
+        false
+    end
+end
+
 ######################
 # Bijectors includes #
 ######################
 # General
 include("bijectors/composed.jl")
 include("bijectors/stacked.jl")
+include("bijectors/named_stacked.jl")
 include("bijectors/reshape.jl")
 
 # Specific
@@ -250,6 +381,7 @@ include("bijectors/truncated.jl")
 include("bijectors/named_bijector.jl")
 include("bijectors/ordered.jl")
 include("bijectors/cdf_quantile.jl")
+include("bijectors/product_bijector.jl")
 
 # Normalizing flow related
 include("bijectors/planar_layer.jl")

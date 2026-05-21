@@ -1,86 +1,46 @@
 module BijectorsReverseDiffExt
 
-if isdefined(Base, :get_extension)
-    using ReverseDiff:
-        ReverseDiff,
-        @grad,
-        value,
-        track,
-        TrackedReal,
-        TrackedVector,
-        TrackedMatrix,
-        @grad_from_chainrules
+using ReverseDiff:
+    ReverseDiff,
+    @grad,
+    value,
+    track,
+    TrackedReal,
+    TrackedVector,
+    TrackedMatrix,
+    @grad_from_chainrules
 
-    using Bijectors:
-        ChainRulesCore,
-        Elementwise,
-        SimplexBijector,
-        maphcat,
-        simplex_link_jacobian,
-        simplex_invlink_jacobian,
-        simplex_logabsdetjac_gradient,
-        Inverse
-    import Bijectors:
-        _eps,
-        logabsdetjac,
-        _logabsdetjac_scale,
-        _simplex_bijector,
-        _simplex_inv_bijector,
-        replace_diag,
-        jacobian,
-        _inv_link_chol_lkj,
-        _link_chol_lkj,
-        _transform_ordered,
-        _transform_inverse_ordered,
-        find_alpha,
-        pd_from_lower,
-        lower_triangular,
-        upper_triangular
+using Bijectors:
+    Elementwise,
+    SimplexBijector,
+    maphcat,
+    simplex_link_jacobian,
+    simplex_invlink_jacobian,
+    simplex_logabsdetjac_gradient,
+    Inverse
+import Bijectors:
+    Bijectors,
+    _eps,
+    logabsdetjac,
+    _logabsdetjac_scale,
+    _simplex_bijector,
+    _simplex_inv_bijector,
+    replace_diag,
+    jacobian,
+    _inv_link_chol_lkj,
+    _link_chol_lkj,
+    _transform_ordered,
+    _transform_inverse_ordered,
+    find_alpha,
+    pd_from_lower,
+    lower_triangular,
+    upper_triangular,
+    transpose_eager,
+    cholesky_lower,
+    cholesky_upper
 
-    using Bijectors.LinearAlgebra
-    using Bijectors.Compat: eachcol
-    using Bijectors.Distributions: LocationScale
-else
-    using ..ReverseDiff:
-        ReverseDiff,
-        @grad,
-        value,
-        track,
-        TrackedReal,
-        TrackedVector,
-        TrackedMatrix,
-        @grad_from_chainrules
-
-    using ..Bijectors:
-        ChainRulesCore,
-        Elementwise,
-        SimplexBijector,
-        maphcat,
-        simplex_link_jacobian,
-        simplex_invlink_jacobian,
-        simplex_logabsdetjac_gradient,
-        Inverse
-    import ..Bijectors:
-        _eps,
-        logabsdetjac,
-        _logabsdetjac_scale,
-        _simplex_bijector,
-        _simplex_inv_bijector,
-        replace_diag,
-        jacobian,
-        _inv_link_chol_lkj,
-        _link_chol_lkj,
-        _transform_ordered,
-        _transform_inverse_ordered,
-        find_alpha,
-        pd_from_lower,
-        lower_triangular,
-        upper_triangular
-
-    using ..Bijectors.LinearAlgebra
-    using ..Bijectors.Compat: eachcol
-    using ..Bijectors.Distributions: LocationScale
-end
+using Bijectors.LinearAlgebra
+using Bijectors.Distributions: LocationScale
 
 _eps(::Type{<:TrackedReal{T}}) where {T} = _eps(T)
 function Base.minimum(d::LocationScale{<:TrackedReal})
@@ -250,39 +210,49 @@ end
 end
 
 # `OrderedBijector`
-function _transform_ordered(y::Union{TrackedVector,TrackedMatrix})
-    return track(_transform_ordered, y)
-end
-@grad function _transform_ordered(y::AbstractVecOrMat)
-    x, dx = ChainRulesCore.rrule(_transform_ordered, value(y))
-    return x, (wrap_chainrules_output ∘ Base.tail ∘ dx)
-end
+@grad_from_chainrules _transform_ordered(y::Union{TrackedVector,TrackedMatrix})
+@grad_from_chainrules _transform_inverse_ordered(x::Union{TrackedVector,TrackedMatrix})
 
-function _transform_inverse_ordered(x::Union{TrackedVector,TrackedMatrix})
-    return track(_transform_inverse_ordered, x)
-end
-@grad function _transform_inverse_ordered(x::AbstractVecOrMat)
-    y, dy = ChainRulesCore.rrule(_transform_inverse_ordered, value(x))
-    return y, (wrap_chainrules_output ∘ Base.tail ∘ dy)
-end
-
-@grad_from_chainrules update_triu_from_vec(vals::TrackedVector{<:Real}, k::Int, dim::Int)
+@grad_from_chainrules Bijectors.update_triu_from_vec(
+    vals::TrackedVector{<:Real}, k::Int, dim::Int
+)
 
 @grad_from_chainrules _link_chol_lkj(x::TrackedMatrix)
-@grad_from_chainrules _inv_link_chol_lkj(x::TrackedVector)
+@grad_from_chainrules _link_chol_lkj_from_upper(x::TrackedMatrix)
+@grad_from_chainrules _link_chol_lkj_from_lower(x::TrackedMatrix)
 
-# NOTE: Probably doesn't work in complete generality.
-wrap_chainrules_output(x) = x
-wrap_chainrules_output(x::ChainRulesCore.AbstractZero) = nothing
-wrap_chainrules_output(x::Tuple) = map(wrap_chainrules_output, x)
+cholesky_lower(X::TrackedMatrix) = track(cholesky_lower, X)
+cholesky_upper(X::TrackedMatrix) = track(cholesky_upper, X)
 
-if VERSION <= v"1.8.0-DEV.1526"
-    # HACK: This dispatch does not wrap X in Hermitian before calling cholesky. 
-    # cholesky does not work with AbstractMatrix in julia versions before the compared one,
-    # and it would error with Hermitian{ReverseDiff.TrackedArray}.
-    # See commit when the fix was introduced :
-    # https://github.com/JuliaLang/julia/commit/635449dabee81bba315ab066627a98f856141969
-    cholesky_factor(X::ReverseDiff.TrackedArray) = cholesky_factor(cholesky(X))
+# `cholesky_lower` and `cholesky_upper` route through ChainRules.jl rules for
+# `Hermitian` and `cholesky` (see `BijectorsReverseDiffChainRulesExt`). Without
+# ChainRules loaded that extension is dormant and the user hits a `MethodError` on
+# `ReverseDiff.track(cholesky_lower, ::TrackedMatrix)`. Point them at the fix.
+const _CHAINRULES_GATED = (cholesky_lower, cholesky_upper)
+
+if isdefined(Base.Experimental, :register_error_hint)
+    function __init__()
+        Base.Experimental.register_error_hint(MethodError) do io, exc, argtypes, _kwargs
+            exc.f === ReverseDiff.track || return nothing
+            length(argtypes) == 2 || return nothing
+            T = argtypes[1]
+            # `.instance` is only defined for singleton types (e.g. `typeof(some_fn)`).
+            isdefined(T, :instance) || return nothing
+            T.instance in _CHAINRULES_GATED || return nothing
+            return print(
+                io,
+                "\nDifferentiating `$(nameof(T.instance))` with ReverseDiff requires ChainRules.jl. ",
+                "Run `using ChainRules` first.",
+            )
+        end
+    end
+end
+
+transpose_eager(X::TrackedMatrix) = track(transpose_eager, X)
+@grad function transpose_eager(X_tracked::TrackedMatrix)
+    X = value(X_tracked)
+    transpose_eager_pullback(Δ) = (transpose_eager(Δ),)
+    return transpose_eager(X), transpose_eager_pullback
 end
 
 end

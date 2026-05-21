@@ -1,12 +1,7 @@
 module BijectorsForwardDiffExt
 
-if isdefined(Base, :get_extension)
-    using Bijectors: Bijectors, find_alpha
-    using ForwardDiff: ForwardDiff
-else
-    using ..Bijectors: Bijectors, find_alpha
-    using ..ForwardDiff: ForwardDiff
-end
+using Bijectors: Bijectors, find_alpha
+using ForwardDiff: ForwardDiff
 
 Bijectors._eps(::Type{<:ForwardDiff.Dual{<:Any,Real}}) = Bijectors._eps(Real)
 Bijectors._eps(::Type{<:ForwardDiff.Dual{<:Any,<:Integer}}) = Bijectors._eps(Real)

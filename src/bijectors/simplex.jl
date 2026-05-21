@@ -136,6 +136,12 @@ function logabsdetjac(b::SimplexBijector, x::AbstractVector{T}) where {T}
 
     return -lp
 end
+
+# Needed to avoid falling back to `with_logabsdet_jacobian` for matrix inputs.
+function logabsdetjac(b::SimplexBijector, x::AbstractMatrix{<:Real})
+    return sum(Base.Fix1(logabsdetjac, b), eachcol(x))
+end
+
 function simplex_logabsdetjac_gradient(x::AbstractVector)
     T = eltype(x)
     ϵ = _eps(T)

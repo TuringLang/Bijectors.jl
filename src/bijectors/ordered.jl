@@ -1,31 +1,21 @@
+struct SignFlip <: Bijector end
+
+with_logabsdet_jacobian(::SignFlip, x) = -x, zero(eltype(x))
+inverse(::SignFlip) = SignFlip()
+output_size(::SignFlip, dim) = dim
+is_monotonically_increasing(::SignFlip) = false
+is_monotonically_decreasing(::SignFlip) = true
+
 """
     OrderedBijector()
 
-A bijector mapping ordered vectors in ℝᵈ to unordered vectors in ℝᵈ.
+A bijector mapping unordered vectors in ℝᵈ to ordered vectors in ℝᵈ.
 
 ## See also
 - [Stan's documentation](https://mc-stan.org/docs/2_27/reference-manual/ordered-vector.html)
   - Note that this transformation and its inverse are the _opposite_ of in this reference.
 """
 struct OrderedBijector <: Bijector end
-
-"""
-    ordered(d::Distribution)
-
-Return a `Distribution` whose support are ordered vectors, i.e., vectors with increasingly ordered elements.
-
-This transformation is currently only supported for otherwise unconstrained distributions.
-"""
-function ordered(d::ContinuousMultivariateDistribution)
-    if bijector(d) !== identity
-        throw(
-            ArgumentError(
-                "ordered transform is currently only supported for unconstrained distributions.",
-            ),
-        )
-    end
-    return transformed(d, OrderedBijector())
-end
 
 with_logabsdet_jacobian(b::OrderedBijector, x) = transform(b, x), logabsdetjac(b, x)
 
@@ -88,3 +78,91 @@ end
 
 logabsdetjac(b::OrderedBijector, x::AbstractVector) = sum(@view(x[2:end]))
 logabsdetjac(b::OrderedBijector, x::AbstractMatrix) = vec(sum(@view(x[2:end, :]); dims=1))
+
+# Need a custom distribution type to handle this properly.
+"""
+    OrderedDistribution
+
+Wraps a distribution to restrict its support to the subspace of ordered vectors.
+
+# Fields
+$(TYPEDFIELDS)
+"""
+struct OrderedDistribution{D<:ContinuousMultivariateDistribution,B} <:
+       ContinuousMultivariateDistribution
+    "distribution transformed to have ordered support"
+    dist::D
+    "transformation from constrained space to ordered unconstrained space"
+    transform::B
+end
+
+"""
+    ordered(d::Distribution)
+
+Return a `Distribution` whose support are ordered vectors, i.e., vectors with increasingly ordered elements.
+
+Specifically, `d` is restricted to the subspace of its domain containing only ordered elements.
+
+!!! warning
+    `rand` is implemented using rejection sampling, which can be slow for high-dimensional distributions.
+    In such cases, consider using MCMC methods to sample from the distribution instead.
+
+!!! warning
+    The resulting ordered distribution is un-normalized, which can cause issues in some contexts, e.g. in
+    hierarchical models where the parameters of the ordered distribution are themselves sampled.
+    See the notes below for a more detailed discussion.
+
+## Notes on `ordered` being un-normalized
+
+The resulting ordered distribution is un-normalized. This is not a problem if used in a context where the
+normalizing factor is irrelevant, but if the value of the normalizing factor impacts the resulting computation,
+the results may be inaccurate.
+
+For example, if the distribution is used in sampling a posterior distribution with MCMC and the parameters
+of the ordered distribution are themselves sampled, then the normalizing factor would in general be needed
+for accurate sampling, and `ordered` should not be used. However, if the parameters are fixed, then since
+MCMC does not require distributions be normalized, `ordered` may be used without problems.
+
+A common case is where the distribution being ordered is a joint distribution of `n` identical univariate
+distributions. In this case the normalization factor works out to be the constant `n!`, and `ordered` can
+again be used without problems even if the parameters of the univariate distribution are sampled.
+"""
+function ordered(d::ContinuousMultivariateDistribution)
+    # We're good if the map from unconstrained (in which we apply the ordered bijector)
+    # to constrained is monotonically increasing, i.e. order-preserving. In that case,
+    # we can form the ordered transformation as `binv ∘ OrderedBijector() ∘ b`.
+    # Similarly, if we're working with monotonically decreasing maps, we can do the same
+    # but with the addition of a sign flip before and after the ordered bijector.
+    b = bijector(d)
+    binv = inverse(b)
+    ordered_b = if is_monotonically_decreasing(binv)
+        SignFlip() ∘ inverse(OrderedBijector()) ∘ SignFlip() ∘ b
+    elseif is_monotonically_increasing(binv)
+        inverse(OrderedBijector()) ∘ b
+    else
+        throw(ArgumentError("ordered transform is currently not supported for $d."))
+    end
+
+    return OrderedDistribution(d, ordered_b)
+end
+
+bijector(d::OrderedDistribution) = d.transform
+
+Base.eltype(::Type{<:OrderedDistribution{D}}) where {D} = eltype(D)
+Base.eltype(d::OrderedDistribution) = eltype(d.dist)
+function Distributions._logpdf(d::OrderedDistribution, x::AbstractVector{<:Real})
+    lp = Distributions.logpdf(d.dist, x)
+    issorted(x) && return lp
+    return oftype(lp, -Inf)
+end
+Base.length(d::OrderedDistribution) = length(d.dist)
+
+function Distributions._rand!(
+    rng::AbstractRNG, d::OrderedDistribution, x::AbstractVector{<:Real}
+)
+    # Rejection sampling.
+    while true
+        Distributions.rand!(rng, d.dist, x)
+        issorted(x) && return x
+    end
+end

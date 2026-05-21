@@ -1,55 +1,78 @@
-## Basic usage
+# Usage with distributions
 
-Other than the `logpdf_with_trans` methods, the package also provides a more composable interface through the `Bijector` types. Consider for example the one from above with `Beta(2, 2)`.
+Bijectors provides many utilities for working with probability distributions.
 
-```julia
-julia> using Random;
-       Random.seed!(42);
+```@example distributions
+using Bijectors
 
-julia> using Bijectors;
-       using Bijectors: Logit;
+dist = LogNormal()
+x = rand(dist)
+b = bijector(dist)  # bijection (0, ∞) → ℝ
 
-julia> dist = Beta(2, 2)
-Beta{Float64}(α=2.0, β=2.0)
-
-julia> x = rand(dist)
-0.36888689965963756
-
-julia> b = bijector(dist) # bijection (0, 1) → ℝ
-Logit{Float64}(0.0, 1.0)
-
-julia> y = b(x)
--0.5369949942509267
+y = b(x)
 ```
 
-In this case we see that `bijector(d::Distribution)` returns the corresponding constrained-to-unconstrained bijection for `Beta`, which indeed is a `Logit` with `a = 0.0` and `b = 1.0`. The resulting `Logit <: Bijector` has a method `(b::Logit)(x)` defined, allowing us to call it just like any other function. Comparing with the above example, `b(x) ≈ link(dist, x)`. Just to convince ourselves:
+Here, `bijector(d::Distribution)` returns the corresponding constrained-to-unconstrained bijection for `Beta`, which is a log function.
+The resulting bijector can be called, just like any other function, to transform samples from the distribution to the unconstrained space.
 
-```julia
-julia> b(x) ≈ link(dist, x)
-true
+The function [`link`](@ref) provides a short way of doing the above:
+
+```@example distributions
+link(dist, x) ≈ b(x)
 ```
+
+See [the Turing.jl docs](https://turinglang.org/docs/developers/transforms/distributions/) for more information about how this is used in probabilistic programming.
 
 ## Transforming distributions
 
-```@setup transformed-dist-simple
-using Bijectors
+We can also couple a distribution together with its bijector to create a _transformed_ `Distribution`, i.e. a `Distribution` defined by sampling from a given `Distribution` and then transforming using a given transformation:
+
+```@example distributions
+dist = LogNormal()          # support on (0, ∞)
+tdist = transformed(dist)   # support on ℝ
 ```
 
-We can create a _transformed_ `Distribution`, i.e. a `Distribution` defined by sampling from a given `Distribution` and then transforming using a given transformation:
+We can then sample from, and compute the `logpdf` for, the resulting distribution:
 
-```@repl transformed-dist-simple
-dist = Beta(2, 2)      # support on (0, 1)
-tdist = transformed(dist) # support on ℝ
-
-tdist isa UnivariateDistribution
+```@example distributions
+y = rand(tdist)
 ```
 
-We can the then compute the `logpdf` for the resulting distribution:
-
-```@repl transformed-dist-simple
-# Some example values
-x = rand(dist)
-y = tdist.transform(x)
-
+```@example distributions
 logpdf(tdist, y)
+```
+
+We should expect here that
+
+```julia
+logpdf(tdist, y) ≈ logpdf(dist, x) - logabsdetjac(b, x)
+```
+
+where `b = bijector(dist)` and `y = b(x)`.
+
+To verify this, we can calculate the value of `x` using the inverse bijector:
+
+```@example distributions
+b = bijector(dist)
+binv = inverse(b)
+
+x = binv(y)
+```
+
+(Because `b` is just a log function, `binv` is an exponential function, i.e. `x = exp(y)`.)
+
+Then we can check the equality:
+
+```@example distributions
+logpdf(tdist, y) ≈ logpdf(dist, x) - logabsdetjac(b, x)
+```
+
+You can also use [`Bijectors.logpdf_with_trans`](@ref) with the original distribution:
+
+```@example distributions
+logpdf_with_trans(dist, x, false) ≈ logpdf(dist, x)
+```
+
+```@example distributions
+logpdf_with_trans(dist, x, true) ≈ logpdf(tdist, y)
 ```

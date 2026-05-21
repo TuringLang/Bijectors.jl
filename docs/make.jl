@@ -9,13 +9,21 @@ makedocs(;
     format=Documenter.HTML(),
     modules=[Bijectors],
     pages=[
-        "Home" => "index.md",
-        "Transforms" => "transforms.md",
-        "Distributions.jl integration" => "distributions.md",
-        "Examples" => "examples.md",
+        "index.md",
+        "interface.md",
+        "distributions.md",
+        "types.md",
+        "defining.md",
+        "defining_examples.md",
+        "advi.md",
+        "flows.md",
+        "vector.md",
     ],
-    strict=false,
     checkdocs=:exports,
+    doctest=true,
+    doctestfilters=[
+        # Ignore the source of a warning in the doctest output, since this is dependent
+        # on host. This is a line that starts with "└ @ " and ends with the line number.
+        r"└ @ .+:[0-9]+",
+    ],
 )
-
-deploydocs(; repo="github.com/TuringLang/Bijectors.jl.git", push_preview=true)
