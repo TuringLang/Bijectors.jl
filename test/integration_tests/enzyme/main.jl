@@ -1,11 +1,11 @@
 using ADTypes
+using AbstractPPL: AbstractPPL
 using Bijectors
-using DifferentiationInterface
+using DifferentiationInterface: DifferentiationInterface
 using Distributions
 using Enzyme: Enzyme, set_runtime_activity, Forward, Reverse, Const
 using EnzymeTestUtils: test_forward, test_reverse
 using FillArrays: Fill
-using FiniteDifferences
 using ForwardDiff: ForwardDiff
 using LinearAlgebra
 using PDMats
@@ -26,9 +26,9 @@ const ENZYME_REVERSE = AutoEnzyme(;
 )
 const adtypes = [ENZYME_FORWARD, ENZYME_REVERSE]
 
-# Triple-nested tuple-of-products (e.g. `product_distribution(p1t, p1t, p1t)`) trip the
-# Enzyme runtime activity inference. Skip the AD section for these cases (non-AD tests
-# still run).
+# Triple-nested tuple-of-products (e.g. `product_distribution(p1t, p1t, p1t)`) throw an
+# Enzyme runtime activity TypeError that `@test_broken` doesn't reliably catch — skip the
+# AD section for these cases (non-AD tests still run).
 function _enzyme_failing_product(d)
     d isa Distributions.ProductDistribution || return false
     d.dists isa Tuple || return false
@@ -43,7 +43,7 @@ end
 # `:reshaped_beta_special` on Julia 1.10 — Forward mode passes.
 function vector_broken_adtypes(c::VectorTestCase)
     c.tag === :reshaped_beta_special && VERSION < v"1.11-" && return [ENZYME_REVERSE]
-    return DI.AbstractADType[]
+    return ADTypes.AbstractADType[]
 end
 
 # This entire test suite is broken on 1.11.
