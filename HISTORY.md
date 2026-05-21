@@ -1,3 +1,11 @@
+# 0.16.0
+
+## Breaking changes
+
+`ChainRulesCore` and `EnzymeCore` have been moved from direct dependencies to weak dependencies. Their integration code, including the `find_alpha` Enzyme rule and the `rrule`s previously defined in `src/chainrules.jl`, now lives in the new `BijectorsChainRulesCoreExt` and `BijectorsEnzymeCoreExt` package extensions. These extensions are only loaded when the user also loads `ChainRulesCore` or `EnzymeCore` themselves, so downstream packages that relied on Bijectors to pull in these packages transitively must now load them directly.
+
+`DifferentiationInterface` has been removed from the package's direct dependencies. It is no longer used at runtime.
+
 # 0.15.24
 
 Export a few more functions from `Bijectors.VectorBijectors`, namely `scalar_to_scalar_bijector`, `TypedIdentity`, `Log`, and `Untruncate`.
