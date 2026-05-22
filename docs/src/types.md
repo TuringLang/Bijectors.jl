@@ -21,4 +21,6 @@ Bijectors.Coupling
 Bijectors.OrderedBijector
 Bijectors.NamedTransform
 Bijectors.NamedCoupling
+Bijectors.CDFBijector
+Bijectors.QuantileBijector
 ```
