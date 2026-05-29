@@ -3,8 +3,8 @@ uuid = "76274a88-744f-5084-9051-94815aaf08c4"
 version = "0.16.0"
 
 [deps]
-AbstractPPL = "7a57a42e-76ec-4ea3-a279-07e840d6d9cf"
 ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
+AbstractPPL = "7a57a42e-76ec-4ea3-a279-07e840d6d9cf"
 ArgCheck = "dce04be8-c92d-5529-be00-80e4d2c0e197"
 ChangesOfVariables = "9e997f8a-9a97-42d5-a9f1-ce6bfc15e2c0"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
@@ -42,8 +42,8 @@ BijectorsReverseDiffChainRulesExt = ["ChainRules", "ReverseDiff"]
 BijectorsReverseDiffExt = "ReverseDiff"
 
 [compat]
-AbstractPPL = "0.15"
 ADTypes = "1"
+AbstractPPL = "0.15"
 ArgCheck = "1, 2"
 ChainRules = "1"
 ChainRulesCore = "0.10.11, 1"
@@ -57,7 +57,7 @@ Functors = "0.1, 0.2, 0.3, 0.4, 0.5"
 InverseFunctions = "0.1"
 IrrationalConstants = "0.1, 0.2"
 LazyArrays = "2"
-LogExpFunctions = "0.3.3"
+LogExpFunctions = "0.3.3, 1"
 MappedArrays = "0.2.2, 0.3, 0.4"
 Mooncake = "0.4.95, 0.5"
 Reexport = "0.2, 1"
