@@ -12,8 +12,7 @@ steps:
       #       - ext
     command: julia --eval='println("Skipping CUDA tests - pipeline configured to do nothing")'
     agents:
-      queue: "juliagpu"
-      cuda: "*"
+      queue: "cuda"
     if: build.message !~ /\[skip tests\]/
     timeout_in_minutes: 60
     env:
