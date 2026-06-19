@@ -1,3 +1,7 @@
+# 0.16.1
+
+Add Mooncake 0.6 forward-mode support for `find_alpha`, and widen Mooncake compat to include 0.6.
+
 # 0.16.0
 
 ## Breaking changes
