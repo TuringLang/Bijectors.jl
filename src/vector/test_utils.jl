@@ -26,13 +26,32 @@ function _name(d::D.JointOrderStatistics)
     return "joint order statistic $(_name(d.dist)) with length $(length(d))"
 end
 
+# Some Distributions samplers are broken in recent releases: the kernel-density ones
+# (Biweight, Triweight, Epanechnikov) return NaN, and Cosine's quantile-based sampler throws
+# under Roots 3. Resample until we get a finite draw so `test_all` exercises Bijectors rather
+# than the upstream bugs.
+_all_finite(x::Real) = isfinite(x)
+_all_finite(x::AbstractArray{<:Real}) = all(isfinite, x)
+_all_finite(x) = true  # non-Real samples (Cholesky, NamedTuple) are unaffected
+function randfinite(d)
+    for _ in 1:10_000
+        x = try
+            rand(d)
+        catch
+            continue
+        end
+        _all_finite(x) && return x
+    end
+    return error("randfinite: no finite sample from $(d) after 10000 attempts")
+end
+
 # AD will give nonsense results at the limits of censored distributions (since the gradient
 # is not well-defined), so we avoid generating samples that are exactly at the limits.
-_rand_safe_ad(d::D.Distribution) = rand(d)
+_rand_safe_ad(d::D.Distribution) = randfinite(d)
 _rand_safe_ad(d::D.Censored) = begin
     a, b = d.lower, d.upper
     while true
-        x = rand(d)
+        x = randfinite(d)
         if x != a && x != b
             return x
         end
@@ -267,7 +286,7 @@ function test_roundtrip(d::D.Distribution)
     # generate random parameters across the support
     @testset "roundtrip: $(_name(d))" begin
         for _ in 1:1000
-            @testset let x = rand(d), d = d
+            @testset let x = randfinite(d), d = d
                 ffwd = to_vec(d)
                 frvs = from_vec(d)
                 @test _isapprox_safe(x, frvs(ffwd(x)))
@@ -276,7 +295,7 @@ function test_roundtrip(d::D.Distribution)
     end
     @testset "roundtrip (linked): $(_name(d))" begin
         for _ in 1:1000
-            @testset let x = rand(d), d = d
+            @testset let x = randfinite(d), d = d
                 ffwd = to_linked_vec(d)
                 frvs = from_linked_vec(d)
                 xnew = frvs(ffwd(x))
@@ -312,7 +331,7 @@ function test_roundtrip_inverse(d::D.Distribution, test_in_support, atol, rtol)
         # Check that Distributions.jl can actually run insupport. Sometimes it can't, e.g.
         # with product_distribution(MvNormal(), MvNormal()), even though that function is
         # well-defined.
-        x = rand(d)
+        x = randfinite(d)
         if test_in_support && (!hasmethod(D.insupport, Tuple{typeof(d),typeof(x)}))
             @info "No method for Distributions.insupport($(typeof(d)), $(typeof(x))), skipping in-support test"
             test_in_support = false
@@ -364,7 +383,7 @@ conversions should be type stable. To disable type stability checks for the cons
 set `test_construction_type_stable=false`.
 """
 function test_type_stability(d::D.Distribution, test_construction_type_stable=true)
-    x = rand(d)
+    x = randfinite(d)
     @testset "type stability: $(_name(d))" begin
         @testset let x = x, d = d
             if test_construction_type_stable
@@ -400,7 +419,7 @@ values produced by `to_vec`.
 function test_optics(d::D.Distribution)
     @testset "optic_vec: $(_name(d))" begin
         o = optic_vec(d)
-        x = rand(d)
+        x = randfinite(d)
         v = to_vec(d)(x)
         for (optic, value) in zip(o, v)
             if optic !== nothing
@@ -423,7 +442,7 @@ function test_optics(d::D.Distribution)
         #  Jacobian of the link transform, row `i` should have nonzeros only in the columns
         #  corresponding to `lo[i]`. This is a bit finicky to do because `x` might not be a
         #  vector(!) so we need to flatten everything first, using `to_vec`.
-        x = rand(d)
+        x = randfinite(d)
         xvec = to_vec(d)(x)
         yvec = to_linked_vec(d)(x)
         f = to_linked_vec(d) ∘ from_vec(d)
@@ -461,7 +480,7 @@ vector forms for the given distribution `d` match those reported by `vec_length`
 function test_vec_lengths(d::D.Distribution)
     @testset "vector lengths: $(_name(d))" begin
         for _ in 1:10
-            @testset let x = rand(d), d = d
+            @testset let x = randfinite(d), d = d
                 y = to_vec(d)(x)
                 @test length(y) == vec_length(d)
             end
@@ -469,7 +488,7 @@ function test_vec_lengths(d::D.Distribution)
     end
     @testset "vector lengths (linked): $(_name(d))" begin
         for _ in 1:10
-            @testset let x = rand(d), d = d
+            @testset let x = randfinite(d), d = d
                 y = to_linked_vec(d)(x)
                 @test length(y) == linked_vec_length(d)
             end
@@ -490,7 +509,7 @@ function test_allocations(d::D.Distribution, expected_zero_allocs=())
     # For univariates, to_vec and to_linked_vec always cause allocations because they have
     # to create a new vector.
     # TODO: Generalise to multivariates etc
-    x = rand(d)
+    x = randfinite(d)
     @testset "allocations: $(_name(d))" begin
         @testset let x = x, d = d
             if to_vec in expected_zero_allocs
@@ -531,7 +550,7 @@ function test_logjac(d::D.Distribution, atol, rtol)
     # Vectorisation logjacs should be zero because they are just reshapes.
     @testset "logjac: $(_name(d))" begin
         for _ in 1:100
-            @testset let x = rand(d), d = d
+            @testset let x = randfinite(d), d = d
                 ffwd = to_vec(d)
                 y, logjac = with_logabsdet_jacobian(ffwd, x)
                 @test _isapprox_safe(y, ffwd(x); atol=atol, rtol=rtol)
