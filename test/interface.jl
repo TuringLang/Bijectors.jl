@@ -6,6 +6,11 @@ using ForwardDiff
 using Bijectors
 Random.seed!(123)
 
+# Distributions 0.25.129's bounded kernel-density samplers (Biweight, Cosine, …) can
+# return NaN; resample until finite so we test Bijectors, not the upstream bug.
+randfinite(d) = (x = rand(d); isfinite(x) ? x : randfinite(d))
+randfinite(d, n::Int) = (x = rand(d, n); all(isfinite, x) ? x : randfinite(d, n))
+
 @testset "Univariate" begin
     # Tests with scalar-valued distributions.
     uni_dists = [
@@ -44,20 +49,20 @@ Random.seed!(123)
             td = @inferred transformed(dist)
 
             # single sample
-            y = @inferred rand(td)
+            y = @inferred randfinite(td)
             x = @inferred inverse(td.transform)(y)
             @test y ≈ @inferred td.transform(x)
             @test @inferred(logpdf(td, y)) ≈ @inferred(logpdf_with_trans(dist, x, true))
 
             # multi-sample
-            y = @inferred rand(td, 10)
+            y = @inferred randfinite(td, 10)
             x = inverse(td.transform).(y)
             @test logpdf.(td, y) ≈ logpdf_with_trans.(dist, x, true)
 
             # logpdf corresponds to logpdf_with_trans
             d = dist
             b = @inferred bijector(d)
-            x = rand(d)
+            x = randfinite(d)
             y = @inferred b(x)
             @test logpdf(d, inverse(b)(y)) + logabsdetjacinv(b, y) ≈
                 logpdf_with_trans(d, x, true)
@@ -66,7 +71,7 @@ Random.seed!(123)
             # verify against AD
             d = dist
             b = bijector(d)
-            x = rand(d)
+            x = randfinite(d)
             y = b(x)
             # `ForwardDiff.derivative` can lead to some numerical inaccuracy,
             # so we use a slightly higher `atol` than default.
