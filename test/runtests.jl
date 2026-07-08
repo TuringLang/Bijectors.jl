@@ -2,7 +2,9 @@ using Bijectors
 
 using ChainRulesTestUtils
 using Combinatorics
-using DifferentiationInterface
+using ADTypes
+using AbstractPPL: AbstractPPL
+using DifferentiationInterface: DifferentiationInterface
 using FiniteDifferences
 using ForwardDiff
 using Functors
@@ -56,12 +58,7 @@ include("bijectors/utils.jl")
         include("bijectors/simplex.jl")
         include("bijectors/equality.jl")
         include("bijectors/scale.jl")
-
-        @testset "ForwardDiff bijector AD" begin
-            for c in generate_ad_testcases()
-                run_ad_case(c, AutoForwardDiff())
-            end
-        end
+        include("bijectors/cdf_quantile.jl")
     end
 
     if GROUP == "All" || GROUP == "Vector" || GROUP == "VectorProduct"
@@ -85,6 +82,9 @@ include("bijectors/utils.jl")
                     run_vector_case(c)
                 end
             end
+
+            # Scalar-to-scalar bijectors not exercised by the test_all sweep.
+            GROUP != "VectorProduct" && include("vector/cdf_quantile.jl")
         end
     end
 end

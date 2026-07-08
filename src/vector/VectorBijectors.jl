@@ -19,7 +19,7 @@ export linked_optic_vec
 # utils
 export has_constant_vec_bijector
 export scalar_to_scalar_bijector
-export TypedIdentity, Log, Untruncate
+export TypedIdentity, Log, Untruncate, CDF, Quantile
 # re-exports
 export with_logabsdet_jacobian
 export inverse
@@ -30,6 +30,7 @@ include("univariate/univariate.jl")
 include("univariate/identities.jl")
 include("univariate/positive.jl")
 include("univariate/truncated.jl")
+include("univariate/cdf_quantile.jl")
 
 include("multivariate/multivariate.jl")
 include("multivariate/identities.jl")

@@ -105,6 +105,8 @@ Univariate distributions tend to fall into one of the following categories:
 Bijectors.VectorBijectors.TypedIdentity
 Bijectors.VectorBijectors.Log
 Bijectors.VectorBijectors.Untruncate
+Bijectors.VectorBijectors.CDF
+Bijectors.VectorBijectors.Quantile
 ```
 
 ## Testing
@@ -117,7 +119,7 @@ For more information about generally testing bijectors (and in particular how to
 
 One of the most tricky parts of testing Bijectors is ensuring that the transforms are compatible with automatic differentiation.
 This is important for DynamicPPL: we need to be able to compute the gradient of the log-density with respect to (possibly transformed) parameters, which may include the log-abs-det-Jacobian of the transformation.
-`test_all` accepts an `adtypes` keyword argument and defaults to `[AutoForwardDiff()]`, so the main test suite exercises ForwardDiff as the reference backend.
+`test_all` accepts an `adtypes` keyword argument that defaults to an empty list, so the main test suite does not exercise any AD backend directly — ForwardDiff is still used internally as the reference for Jacobian correctness via `ref_adtype`.
 ReverseDiff, Mooncake, and Enzyme are covered by standalone integration suites under `test/integration_tests/<backend>/`, each of which passes its own `adtypes` list through to `test_all`.
 It is acceptable to skip tests for a particular backend if there are genuine upstream bugs, especially with ReverseDiff, which is not actively maintained.
 Where possible it is best to ensure that all backends are supported, and to use `@test_broken` to mark any known issues with specific backends.
