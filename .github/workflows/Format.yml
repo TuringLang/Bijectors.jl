@@ -16,7 +16,6 @@ concurrency:
 
 jobs:
   check:
-    name: runic
     runs-on: ubuntu-latest
 
     steps:
