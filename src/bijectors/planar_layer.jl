@@ -172,10 +172,12 @@ function find_alpha(wt_y::T, wt_u_hat::T, b::T) where {T<:Real}
         return lower
     end
 
-    # Solve the root-finding problem
-    # A value of `κ₁ = 0.2 / (upper - lower)` is suggested
-    # Ref: https://docs.rs/kurbo/0.11.1/kurbo/common/fn.solve_itp.html
-    α0 = Roots.find_zero((lower, upper), Roots.ITP(; κ₁=inv(10 * Δ))) do α
+    # Solve the root-finding problem with the Alefeld-Potra-Shi method, which is
+    # superlinear and narrows the bracket down to adjacent floating point values.
+    # We used to use `Roots.ITP`, but its bracket can stall a few floats short of
+    # convergence, and as of Roots 3.0.2 `find_zero` then returns `NaN` instead of
+    # the best endpoint, causing a `ConvergenceFailed` error.
+    α0 = Roots.find_zero((lower, upper), Roots.A42()) do α
         return α + wt_u_hat * tanh(α + b) - wt_y
     end
 
