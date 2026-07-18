@@ -68,10 +68,13 @@ end
 function _rqs_gather(knots::AbstractArray, k::AbstractMatrix{<:Integer})
     stride1 = size(knots, 1)
     D, N = size(k)
-    offset =
-        reshape(0:(D - 1), D, 1) .* stride1 .+ reshape(0:(N - 1), 1, N) .* (stride1 * D)
+    di = reshape(1:D, D, 1)
+    ni = reshape(1:N, 1, N)
+    # Fuse the linear index into a single broadcast that includes `k`, so the result lives on
+    # the same device as `k`; a standalone host offset array added to a device `k` would fail.
+    lin = @. k + (di - 1) * stride1 + (ni - 1) * (stride1 * D)
     flat = reshape(knots, :)
-    return flat[offset .+ k], flat[offset .+ (k .+ 1)]
+    return flat[lin], flat[lin .+ 1]
 end
 
 """
