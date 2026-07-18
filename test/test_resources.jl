@@ -67,7 +67,12 @@ ADTestCase(name::String, func, arg) = ADTestCase(name, func, arg, :_default)
 _settag(c::ADTestCase, tag::Symbol) = ADTestCase(c.name, c.func, c.arg, tag)
 
 const _AD_TAGS = (
-    :veccorrbijector, :veccholeskybijector, :planarlayer, :pdvecbijector, :stackedbijector
+    :veccorrbijector,
+    :veccholeskybijector,
+    :planarlayer,
+    :pdvecbijector,
+    :stackedbijector,
+    :batchedrqs,
 )
 
 """
@@ -169,6 +174,33 @@ function _gen_testcases(::Val{:veccholeskybijector})
         )
     end
     return cases
+end
+
+function _gen_testcases(::Val{:batchedrqs})
+    rng = _testcase_rng()
+    K, D, N, B = 4, 2, 3, 5
+    n_raw = (3K - 1) * D
+
+    # θ packs the raw per-sample spline parameters followed by the batched inputs, so the
+    # gradient covers the full path: constraints, gather, spline, and log-det.
+    forward = function (θ)
+        raw = reshape(θ[1:(n_raw * N)], n_raw, N)
+        x = reshape(θ[(n_raw * N + 1):end], D, N)
+        b = Bijectors.BatchedRQS(raw, D, B)
+        return sum(transform(b, x)) + sum(logabsdetjac(b, x))
+    end
+    backward = function (θ)
+        raw = reshape(θ[1:(n_raw * N)], n_raw, N)
+        y = reshape(θ[(n_raw * N + 1):end], D, N)
+        b = Bijectors.BatchedRQS(raw, D, B)
+        binv = inverse(b)
+        return sum(transform(binv, y)) + sum(logabsdetjac(binv, y))
+    end
+    arg = randn(rng, n_raw * N + D * N)
+    return [
+        ADTestCase("BatchedRQS forward", forward, arg),
+        ADTestCase("BatchedRQS inverse", backward, copy(arg)),
+    ]
 end
 
 function _gen_testcases(::Val{:planarlayer})
