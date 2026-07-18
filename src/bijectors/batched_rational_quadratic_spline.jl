@@ -47,3 +47,66 @@ function rqs_params_from_raw(θ_raw::AbstractMatrix, n_dims::Integer, B)
     derivatives = _rqs_constrain_derivatives(θ[(2K + 1):(3K - 1), :, :])
     return widths, heights, derivatives
 end
+
+# Locate the bin of each element and whether it lies inside the spline range. `knots` is
+# `(K + 1, D, N)`, `x` is `(D, N)`. `count` is the number of knots not exceeding `x`, so a
+# point in `[knots[k], knots[k+1])` gives `count == k`; `count == 0` or `count == K + 1`
+# means it is below or above the range. The comparison and integer reduction are
+# non-differentiable by construction, which is what confines the gradient to the arithmetic
+# of the selected bin.
+function _rqs_bin(knots::AbstractArray, x::AbstractMatrix)
+    K = size(knots, 1) - 1
+    count = dropdims(sum(knots .<= reshape(x, 1, size(x)...); dims=1); dims=1)
+    inside = (count .>= 1) .& (count .<= K)
+    return clamp.(count, 1, K), inside
+end
+
+# Gather the lower and upper knot values of each element's bin into `(D, N)` arrays. Linear
+# indices are built by broadcast so they live on the same device as the parameters, and the
+# gather is a plain `getindex` by integer array: vectorized on the GPU and differentiable on
+# every backend, with the gradient flowing back to the two selected knots.
+function _rqs_gather(knots::AbstractArray, k::AbstractMatrix{<:Integer})
+    stride1 = size(knots, 1)
+    D, N = size(k)
+    offset =
+        reshape(0:(D - 1), D, 1) .* stride1 .+ reshape(0:(N - 1), 1, N) .* (stride1 * D)
+    flat = reshape(knots, :)
+    return flat[offset .+ k], flat[offset .+ (k .+ 1)]
+end
+
+"""
+    rqs_forward(x, widths, heights, derivatives)
+
+Evaluate the batched rational-quadratic spline forward. `x` is `(D, N)` and the knot
+parameters are `(K + 1, D, N)`. Returns `(y, logjac)` with `y` of shape `(D, N)` and
+`logjac` of shape `(1, N)`, the per-sample sum over dimensions of `log|dy/dx|`. Outside
+`[widths[1], widths[end]]` the map is the identity and contributes zero to `logjac`.
+"""
+function rqs_forward(
+    x::AbstractMatrix,
+    widths::AbstractArray,
+    heights::AbstractArray,
+    derivatives::AbstractArray,
+)
+    T = eltype(x)
+    k, inside = _rqs_bin(widths, x)
+    xₖ, xₖ₊₁ = _rqs_gather(widths, k)
+    yₖ, yₖ₊₁ = _rqs_gather(heights, k)
+    dₖ, dₖ₊₁ = _rqs_gather(derivatives, k)
+
+    Δx = xₖ₊₁ .- xₖ
+    Δy = yₖ₊₁ .- yₖ
+    s = Δy ./ Δx
+    # Clamp keeps the discarded (out-of-range) branch finite so its zero-weighted gradient
+    # never turns into NaN; inside the range ξ is already in [0, 1] and clamp is a no-op.
+    ξ = clamp.((x .- xₖ) ./ Δx, zero(T), one(T))
+
+    denom = @. s + (dₖ₊₁ + dₖ - 2s) * ξ * (1 - ξ)
+    y_bin = @. yₖ + Δy * (s * ξ^2 + dₖ * ξ * (1 - ξ)) / denom
+    nom = @. dₖ₊₁ * ξ^2 + 2s * ξ * (1 - ξ) + dₖ * (1 - ξ)^2
+    logjac_bin = @. 2 * log(abs(s)) + log(abs(nom)) - 2 * log(abs(denom))
+
+    y = ifelse.(inside, y_bin, x)
+    logjac = ifelse.(inside, logjac_bin, zero(T))
+    return y, sum(logjac; dims=1)
+end
