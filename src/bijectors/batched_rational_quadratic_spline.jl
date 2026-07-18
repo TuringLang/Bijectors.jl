@@ -156,3 +156,56 @@ function rqs_inverse(
     logjac = ifelse.(inside, .-_rqs_forward_logjac(s, dₖ, dₖ₊₁, ξ), zero(T))
     return x, sum(logjac; dims=1)
 end
+
+"""
+    BatchedRQS(widths, heights, derivatives)
+    BatchedRQS(θ_raw::AbstractMatrix, n_dims::Integer, B)
+
+Batched rational quadratic spline bijector. The knot parameters `widths`, `heights`, and
+`derivatives` are `(K + 1, D, N)` arrays already constrained to a valid monotone spline (as
+produced by [`rqs_params_from_raw`](@ref)); the second constructor builds them from raw
+neural-network outputs. `transform` maps `(D, N)` inputs to `(D, N)` outputs and
+`logabsdetjac` returns the per-sample `(N,)` log-determinant.
+"""
+struct BatchedRQS{T<:AbstractArray} <: Bijector
+    widths::T
+    heights::T
+    derivatives::T
+
+    function BatchedRQS(widths::T, heights::T, derivatives::T) where {T<:AbstractArray}
+        if !(size(widths) == size(heights) == size(derivatives))
+            throw(
+                DimensionMismatch("widths, heights, and derivatives must share their shape")
+            )
+        end
+        return new{T}(widths, heights, derivatives)
+    end
+end
+
+function BatchedRQS(θ_raw::AbstractMatrix, n_dims::Integer, B)
+    return BatchedRQS(rqs_params_from_raw(θ_raw, n_dims, B)...)
+end
+
+function transform(b::BatchedRQS, x::AbstractMatrix)
+    return first(rqs_forward(x, b.widths, b.heights, b.derivatives))
+end
+
+function transform(ib::Inverse{<:BatchedRQS}, y::AbstractMatrix)
+    b = ib.orig
+    return first(rqs_inverse(y, b.widths, b.heights, b.derivatives))
+end
+
+function logabsdetjac(b::BatchedRQS, x::AbstractMatrix)
+    return vec(last(rqs_forward(x, b.widths, b.heights, b.derivatives)))
+end
+
+function with_logabsdet_jacobian(b::BatchedRQS, x::AbstractMatrix)
+    y, logjac = rqs_forward(x, b.widths, b.heights, b.derivatives)
+    return y, vec(logjac)
+end
+
+function with_logabsdet_jacobian(ib::Inverse{<:BatchedRQS}, y::AbstractMatrix)
+    b = ib.orig
+    x, logjac = rqs_inverse(y, b.widths, b.heights, b.derivatives)
+    return x, vec(logjac)
+end

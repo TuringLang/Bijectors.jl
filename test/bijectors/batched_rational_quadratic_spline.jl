@@ -1,4 +1,5 @@
-using Bijectors: rqs_params_from_raw, rqs_forward, rqs_inverse, rqs_univariate
+using Bijectors: rqs_params_from_raw, rqs_forward, rqs_inverse, rqs_univariate, BatchedRQS
+using Bijectors: transform, with_logabsdet_jacobian, logabsdetjac, inverse
 using ForwardDiff: ForwardDiff
 
 @testset "batched RQS parameters" begin
@@ -127,5 +128,49 @@ end
             v -> sum(rqs_inverse(reshape(v, D, N), w, h, d)[2]), vec(y)
         )
         @test all(isfinite, gj)
+    end
+end
+
+@testset "BatchedRQS bijector" begin
+    @testset "T=$T, K=$K, D=$D, N=$N" for T in (Float32, Float64),
+        K in (4, 8), D in (1, 3),
+        N in (1, 8)
+
+        B = 5
+        θ_raw = randn(T, (3K - 1) * D, N)
+        w, h, d = rqs_params_from_raw(θ_raw, D, B)
+        b = BatchedRQS(w, h, d)
+        x = T(0.8B) .* (2 .* rand(T, D, N) .- 1)
+        rtol = T == Float32 ? 1.0f-4 : 1.0e-9
+
+        # The convenience constructor matches building from constrained params.
+        b2 = BatchedRQS(θ_raw, D, B)
+        @test b2.widths == w && b2.heights == h && b2.derivatives == d
+
+        # transform / logabsdetjac / with_logabsdet_jacobian are consistent.
+        y = transform(b, x)
+        ladj = logabsdetjac(b, x)
+        y2, ladj2 = with_logabsdet_jacobian(b, x)
+        @test y == y2
+        @test ladj == ladj2
+        @test size(y) == (D, N)
+        @test size(ladj) == (N,)
+        @test eltype(y) == T
+        @test eltype(ladj) == T
+
+        # Inverse via the generic wrapper round-trips and negates the log-det.
+        xback, ladj_inv = with_logabsdet_jacobian(inverse(b), y)
+        @test xback ≈ x rtol = rtol
+        @test ladj_inv ≈ -ladj rtol = rtol
+        @test transform(inverse(b), y) ≈ x rtol = rtol
+
+        # Type stability.
+        @inferred transform(b, x)
+        @inferred with_logabsdet_jacobian(b, x)
+    end
+
+    @testset "shape mismatch is rejected" begin
+        w = randn(Float64, 5, 2, 3)
+        @test_throws DimensionMismatch BatchedRQS(w, w, randn(Float64, 5, 2, 4))
     end
 end
