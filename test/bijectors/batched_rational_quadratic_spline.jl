@@ -1,4 +1,4 @@
-using Bijectors: rqs_params_from_raw, rqs_forward, rqs_univariate
+using Bijectors: rqs_params_from_raw, rqs_forward, rqs_inverse, rqs_univariate
 using ForwardDiff: ForwardDiff
 
 @testset "batched RQS parameters" begin
@@ -77,5 +77,55 @@ end
         y, logjac = rqs_forward(x, w, h, d)
         @test y == x
         @test all(iszero, logjac)
+    end
+end
+
+@testset "batched RQS inverse" begin
+    @testset "T=$T, K=$K, D=$D, N=$N" for T in (Float32, Float64),
+        K in (4, 8), D in (1, 3),
+        N in (1, 8)
+
+        B = 5
+        w, h, d = rqs_params_from_raw(randn(T, (3K - 1) * D, N), D, B)
+        rtol = T == Float32 ? 1.0f-4 : 1.0e-9
+
+        # inverse ∘ forward
+        x = T(0.8B) .* (2 .* rand(T, D, N) .- 1)
+        y, logjac_fwd = rqs_forward(x, w, h, d)
+        xback, logjac_inv = rqs_inverse(y, w, h, d)
+        @test xback ≈ x rtol = rtol
+        @test logjac_inv ≈ -logjac_fwd rtol = rtol
+
+        # forward ∘ inverse (heights are also constrained to [-B, B])
+        yin = T(0.8B) .* (2 .* rand(T, D, N) .- 1)
+        xr, _ = rqs_inverse(yin, w, h, d)
+        yr, _ = rqs_forward(xr, w, h, d)
+        @test yr ≈ yin rtol = rtol
+    end
+
+    @testset "out-of-range identity, T=$T" for T in (Float32, Float64)
+        B = 5
+        K, D, N = 6, 2, 4
+        w, h, d = rqs_params_from_raw(randn(T, (3K - 1) * D, N), D, B)
+        y = T[2B -2B 3B -3B; 2B -2B 3B -3B]
+        x, logjac = rqs_inverse(y, w, h, d)
+        @test x == y
+        @test all(iszero, logjac)
+    end
+
+    @testset "boundary gradient is finite, T=$T" for T in (Float32, Float64)
+        B = 5
+        K, D, N = 6, 1, 5
+        w, h, d = rqs_params_from_raw(randn(T, (3K - 1) * D, N), D, B)
+        # points spanning below, on, and above the range
+        y = reshape(T[-B - 1, -B, 0, B, B + 1], D, N)
+        g = ForwardDiff.gradient(
+            v -> sum(rqs_inverse(reshape(v, D, N), w, h, d)[1]), vec(y)
+        )
+        @test all(isfinite, g)
+        gj = ForwardDiff.gradient(
+            v -> sum(rqs_inverse(reshape(v, D, N), w, h, d)[2]), vec(y)
+        )
+        @test all(isfinite, gj)
     end
 end

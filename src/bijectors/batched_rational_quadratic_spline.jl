@@ -103,10 +103,56 @@ function rqs_forward(
 
     denom = @. s + (dₖ₊₁ + dₖ - 2s) * ξ * (1 - ξ)
     y_bin = @. yₖ + Δy * (s * ξ^2 + dₖ * ξ * (1 - ξ)) / denom
-    nom = @. dₖ₊₁ * ξ^2 + 2s * ξ * (1 - ξ) + dₖ * (1 - ξ)^2
-    logjac_bin = @. 2 * log(abs(s)) + log(abs(nom)) - 2 * log(abs(denom))
 
     y = ifelse.(inside, y_bin, x)
-    logjac = ifelse.(inside, logjac_bin, zero(T))
+    logjac = ifelse.(inside, _rqs_forward_logjac(s, dₖ, dₖ₊₁, ξ), zero(T))
     return y, sum(logjac; dims=1)
+end
+
+# Forward log|dy/dx| for a bin at spline coordinate ξ in [0, 1], reused by the inverse.
+function _rqs_forward_logjac(s, dₖ, dₖ₊₁, ξ)
+    denom = @. s + (dₖ₊₁ + dₖ - 2s) * ξ * (1 - ξ)
+    nom = @. dₖ₊₁ * ξ^2 + 2s * ξ * (1 - ξ) + dₖ * (1 - ξ)^2
+    return @. 2 * log(abs(s)) + log(abs(nom)) - 2 * log(abs(denom))
+end
+
+"""
+    rqs_inverse(y, widths, heights, derivatives)
+
+Invert the batched rational-quadratic spline. `y` is `(D, N)` and the knot parameters are
+`(K + 1, D, N)`. Returns `(x, logjac)` with `x` of shape `(D, N)` and `logjac` of shape
+`(1, N)`, the per-sample sum over dimensions of `log|dx/dy|`. The bin holding each `y` is a
+monotone quadratic in the spline coordinate, solved with the roundoff-stable root; the
+log-det is the negation of the forward log-det at the recovered coordinate.
+"""
+function rqs_inverse(
+    y::AbstractMatrix,
+    widths::AbstractArray,
+    heights::AbstractArray,
+    derivatives::AbstractArray,
+)
+    T = eltype(y)
+    k, inside = _rqs_bin(heights, y)
+    xₖ, xₖ₊₁ = _rqs_gather(widths, k)
+    yₖ, yₖ₊₁ = _rqs_gather(heights, k)
+    dₖ, dₖ₊₁ = _rqs_gather(derivatives, k)
+
+    Δx = xₖ₊₁ .- xₖ
+    Δy = yₖ₊₁ .- yₖ
+    s = Δy ./ Δx
+    # Clamp to the bin so the discarded (out-of-range) branch stays finite; inside the range
+    # Δy2 already lies in [0, Δy] and clamp is a no-op.
+    Δy2 = clamp.(y .- yₖ, zero(T), Δy)
+
+    c1 = dₖ₊₁ .+ dₖ .- 2 .* s
+    a = @. Δy * (s - dₖ) + Δy2 * c1
+    b = @. Δy * dₖ - Δy2 * c1
+    c = @. -s * Δy2
+    disc = @. max(b^2 - 4 * a * c, zero(T))
+    denom = @. -b - sqrt(disc)
+    ξ = clamp.((2 .* c) ./ denom, zero(T), one(T))
+
+    x = ifelse.(inside, xₖ .+ ξ .* Δx, y)
+    logjac = ifelse.(inside, .-_rqs_forward_logjac(s, dₖ, dₖ₊₁, ξ), zero(T))
+    return x, sum(logjac; dims=1)
 end
