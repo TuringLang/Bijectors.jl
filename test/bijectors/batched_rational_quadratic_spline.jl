@@ -4,7 +4,9 @@ using ForwardDiff: ForwardDiff
 
 @testset "batched RQS parameters" begin
     @testset "T=$T, K=$K, D=$D, N=$N, B=$B" for T in (Float32, Float64),
-        K in (4, 8), D in (1, 3), N in (1, 16),
+        K in (4, 8),
+        D in (1, 3),
+        N in (1, 16),
         B in (2, 30)
 
         θ_raw = randn(T, (3K - 1) * D, N)
@@ -35,7 +37,8 @@ end
 
 @testset "batched RQS forward" begin
     @testset "T=$T, K=$K, D=$D, N=$N" for T in (Float32, Float64),
-        K in (4, 8), D in (1, 3),
+        K in (4, 8),
+        D in (1, 3),
         N in (1, 8)
 
         B = 5
@@ -83,7 +86,8 @@ end
 
 @testset "batched RQS inverse" begin
     @testset "T=$T, K=$K, D=$D, N=$N" for T in (Float32, Float64),
-        K in (4, 8), D in (1, 3),
+        K in (4, 8),
+        D in (1, 3),
         N in (1, 8)
 
         B = 5
@@ -133,7 +137,8 @@ end
 
 @testset "BatchedRQS bijector" begin
     @testset "T=$T, K=$K, D=$D, N=$N" for T in (Float32, Float64),
-        K in (4, 8), D in (1, 3),
+        K in (4, 8),
+        D in (1, 3),
         N in (1, 8)
 
         B = 5
