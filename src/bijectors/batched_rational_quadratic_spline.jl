@@ -167,18 +167,25 @@ produced by [`rqs_params_from_raw`](@ref)); the second constructor builds them f
 neural-network outputs. `transform` maps `(D, N)` inputs to `(D, N)` outputs and
 `logabsdetjac` returns the per-sample `(N,)` log-determinant.
 """
-struct BatchedRQS{T<:AbstractArray} <: Bijector
-    widths::T
-    heights::T
-    derivatives::T
+# The three fields carry independent type parameters because automatic differentiation can
+# return them as different array types (for example ReverseDiff yields a TrackedArray for one
+# and an Array of tracked scalars for another).
+struct BatchedRQS{Tw<:AbstractArray,Th<:AbstractArray,Td<:AbstractArray} <: Bijector
+    widths::Tw
+    heights::Th
+    derivatives::Td
 
-    function BatchedRQS(widths::T, heights::T, derivatives::T) where {T<:AbstractArray}
+    function BatchedRQS(
+        widths::AbstractArray, heights::AbstractArray, derivatives::AbstractArray
+    )
         if !(size(widths) == size(heights) == size(derivatives))
             throw(
                 DimensionMismatch("widths, heights, and derivatives must share their shape")
             )
         end
-        return new{T}(widths, heights, derivatives)
+        return new{typeof(widths),typeof(heights),typeof(derivatives)}(
+            widths, heights, derivatives
+        )
     end
 end
 
