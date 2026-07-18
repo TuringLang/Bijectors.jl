@@ -70,11 +70,12 @@ end
 # every backend, with the gradient flowing back to the two selected knots.
 function _rqs_gather(knots::AbstractArray, k::AbstractMatrix{<:Integer})
     stride1 = size(knots, 1)
-    D, N = size(k)
-    di = reshape(1:D, D, 1)
-    ni = reshape(1:N, 1, N)
-    # Fuse the linear index into a single broadcast that includes `k`, so the result lives on
-    # the same device as `k`; a standalone host offset array added to a device `k` would fail.
+    D = size(k, 1)
+    # Row and column indices of each entry, derived from `k` so they share its array type: a
+    # reshaped host range cannot take part in a broadcast against a GPU array.
+    unit = one.(k)
+    di = cumsum(unit; dims=1)
+    ni = cumsum(unit; dims=2)
     lin = @. k + (di - 1) * stride1 + (ni - 1) * (stride1 * D)
     flat = reshape(knots, :)
     return flat[lin], flat[lin .+ 1]
