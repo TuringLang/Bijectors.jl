@@ -16,7 +16,9 @@ function _rqs_constrain_knots(raw::AbstractArray, B)
     T = eltype(raw)
     Bc = T(B)
     increments = LogExpFunctions.softmax(raw; dims=1)
-    lead = fill!(similar(raw, 1, Base.tail(size(raw))...), zero(T))
+    # A leading zero row, built without mutation so Zygote can differentiate it, and from a
+    # slice of `increments` so it keeps the array type (`Array`, `CuArray`, ...).
+    lead = zero(T) .* increments[1:1, :, :]
     return cumsum(cat(lead, increments; dims=1); dims=1) .* (2 * Bc) .- Bc
 end
 
@@ -24,7 +26,8 @@ end
 # the spline continues into the identity map outside `[-B, B]`.
 function _rqs_constrain_derivatives(raw::AbstractArray)
     T = eltype(raw)
-    edge = fill!(similar(raw, 1, Base.tail(size(raw))...), one(T))
+    # Unit endpoint rows, built without mutation (see `_rqs_constrain_knots`).
+    edge = zero(T) .* raw[1:1, :, :] .+ one(T)
     return cat(edge, LogExpFunctions.log1pexp.(raw), edge; dims=1)
 end
 
