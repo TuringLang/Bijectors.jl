@@ -4,7 +4,7 @@
 A bijector implementation of Stan's parametrization method for Correlation matrix:
 https://mc-stan.org/docs/reference-manual/transforms.html#correlation-matrix-transform.section
 
-Basically, a unconstrained strictly upper triangular matrix `y` is transformed to 
+Basically, a unconstrained strictly upper triangular matrix `y` is transformed to
 a correlation matrix by following readable but not that efficient form:
 
 ```
@@ -46,7 +46,7 @@ x = w' * w
 Consider block matrix representation for `x`
 
 ```
-x = [w1'; w2'; ... wn'] * [w1 w2 ... wn] == 
+x = [w1'; w2'; ... wn'] * [w1 w2 ... wn] ==
 [w1'w1 w1'w2 ... w1'wn;
  w2'w1 w2'w2 ... w2'wn;
  ...
@@ -58,7 +58,7 @@ The diagonal elements are given by `wk'wk = 1`, thus `x` is a correlation matrix
 Every step is invertible, so this is a bijection(bijector).
 
 Note: The implementation doesn't follow their "manageable expression" directly,
-because their equation seems wrong (7/30/2020). Insteadly it follows definition 
+because their equation seems wrong (7/30/2020). Insteadly it follows definition
 above the "manageable expression" directly, which is also described in above doc.
 """
 struct CorrBijector <: Bijector end
@@ -84,7 +84,7 @@ logabsdetjac(::Inverse{CorrBijector}, Y) = _logabsdetjac_inv_corr(Y)
 function logabsdetjac(b::CorrBijector, X)
     #=
     It may be more efficient if we can use un-contraint value to prevent call of b
-    It's recommended to directly call 
+    It's recommended to directly call
     `logabsdetjac(::Inverse{CorrBijector}, y::AbstractMatrix{<:Real})`
     if possible.
     =#
@@ -94,7 +94,7 @@ end
 """
     VecCorrBijector <: Bijector
 
-A bijector to transform a correlation matrix to an unconstrained vector. 
+A bijector to transform a correlation matrix to an unconstrained vector.
 
 # Reference
 https://mc-stan.org/docs/reference-manual/correlation-matrix-transform.html
@@ -164,10 +164,10 @@ end
 """
     VecCholeskyBijector <: Bijector
 
-A bijector to transform a Cholesky factor of a correlation matrix to an unconstrained vector. 
+A bijector to transform a Cholesky factor of a correlation matrix to an unconstrained vector.
 
 # Fields
-- mode :`Symbol`. Controls the inverse tranformation :
+- mode :`Symbol`. Controls the inverse transformation :
     - if `mode === :U` returns a `LinearAlgebra.Cholesky` holding the `UpperTriangular` factor
     - if `mode === :L` returns a `LinearAlgebra.Cholesky` holding the `LowerTriangular` factor
 
@@ -199,7 +199,7 @@ julia> y = b(X)  # Transform to unconstrained vector representation.
  -0.3638927608636788
  -0.29813769428942216
 
-julia> X_inv = inverse(b)(y); 
+julia> X_inv = inverse(b)(y);
 julia> X_inv.U ≈ X.U  # (✓) Round-trip through `b` and its inverse.
 true
 julia> X_inv.L ≈ X.L  # (✓) Also works for the lower triangular factor.

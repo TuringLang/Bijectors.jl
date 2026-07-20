@@ -8,7 +8,7 @@ It assumes that there are three forms of samples from a distribution `d` that we
 
  2. **A vectorised form**, which is a vector that contains a flattened version of the original form.
  3. **A linked vectorised form**, which is a vector in which:
-    
+
       + each element is independent; and
       + each element is unconstrained (can take any value in ℝ).
 
@@ -93,7 +93,7 @@ Bijectors.VectorBijectors.has_constant_vec_bijector
 
 For univariate distributions the default definition is to generate a bijector that inspects the minimum and maximum of the distribution.
 While this will work correctly, it might not be the most performant.
-You can manually define the VectorBijectors API for univariate distributions, but it is probably faster to just overload the single function `scalar_to_scalar_bijector`: everything else will be automatically dervied.
+You can manually define the VectorBijectors API for univariate distributions, but it is probably faster to just overload the single function `scalar_to_scalar_bijector`: everything else will be automatically derived.
 
 ```@docs
 Bijectors.VectorBijectors.scalar_to_scalar_bijector
