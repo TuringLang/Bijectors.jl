@@ -10,7 +10,12 @@ steps:
       #     dirs:
       #       - src
       #       - ext
-    command: julia --eval='println("Skipping CUDA tests - pipeline configured to do nothing")'
+    # `Pkg.develop` makes Julia 1.10 use the working tree's Bijectors. The `[sources]` section
+    # in test/gpu/Project.toml only takes effect on Julia 1.11+, so on 1.10 the registry
+    # version would be resolved instead.
+    command: |
+      julia --project=test/gpu --color=yes -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
+      julia --project=test/gpu --color=yes test/gpu/main.jl
     agents:
       queue: "cuda"
     if: build.message !~ /\[skip tests\]/

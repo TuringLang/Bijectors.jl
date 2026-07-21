@@ -1,0 +1,13 @@
+[deps]
+Bijectors = "76274a88-744f-5084-9051-94815aaf08c4"
+CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
+
+[sources]
+Bijectors = {path = "../.."}
+
+[compat]
+CUDA = "5"
+Zygote = "0.6, 0.7"
