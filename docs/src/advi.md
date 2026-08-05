@@ -49,7 +49,7 @@ _Disclaimer: numerical accuracy is limited, so you might still see `0` and `1` i
 ## Multivariate ADVI example
 
 We can also do _multivariate_ ADVI using the `Stacked` bijector.
-`Stacked` gives us a way to combine univariate and/or multivariate bijectors into a singe multivariate bijector.
+`Stacked` gives us a way to combine univariate and/or multivariate bijectors into a single multivariate bijector.
 Say you have a vector `x` of length 2 and you want to transform the first entry using `Exp` and the second entry using `Log`.
 `Stacked` gives you an easy and efficient way of representing such a bijector.
 

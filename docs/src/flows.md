@@ -22,7 +22,7 @@ y = rand(rng, flow)
 logpdf(flow, y)         # uses inverse of `b`
 ```
 
-Similarily to the multivariate ADVI example, we could use `Stacked` to get a _bounded_ flow:
+Similarly to the multivariate ADVI example, we could use `Stacked` to get a _bounded_ flow:
 
 ```@example normalizing-flows
 d = MvNormal(zeros(2), ones(2));
