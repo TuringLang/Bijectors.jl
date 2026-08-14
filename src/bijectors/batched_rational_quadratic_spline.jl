@@ -168,9 +168,18 @@ function rqs_inverse(
     a = @. Δy * (s - dₖ) + Δy2 * c1
     b = @. Δy * dₖ - Δy2 * c1
     c = @. -s * Δy2
-    disc = @. max(b^2 - 4 * a * c, zero(T))
-    denom = @. -b - sqrt(disc)
-    ξ = clamp.((2 .* c) ./ denom, zero(T), one(T))
+    # Keeping the sqrt argument strictly positive keeps its gradient finite when the
+    # discriminant vanishes in a degenerate bin.
+    tiny = floatmin(T)
+    sqrtdisc = @. sqrt(max(b^2 - 4 * a * c, tiny))
+    # The cancellation-free form of the selected root depends on the sign of b. When a is
+    # zero, b equals Δy * s > 0, so the b < 0 branch never divides by zero.
+    ξ =
+        clamp.(
+            ifelse.(b .>= 0, (2 .* c) ./ (-b .- sqrtdisc), (-b .+ sqrtdisc) ./ (2 .* a)),
+            zero(T),
+            one(T),
+        )
 
     x = ifelse.(inside, xₖ .+ ξ .* Δx, y)
     logjac = ifelse.(inside, .-_rqs_forward_logjac(s, dₖ, dₖ₊₁, ξ), zero(T))
