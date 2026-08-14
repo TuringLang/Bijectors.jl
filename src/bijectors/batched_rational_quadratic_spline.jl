@@ -77,6 +77,10 @@ function _rqs_bin(knots::AbstractArray, x::AbstractMatrix)
     return clamp.(count, 1, K), inside
 end
 
+# Plain boolean sign mask for the inverse root selection, kept as its own function so AD
+# extensions can compute it from primal values.
+_rqs_nonneg(b) = b .>= 0
+
 # Gather the lower and upper knot values of each element's bin into `(D, N)` arrays. Linear
 # indices are built by broadcast so they live on the same device as the parameters, and the
 # gather is a plain `getindex` by integer array: vectorized on the GPU and differentiable on
@@ -124,8 +128,12 @@ function rqs_forward(
     denom = @. s + (dₖ₊₁ + dₖ - 2s) * ξ * (1 - ξ)
     y_bin = @. yₖ + Δy * (s * ξ^2 + dₖ * ξ * (1 - ξ)) / denom
 
-    y = ifelse.(inside, y_bin, x)
-    logjac = ifelse.(inside, _rqs_forward_logjac(s, dₖ, dₖ₊₁, ξ), zero(T))
+    # Boolean masks instead of ifelse, precomputed outside the differentiated broadcasts:
+    # ReverseDiff's array broadcast handles neither ifelse nor ! on its arguments, and the
+    # parameter floors keep the discarded branch finite so the zero weight is exact.
+    outside = .!inside
+    y = @. inside * y_bin + outside * x
+    logjac = inside .* _rqs_forward_logjac(s, dₖ, dₖ₊₁, ξ)
     return y, sum(logjac; dims=1)
 end
 
@@ -172,17 +180,18 @@ function rqs_inverse(
     # discriminant vanishes in a degenerate bin.
     tiny = floatmin(T)
     sqrtdisc = @. sqrt(max(b^2 - 4 * a * c, tiny))
-    # The cancellation-free form of the selected root depends on the sign of b. When a is
-    # zero, b equals Δy * s > 0, so the b < 0 branch never divides by zero.
-    ξ =
-        clamp.(
-            ifelse.(b .>= 0, (2 .* c) ./ (-b .- sqrtdisc), (-b .+ sqrtdisc) ./ (2 .* a)),
-            zero(T),
-            one(T),
-        )
+    # The cancellation-free form of the selected root is c/q for b >= 0 and q/a for b < 0,
+    # with q the half-sum matching the sign of b. Masks pick the numerator and denominator
+    # before dividing (ReverseDiff's array broadcast cannot handle ifelse); the selected
+    # denominator is never zero because a = 0 forces b = Δy * s > 0.
+    pos = _rqs_nonneg(b)
+    neg = .!pos
+    q = @. -(b + (2 * pos - 1) * sqrtdisc) / 2
+    ξ = clamp.((pos .* c .+ neg .* q) ./ (pos .* q .+ neg .* a), zero(T), one(T))
 
-    x = ifelse.(inside, xₖ .+ ξ .* Δx, y)
-    logjac = ifelse.(inside, .-_rqs_forward_logjac(s, dₖ, dₖ₊₁, ξ), zero(T))
+    outside = .!inside
+    x = @. inside * (xₖ + ξ * Δx) + outside * y
+    logjac = .-(inside .* _rqs_forward_logjac(s, dₖ, dₖ₊₁, ξ))
     return x, sum(logjac; dims=1)
 end
 

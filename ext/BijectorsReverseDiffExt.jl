@@ -255,4 +255,17 @@ transpose_eager(X::TrackedMatrix) = track(transpose_eager, X)
     return transpose_eager(X), transpose_eager_pullback
 end
 
+# Bin location returns integers, so no derivative flows through it. Stripping the tracking
+# avoids a crash in ReverseDiff's broadcast of `.<=` when only one argument is tracked.
+function Bijectors._rqs_bin(knots::ReverseDiff.TrackedArray, x::AbstractMatrix)
+    return Bijectors._rqs_bin(value(knots), x)
+end
+function Bijectors._rqs_bin(knots::AbstractArray, x::TrackedMatrix)
+    return Bijectors._rqs_bin(knots, value(x))
+end
+function Bijectors._rqs_bin(knots::ReverseDiff.TrackedArray, x::TrackedMatrix)
+    return Bijectors._rqs_bin(value(knots), value(x))
+end
+Bijectors._rqs_nonneg(b::ReverseDiff.TrackedArray) = value(b) .>= 0
+
 end
