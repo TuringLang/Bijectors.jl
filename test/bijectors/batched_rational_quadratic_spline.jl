@@ -22,10 +22,9 @@ using ForwardDiff: ForwardDiff
         @test eltype(derivatives) == T
 
         for grid in (widths, heights)
-            # The first knot is exactly -B (a prepended zero before the cumsum); the last is
-            # B up to the floating-point error in the softmax normalisation.
+            # Both boundary knots are pinned exactly.
             @test all(grid[1, :, :] .== -T(B))
-            @test all(isapprox.(grid[end, :, :], T(B)))
+            @test all(grid[end, :, :] .== T(B))
             @test all(diff(grid; dims=1) .> 0)
         end
 
@@ -46,6 +45,45 @@ using ForwardDiff: ForwardDiff
             @test (h != h0) == (moved == :heights)
             @test (d != d0) == (moved == :derivatives)
         end
+    end
+
+    @testset "extreme logits stay finite, T=$T" for T in (Float32, Float64)
+        # Without the minimum bin fraction and minimum derivative these logits underflow a
+        # width, a height, and a slope to exactly zero and produce NaN from in-range inputs.
+        K, D, N, B = 4, 1, 1, 5
+        θ = zeros(T, 3K - 1, N)
+        θ[1, 1] = 110
+        θ[K + 1, 1] = 110
+        θ[2K + 1, 1] = -150
+        w, h, d = rqs_params_from_raw(θ, D, B)
+
+        @test all(diff(w; dims=1) .>= 2 * T(B) * T(1e-3) * T(0.99))
+        @test all(diff(h; dims=1) .>= 2 * T(B) * T(1e-3) * T(0.99))
+        @test all(d .>= T(1e-3))
+
+        # Probe interior points, every knot, and out-of-range points.
+        xs = reshape(vcat(T[-0.99B, 0, 0.99B, -B - 1, B + 1], w[:, 1, 1]), 1, :)
+        wN = repeat(w; outer=(1, 1, size(xs, 2)))
+        hN = repeat(h; outer=(1, 1, size(xs, 2)))
+        dN = repeat(d; outer=(1, 1, size(xs, 2)))
+
+        y, logjac = rqs_forward(xs, wN, hN, dN)
+        @test all(isfinite, y)
+        @test all(isfinite, logjac)
+        xb, logjac_inv = rqs_inverse(y, wN, hN, dN)
+        @test all(isfinite, xb)
+        @test all(isfinite, logjac_inv)
+
+        gx = ForwardDiff.gradient(
+            v -> sum(rqs_forward(reshape(v, 1, :), wN, hN, dN)[1]), vec(xs)
+        )
+        @test all(isfinite, gx)
+        gθ = ForwardDiff.gradient(vec(θ)) do v
+            wg, hg, dg = rqs_params_from_raw(reshape(v, :, N), D, B)
+            x1 = reshape(T[0.99B], 1, 1)
+            sum(rqs_forward(x1, wg, hg, dg)[2])
+        end
+        @test all(isfinite, gθ)
     end
 end
 

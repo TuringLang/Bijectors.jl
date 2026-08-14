@@ -9,26 +9,39 @@
 # Parameter arrays carry the knot axis first: `(K + 1, D, N)` for `K` bins, `D` transformed
 # dimensions, and `N` samples. Inputs are `(D, N)`.
 
+# Minimum bin fraction and minimum derivative, as in nflows and distrax. Without them an
+# extreme logit can underflow a softmax bin or a softplus slope to exactly zero, which turns
+# in-range evaluations into NaN.
+const _RQS_MIN_BIN_FRACTION = 1e-3
+const _RQS_MIN_DERIVATIVE = 1e-3
+
 # Constrain raw parameters into a monotone knot grid on `[-B, B]`, batched along dim 1.
 # Mirrors the single-sample `RationalQuadraticSpline(widths, heights, derivatives, B)`
 # constructor: softmax to positive increments, cumulative sum to knots, scale to `[-B, B]`.
 function _rqs_constrain_knots(raw::AbstractArray, B)
     T = eltype(raw)
     Bc = T(B)
-    increments = LogExpFunctions.softmax(raw; dims=1)
+    K = size(raw, 1)
+    frac = T(_RQS_MIN_BIN_FRACTION)
+    K * frac < 1 || throw(ArgumentError("too many bins for the minimum bin fraction: $K"))
+    increments = frac .+ (1 - K * frac) .* LogExpFunctions.softmax(raw; dims=1)
     # A leading zero row, built without mutation so Zygote can differentiate it, and from a
     # slice of `increments` so it keeps the array type (`Array`, `CuArray`, ...).
     lead = zero(T) .* increments[1:1, :, :]
-    return cumsum(cat(lead, increments; dims=1); dims=1) .* (2 * Bc) .- Bc
+    knots = cumsum(cat(lead, increments; dims=1); dims=1) .* (2 * Bc) .- Bc
+    # The cumulative sum reaches B only up to rounding; pin the top knot exactly.
+    top = Bc .+ zero(T) .* knots[(K + 1):(K + 1), :, :]
+    return cat(knots[1:K, :, :], top; dims=1)
 end
 
 # Interior derivatives are made positive with softplus; the endpoints are fixed to one so
 # the spline continues into the identity map outside `[-B, B]`.
 function _rqs_constrain_derivatives(raw::AbstractArray)
     T = eltype(raw)
+    dmin = T(_RQS_MIN_DERIVATIVE)
     # Unit endpoint rows, built without mutation (see `_rqs_constrain_knots`).
     edge = zero(T) .* raw[1:1, :, :] .+ one(T)
-    return cat(edge, LogExpFunctions.log1pexp.(raw), edge; dims=1)
+    return cat(edge, dmin .+ LogExpFunctions.log1pexp.(raw), edge; dims=1)
 end
 
 """
