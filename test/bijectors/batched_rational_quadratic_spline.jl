@@ -33,6 +33,20 @@ using ForwardDiff: ForwardDiff
         @test all(derivatives[end, :, :] .== one(T))
         @test all(derivatives .> 0)
     end
+
+    @testset "raw parameter layout" begin
+        K, D, N, B = 4, 2, 3, 5.0
+        base = zeros((3K - 1) * D, N)
+        w0, h0, d0 = rqs_params_from_raw(base, D, B)
+        for (idx, moved) in ((1, :widths), (K + 1, :heights), (2K + 1, :derivatives))
+            θ = copy(base)
+            θ[idx, 1] += 1.0
+            w, h, d = rqs_params_from_raw(θ, D, B)
+            @test (w != w0) == (moved == :widths)
+            @test (h != h0) == (moved == :heights)
+            @test (d != d0) == (moved == :derivatives)
+        end
+    end
 end
 
 @testset "batched RQS forward" begin
