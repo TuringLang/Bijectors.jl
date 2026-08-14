@@ -197,9 +197,14 @@ function _gen_testcases(::Val{:batchedrqs})
         return sum(transform(binv, y)) + sum(logabsdetjac(binv, y))
     end
     arg = randn(rng, n_raw * N + D * N)
+    # Inputs spanning both tails, so reverse mode also differentiates the out-of-range
+    # identity branch and the boundary clamps.
+    arg_tails = vcat(arg[1:(n_raw * N)], 2B .* randn(rng, D * N))
     return [
         ADTestCase("BatchedRQS forward", forward, arg),
         ADTestCase("BatchedRQS inverse", backward, copy(arg)),
+        ADTestCase("BatchedRQS forward with tails", forward, arg_tails),
+        ADTestCase("BatchedRQS inverse with tails", backward, copy(arg_tails)),
     ]
 end
 
