@@ -202,11 +202,20 @@ function _gen_testcases(::Val{:batchedrqs})
     # keeps a nonzero part to compare.
     x_mixed = vcat(arg[(n_raw * N + 1):(n_raw * N + 3)], [2B, -2B, B + 0.5])
     arg_tails = vcat(arg[1:(n_raw * N)], x_mixed)
+    # Raw parameters extreme enough to saturate the floors: without them these logits
+    # underflow a width, a height, and a slope to zero.
+    raw_extreme = copy(arg[1:(n_raw * N)])
+    raw_extreme[1] = 110
+    raw_extreme[K + 1] = 110
+    raw_extreme[2K + 1] = -150
+    arg_extreme = vcat(raw_extreme, arg[(n_raw * N + 1):end])
     return [
         ADTestCase("BatchedRQS forward", forward, arg),
         ADTestCase("BatchedRQS inverse", backward, copy(arg)),
         ADTestCase("BatchedRQS forward with tails", forward, arg_tails),
         ADTestCase("BatchedRQS inverse with tails", backward, copy(arg_tails)),
+        ADTestCase("BatchedRQS forward extreme logits", forward, arg_extreme),
+        ADTestCase("BatchedRQS inverse extreme logits", backward, copy(arg_extreme)),
     ]
 end
 
