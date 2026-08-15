@@ -16,13 +16,11 @@ using ForwardDiff: ForwardDiff
         @test size(heights) == (K + 1, D, N)
         @test size(derivatives) == (K + 1, D, N)
 
-        # Raw parameters must not silently widen the element type.
         @test eltype(widths) == T
         @test eltype(heights) == T
         @test eltype(derivatives) == T
 
         for grid in (widths, heights)
-            # Both boundary knots are pinned exactly.
             @test all(grid[1, :, :] .== -T(B))
             @test all(grid[end, :, :] .== T(B))
             @test all(diff(grid; dims=1) .> 0)
@@ -200,11 +198,9 @@ end
         x = T(0.8B) .* (2 .* rand(T, D, N) .- 1)
         rtol = T == Float32 ? 1.0f-4 : 1.0e-9
 
-        # The convenience constructor matches building from constrained params.
         b2 = BatchedRQS(θ_raw, D, B)
         @test b2.widths == w && b2.heights == h && b2.derivatives == d
 
-        # transform / logabsdetjac / with_logabsdet_jacobian are consistent.
         y = transform(b, x)
         ladj = logabsdetjac(b, x)
         y2, ladj2 = with_logabsdet_jacobian(b, x)
@@ -215,13 +211,11 @@ end
         @test eltype(y) == T
         @test eltype(ladj) == T
 
-        # Inverse via the generic wrapper round-trips and negates the log-det.
         xback, ladj_inv = with_logabsdet_jacobian(inverse(b), y)
         @test xback ≈ x rtol = rtol
         @test ladj_inv ≈ -ladj rtol = rtol
         @test transform(inverse(b), y) ≈ x rtol = rtol
 
-        # Type stability.
         @inferred transform(b, x)
         @inferred with_logabsdet_jacobian(b, x)
     end

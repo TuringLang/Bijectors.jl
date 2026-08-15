@@ -1,26 +1,20 @@
-#############################################
+###############################################
 ### Batched rational quadratic spline (RQS) ###
-#############################################
+###############################################
 
-# A batched counterpart to `RationalQuadraticSpline` that evaluates many splines over a
-# batch of samples with whole-array operations, so the same source runs on `Array` and
-# `CuArray` and is differentiable by every AD backend. No derivative rules are written by
-# hand; the ReverseDiff extension only strips tracking from the integer bin location and
-# the boolean branch masks, which carry no gradient.
+# A batched counterpart to `RationalQuadraticSpline`: whole-array operations only, so the
+# same code runs on `Array` and `CuArray` and every AD backend differentiates it directly.
 #
 # Parameter arrays carry the knot axis first: `(K + 1, D, N)` for `K` bins, `D` transformed
 # dimensions, and `N` samples. Inputs are `(D, N)`.
 
-# Minimum bin fraction and minimum derivative, as in nflows and distrax. Without them an
-# extreme logit can underflow a softmax bin or a softplus slope to exactly zero, which turns
-# in-range evaluations into NaN.
+# Floors as in nflows and distrax: without them an extreme logit can underflow a bin or a
+# slope to exactly zero and turn in-range evaluations into NaN.
 const _RQS_MIN_BIN_FRACTION = 1e-3
 const _RQS_MIN_DERIVATIVE = 1e-3
 
-# Constrain raw parameters into a monotone knot grid on `[-B, B]`, batched along dim 1:
-# floored softmax to positive increments, cumulative sum to knots, both endpoints pinned
-# exactly. The floors make this differ from the single-sample `RationalQuadraticSpline`
-# constructor for the same raw parameters.
+# The floors and the pinned endpoints make these knots differ from what the single-sample
+# `RationalQuadraticSpline` constructor builds for the same raw parameters.
 function _rqs_constrain_knots(raw::AbstractArray, B)
     T = eltype(raw)
     Bc = T(B)
@@ -28,8 +22,7 @@ function _rqs_constrain_knots(raw::AbstractArray, B)
     frac = T(_RQS_MIN_BIN_FRACTION)
     K * frac < 1 || throw(ArgumentError("too many bins for the minimum bin fraction: $K"))
     increments = frac .+ (1 - K * frac) .* LogExpFunctions.softmax(raw; dims=1)
-    # A leading zero row, built without mutation so Zygote can differentiate it, and from a
-    # slice of `increments` so it keeps the array type (`Array`, `CuArray`, ...).
+    # Built without mutation for Zygote, from a slice so the array type is preserved.
     lead = zero(T) .* increments[1:1, :, :]
     knots = cumsum(cat(lead, increments; dims=1); dims=1) .* (2 * Bc) .- Bc
     # The cumulative sum reaches B only up to rounding; pin the top knot exactly.
@@ -37,12 +30,10 @@ function _rqs_constrain_knots(raw::AbstractArray, B)
     return cat(knots[1:K, :, :], top; dims=1)
 end
 
-# Interior derivatives are made positive with softplus; the endpoints are fixed to one so
-# the spline continues into the identity map outside `[-B, B]`.
+# Unit endpoints so the spline continues into the identity map outside `[-B, B]`.
 function _rqs_constrain_derivatives(raw::AbstractArray)
     T = eltype(raw)
     dmin = T(_RQS_MIN_DERIVATIVE)
-    # Unit endpoint rows, built without mutation (see `_rqs_constrain_knots`).
     edge = zero(T) .* raw[1:1, :, :] .+ one(T)
     return cat(edge, dmin .+ LogExpFunctions.log1pexp.(raw), edge; dims=1)
 end
@@ -67,12 +58,9 @@ function rqs_params_from_raw(θ_raw::AbstractMatrix, n_dims::Integer, B)
     return widths, heights, derivatives
 end
 
-# Locate the bin of each element and whether it lies inside the spline range. `knots` is
-# `(K + 1, D, N)`, `x` is `(D, N)`. `count` is the number of knots not exceeding `x`, so a
-# point in `[knots[k], knots[k+1])` gives `count == k`; `count == 0` or `count == K + 1`
-# means it is below or above the range. The comparison and integer reduction are
-# non-differentiable by construction, which is what confines the gradient to the arithmetic
-# of the selected bin.
+# Count of knots not exceeding each element: a point in `[knots[k], knots[k+1])` gets
+# `count == k`, with 0 and K + 1 marking the tails. Integer output, so no gradient flows
+# through the bin search.
 function _rqs_bin(knots::AbstractArray, x::AbstractMatrix)
     K = size(knots, 1) - 1
     count = dropdims(sum(knots .<= reshape(x, 1, size(x)...); dims=1); dims=1)
@@ -80,19 +68,14 @@ function _rqs_bin(knots::AbstractArray, x::AbstractMatrix)
     return clamp.(count, 1, K), inside
 end
 
-# Plain boolean sign mask for the inverse root selection, kept as its own function so AD
-# extensions can compute it from primal values.
+# Separate function so AD extensions can compute the mask from primal values.
 _rqs_nonneg(b) = b .>= 0
 
-# Gather the lower and upper knot values of each element's bin into `(D, N)` arrays. Linear
-# indices are built by broadcast so they live on the same device as the parameters, and the
-# gather is a plain `getindex` by integer array: vectorized on the GPU and differentiable on
-# every backend, with the gradient flowing back to the two selected knots.
 function _rqs_gather(knots::AbstractArray, k::AbstractMatrix{<:Integer})
     stride1 = size(knots, 1)
     D = size(k, 1)
-    # Row and column indices of each entry, derived from `k` so they share its array type: a
-    # reshaped host range cannot take part in a broadcast against a GPU array.
+    # Indices derived from `k` so they share its array type; a host range cannot take part
+    # in a broadcast against a GPU array.
     unit = one.(k)
     di = cumsum(unit; dims=1)
     ni = cumsum(unit; dims=2)
@@ -124,16 +107,14 @@ function rqs_forward(
     Δx = xₖ₊₁ .- xₖ
     Δy = yₖ₊₁ .- yₖ
     s = Δy ./ Δx
-    # Clamp keeps the discarded (out-of-range) branch finite so its zero-weighted gradient
-    # never turns into NaN; inside the range ξ is already in [0, 1] and clamp is a no-op.
+    # Clamp keeps the discarded out-of-range branch finite; in range it is a no-op.
     ξ = clamp.((x .- xₖ) ./ Δx, zero(T), one(T))
 
     denom = @. s + (dₖ₊₁ + dₖ - 2s) * ξ * (1 - ξ)
     y_bin = @. yₖ + Δy * (s * ξ^2 + dₖ * ξ * (1 - ξ)) / denom
 
-    # Boolean masks instead of ifelse, precomputed outside the differentiated broadcasts:
-    # ReverseDiff's array broadcast handles neither ifelse nor ! on its arguments, and the
-    # parameter floors keep the discarded branch finite so the zero weight is exact.
+    # Masks instead of ifelse: ReverseDiff's array broadcast handles neither ifelse nor !,
+    # and the floors keep the discarded branch finite, so the zero weight is exact.
     outside = .!inside
     y = @. inside * y_bin + outside * x
     logjac = inside .* _rqs_forward_logjac(s, dₖ, dₖ₊₁, ξ)
@@ -171,22 +152,19 @@ function rqs_inverse(
     Δx = xₖ₊₁ .- xₖ
     Δy = yₖ₊₁ .- yₖ
     s = Δy ./ Δx
-    # Clamp to the bin so the discarded (out-of-range) branch stays finite; inside the range
-    # Δy2 already lies in [0, Δy] and clamp is a no-op.
+    # Clamp keeps the discarded out-of-range branch finite; in range it is a no-op.
     Δy2 = clamp.(y .- yₖ, zero(T), Δy)
 
     c1 = dₖ₊₁ .+ dₖ .- 2 .* s
     a = @. Δy * (s - dₖ) + Δy2 * c1
     b = @. Δy * dₖ - Δy2 * c1
     c = @. -s * Δy2
-    # Keeping the sqrt argument strictly positive keeps its gradient finite when the
-    # discriminant vanishes in a degenerate bin.
+    # A strictly positive sqrt argument keeps its gradient finite when the discriminant
+    # vanishes.
     tiny = floatmin(T)
     sqrtdisc = @. sqrt(max(b^2 - 4 * a * c, tiny))
-    # The cancellation-free form of the selected root is c/q for b >= 0 and q/a for b < 0,
-    # with q the half-sum matching the sign of b. Masks pick the numerator and denominator
-    # before dividing (ReverseDiff's array broadcast cannot handle ifelse); the selected
-    # denominator is never zero because a = 0 forces b = Δy * s > 0.
+    # Cancellation-free root: c/q for b >= 0 and q/a for b < 0, with q the half-sum matching
+    # the sign of b. The selected denominator is never zero: a = 0 forces b = Δy * s > 0.
     pos = _rqs_nonneg(b)
     neg = .!pos
     q = @. -(b + (2 * pos - 1) * sqrtdisc) / 2
@@ -208,9 +186,8 @@ produced by [`rqs_params_from_raw`](@ref)); the second constructor builds them f
 neural-network outputs. `transform` maps `(D, N)` inputs to `(D, N)` outputs and
 `logabsdetjac` returns the per-sample `(N,)` log-determinant.
 """
-# The three fields carry independent type parameters because automatic differentiation can
-# return them as different array types (for example ReverseDiff yields a TrackedArray for one
-# and an Array of tracked scalars for another).
+# Independent field type parameters: AD backends can return the three constrained arrays as
+# different array types.
 struct BatchedRQS{Tw<:AbstractArray,Th<:AbstractArray,Td<:AbstractArray} <: Bijector
     widths::Tw
     heights::Th

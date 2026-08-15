@@ -30,9 +30,8 @@ end
     end
 end
 
-# Gradient of the batched RQS with respect to its input only, with the knot parameters held
-# as plain constant arrays. This is the score of a fixed trained flow and used to crash in
-# ReverseDiff's broadcast machinery.
+# Input-only gradients with the knot parameters as plain constants (the score of a fixed
+# trained flow); this used to crash in ReverseDiff's broadcast machinery.
 @testset "ReverseDiff batched RQS input-only gradient" begin
     K, D, N, B = 4, 2, 3, 5
     θ = randn(StableRNG(23), (3K - 1) * D, N)

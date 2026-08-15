@@ -197,9 +197,8 @@ function _gen_testcases(::Val{:batchedrqs})
         return sum(transform(binv, y)) + sum(logabsdetjac(binv, y))
     end
     arg = randn(rng, n_raw * N + D * N)
-    # A batch mixing in-range and out-of-range lanes, so reverse mode differentiates the
-    # spline arithmetic and the identity tails in the same pass and the parameter gradient
-    # keeps a nonzero part to compare.
+    # Mixed in-range and out-of-range lanes: one pass differentiates both branches and the
+    # parameter gradient keeps a nonzero part to compare.
     x_mixed = vcat(arg[(n_raw * N + 1):(n_raw * N + 3)], [2B, -2B, B + 0.5])
     arg_tails = vcat(arg[1:(n_raw * N)], x_mixed)
     # Raw parameters extreme enough to saturate the floors: without them these logits

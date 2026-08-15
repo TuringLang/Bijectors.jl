@@ -5,8 +5,6 @@ using Random
 using Test
 using Zygote
 
-# Scalar indexing on a GPU array is the usual sign that an operation fell back to a slow,
-# element-by-element host loop. Disallowing it turns any such fallback into a test failure.
 CUDA.allowscalar(false)
 
 @testset "Batched RQS on CUDA" begin
