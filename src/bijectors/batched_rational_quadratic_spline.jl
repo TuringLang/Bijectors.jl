@@ -4,12 +4,12 @@
 
 # A batched counterpart to `RationalQuadraticSpline`: whole-array operations only, so the
 # same code runs on `Array` and `CuArray` and every AD backend differentiates it directly.
-#
+
 # Parameter arrays carry the knot axis first: `(K + 1, D, N)` for `K` bins, `D` transformed
 # dimensions, and `N` samples. Inputs are `(D, N)`.
 
-# Floors as in nflows and distrax: without them an extreme logit can underflow a bin or a
-# slope to exactly zero and turn in-range evaluations into NaN.
+# Floors keep every bin and slope strictly positive; an extreme logit would otherwise
+# underflow one to exactly zero and turn in-range evaluations into NaN.
 const _RQS_MIN_BIN_FRACTION = 1e-3
 const _RQS_MIN_DERIVATIVE = 1e-3
 
