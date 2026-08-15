@@ -1,3 +1,7 @@
+# 0.16.3
+
+Add a batched rational quadratic spline. `BatchedRQS` evaluates one spline per dimension per sample over `(D, N)` inputs with whole-array operations, so it runs on the GPU and is differentiable by ForwardDiff, Zygote, ReverseDiff, Mooncake, and Enzyme. `rqs_params_from_raw` turns raw network outputs into constrained knot parameters with a minimum bin fraction and a minimum derivative of 1e-3 and with both boundary knots pinned exactly, following the reference neural spline flow implementations. The floors mean the constrained knots differ from what the single-sample `RationalQuadraticSpline` constructor produces for the same raw parameters.
+
 # 0.16.1
 
 Add Mooncake 0.6 forward-mode support for `find_alpha`, and widen Mooncake compat to include 0.6.
