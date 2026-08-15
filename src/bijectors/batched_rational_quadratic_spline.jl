@@ -4,7 +4,9 @@
 
 # A batched counterpart to `RationalQuadraticSpline` that evaluates many splines over a
 # batch of samples with whole-array operations, so the same source runs on `Array` and
-# `CuArray` and is differentiable by every AD backend without hand-written rules.
+# `CuArray` and is differentiable by every AD backend. No derivative rules are written by
+# hand; the ReverseDiff extension only strips tracking from the integer bin location and
+# the boolean branch masks, which carry no gradient.
 #
 # Parameter arrays carry the knot axis first: `(K + 1, D, N)` for `K` bins, `D` transformed
 # dimensions, and `N` samples. Inputs are `(D, N)`.
@@ -15,9 +17,10 @@
 const _RQS_MIN_BIN_FRACTION = 1e-3
 const _RQS_MIN_DERIVATIVE = 1e-3
 
-# Constrain raw parameters into a monotone knot grid on `[-B, B]`, batched along dim 1.
-# Mirrors the single-sample `RationalQuadraticSpline(widths, heights, derivatives, B)`
-# constructor: softmax to positive increments, cumulative sum to knots, scale to `[-B, B]`.
+# Constrain raw parameters into a monotone knot grid on `[-B, B]`, batched along dim 1:
+# floored softmax to positive increments, cumulative sum to knots, both endpoints pinned
+# exactly. The floors make this differ from the single-sample `RationalQuadraticSpline`
+# constructor for the same raw parameters.
 function _rqs_constrain_knots(raw::AbstractArray, B)
     T = eltype(raw)
     Bc = T(B)
