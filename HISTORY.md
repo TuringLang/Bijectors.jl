@@ -1,3 +1,7 @@
+# 0.16.3
+
+Allow LogExpFunctions 1.0.
+
 # 0.16.2
 
 Switch the root finder in `find_alpha` from ITP to A42, which avoids the `ConvergenceFailed` error raised when the ITP bracket stalls short of convergence.
