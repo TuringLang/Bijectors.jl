@@ -181,8 +181,6 @@ pd_from_lower(X::TrackedMatrix) = track(pd_from_lower, X)
     end
 end
 
-@grad_from_chainrules pd_from_upper(X::TrackedMatrix)
-
 lower_triangular(A::TrackedMatrix) = track(lower_triangular, A)
 @grad function lower_triangular(A::AbstractMatrix)
     Ad = value(A)
@@ -218,8 +216,6 @@ end
 )
 
 @grad_from_chainrules _link_chol_lkj(x::TrackedMatrix)
-@grad_from_chainrules _link_chol_lkj_from_upper(x::TrackedMatrix)
-@grad_from_chainrules _link_chol_lkj_from_lower(x::TrackedMatrix)
 
 cholesky_lower(X::TrackedMatrix) = track(cholesky_lower, X)
 cholesky_upper(X::TrackedMatrix) = track(cholesky_upper, X)
