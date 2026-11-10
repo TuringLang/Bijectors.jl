@@ -198,12 +198,13 @@ function find_alpha(wt_y::T, wt_u_hat::T, b::T) where {T<:TrackedReal}
 end
 @grad function find_alpha(wt_y::TrackedReal, wt_u_hat::TrackedReal, b::TrackedReal)
     α = find_alpha(value(wt_y), value(wt_u_hat), value(b))
-
-    ∂wt_y = inv(1 + wt_u_hat * sech(α + b)^2)
-    ∂wt_u_hat = -tanh(α + b) * ∂wt_y
-    ∂b = ∂wt_y - 1
-    find_alpha_pullback(Δ::Real) = (Δ * ∂wt_y, Δ * ∂wt_u_hat, Δ * ∂b)
-
+    # ReverseDiff reuses this pullback when replaying a tape, so use the current inputs.
+    function find_alpha_pullback(Δ::Real)
+        u, c = value(wt_u_hat), value(b)
+        a = find_alpha(value(wt_y), u, c)
+        ∂wt_y = inv(1 + u * sech(a + c)^2)
+        return (Δ * ∂wt_y, -Δ * tanh(a + c) * ∂wt_y, Δ * (∂wt_y - 1))
+    end
     return α, find_alpha_pullback
 end
 

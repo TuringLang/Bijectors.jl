@@ -2,6 +2,8 @@
 
 Fix loading of the ReverseDiff extension with ReverseDiff 1.18.8, which failed with `UndefVarError: pd_from_upper not defined`.
 
+Fix ReverseDiff gradients of the inverse `PlanarLayer`, which errored with `tape has finished recording` on ReverseDiff 1.18.4 and later, and were wrong when a tape was reused at a new input.
+
 Make the `link` and `invlink` doctests independent of how Distributions prints a distribution.
 
 # 0.16.3
