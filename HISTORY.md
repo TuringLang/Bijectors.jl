@@ -2,6 +2,8 @@
 
 Fix loading of the ReverseDiff extension with ReverseDiff 1.18.8, which failed with `UndefVarError: pd_from_upper not defined`.
 
+Make the `link` and `invlink` doctests independent of how Distributions prints a distribution.
+
 # 0.16.3
 
 Allow LogExpFunctions 1.0.
