@@ -4,6 +4,8 @@ Fix loading of the ReverseDiff extension with ReverseDiff 1.18.8, which failed w
 
 Fix ReverseDiff gradients of the inverse `PlanarLayer`, which errored with `tape has finished recording` on ReverseDiff 1.18.4 and later, and were wrong when a tape was reused at a new input.
 
+Fix a `MethodError` when a ReverseDiff tape through the inverse `PlanarLayer` is reused at a new input and the layer parameters are not tracked.
+
 Make the `link` and `invlink` doctests independent of how Distributions prints a distribution.
 
 # 0.16.3
