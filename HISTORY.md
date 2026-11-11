@@ -8,6 +8,8 @@ Fix a `MethodError` when a ReverseDiff tape through the inverse `PlanarLayer` is
 
 Make the `link` and `invlink` doctests independent of how Distributions prints a distribution.
 
+Fix a `MethodError` from `CorrBijector` and `VecCorrBijector` on Julia 1.13 when `cholesky` stores the factor as the lower triangle, as Mooncake forward mode does.
+
 # 0.16.3
 
 Allow LogExpFunctions 1.0.
