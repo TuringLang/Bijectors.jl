@@ -181,8 +181,6 @@ pd_from_lower(X::TrackedMatrix) = track(pd_from_lower, X)
     end
 end
 
-@grad_from_chainrules pd_from_upper(X::TrackedMatrix)
-
 lower_triangular(A::TrackedMatrix) = track(lower_triangular, A)
 @grad function lower_triangular(A::AbstractMatrix)
     Ad = value(A)
@@ -198,14 +196,15 @@ end
 function find_alpha(wt_y::T, wt_u_hat::T, b::T) where {T<:TrackedReal}
     return track(find_alpha, wt_y, wt_u_hat, b)
 end
-@grad function find_alpha(wt_y::TrackedReal, wt_u_hat::TrackedReal, b::TrackedReal)
+@grad function find_alpha(wt_y::Real, wt_u_hat::Real, b::Real)
     α = find_alpha(value(wt_y), value(wt_u_hat), value(b))
-
-    ∂wt_y = inv(1 + wt_u_hat * sech(α + b)^2)
-    ∂wt_u_hat = -tanh(α + b) * ∂wt_y
-    ∂b = ∂wt_y - 1
-    find_alpha_pullback(Δ::Real) = (Δ * ∂wt_y, Δ * ∂wt_u_hat, Δ * ∂b)
-
+    # ReverseDiff reuses this pullback when replaying a tape, so use the current inputs.
+    function find_alpha_pullback(Δ::Real)
+        u, c = value(wt_u_hat), value(b)
+        a = find_alpha(value(wt_y), u, c)
+        ∂wt_y = inv(1 + u * sech(a + c)^2)
+        return (Δ * ∂wt_y, -Δ * tanh(a + c) * ∂wt_y, Δ * (∂wt_y - 1))
+    end
     return α, find_alpha_pullback
 end
 
@@ -218,8 +217,6 @@ end
 )
 
 @grad_from_chainrules _link_chol_lkj(x::TrackedMatrix)
-@grad_from_chainrules _link_chol_lkj_from_upper(x::TrackedMatrix)
-@grad_from_chainrules _link_chol_lkj_from_lower(x::TrackedMatrix)
 
 cholesky_lower(X::TrackedMatrix) = track(cholesky_lower, X)
 cholesky_upper(X::TrackedMatrix) = track(cholesky_upper, X)

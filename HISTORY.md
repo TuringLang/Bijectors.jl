@@ -1,3 +1,15 @@
+# 0.16.4
+
+Fix loading of the ReverseDiff extension with ReverseDiff 1.18.8, which failed with `UndefVarError: pd_from_upper not defined`.
+
+Fix ReverseDiff gradients of the inverse `PlanarLayer`, which errored with `tape has finished recording` on ReverseDiff 1.18.4 and later, and were wrong when a tape was reused at a new input.
+
+Fix a `MethodError` when a ReverseDiff tape through the inverse `PlanarLayer` is reused at a new input and the layer parameters are not tracked.
+
+Make the `link` and `invlink` doctests independent of how Distributions prints a distribution.
+
+Fix a `MethodError` from `CorrBijector` and `VecCorrBijector` on Julia 1.13 when `cholesky` stores the factor as the lower triangle, as Mooncake forward mode does.
+
 # 0.16.3
 
 Allow LogExpFunctions 1.0.

@@ -35,3 +35,11 @@ end
         @test dist_transformed isa MatrixDistribution
     end
 end
+
+@testset "triangular helpers on adjoint Cholesky factors" begin
+    A = [2.0 1; 1 2]
+    CL = cholesky(Hermitian(A, :L))
+    @test Bijectors.upper_triangular(parent(CL.U)) == Matrix(CL.U)
+    CU = cholesky(Hermitian(A, :U))
+    @test Bijectors.lower_triangular(parent(CU.L)) == Matrix(CU.L)
+end

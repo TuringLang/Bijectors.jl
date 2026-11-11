@@ -8,8 +8,8 @@ _vec(x::AbstractArray{<:Real}) = vec(x)
 _vec(x::Real) = x
 
 # # Because `ReverseDiff` does not play well with structural matrices.
-lower_triangular(A::AbstractMatrix) = convert(typeof(A), LowerTriangular(A))
-upper_triangular(A::AbstractMatrix) = convert(typeof(A), UpperTriangular(A))
+lower_triangular(A::AbstractMatrix) = tril(A)
+upper_triangular(A::AbstractMatrix) = triu(A)
 
 function pd_from_lower(X)
     L = lower_triangular(X)
