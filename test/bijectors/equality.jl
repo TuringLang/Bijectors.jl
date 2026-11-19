@@ -44,3 +44,28 @@
         end
     end
 end
+
+@testset "Hashing" begin
+    VB = Bijectors.VectorBijectors
+    product = product_distribution([Normal(), Beta(2, 2)])
+    reshaped = VB.ReshapeWrapper((1, 1), (1,), Shift([1.0]))
+    for b in (
+        Shift([1.0, 2.0]),
+        Scale([1.0, 2.0]),
+        Bijectors.Inverse(Shift([1.0])),
+        VB.to_linked_vec(product),
+        VB.from_linked_vec(product),
+        reshaped,
+        inverse(reshaped),
+    )
+        copy = deepcopy(b)
+        @test isequal(b, copy)
+        @test hash(b) == hash(copy)
+        @test get(Dict{Any,Int}(b => 1), copy, 0) == 1
+    end
+    @test hash(VB.Elementwise(Shift(1), (2,))) == hash(VB.Elementwise(Shift(1.0), (2,)))
+    for f in (Shift, Scale, x -> Bijectors.Inverse(Shift(x)))
+        @test isequal(f(NaN), f(NaN))
+        @test !isequal(f(0.0), f(-0.0))
+    end
+end

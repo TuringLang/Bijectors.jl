@@ -266,6 +266,8 @@ inverse(t::Transform) = Inverse(t)
 inverse(ib::Inverse) = ib.orig
 
 Base.:(==)(b1::Inverse, b2::Inverse) = b1.orig == b2.orig
+Base.isequal(b1::Inverse, b2::Inverse) = isequal(b1.orig, b2.orig)
+Base.hash(b::Inverse, h::UInt) = hash(b.orig, hash(:Inverse, h))
 
 "Abstract type of a bijector, i.e. differentiable bijection with differentiable inverse."
 abstract type Bijector <: Transform end

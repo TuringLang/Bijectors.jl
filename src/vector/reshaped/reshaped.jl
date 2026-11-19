@@ -37,6 +37,9 @@ function Base.isequal(r1::ReshapeWrapper, r2::ReshapeWrapper)
            isequal(r1.original_size, r2.original_size) &&
            isequal(r1.bijector, r2.bijector)
 end
+function Base.hash(r::ReshapeWrapper, h::UInt)
+    return hash((:ReshapeWrapper, r.reshaped_size, r.original_size, r.bijector), h)
+end
 function with_logabsdet_jacobian(
     r::ReshapeWrapper{N1}, rx::AbstractArray{T,N1}
 ) where {T,N1}
@@ -70,6 +73,9 @@ function Base.isequal(r1::InvReshapeWrapper, r2::InvReshapeWrapper)
     return isequal(r1.reshaped_size, r2.reshaped_size) &&
            isequal(r1.original_size, r2.original_size) &&
            isequal(r1.inv_bijector, r2.inv_bijector)
+end
+function Base.hash(r::InvReshapeWrapper, h::UInt)
+    return hash((:InvReshapeWrapper, r.reshaped_size, r.original_size, r.inv_bijector), h)
 end
 function with_logabsdet_jacobian(r::InvReshapeWrapper, x::AbstractVector)
     rx, ladj = with_logabsdet_jacobian(r.inv_bijector, x)

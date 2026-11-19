@@ -6,6 +6,8 @@ struct Shift{T} <: Bijector
 end
 
 Base.:(==)(b1::Shift, b2::Shift) = b1.a == b2.a
+Base.isequal(b1::Shift, b2::Shift) = isequal(b1.a, b2.a)
+Base.hash(b::Shift, h::UInt) = hash(b.a, hash(:Shift, h))
 
 Functors.@functor Shift
 
