@@ -1,6 +1,6 @@
 # 0.16.5 (unreleased)
 
-  - Equal copies of `Shift`, `Scale`, `Inverse` and vector-bijector wrappers work as `Set` and `Dict` keys.
+  - Equal copies of array-backed `Shift` and `Scale` transforms, including inverse and vector-bijector wrappers, work as `Set` and `Dict` keys.
 
 # 0.16.4
 

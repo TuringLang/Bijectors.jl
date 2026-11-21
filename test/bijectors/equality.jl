@@ -47,23 +47,22 @@ end
 
 @testset "Hashing" begin
     VB = Bijectors.VectorBijectors
-    product = product_distribution([Normal(), Beta(2, 2)])
-    reshaped = VB.ReshapeWrapper((1, 1), (1,), Shift([1.0]))
-    for b in (
-        Shift([1.0, 2.0]),
-        Scale([1.0, 2.0]),
-        Bijectors.Inverse(Shift([1.0])),
-        VB.to_linked_vec(product),
-        VB.from_linked_vec(product),
-        reshaped,
-        inverse(reshaped),
+    h = hash(:bijector)
+    for f in (
+        Shift,
+        Scale,
+        x -> Bijectors.Inverse(Shift(x)),
+        x -> VB.Elementwise(Shift(x), (2,)),
+        x -> VB.ProductVecTransform([Shift(x)], [1:2], (2,)),
+        x -> VB.ProductVecInvTransform([Shift(x)], [1:2], (2,)),
+        x -> VB.ReshapeWrapper((1, 2), (2,), Shift(x)),
+        x -> inverse(VB.ReshapeWrapper((1, 2), (2,), Shift(x))),
     )
-        copy = deepcopy(b)
-        @test isequal(b, copy)
-        @test hash(b) == hash(copy)
-        @test get(Dict{Any,Int}(b => 1), copy, 0) == 1
+        b1, b2 = f([1, 2]), f([1.0, 2.0])
+        @test isequal(b1, b2)
+        @test hash(b1, h) == hash(b2, h)
+        @test get(Dict{Any,Int}(b1 => 1), b2, 0) == 1
     end
-    @test hash(VB.Elementwise(Shift(1), (2,))) == hash(VB.Elementwise(Shift(1.0), (2,)))
     for f in (Shift, Scale, x -> Bijectors.Inverse(Shift(x)))
         @test isequal(f(NaN), f(NaN))
         @test !isequal(f(0.0), f(-0.0))
