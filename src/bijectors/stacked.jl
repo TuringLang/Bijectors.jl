@@ -102,6 +102,14 @@ function Base.:(==)(b1::Stacked, b2::Stacked)
            all(b1.ranges_out .== b2.ranges_out)
 end
 
+function Base.isequal(b1::Stacked, b2::Stacked)
+    return isequal(b1.bs, b2.bs) &&
+           isequal(b1.ranges_in, b2.ranges_in) &&
+           isequal(b1.ranges_out, b2.ranges_out)
+end
+
+Base.hash(b::Stacked, h::UInt) = hash((:Stacked, b.bs, b.ranges_in, b.ranges_out), h)
+
 isclosedform(b::Stacked) = all(isclosedform, b.bs)
 
 isinvertible(b::Stacked) = all(isinvertible, b.bs)

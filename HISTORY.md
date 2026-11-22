@@ -1,6 +1,8 @@
-# 0.16.5 (unreleased)
+# 0.16.5
 
-  - Equal copies of array-backed `Shift` and `Scale` transforms, including inverse and vector-bijector wrappers, work as `Set` and `Dict` keys.
+Equal copies of transforms such as `Shift`, `Scale` and `TruncatedBijector`, including inverse and vector wrappers, now hash equally and work as `Set` and `Dict` keys.
+
+The updated `isequal` methods treat `NaN` as equal to itself and distinguish `0.0` from `-0.0` when comparing fields.
 
 # 0.16.4
 

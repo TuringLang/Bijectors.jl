@@ -3,8 +3,6 @@ struct Scale{T} <: Bijector
 end
 
 Base.:(==)(b1::Scale, b2::Scale) = b1.a == b2.a
-Base.isequal(b1::Scale, b2::Scale) = isequal(b1.a, b2.a)
-Base.hash(b::Scale, h::UInt) = hash(b.a, hash(:Scale, h))
 
 Functors.@functor Scale
 

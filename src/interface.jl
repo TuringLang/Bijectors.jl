@@ -266,8 +266,6 @@ inverse(t::Transform) = Inverse(t)
 inverse(ib::Inverse) = ib.orig
 
 Base.:(==)(b1::Inverse, b2::Inverse) = b1.orig == b2.orig
-Base.isequal(b1::Inverse, b2::Inverse) = isequal(b1.orig, b2.orig)
-Base.hash(b::Inverse, h::UInt) = hash(b.orig, hash(:Inverse, h))
 
 "Abstract type of a bijector, i.e. differentiable bijection with differentiable inverse."
 abstract type Bijector <: Transform end
@@ -397,3 +395,20 @@ include("bijectors/rational_quadratic_spline.jl")
 # Other includes #
 ##################
 include("transformed_distribution.jl")
+
+# These transforms compare all their fields in `==`.
+_transform_fields(b) = ntuple(i -> getfield(b, i), Val(fieldcount(typeof(b))))
+for T in (
+    :Inverse,
+    :Shift,
+    :Scale,
+    :Logit,
+    :TruncatedBijector,
+    :Permute,
+    :PlanarLayer,
+    :RadialLayer,
+    :InvertibleBatchNorm,
+)
+    @eval Base.isequal(a::$T, b::$T) = isequal(_transform_fields(a), _transform_fields(b))
+    @eval Base.hash(b::$T, h::UInt) = hash(_transform_fields(b), hash($(QuoteNode(T)), h))
+end
