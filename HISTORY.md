@@ -1,10 +1,8 @@
 # 0.16.5
 
-`Shift`, `Scale`, `Inverse`, `Logit`, `TruncatedBijector`, `Permute`, `PlanarLayer`, `RadialLayer`, `InvertibleBatchNorm`, `Stacked` and the elementwise, product and reshape vector wrappers now hash the fields compared by `isequal`. Equal copies can share a `Set` or `Dict` entry when those fields hash equally.
+`hash` now agrees with `isequal` for `Shift`, `Scale`, `Inverse`, `Logit`, `TruncatedBijector`, `Permute`, `PlanarLayer`, `RadialLayer`, `InvertibleBatchNorm`, `Stacked`, `CDFBijector`, `QuantileBijector` and the elementwise, product and reshape vector wrappers when their fields hash consistently with `isequal`.
 
-`isequal` compares the fields of these legacy transforms using Julia's `isequal` rules for `NaN` and signed zero. For example, `isequal(Shift(NaN), Shift(NaN))` returns `true` and `isequal(Shift(0.0), Shift(-0.0))` returns `false`.
-
-`isequal` on `Stacked` returns `false` when the numbers of transforms differ, where it could previously throw `DimensionMismatch`.
+`isequal` on these legacy transforms follows Julia's rules for `NaN` and signed zero. For example, `isequal(Shift(NaN), Shift(NaN))` returns `true` and `isequal(Shift(0.0), Shift(-0.0))` returns `false`. `isequal` on `Stacked` returns `false` when the numbers of transforms differ, where it could previously throw `DimensionMismatch`.
 
 # 0.16.4
 

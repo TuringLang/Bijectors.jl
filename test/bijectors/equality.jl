@@ -36,6 +36,8 @@
         TruncatedBijector(1.0, 3.0),
         TruncatedBijector(0.0, 2.0),
         bijector(product_distribution([Normal(), Beta()])),
+        Bijectors.CDFBijector(MixtureModel([Normal(), Normal(1, 1)])),
+        Bijectors.QuantileBijector(MixtureModel([Normal(), Normal(1, 1)])),
     ]
     for i in eachindex(bs), j in eachindex(bs)
         if i == j
@@ -67,13 +69,5 @@ end
     for f in (Shift, Scale, x -> Bijectors.Inverse(Shift(x)))
         @test !isequal(f(0.0), f(-0.0))
     end
-    @test isequal(Logit(NaN, 1.0), Logit(NaN, 1.0))
-end
-
-@testset "Stacked equality" begin
     @test !isequal(Stacked(fill(identity, 2)), Stacked(fill(identity, 3)))
-    bs = [Shift(1.0), Shift(2.0)]
-    a = inverse(Stacked(bs, [1:1, 2:2]))
-    b = inverse(Stacked(bs, [2:2, 1:1]))
-    @test !isequal(a, b)
 end

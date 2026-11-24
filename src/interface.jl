@@ -396,7 +396,7 @@ include("bijectors/rational_quadratic_spline.jl")
 ##################
 include("transformed_distribution.jl")
 
-# These transforms compare all their fields in `==`.
+# Keep hashing and equality based on the same fields.
 _transform_fields(b) = ntuple(i -> getfield(b, i), Val(fieldcount(typeof(b))))
 for T in (
     :Inverse,
@@ -408,6 +408,9 @@ for T in (
     :PlanarLayer,
     :RadialLayer,
     :InvertibleBatchNorm,
+    :Stacked,
+    :CDFBijector,
+    :QuantileBijector,
 )
     @eval Base.isequal(a::$T, b::$T) = isequal(_transform_fields(a), _transform_fields(b))
     @eval Base.hash(b::$T, h::UInt) = hash(_transform_fields(b), hash($(QuoteNode(T)), h))
