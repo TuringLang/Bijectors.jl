@@ -37,6 +37,7 @@ Base.:(==)(a::Elementwise, b::Elementwise) = (a.value == b.value) & (a.size == b
 function Base.isequal(a::Elementwise, b::Elementwise)
     return isequal(a.value, b.value) && isequal(a.size, b.size)
 end
+Base.hash(a::Elementwise, h::UInt) = hash((:Elementwise, a.value, a.size), h)
 
 _map_inverse(t::Elementwise) = Elementwise(inverse(t.value), t.size)
 

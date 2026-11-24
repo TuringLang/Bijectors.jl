@@ -61,6 +61,8 @@ for struct_type in (:ProductVecTransform, :ProductVecInvTransform)
             isequal(t1.transforms, t2.transforms) &&
             isequal(t1.ranges, t2.ranges) &&
             isequal(t1.base_size, t2.base_size)
+        Base.hash(t::$struct_type, h::UInt) =
+            hash(($struct_type, t.transforms, t.ranges, t.base_size), h)
     end
 end
 
