@@ -4,6 +4,8 @@
 
 `isequal` on these legacy transforms follows Julia's rules for `NaN` and signed zero. For example, `isequal(Shift(NaN), Shift(NaN))` returns `true` and `isequal(Shift(0.0), Shift(-0.0))` returns `false`. `isequal` on `Stacked` returns `false` when the numbers of transforms differ, where it could previously throw `DimensionMismatch`.
 
+Allow DocStringExtensions 0.10 alongside 0.9.
+
 # 0.16.4
 
 Fix loading of the ReverseDiff extension with ReverseDiff 1.18.8, which failed with `UndefVarError: pd_from_upper not defined`.
